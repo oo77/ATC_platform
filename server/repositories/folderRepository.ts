@@ -345,14 +345,17 @@ export async function moveFolder(
 /**
  * Удалить папку (soft delete)
  */
-export async function deleteFolder(id: number): Promise<boolean> {
+export async function deleteFolder(
+  id: number,
+  force: boolean = false
+): Promise<boolean> {
   const folder = await getFolderById(id);
   if (!folder) {
     return false;
   }
 
-  // Системные папки нельзя удалять
-  if (folder.isSystem) {
+  // Системные папки нельзя удалять, если не указан флаг force
+  if (folder.isSystem && !force) {
     throw new Error("Cannot delete system folder");
   }
 

@@ -710,29 +710,29 @@ export const up = async (connection: PoolConnection): Promise<void> => {
     console.log("✅ Certificate templates created");
   }
 
-  // Системные папки
-  const [existingFolders] = await connection.query<any[]>(
-    "SELECT COUNT(*) as count FROM folders WHERE is_system = TRUE"
-  );
+  // Системные папки - удалено по запросу
+  // const [existingFolders] = await connection.query<any[]>(
+  //   "SELECT COUNT(*) as count FROM folders WHERE is_system = TRUE"
+  // );
 
-  if (existingFolders[0].count === 0) {
-    const systemFolders = [
-      { name: "Courses", path: "/Courses" },
-      { name: "Certificates", path: "/Certificates" },
-      { name: "Profiles", path: "/Profiles" },
-      { name: "Groups", path: "/Groups" },
-      { name: "Misc", path: "/Misc" },
-      { name: "Documents", path: "/Documents" },
-    ];
+  // if (existingFolders[0].count === 0) {
+  //   const systemFolders = [
+  //     { name: "Courses", path: "/Courses" },
+  //     { name: "Certificates", path: "/Certificates" },
+  //     { name: "Profiles", path: "/Profiles" },
+  //     { name: "Groups", path: "/Groups" },
+  //     { name: "Misc", path: "/Misc" },
+  //     { name: "Documents", path: "/Documents" },
+  //   ];
 
-    for (const folder of systemFolders) {
-      await connection.query(
-        `INSERT INTO folders (uuid, name, parent_id, path, is_system) VALUES (?, ?, NULL, ?, TRUE)`,
-        [randomUUID(), folder.name, folder.path]
-      );
-    }
-    console.log("✅ System folders created");
-  }
+  //   for (const folder of systemFolders) {
+  //     await connection.query(
+  //       `INSERT INTO folders (uuid, name, parent_id, path, is_system) VALUES (?, ?, NULL, ?, TRUE)`,
+  //       [randomUUID(), folder.name, folder.path]
+  //     );
+  //   }
+  //   console.log("✅ System folders created");
+  // }
 
   // Аудитории
   const [existingClassrooms] = await connection.query<any[]>(

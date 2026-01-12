@@ -6,12 +6,20 @@
 import fs from "fs/promises";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
+import { executeQuery } from "../../utils/db";
 import {
   createFolder,
-  getFolderByPath,
+  deleteFolder,
+  type Folder,
 } from "../../repositories/folderRepository";
-import { createFile, checkFileExists } from "../../repositories/fileRepository";
+import {
+  createFile,
+  deleteFile,
+  updateFile,
+  type FileRecord,
+} from "../../repositories/fileRepository";
 import { getFileExtension } from "../../utils/storage/fileUtils";
+import { logActivity } from "../../utils/activityLogger";
 
 const STORAGE_PATH = path.resolve(process.cwd(), "storage");
 
@@ -38,16 +46,19 @@ function getMimeType(extension: string): string {
 }
 
 function getCategoryByPath(folderPath: string): string {
-  if (folderPath.includes("Certificates") || folderPath.includes("Сертификат"))
+  const lowerPath = folderPath.toLowerCase();
+
+  if (lowerPath.includes("certificates") || lowerPath.includes("сертификат"))
     return "certificate_generated";
-  if (folderPath.includes("Courses") || folderPath.includes("Курс"))
+  if (lowerPath.includes("courses") || lowerPath.includes("курс"))
     return "course_material";
-  if (folderPath.includes("Profiles") || folderPath.includes("Профил"))
+  if (lowerPath.includes("profiles") || lowerPath.includes("профил"))
     return "profile";
-  if (folderPath.includes("Groups") || folderPath.includes("Групп"))
+  if (lowerPath.includes("groups") || lowerPath.includes("групп"))
     return "group_file";
-  if (folderPath.includes("Documents") || folderPath.includes("Документы"))
+  if (lowerPath.includes("documents") || lowerPath.includes("документы"))
     return "other";
+
   return "other";
 }
 
@@ -62,133 +73,247 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    let foldersImported = 0;
-    let filesImported = 0;
-    let errors: string[] = [];
+    const stats = {
+      foldersCreated: 0,
+      foldersDeleted: 0,
+      filesCreated: 0,
+      filesUpdated: 0,
+      filesDeleted: 0,
+      errors: [] as string[],
+    };
 
-    // Синхронизация папок
-    async function syncFolders(
-      dirPath: string,
-      parentId: number | null = null,
-      parentPath: string = ""
-    ): Promise<void> {
-      const items = await fs.readdir(dirPath, { withFileTypes: true });
+    // 1. Загружаем текущее состояние БД
+    // --------------------------------------------------------------------------
 
-      for (const item of items) {
-        if (item.isDirectory()) {
-          // Игнорируем uploads, если он существует внутри storage, чтобы избежать дублирования старой структуры
-          // Но это зависит от того, перенес ли пользователь файлы. В данном случае сканируем всё.
-          // Если пользователь хочет переименовать uploads в storage, то содержимое уже там.
+    // Все папки
+    const dbFolders = await executeQuery<
+      { id: number; path: string; is_system: number }[]
+    >("SELECT id, path, is_system FROM folders WHERE deleted_at IS NULL");
+    const dbFoldersMap = new Map<string, { id: number; isSystem: boolean }>();
+    dbFolders.forEach((f) =>
+      dbFoldersMap.set(f.path, { id: f.id, isSystem: !!f.is_system })
+    );
 
-          const folderPath = parentPath
-            ? `${parentPath}/${item.name}`
-            : `/${item.name}`;
+    // Все файлы
+    const dbFiles = await executeQuery<
+      {
+        id: number;
+        uuid: string;
+        folder_id: number | null;
+        filename: string;
+        size_bytes: number;
+      }[]
+    >(
+      "SELECT id, uuid, folder_id, filename, size_bytes FROM files WHERE deleted_at IS NULL"
+    );
+    // Ключ: "folderId:filename" (folderId может быть 'null')
+    const dbFilesMap = new Map<
+      string,
+      { id: number; uuid: string; sizeBytes: number }
+    >();
+    dbFiles.forEach((f) => {
+      const key = `${f.folder_id === null ? "null" : f.folder_id}:${
+        f.filename
+      }`;
+      dbFilesMap.set(key, { id: f.id, uuid: f.uuid, sizeBytes: f.size_bytes });
+    });
 
-          try {
-            const existing = await getFolderByPath(folderPath);
-            let currentFolderId;
+    // Множества для отслеживания найденных элементов (для последующего удаления отсутствующих)
+    const visitedFolderIds = new Set<number>();
+    const visitedFileIds = new Set<number>(); // используем ID, а не UUID для консистентности
 
-            if (!existing) {
-              const folder = await createFolder({
-                name: item.name,
-                parentId: parentId,
-                isSystem: false,
-              });
-              foldersImported++;
-              currentFolderId = folder.id;
-            } else {
-              currentFolderId = existing.id;
-            }
+    // 2. Рекурсивное сканирование файловой системы
+    // --------------------------------------------------------------------------
 
-            const subDirPath = path.join(dirPath, item.name);
-            await syncFolders(subDirPath, currentFolderId, folderPath);
-          } catch (error: any) {
-            errors.push(`Папка ${folderPath}: ${error.message}`);
-          }
-        }
-      }
-    }
+    async function scanDirectory(
+      physicalPath: string,
+      relativePath: string, // Путь относительно корня (пустая строка или /FolderName...)
+      parentDbId: number | null
+    ) {
+      try {
+        const items = await fs.readdir(physicalPath, { withFileTypes: true });
 
-    // Синхронизация файлов
-    async function syncFiles(
-      dirPath: string,
-      relativePath: string = ""
-    ): Promise<void> {
-      const items = await fs.readdir(dirPath, { withFileTypes: true });
+        for (const item of items) {
+          const itemPhysicalPath = path.join(physicalPath, item.name);
 
-      for (const item of items) {
-        const itemPath = path.join(dirPath, item.name);
-        const itemRelativePath = relativePath
-          ? `${relativePath}/${item.name}`
-          : item.name;
+          // Пропускаем системные файлы и папки
+          if (
+            item.name.startsWith(".") ||
+            item.name === "Thumbs.db" ||
+            item.name === "node_modules"
+          )
+            continue;
 
-        if (item.isDirectory()) {
-          await syncFiles(itemPath, itemRelativePath);
-        } else if (item.isFile()) {
-          // Пропускаем системные файлы
-          if (item.name.startsWith(".") || item.name === "Thumbs.db") continue;
+          // Пропускаем uploads в корне, как в оригинальной логике, если нужно
+          // if (relativePath === "" && item.name === "uploads") continue;
 
-          try {
-            const stats = await fs.stat(itemPath);
-            const extension = getFileExtension(item.name);
-            const mimeType = getMimeType(extension);
-
+          if (item.isDirectory()) {
+            // === ПАПКА ===
             const folderPath = relativePath
-              ? `/${relativePath.replace(/\\/g, "/")}`
-              : "/";
-            const folder = await getFolderByPath(folderPath);
+              ? `${relativePath}/${item.name}`
+              : `/${item.name}`;
 
-            if (folder) {
-              // Проверяем существование файла
-              const existingFile = await checkFileExists(folder.id, item.name);
+            let currentFolderId: number;
+            const existingFolder = dbFoldersMap.get(folderPath);
 
-              if (existingFile) {
-                // Файл уже существует, пропускаем
-                continue;
+            if (existingFolder) {
+              // Папка существует в БД
+              currentFolderId = existingFolder.id;
+              visitedFolderIds.add(currentFolderId);
+            } else {
+              // Папка новая - создаем
+              try {
+                const newFolder = await createFolder({
+                  name: item.name,
+                  parentId: parentDbId,
+                  isSystem: false,
+                  userId: user.id, // Опционально сохраняем кто запустил синк, или null
+                });
+                currentFolderId = newFolder.id;
+
+                // Добавляем в мап, чтобы избежать дублей если вдруг
+                dbFoldersMap.set(folderPath, {
+                  id: currentFolderId,
+                  isSystem: false,
+                });
+                visitedFolderIds.add(currentFolderId);
+                stats.foldersCreated++;
+              } catch (folderErr: any) {
+                stats.errors.push(
+                  `Ошибка создания папки ${folderPath}: ${folderErr.message}`
+                );
+                continue; // Пропускаем содержимое если не смогли создать папку
               }
-
-              const uuid = uuidv4();
-              // storagePath - это путь папки относительно корня storage, а не полный путь
-              const storagePath =
-                itemRelativePath.substring(
-                  0,
-                  itemRelativePath.lastIndexOf("/")
-                ) || "";
-              const category = getCategoryByPath(folderPath);
-
-              await createFile({
-                uuid,
-                filename: item.name,
-                storedName: item.name,
-                mimeType,
-                sizeBytes: stats.size,
-                extension,
-                storagePath,
-                fullPath: itemPath, // Сейчас это абсолютный путь?
-                category: category as any,
-                folderId: folder.id,
-                uploadedBy: user.id,
-              });
-
-              filesImported++;
             }
-          } catch (error: any) {
-            errors.push(`Файл ${item.name}: ${error.message}`);
+
+            // Рекурсия
+            await scanDirectory(itemPhysicalPath, folderPath, currentFolderId);
+          } else if (item.isFile()) {
+            // === ФАЙЛ ===
+            const mapKey = `${parentDbId === null ? "null" : parentDbId}:${
+              item.name
+            }`;
+            const existingFile = dbFilesMap.get(mapKey);
+
+            // Получаем размер файла
+            let size = 0;
+            try {
+              const fileStats = await fs.stat(itemPhysicalPath);
+              size = fileStats.size;
+            } catch (e) {
+              console.warn(`Не удалось прочитать размер файла ${item.name}`);
+            }
+
+            if (existingFile) {
+              // Файл существует в БД
+              visitedFileIds.add(existingFile.id);
+
+              // Проверяем изменения (например, размер изменился)
+              if (existingFile.sizeBytes !== size) {
+                await executeQuery(
+                  "UPDATE files SET size_bytes = ?, updated_at = NOW() WHERE id = ?",
+                  [size, existingFile.id]
+                );
+                stats.filesUpdated++;
+              }
+            } else {
+              // Файл новый - создаем
+              try {
+                const extension = getFileExtension(item.name);
+                const mimeType = getMimeType(extension);
+                const category = getCategoryByPath(relativePath || "/");
+
+                const fileStoragePath = relativePath.startsWith("/")
+                  ? relativePath.substring(1)
+                  : relativePath;
+
+                await createFile({
+                  uuid: uuidv4(),
+                  filename: item.name,
+                  storedName: item.name,
+                  mimeType,
+                  sizeBytes: size,
+                  extension,
+                  storagePath: fileStoragePath,
+                  fullPath: itemPhysicalPath,
+                  category: category as any,
+                  folderId: parentDbId,
+                  uploadedBy: user.id,
+                });
+
+                stats.filesCreated++;
+              } catch (fileErr: any) {
+                stats.errors.push(
+                  `Ошибка создания файла ${item.name}: ${fileErr.message}`
+                );
+              }
+            }
           }
+        }
+      } catch (err: any) {
+        stats.errors.push(
+          `Ошибка доступа к папке ${physicalPath}: ${err.message}`
+        );
+      }
+    }
+
+    // Запускаем сканирование
+    await scanDirectory(STORAGE_PATH, "", null); // Root, relative="", parentId=null
+
+    // 3. Удаление несуществующих элементов (Cleanup)
+    // --------------------------------------------------------------------------
+
+    // Папки
+    for (const [path, info] of dbFoldersMap.entries()) {
+      if (!visitedFolderIds.has(info.id)) {
+        // if (info.isSystem) {
+        //   continue;
+        // }
+
+        try {
+          await deleteFolder(info.id, true);
+          stats.foldersDeleted++;
+        } catch (delErr: any) {
+          stats.errors.push(
+            `Ошибка удаления папки ${path} (ID: ${info.id}): ${delErr.message}`
+          );
         }
       }
     }
 
-    // Запуск синхронизации
-    await syncFolders(STORAGE_PATH);
-    await syncFiles(STORAGE_PATH);
+    // Файлы
+    for (const [key, info] of dbFilesMap.entries()) {
+      if (!visitedFileIds.has(info.id)) {
+        try {
+          await deleteFile(info.uuid);
+          stats.filesDeleted++;
+        } catch (delErr: any) {
+          stats.errors.push(
+            `Ошибка удаления файла (ID: ${info.id}): ${delErr.message}`
+          );
+        }
+      }
+    }
+
+    // Логирование действия
+    await logActivity(
+      event,
+      "IMPORT",
+      "SYSTEM",
+      undefined,
+      "Синхронизация файлового менеджера",
+      stats
+    );
 
     return {
       success: true,
-      foldersImported,
-      filesImported,
-      errors: errors.length > 0 ? errors : undefined,
-      message: `Синхронизация завершена: ${foldersImported} папок, ${filesImported} файлов`,
+      foldersImported: stats.foldersCreated,
+      filesImported: stats.filesCreated,
+      stats: stats,
+      errors: stats.errors.length > 0 ? stats.errors : undefined,
+      message: `Синхронизация завершена: 
+        +Папок: ${stats.foldersCreated}, -Папок: ${stats.foldersDeleted}
+        +Файлов: ${stats.filesCreated}, ~Обновлено: ${stats.filesUpdated}, -Удалено: ${stats.filesDeleted}`,
     };
   } catch (error: any) {
     console.error("Ошибка синхронизации:", error);
