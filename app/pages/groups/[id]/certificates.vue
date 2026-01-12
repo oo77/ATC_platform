@@ -506,10 +506,7 @@
                     <!-- Скачать (показываем для выданных сертификатов) -->
                     <a
                       v-if="row.certificate?.status === 'issued'"
-                      :href="
-                        row.certificate.pdfFileUrl ||
-                        `/api/certificates/download/${row.certificate.id}`
-                      "
+                      :href="`/api/certificates/download/${row.certificate.id}`"
                       target="_blank"
                       class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-primary transition-colors"
                       title="Скачать сертификат"

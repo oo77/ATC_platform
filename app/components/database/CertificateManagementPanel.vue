@@ -584,8 +584,8 @@
                 <div class="flex items-center justify-center gap-2">
                   <!-- Скачать PDF -->
                   <a
-                    v-if="cert.pdfFileUrl"
-                    :href="cert.pdfFileUrl"
+                    v-if="cert.id"
+                    :href="`/api/certificates/download/${cert.id}`"
                     target="_blank"
                     class="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
                     title="Скачать PDF"
@@ -667,9 +667,7 @@
       >
         <p class="text-sm text-gray-600 dark:text-gray-400">
           Показано {{ (pagination.page - 1) * pagination.limit + 1 }} -
-          {{
-            Math.min(pagination.page * pagination.limit, pagination.total)
-          }}
+          {{ Math.min(pagination.page * pagination.limit, pagination.total) }}
           из {{ pagination.total }}
         </p>
         <div class="flex items-center gap-2">

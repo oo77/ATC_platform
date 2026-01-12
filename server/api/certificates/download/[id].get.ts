@@ -7,6 +7,8 @@ import * as fs from "fs";
 import * as path from "path";
 import { getIssuedCertificateById } from "../../../repositories/certificateTemplateRepository";
 
+const STORAGE_ROOT = path.join(process.cwd(), "storage");
+
 export default defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, "id");
@@ -37,114 +39,98 @@ export default defineEventHandler(async (event) => {
     console.log(
       `[DOWNLOAD] Сертификат найден: ${certificate.certificateNumber}`
     );
-    console.log(`[DOWNLOAD] PDF URL: ${certificate.pdfFileUrl}`);
-    console.log(`[DOWNLOAD] DOCX URL: ${certificate.docxFileUrl}`);
 
-    // Определяем файл для скачивания
-    let fileUrl: string | null = null;
-    let contentType: string = "";
-    let extension: string = "";
-    let actualFormat: string = "";
+    // Определяем имя файла
+    let fileName = "";
+    if (requestedFormat === "docx" && certificate.docxFileUrl) {
+      fileName = path.basename(certificate.docxFileUrl);
+    } else if (certificate.pdfFileUrl) {
+      fileName = path.basename(certificate.pdfFileUrl);
+    }
+
+    // Если в URL нет имени файла, пробуем сгенерировать из номера
+    if (!fileName && certificate.certificateNumber) {
+      fileName = `${certificate.certificateNumber.replace(
+        /[\/\\:*?"<>|]/g,
+        "_"
+      )}.${requestedFormat}`;
+    }
+
+    if (!fileName) {
+      throw createError({
+        statusCode: 404,
+        message: "Не удалось определить имя файла сертификата",
+      });
+    }
+
+    // Стратегии поиска файла
+    const candidates: string[] = [];
+
+    // 1. Прямой путь из БД (если есть)
+    if (requestedFormat === "docx" && certificate.docxFileUrl)
+      candidates.push(certificate.docxFileUrl);
+    else if (certificate.pdfFileUrl) candidates.push(certificate.pdfFileUrl);
+
+    // 2. В папке storage/Certificates
+    candidates.push(path.join("storage", "Certificates", fileName));
+
+    // 3. В папке storage/Certificates (сгенерированное имя из номера)
+    const generatedName = `${certificate.certificateNumber.replace(
+      /[\/\\:*?"<>|]/g,
+      "_"
+    )}.${requestedFormat}`;
+    candidates.push(path.join("storage", "Certificates", generatedName));
+
+    // 4. В папке storage/Certificates/generated (legacy)
+    candidates.push(
+      path.join("storage", "Certificates", "generated", fileName)
+    );
+    candidates.push(
+      path.join("storage", "Certificates", "generated", generatedName)
+    );
+
+    // 5. То же самое но с lowercase 'certificates' (на всякий случай)
+    candidates.push(path.join("storage", "certificates", fileName));
+    candidates.push(
+      path.join("storage", "certificates", "generated", fileName)
+    );
+
     let filePath: string | null = null;
+    let extension = requestedFormat;
 
-    const searchPaths = [
-      // 1. Direct path from DB
-      certificate.pdfFileUrl,
-      // 2. Standard location (Certificate root)
-      certificate.pdfFileUrl
-        ? path.join(
-            "/storage/Certificates",
-            path.basename(certificate.pdfFileUrl)
-          )
-        : null,
-      // 3. Nested generated paths (legacy/import locations)
-      certificate.pdfFileUrl
-        ? path.join(
-            "/storage/Certificates/certificates/generated",
-            path.basename(certificate.pdfFileUrl)
-          )
-        : null,
-      certificate.pdfFileUrl
-        ? path.join(
-            "/storage/certificates/certificates/generated",
-            path.basename(certificate.pdfFileUrl)
-          )
-        : null,
-      // 4. Just filename in known folder
-      certificate.certificateNumber
-        ? path.join(
-            "/storage/Certificates",
-            `${certificate.certificateNumber.replace(
-              /[\/\\:*?"<>|]/g,
-              "_"
-            )}.pdf`
-          )
-        : null,
-    ];
+    for (const candidate of candidates) {
+      if (!candidate) continue;
 
-    if (requestedFormat === "docx") {
-      // DOCX logic (simplified for now, strictly follows DB or similar pattern if needed)
-      if (
-        certificate.docxFileUrl &&
-        fs.existsSync(path.join(process.cwd(), certificate.docxFileUrl))
-      ) {
-        fileUrl = certificate.docxFileUrl;
-        filePath = path.join(process.cwd(), fileUrl);
-        contentType =
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-        extension = "docx";
-        actualFormat = "docx";
+      // Убираем leading slash для path.join
+      const cleanCandidate =
+        candidate.startsWith("/") || candidate.startsWith("\\")
+          ? candidate.slice(1)
+          : candidate;
+      const absPath = path.join(process.cwd(), cleanCandidate);
+
+      if (fs.existsSync(absPath)) {
+        filePath = absPath;
+        break;
       }
     }
 
-    // Attempt to find PDF if no DOCX selected or found
+    // Если не нашли, попробуем поискать рекурсивно в storage/Certificates
     if (!filePath) {
-      for (const searchPath of searchPaths) {
-        if (!searchPath) continue;
-
-        // Remove leading slash for path.join if it exists to ensure relative to cwd works or is absolute?
-        // path.join(process.cwd(), '/foo') -> D:\foo (absolute). We want relative to project root usually.
-        // But our strings start with /storage.
-        // let's strip leading / or use it as relative.
-        const cleanPath =
-          searchPath.startsWith("/") || searchPath.startsWith("\\")
-            ? searchPath.slice(1)
-            : searchPath;
-        const attemptPath = path.join(process.cwd(), cleanPath);
-
-        if (fs.existsSync(attemptPath)) {
-          fileUrl = searchPath; // Keep the found path
-          filePath = attemptPath;
-          contentType = "application/pdf";
-          extension = "pdf";
-          actualFormat = "pdf";
-          console.log(`[DOWNLOAD] Found PDF at: ${attemptPath}`);
-          break;
-        }
-      }
-    }
-
-    // Fallback to DOCX if PDF not found and format wasn't strictly PDF
-    if (!filePath && certificate.docxFileUrl) {
-      const cleanDocx = certificate.docxFileUrl.startsWith("/")
-        ? certificate.docxFileUrl.slice(1)
-        : certificate.docxFileUrl;
-      const attemptDocx = path.join(process.cwd(), cleanDocx);
-      if (fs.existsSync(attemptDocx)) {
-        console.log(`[DOWNLOAD] PDF not found, falling back to DOCX`);
-        fileUrl = certificate.docxFileUrl;
-        filePath = attemptDocx;
-        contentType =
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-        extension = "docx";
-        actualFormat = "docx";
+      console.log(
+        `[DOWNLOAD] Файл не найден по стандартным путям. Ищем рекурсивно в storage/Certificates...`
+      );
+      const searchRoot = path.join(STORAGE_ROOT, "Certificates");
+      const found =
+        findFileRecursively(searchRoot, fileName) ||
+        findFileRecursively(searchRoot, generatedName);
+      if (found) {
+        filePath = found;
       }
     }
 
     if (!filePath) {
       console.error(
-        `[DOWNLOAD] Файл сертификата ${id} не найден. Searched in:`,
-        searchPaths
+        `[DOWNLOAD] Файл сертификата ${id} не найден. Имя файла: ${fileName}`
       );
       throw createError({
         statusCode: 404,
@@ -152,18 +138,22 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    console.log(`[DOWNLOAD] Отдаём файл: ${filePath}`);
+
     // Читаем файл
     const fileBuffer = fs.readFileSync(filePath);
 
-    // Формируем имя файла для скачивания
-    const downloadFilename = `Сертификат_${certificate.certificateNumber.replace(
-      /\//g,
+    // MIME type
+    const contentType =
+      extension === "docx"
+        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        : "application/pdf";
+
+    // Имя для скачивания (безопасное)
+    const downloadFilename = `Certificate_${certificate.certificateNumber.replace(
+      /[\/\\:*?"<>|]/g,
       "_"
     )}.${extension}`;
-
-    console.log(
-      `[DOWNLOAD] Отдаём файл: ${downloadFilename} (${actualFormat}, ${fileBuffer.length} байт)`
-    );
 
     // Устанавливаем заголовки
     setHeader(event, "Content-Type", contentType);
@@ -188,3 +178,25 @@ export default defineEventHandler(async (event) => {
     });
   }
 });
+
+function findFileRecursively(dir: string, filename: string): string | null {
+  if (!fs.existsSync(dir)) return null;
+
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (entry.isFile()) {
+        if (entry.name.toLowerCase() === filename.toLowerCase()) {
+          return path.join(dir, entry.name);
+        }
+      } else if (entry.isDirectory()) {
+        const found = findFileRecursively(path.join(dir, entry.name), filename);
+        if (found) return found;
+      }
+    }
+  } catch (e) {
+    console.warn(`Error scanning dir ${dir}:`, e);
+  }
+  return null;
+}
