@@ -1,0 +1,1130 @@
+### MENU
+
+- 
+            [Dashboard](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [eCommerce](https://demo.tailadmin.com/index.html)
+
+
+                  [Analytics](https://demo.tailadmin.com/analytics.html)
+
+
+                  [Marketing](https://demo.tailadmin.com/marketing.html)
+
+
+                  [CRM](https://demo.tailadmin.com/crm.html)
+
+
+                  [Stocks](https://demo.tailadmin.com/stocks.html)
+
+
+                  [SaaS
+
+
+                        New](https://demo.tailadmin.com/saas.html)
+
+
+                  [Logistics
+
+
+                        New](https://demo.tailadmin.com/logistics.html)
+
+
+
+
+
+- 
+                  [eCommerce](https://demo.tailadmin.com/index.html)
+
+- 
+                  [Analytics](https://demo.tailadmin.com/analytics.html)
+
+- 
+                  [Marketing](https://demo.tailadmin.com/marketing.html)
+
+- 
+                  [CRM](https://demo.tailadmin.com/crm.html)
+
+- 
+                  [Stocks](https://demo.tailadmin.com/stocks.html)
+
+- 
+                  [SaaS
+
+
+                        New](https://demo.tailadmin.com/saas.html)
+
+- 
+                  [Logistics
+
+
+                        New](https://demo.tailadmin.com/logistics.html)
+
+- 
+            [AI Assistant
+
+
+
+
+                  New](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [Text Generator](https://demo.tailadmin.com/text-generator.html)
+
+
+                  [Image Generator](https://demo.tailadmin.com/image-generator.html)
+
+
+                  [Code Generator](https://demo.tailadmin.com/code-generator.html)
+
+
+                  [Video Generator](https://demo.tailadmin.com/video-generator.html)
+
+
+
+
+
+- 
+                  [Text Generator](https://demo.tailadmin.com/text-generator.html)
+
+- 
+                  [Image Generator](https://demo.tailadmin.com/image-generator.html)
+
+- 
+                  [Code Generator](https://demo.tailadmin.com/code-generator.html)
+
+- 
+                  [Video Generator](https://demo.tailadmin.com/video-generator.html)
+
+- 
+            [E-commerce
+
+
+
+
+                  New](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [Products](https://demo.tailadmin.com/products-list.html)
+
+
+                  [Add Product](https://demo.tailadmin.com/add-product.html)
+
+
+                  [Billing](https://demo.tailadmin.com/billing.html)
+
+
+                  [Invoices](https://demo.tailadmin.com/invoices.html)
+
+
+                  [Single Invoice](https://demo.tailadmin.com/single-invoice.html)
+
+
+                  [Create Invoice](https://demo.tailadmin.com/create-invoice.html)
+
+
+                  [Transactions](https://demo.tailadmin.com/transactions.html)
+
+
+                  [Single Transaction](https://demo.tailadmin.com/single-transaction.html)
+
+
+
+
+
+- 
+                  [Products](https://demo.tailadmin.com/products-list.html)
+
+- 
+                  [Add Product](https://demo.tailadmin.com/add-product.html)
+
+- 
+                  [Billing](https://demo.tailadmin.com/billing.html)
+
+- 
+                  [Invoices](https://demo.tailadmin.com/invoices.html)
+
+- 
+                  [Single Invoice](https://demo.tailadmin.com/single-invoice.html)
+
+- 
+                  [Create Invoice](https://demo.tailadmin.com/create-invoice.html)
+
+- 
+                  [Transactions](https://demo.tailadmin.com/transactions.html)
+
+- 
+                  [Single Transaction](https://demo.tailadmin.com/single-transaction.html)
+
+- 
+            [Calendar](https://demo.tailadmin.com/calendar.html)
+
+- 
+            [User Profile](https://demo.tailadmin.com/profile.html)
+
+- 
+            [Task](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [List](https://demo.tailadmin.com/task-list.html)
+
+
+                  [Kanban](https://demo.tailadmin.com/task-kanban.html)
+
+
+
+
+
+- 
+                  [List](https://demo.tailadmin.com/task-list.html)
+
+- 
+                  [Kanban](https://demo.tailadmin.com/task-kanban.html)
+
+- 
+            [Forms](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [Form Elements](https://demo.tailadmin.com/form-elements.html)
+
+
+                  [Form Layout](https://demo.tailadmin.com/form-layout.html)
+
+
+
+
+
+- 
+                  [Form Elements](https://demo.tailadmin.com/form-elements.html)
+
+- 
+                  [Form Layout](https://demo.tailadmin.com/form-layout.html)
+
+- 
+            [Tables](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [Basic Tables](https://demo.tailadmin.com/basic-tables.html)
+
+### MENU
+
+[Data Tables](https://demo.tailadmin.com/data-tables.html)
+
+
+
+
+
+- 
+                  [Basic Tables](https://demo.tailadmin.com/basic-tables.html)
+
+- 
+                  [Data Tables](https://demo.tailadmin.com/data-tables.html)
+
+- 
+            [Pages](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [File Manager](https://demo.tailadmin.com/file-manager.html)
+
+
+                  [Pricing Tables](https://demo.tailadmin.com/pricing-tables.html)
+
+
+                  [FAQ](https://demo.tailadmin.com/faq.html)
+
+
+                  [API Keys
+
+
+                        New](https://demo.tailadmin.com/api-keys.html)
+
+
+                  [Integrations
+
+
+                        New](https://demo.tailadmin.com/integrations.html)
+
+
+
+                  [Blank Page](https://demo.tailadmin.com/blank.html)
+
+
+                  [404 Error](https://demo.tailadmin.com/404.html)
+
+
+                  [500 Error](https://demo.tailadmin.com/500.html)
+
+
+                  [503 Error](https://demo.tailadmin.com/503.html)
+
+
+                  [Coming Soon](https://demo.tailadmin.com/coming-soon.html)
+
+
+                  [Maintenance](https://demo.tailadmin.com/maintenance.html)
+
+
+                  [Success](https://demo.tailadmin.com/success.html)
+
+
+
+
+
+- 
+                  [File Manager](https://demo.tailadmin.com/file-manager.html)
+
+- 
+                  [Pricing Tables](https://demo.tailadmin.com/pricing-tables.html)
+
+- 
+                  [FAQ](https://demo.tailadmin.com/faq.html)
+
+- 
+                  [API Keys
+
+
+                        New](https://demo.tailadmin.com/api-keys.html)
+
+- 
+                  [Integrations
+
+
+                        New](https://demo.tailadmin.com/integrations.html)
+
+- 
+                  [Blank Page](https://demo.tailadmin.com/blank.html)
+
+- 
+                  [404 Error](https://demo.tailadmin.com/404.html)
+
+- 
+                  [500 Error](https://demo.tailadmin.com/500.html)
+
+- 
+                  [503 Error](https://demo.tailadmin.com/503.html)
+
+- 
+                  [Coming Soon](https://demo.tailadmin.com/coming-soon.html)
+
+- 
+                  [Maintenance](https://demo.tailadmin.com/maintenance.html)
+
+- 
+                  [Success](https://demo.tailadmin.com/success.html)
+
+[Dashboard](https://demo.tailadmin.com/calendar)
+- 
+                  [eCommerce](https://demo.tailadmin.com/index.html)
+
+- 
+                  [Analytics](https://demo.tailadmin.com/analytics.html)
+
+- 
+                  [Marketing](https://demo.tailadmin.com/marketing.html)
+
+- 
+                  [CRM](https://demo.tailadmin.com/crm.html)
+
+- 
+                  [Stocks](https://demo.tailadmin.com/stocks.html)
+
+- 
+                  [SaaS
+
+
+                        New](https://demo.tailadmin.com/saas.html)
+
+- 
+                  [Logistics
+
+
+                        New](https://demo.tailadmin.com/logistics.html)
+
+[eCommerce](https://demo.tailadmin.com/index.html)
+[Analytics](https://demo.tailadmin.com/analytics.html)
+[Marketing](https://demo.tailadmin.com/marketing.html)
+[CRM](https://demo.tailadmin.com/crm.html)
+[Stocks](https://demo.tailadmin.com/stocks.html)
+[SaaS
+
+
+                        New](https://demo.tailadmin.com/saas.html)
+[Logistics
+
+
+                        New](https://demo.tailadmin.com/logistics.html)
+[AI Assistant
+
+
+
+
+                  New](https://demo.tailadmin.com/calendar)
+- 
+                  [Text Generator](https://demo.tailadmin.com/text-generator.html)
+
+- 
+                  [Image Generator](https://demo.tailadmin.com/image-generator.html)
+
+- 
+                  [Code Generator](https://demo.tailadmin.com/code-generator.html)
+
+- 
+                  [Video Generator](https://demo.tailadmin.com/video-generator.html)
+
+[Text Generator](https://demo.tailadmin.com/text-generator.html)
+[Image Generator](https://demo.tailadmin.com/image-generator.html)
+[Code Generator](https://demo.tailadmin.com/code-generator.html)
+[Video Generator](https://demo.tailadmin.com/video-generator.html)
+[E-commerce
+
+
+
+
+                  New](https://demo.tailadmin.com/calendar)
+- 
+                  [Products](https://demo.tailadmin.com/products-list.html)
+
+- 
+                  [Add Product](https://demo.tailadmin.com/add-product.html)
+
+- 
+                  [Billing](https://demo.tailadmin.com/billing.html)
+
+- 
+                  [Invoices](https://demo.tailadmin.com/invoices.html)
+
+- 
+                  [Single Invoice](https://demo.tailadmin.com/single-invoice.html)
+
+-
+
+### MENU
+
+[Create Invoice](https://demo.tailadmin.com/create-invoice.html)
+
+- 
+                  [Transactions](https://demo.tailadmin.com/transactions.html)
+
+- 
+                  [Single Transaction](https://demo.tailadmin.com/single-transaction.html)
+
+[Products](https://demo.tailadmin.com/products-list.html)
+[Add Product](https://demo.tailadmin.com/add-product.html)
+[Billing](https://demo.tailadmin.com/billing.html)
+[Invoices](https://demo.tailadmin.com/invoices.html)
+[Single Invoice](https://demo.tailadmin.com/single-invoice.html)
+[Create Invoice](https://demo.tailadmin.com/create-invoice.html)
+[Transactions](https://demo.tailadmin.com/transactions.html)
+[Single Transaction](https://demo.tailadmin.com/single-transaction.html)
+[Calendar](https://demo.tailadmin.com/calendar.html)
+[User Profile](https://demo.tailadmin.com/profile.html)
+[Task](https://demo.tailadmin.com/calendar)
+- 
+                  [List](https://demo.tailadmin.com/task-list.html)
+
+- 
+                  [Kanban](https://demo.tailadmin.com/task-kanban.html)
+
+[List](https://demo.tailadmin.com/task-list.html)
+[Kanban](https://demo.tailadmin.com/task-kanban.html)
+[Forms](https://demo.tailadmin.com/calendar)
+- 
+                  [Form Elements](https://demo.tailadmin.com/form-elements.html)
+
+- 
+                  [Form Layout](https://demo.tailadmin.com/form-layout.html)
+
+[Form Elements](https://demo.tailadmin.com/form-elements.html)
+[Form Layout](https://demo.tailadmin.com/form-layout.html)
+[Tables](https://demo.tailadmin.com/calendar)
+- 
+                  [Basic Tables](https://demo.tailadmin.com/basic-tables.html)
+
+- 
+                  [Data Tables](https://demo.tailadmin.com/data-tables.html)
+
+[Basic Tables](https://demo.tailadmin.com/basic-tables.html)
+[Data Tables](https://demo.tailadmin.com/data-tables.html)
+[Pages](https://demo.tailadmin.com/calendar)
+- 
+                  [File Manager](https://demo.tailadmin.com/file-manager.html)
+
+- 
+                  [Pricing Tables](https://demo.tailadmin.com/pricing-tables.html)
+
+- 
+                  [FAQ](https://demo.tailadmin.com/faq.html)
+
+- 
+                  [API Keys
+
+
+                        New](https://demo.tailadmin.com/api-keys.html)
+
+- 
+                  [Integrations
+
+
+                        New](https://demo.tailadmin.com/integrations.html)
+
+- 
+                  [Blank Page](https://demo.tailadmin.com/blank.html)
+
+- 
+                  [404 Error](https://demo.tailadmin.com/404.html)
+
+- 
+                  [500 Error](https://demo.tailadmin.com/500.html)
+
+- 
+                  [503 Error](https://demo.tailadmin.com/503.html)
+
+- 
+                  [Coming Soon](https://demo.tailadmin.com/coming-soon.html)
+
+- 
+                  [Maintenance](https://demo.tailadmin.com/maintenance.html)
+
+- 
+                  [Success](https://demo.tailadmin.com/success.html)
+
+[File Manager](https://demo.tailadmin.com/file-manager.html)
+[Pricing Tables](https://demo.tailadmin.com/pricing-tables.html)
+[FAQ](https://demo.tailadmin.com/faq.html)
+[API Keys
+
+
+                        New](https://demo.tailadmin.com/api-keys.html)
+[Integrations
+
+
+                        New](https://demo.tailadmin.com/integrations.html)
+[Blank Page](https://demo.tailadmin.com/blank.html)
+[404 Error](https://demo.tailadmin.com/404.html)
+[500 Error](https://demo.tailadmin.com/500.html)
+[503 Error](https://demo.tailadmin.com/503.html)
+[Coming Soon](https://demo.tailadmin.com/coming-soon.html)
+[Maintenance](https://demo.tailadmin.com/maintenance.html)
+[Success](https://demo.tailadmin.com/success.html)
+
+### Support
+
+- 
+            [Chat](https://demo.tailadmin.com/chat.html)
+
+- 
+            [Support Ticket
+
+
+
+                  New](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [Ticket List](https://demo.tailadmin.com/support-tickets.html)
+
+
+                  [Ticket Reply](https://demo.tailadmin.com/support-ticket-reply.html)
+
+
+
+
+
+- 
+                  [Ticket List](https://demo.tailadmin.com/support-tickets.html)
+
+- 
+                  [Ticket Reply](https://demo.tailadmin.com/support-ticket-reply.html)
+
+- 
+            [Email](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [Inbox](https://demo.tailadmin.com/inbox.html)
+
+
+                  [Details](https://demo.tailadmin.com/inbox-details.html)
+
+
+
+
+
+- 
+                  [Inbox](https://demo.tailadmin.com/inbox.html)
+
+- 
+                  [Details](https://demo.tailadmin.com/inbox-details.html)
+
+[Chat](https://demo.tailadmin.com/chat.html)
+[Support Ticket
+
+
+
+                  New](https://demo.tailadmin.com/calendar)
+- 
+                  [Ticket List](https://demo.tailadmin.com/support-tickets.html)
+
+- 
+                  [Ticket Reply](https://demo.tailadmin.com/support-ticket-reply.html)
+
+[Ticket List](https://demo.tailadmin.com/support-tickets.html)
+[Ticket Reply](https://demo.tailadmin.com/support-ticket-reply.html)
+[Email](https://demo.tailadmin.com/calendar)
+- 
+                  [Inbox](https://demo.tailadmin.com/inbox.html)
+
+- 
+                  [Details](https://demo.tailadmin.com/inbox-details.html)
+
+[Inbox](https://demo.tailadmin.com/inbox.html)
+[Details](https://demo.tailadmin.com/inbox-details.html)
+
+### others
+
+- 
+            [Charts](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [Line Chart](https://demo.tailadmin.com/line-chart.html)
+
+
+                  [Bar Chart](https://demo.tailadmin.com/bar-chart.html)
+
+
+                  [Pie Chart](https://demo.tailadmin.com/pie-chart.html)
+
+
+
+
+
+- 
+                  [Line Chart](https://demo.tailadmin.com/line-chart.html)
+
+- 
+                  [Bar Chart](https://demo.tailadmin.com/bar-chart.html)
+
+- 
+                  [Pie Chart](https://demo.tailadmin.com/pie-chart.html)
+
+- 
+            [UI Elements](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [Alerts](https://demo.tailadmin.com/alerts.html)
+
+
+                  [Avatars](https://demo.tailadmin.com/avatars.html)
+
+
+                  [Badge](https://demo.tailadmin.com/badge.html)
+
+
+                  [Breadcrumb](https://demo.tailadmin.com/breadcrumb.html)
+
+
+                  [Buttons](https://demo.tailadmin.com/buttons.html)
+
+
+                  [Buttons Group](https://demo.tailadmin.com/buttons-group.html)
+
+
+                  [Cards](https://demo.tailadmin.com/cards.html)
+
+
+                  [Carousel](https://demo.tailadmin.com/carousel.html)
+
+
+                  [Dropdowns](https://demo.tailadmin.com/dropdowns.html)
+
+
+                  [Images](https://demo.tailadmin.com/images.html)
+
+
+                  [Links](https://demo.tailadmin.com/links.html)
+
+
+                  [List](https://demo.tailadmin.com/list.html)
+
+
+                  [Modals](https://demo.tailadmin.com/modals.html)
+
+
+                  [Notifications](https://demo.tailadmin.com/notifications.html)
+
+
+                  [Pagination](https://demo.tailadmin.com/pagination.html)
+
+
+                  [Popovers](https://demo.tailadmin.com/popovers.html)
+
+
+                  [Progress Bars](https://demo.tailadmin.com/progress-bar.html)
+
+
+                  [Ribbons](https://demo.tailadmin.com/ribbons.html)
+
+
+                  [Spinners](https://demo.tailadmin.com/spinners.html)
+
+
+                  [Tabs](https://demo.tailadmin.com/tabs.html)
+
+
+                  [Tooltips](https://demo.tailadmin.com/tooltips.html)
+
+
+
+                  [Videos](https://demo.tailadmin.com/videos.html)
+
+
+
+
+
+- 
+                  [Alerts](https://demo.tailadmin.com/alerts.html)
+
+- 
+                  [Avatars](https://demo.tailadmin.com/avatars.html)
+
+- 
+                  [Badge](https://demo.tailadmin.com/badge.html)
+
+- 
+                  [Breadcrumb](https://demo.tailadmin.com/breadcrumb.html)
+
+- 
+                  [Buttons](https://demo.tailadmin.com/buttons.html)
+
+- 
+                  [Buttons Group](https://demo.tailadmin.com/buttons-group.html)
+
+- 
+                  [Cards](https://demo.tailadmin.com/cards.html)
+
+- 
+                  [Carousel](https://demo.tailadmin.com/carousel.html)
+
+- 
+                  [Dropdowns](https://demo.tailadmin.com/dropdowns.html)
+
+- 
+                  [Images](https://demo.tailadmin.com/images.html)
+
+- 
+                  [Links](https://demo.tailadmin.com/links.html)
+
+- 
+                  [List](https://demo.tailadmin.com/list.html)
+
+- 
+                  [Modals](https://demo.tailadmin.com/modals.html)
+
+- 
+                  [Notifications](https://demo.tailadmin.com/notifications.html)
+
+- 
+                  [Pagination](https://demo.tailadmin.com/pagination.html)
+
+- 
+                  [Popovers](https://demo.tailadmin.com/popovers.html)
+
+- 
+                  [Progress Bars](https://demo.tailadmin.com/progress-bar.html)
+
+- 
+                  [Ribbons](https://demo.tailadmin.com/ribbons.html)
+
+- 
+                  [Spinners](https://demo.tailadmin.com/spinners.html)
+
+- 
+                  [Tabs](https://demo.tailadmin.com/tabs.html)
+
+- 
+                  [Tooltips](https://demo.tailadmin.com/tooltips.html)
+
+- 
+                  [Videos](https://demo.tailadmin.com/videos.html)
+
+- 
+            [Authentication](https://demo.tailadmin.com/calendar)
+
+
+
+
+
+                  [Sign In](https://demo.tailadmin.com/signin.html)
+
+
+                  [Sign Up](https://demo.tailadmin.com/signup.html)
+
+
+                  [Reset Password](https://demo.tailadmin.com/reset-password.html)
+
+
+                  [Two Step Verification](https://demo.tailadmin.com/two-step-verification.html)
+
+
+
+
+
+- 
+                  [Sign In](https://demo.tailadmin.com/signin.html)
+
+- 
+                  [Sign Up](https://demo.tailadmin.com/signup.html)
+
+- 
+                  [Reset Password](https://demo.tailadmin.com/reset-password.html)
+
+-
+
+### others
+
+[Two Step Verification](https://demo.tailadmin.com/two-step-verification.html)
+
+[Charts](https://demo.tailadmin.com/calendar)
+- 
+                  [Line Chart](https://demo.tailadmin.com/line-chart.html)
+
+- 
+                  [Bar Chart](https://demo.tailadmin.com/bar-chart.html)
+
+- 
+                  [Pie Chart](https://demo.tailadmin.com/pie-chart.html)
+
+[Line Chart](https://demo.tailadmin.com/line-chart.html)
+[Bar Chart](https://demo.tailadmin.com/bar-chart.html)
+[Pie Chart](https://demo.tailadmin.com/pie-chart.html)
+[UI Elements](https://demo.tailadmin.com/calendar)
+- 
+                  [Alerts](https://demo.tailadmin.com/alerts.html)
+
+- 
+                  [Avatars](https://demo.tailadmin.com/avatars.html)
+
+- 
+                  [Badge](https://demo.tailadmin.com/badge.html)
+
+- 
+                  [Breadcrumb](https://demo.tailadmin.com/breadcrumb.html)
+
+- 
+                  [Buttons](https://demo.tailadmin.com/buttons.html)
+
+- 
+                  [Buttons Group](https://demo.tailadmin.com/buttons-group.html)
+
+- 
+                  [Cards](https://demo.tailadmin.com/cards.html)
+
+- 
+                  [Carousel](https://demo.tailadmin.com/carousel.html)
+
+- 
+                  [Dropdowns](https://demo.tailadmin.com/dropdowns.html)
+
+- 
+                  [Images](https://demo.tailadmin.com/images.html)
+
+- 
+                  [Links](https://demo.tailadmin.com/links.html)
+
+- 
+                  [List](https://demo.tailadmin.com/list.html)
+
+- 
+                  [Modals](https://demo.tailadmin.com/modals.html)
+
+- 
+                  [Notifications](https://demo.tailadmin.com/notifications.html)
+
+- 
+                  [Pagination](https://demo.tailadmin.com/pagination.html)
+
+- 
+                  [Popovers](https://demo.tailadmin.com/popovers.html)
+
+- 
+                  [Progress Bars](https://demo.tailadmin.com/progress-bar.html)
+
+- 
+                  [Ribbons](https://demo.tailadmin.com/ribbons.html)
+
+- 
+                  [Spinners](https://demo.tailadmin.com/spinners.html)
+
+- 
+                  [Tabs](https://demo.tailadmin.com/tabs.html)
+
+- 
+                  [Tooltips](https://demo.tailadmin.com/tooltips.html)
+
+- 
+                  [Videos](https://demo.tailadmin.com/videos.html)
+
+[Alerts](https://demo.tailadmin.com/alerts.html)
+[Avatars](https://demo.tailadmin.com/avatars.html)
+[Badge](https://demo.tailadmin.com/badge.html)
+[Breadcrumb](https://demo.tailadmin.com/breadcrumb.html)
+[Buttons](https://demo.tailadmin.com/buttons.html)
+[Buttons Group](https://demo.tailadmin.com/buttons-group.html)
+[Cards](https://demo.tailadmin.com/cards.html)
+[Carousel](https://demo.tailadmin.com/carousel.html)
+[Dropdowns](https://demo.tailadmin.com/dropdowns.html)
+[Images](https://demo.tailadmin.com/images.html)
+[Links](https://demo.tailadmin.com/links.html)
+[List](https://demo.tailadmin.com/list.html)
+[Modals](https://demo.tailadmin.com/modals.html)
+[Notifications](https://demo.tailadmin.com/notifications.html)
+[Pagination](https://demo.tailadmin.com/pagination.html)
+[Popovers](https://demo.tailadmin.com/popovers.html)
+[Progress Bars](https://demo.tailadmin.com/progress-bar.html)
+[Ribbons](https://demo.tailadmin.com/ribbons.html)
+[Spinners](https://demo.tailadmin.com/spinners.html)
+[Tabs](https://demo.tailadmin.com/tabs.html)
+[Tooltips](https://demo.tailadmin.com/tooltips.html)
+[Videos](https://demo.tailadmin.com/videos.html)
+[Authentication](https://demo.tailadmin.com/calendar)
+- 
+                  [Sign In](https://demo.tailadmin.com/signin.html)
+
+- 
+                  [Sign Up](https://demo.tailadmin.com/signup.html)
+
+- 
+                  [Reset Password](https://demo.tailadmin.com/reset-password.html)
+
+- 
+                  [Two Step Verification](https://demo.tailadmin.com/two-step-verification.html)
+
+[Sign In](https://demo.tailadmin.com/signin.html)
+[Sign Up](https://demo.tailadmin.com/signup.html)
+[Reset Password](https://demo.tailadmin.com/reset-password.html)
+[Two Step Verification](https://demo.tailadmin.com/two-step-verification.html)
+
+### #1 Tailwind CSS Dashboard
+
+Leading Tailwind CSS Admin Template with 400+ UI Component and Pages.
+[Purchase Plan](https://tailadmin.com/pricing)
+
+##### Notification
+- 
+                [Terry Franci
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      5 min ago](https://demo.tailadmin.com/calendar)
+
+- 
+                [Alena Franci
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      8 min ago](https://demo.tailadmin.com/calendar)
+
+- 
+                [Jocelyn Kenter
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      15 min ago](https://demo.tailadmin.com/calendar)
+
+- 
+                [Brandon Philips
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      1 hr ago](https://demo.tailadmin.com/calendar)
+
+- 
+                [Terry Franci
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      5 min ago](https://demo.tailadmin.com/calendar)
+
+- 
+                [Alena Franci
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      8 min ago](https://demo.tailadmin.com/calendar)
+
+- 
+                [Jocelyn Kenter
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      15 min ago](https://demo.tailadmin.com/calendar)
+
+- 
+                [Brandon Philips
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      1 hr ago](https://demo.tailadmin.com/calendar)
+
+[Terry Franci
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      5 min ago](https://demo.tailadmin.com/calendar)
+[Alena Franci
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      8 min ago](https://demo.tailadmin.com/calendar)
+[Jocelyn Kenter
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      15 min ago](https://demo.tailadmin.com/calendar)
+[Brandon Philips
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      1 hr ago](https://demo.tailadmin.com/calendar)
+[Terry Franci
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      5 min ago](https://demo.tailadmin.com/calendar)
+[Alena Franci
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      8 min ago](https://demo.tailadmin.com/calendar)
+[Jocelyn Kenter
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      15 min ago](https://demo.tailadmin.com/calendar)
+[Brandon Philips
+                      requests permission to change
+                      Project - Nganter App
+
+
+
+                      Project
+
+                      1 hr ago](https://demo.tailadmin.com/calendar)
+[View All Notification](https://demo.tailadmin.com/calendar)
+[Musharof](https://demo.tailadmin.com/calendar)
+[[email protected]](https://demo.tailadmin.com/cdn-cgi/l/email-protection)
+- 
+              [Edit profile](https://demo.tailadmin.com/profile.html)
+
+- 
+              [Account settings](https://demo.tailadmin.com/chat.html)
+
+- 
+              [Support](https://demo.tailadmin.com/profile.html)
+
+[Edit profile](https://demo.tailadmin.com/profile.html)
+[Account settings](https://demo.tailadmin.com/chat.html)
+[Support](https://demo.tailadmin.com/profile.html)
+1. 
+        [Home](https://demo.tailadmin.com/index.html)
+
+2. 
+[Home](https://demo.tailadmin.com/index.html)
+
+##### Add / Edit Event
+
+### #1 Tailwind CSS Dashboard
+
+Plan your next big moment: schedule or edit an event to stay on track

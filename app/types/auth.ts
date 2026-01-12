@@ -1,0 +1,59 @@
+/**
+ * Типы для клиентской части (app)
+ * Дублируем необходимые типы из server/types/auth.ts
+ */
+
+// Роли пользователей
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  MANAGER = 'MANAGER',
+  TEACHER = 'TEACHER',
+  STUDENT = 'STUDENT',
+}
+
+// Публичные данные пользователя (без пароля)
+export interface UserPublic {
+  id: string;
+  role: UserRole;
+  name: string;
+  email: string;
+  phone?: string | null;
+  workplace?: string | null;
+  position?: string | null;
+  pinfl?: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Данные для входа
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+// Данные для регистрации
+export interface RegisterData {
+  name: string;
+  email: string;
+  password: string;
+  phone?: string;
+  workplace?: string;
+  position?: string;
+  pinfl?: string;
+  role?: UserRole;
+}
+
+// Ответ при успешной аутентификации
+export interface AuthResponse {
+  success: boolean;
+  user: UserPublic;
+  token: string;
+  refreshToken?: string;
+}
+
+// Ответ при ошибке
+export interface ErrorResponse {
+  success: false;
+  message: string;
+  errors?: Record<string, string[]>;
+}

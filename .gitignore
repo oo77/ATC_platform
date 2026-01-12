@@ -1,0 +1,41 @@
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Node dependencies
+node_modules
+
+# Logs
+logs
+*.log
+
+
+
+# Misc
+.DS_Store
+.fleet
+.idea
+*.resolved
+
+# Local scripts (not for production)
+scripts/
+
+# Storage uploads (local files)
+storage/uploads/
+
+# Ngrok configuration (contains authtoken)
+ngrok.yml
+
+# Environment files (contain secrets!)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# SSL certificates (only private keys are sensitive, CA certs are public)
+server/certs/*.key
+server/certs/*-private.pem

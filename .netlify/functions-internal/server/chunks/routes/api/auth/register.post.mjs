@@ -1,0 +1,112 @@
+import { d as defineEventHandler, r as readBody, c as createError, e as executeQuery, k as hashPassword, b as createTokenPayload, f as generateToken, h as generateRefreshToken, i as toPublicUser } from '../../../nitro/nitro.mjs';
+import { randomUUID } from 'crypto';
+import { v as validate, r as registerSchema } from '../../../_/validation.mjs';
+import { a as logActivityDirect } from '../../../_/activityLogger.mjs';
+import 'grammy';
+import 'uuid';
+import 'node:http';
+import 'node:https';
+import 'node:events';
+import 'node:buffer';
+import 'node:fs';
+import 'node:path';
+import 'node:crypto';
+import 'mysql2/promise';
+import 'bcryptjs';
+import 'jsonwebtoken';
+import 'zod';
+import '../../../_/activityLogRepository.mjs';
+
+const register_post = defineEventHandler(async (event) => {
+  try {
+    const body = await readBody(event);
+    const validation = validate(registerSchema, body);
+    if (!validation.success) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Validation Error",
+        data: {
+          success: false,
+          message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u0432\u0430\u043B\u0438\u0434\u0430\u0446\u0438\u0438 \u0434\u0430\u043D\u043D\u044B\u0445",
+          errors: validation.errors
+        }
+      });
+    }
+    const data = validation.data;
+    const existingUsers = await executeQuery(
+      "SELECT id FROM users WHERE email = ? LIMIT 1",
+      [data.email]
+    );
+    if (existingUsers.length > 0) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: "User Already Exists",
+        data: {
+          success: false,
+          message: "\u041F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044C \u0441 \u0442\u0430\u043A\u0438\u043C email \u0443\u0436\u0435 \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u0435\u0442",
+          errors: { email: ["Email \u0443\u0436\u0435 \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043E\u0432\u0430\u043D"] }
+        }
+      });
+    }
+    const passwordHash = await hashPassword(data.password);
+    const userId = randomUUID();
+    const role = data.role || "STUDENT";
+    await executeQuery(
+      `INSERT INTO users (id, role, name, email, password_hash, phone, workplace, position, pinfl, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))`,
+      [
+        userId,
+        role,
+        data.name,
+        data.email,
+        passwordHash,
+        data.phone || null,
+        data.workplace || null,
+        data.position || null,
+        data.pinfl || null
+      ]
+    );
+    const [newUser] = await executeQuery(
+      "SELECT * FROM users WHERE id = ? LIMIT 1",
+      [userId]
+    );
+    if (!newUser) {
+      throw new Error("Failed to create user");
+    }
+    const tokenPayload = createTokenPayload(newUser);
+    const token = generateToken(tokenPayload);
+    const refreshToken = generateRefreshToken(tokenPayload);
+    const response = {
+      success: true,
+      user: toPublicUser(newUser),
+      token,
+      refreshToken
+    };
+    console.log(`\u2705 User registered: ${newUser.email} (${newUser.role})`);
+    await logActivityDirect(
+      newUser.id,
+      "CREATE",
+      "USER",
+      newUser.id,
+      newUser.name,
+      { email: newUser.email, role: newUser.role, selfRegistration: true }
+    );
+    return response;
+  } catch (error) {
+    console.error("Registration error:", error);
+    if (error.statusCode) {
+      throw error;
+    }
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Registration Failed",
+      data: {
+        success: false,
+        message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u0438 \u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u0435\u043B\u044F"
+      }
+    });
+  }
+});
+
+export { register_post as default };
+//# sourceMappingURL=register.post.mjs.map
