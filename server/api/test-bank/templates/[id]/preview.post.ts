@@ -38,6 +38,10 @@ export default defineEventHandler(async (event) => {
             });
         }
 
+        // Получаем тело запроса (для языка)
+        const body = await readBody(event).catch(() => ({}));
+        const selectedLanguage = body?.language;
+
         // Получаем шаблон теста
         const template = await getTestTemplateById(templateId);
         if (!template) {
@@ -47,13 +51,30 @@ export default defineEventHandler(async (event) => {
             });
         }
 
+        // Проверяем допустимость языка
+        if (selectedLanguage && template.allowed_languages && template.allowed_languages.length > 0) {
+            if (!template.allowed_languages.includes(selectedLanguage)) {
+                throw createError({
+                    statusCode: 400,
+                    message: `Язык "${selectedLanguage}" не разрешен для этого шаблона`,
+                });
+            }
+        }
+
         // Получаем вопросы из банка (activeOnly = true)
-        const allQuestions = await getQuestionsByBankId(template.bank_id, true);
+        let allQuestions = await getQuestionsByBankId(template.bank_id, true);
+
+        // Фильтруем вопросы по языку, если он выбран
+        if (selectedLanguage) {
+            allQuestions = allQuestions.filter(q => q.language === selectedLanguage);
+        }
 
         if (allQuestions.length === 0) {
             throw createError({
                 statusCode: 400,
-                message: 'В банке вопросов нет активных вопросов',
+                message: selectedLanguage 
+                    ? `В банке нет активных вопросов на языке: ${selectedLanguage}`
+                    : 'В банке вопросов нет активных вопросов',
             });
         }
 
@@ -67,7 +88,6 @@ export default defineEventHandler(async (event) => {
             // Все вопросы
             selectedQuestions = allQuestions;
         }
-        // TODO: Для режима 'manual' нужно получить вопросы из test_template_questions
 
         // Перемешиваем вопросы если нужно
         if (template.shuffle_questions) {
@@ -91,6 +111,7 @@ export default defineEventHandler(async (event) => {
                 student_id: null, // Preview запускает преподаватель/админ, не студент
                 preview_user_id: user.id, // ID пользователя, запустившего preview
                 is_preview: true,
+                language: selectedLanguage || (template.allowed_languages?.length === 1 ? template.allowed_languages[0] : null),
                 ip_address: event.node.req.socket.remoteAddress,
                 user_agent: event.node.req.headers['user-agent'],
             },
@@ -106,7 +127,8 @@ export default defineEventHandler(async (event) => {
                 time_limit_minutes: template.time_limit_minutes,
                 passing_score: template.passing_score,
                 allow_back: template.allow_back,
-                proctoring_enabled: false, // Отключаем прокторинг для preview
+                proctoring_enabled: template.proctoring_enabled,
+                proctoring_settings: template.proctoring_settings,
             },
             questions_count: questionsOrder.length,
         };

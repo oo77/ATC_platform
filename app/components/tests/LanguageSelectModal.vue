@@ -122,6 +122,11 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  // Позволяет передать список языков напрямую (для preview)
+  customLanguages: {
+    type: Array,
+    default: null,
+  },
 });
 
 const emit = defineEmits(['close', 'confirm']);
@@ -137,9 +142,18 @@ const confirming = ref(false);
 
 // Загрузка доступных языков при открытии модалки
 watch(() => props.isOpen, async (isOpen) => {
-  if (isOpen && props.assignmentId) {
+  if (isOpen) {
     selectedLanguage.value = null;
-    await loadLanguages();
+    
+    if (props.customLanguages) {
+      languages.value = props.customLanguages;
+      // Если доступен только один язык — автоматически выбираем его
+      if (languages.value.length === 1) {
+        selectedLanguage.value = languages.value[0].value;
+      }
+    } else if (props.assignmentId) {
+      await loadLanguages();
+    }
   }
 });
 

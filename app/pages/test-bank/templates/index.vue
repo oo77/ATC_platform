@@ -175,51 +175,100 @@
         <p class="mt-2">Создайте первый шаблон теста</p>
       </div>
 
-      <div v-else class="divide-y divide-gray-200 dark:divide-gray-700">
-        <div
-          v-for="template in templates"
-          :key="template.id"
-          class="p-4 md:p-6 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-        >
-          <div class="flex flex-col md:flex-row md:items-center gap-4">
-            <!-- Иконка и основная информация -->
-            <div class="flex items-start gap-4 flex-grow">
-              <div class="flex-shrink-0 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
+      <div v-else>
+        <!-- Табличное отображение на десктопе -->
+        <div class="hidden md:block overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Шаблон теста
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Банк вопросов
+                </th>
+                <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Параметры
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Языки
+                </th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Статус
+                </th>
+                <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Действия
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              <tr
+                v-for="template in templates"
+                :key="template.id"
+                class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <!-- Шаблон теста -->
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
+                      <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div class="min-w-0">
+                      <div class="font-medium text-gray-900 dark:text-white">{{ template.name }}</div>
+                      <div class="flex items-center gap-2 mt-1">
+                        <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-800 dark:text-gray-200">
+                          {{ template.code }}
+                        </span>
+                        <span v-if="template.description" class="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
+                          {{ template.description }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </td>
 
-              <div class="flex-grow min-w-0">
-                <div class="flex items-center gap-3 flex-wrap">
-                  <h3 class="font-semibold text-gray-900 dark:text-white">
-                    {{ template.name }}
-                  </h3>
-                  <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:text-gray-200">
-                    {{ template.code }}
-                  </span>
-                  <span
-                    :class="[
-                      'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                      template.is_active
-                        ? 'bg-success/10 text-success'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    ]"
-                  >
-                    {{ template.is_active ? 'Активен' : 'Неактивен' }}
-                  </span>
-                </div>
+                <!-- Банк вопросов -->
+                <td class="px-6 py-4">
+                  <NuxtLink :to="`/test-bank/${template.bank_id}`" class="text-sm text-primary hover:underline">
+                    {{ template.bank_name }}
+                  </NuxtLink>
+                </td>
 
-                <p v-if="template.description" class="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
-                  {{ template.description }}
-                </p>
+                <!-- Параметры -->
+                <td class="px-6 py-4">
+                  <div class="flex flex-col gap-1 text-xs text-gray-600 dark:text-gray-400">
+                    <div class="flex items-center justify-center gap-1">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{{ getQuestionsLabel(template) }}</span>
+                    </div>
+                    <div class="flex items-center justify-center gap-1">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{{ template.time_limit_minutes ? `${template.time_limit_minutes} мин` : 'Без лимита' }}</span>
+                    </div>
+                    <div class="flex items-center justify-center gap-1">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{{ template.passing_score }}%</span>
+                    </div>
+                    <div class="flex items-center justify-center gap-1">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span>{{ template.max_attempts === 1 ? '1 попытка' : `${template.max_attempts} попыток` }}</span>
+                    </div>
+                  </div>
+                </td>
 
-                <div class="flex flex-wrap items-center gap-2 mt-2">
-                  <span class="text-sm text-gray-500 dark:text-gray-400">
-                    Банк: <NuxtLink :to="`/test-bank/${template.bank_id}`" class="text-primary hover:underline">{{ template.bank_name }}</NuxtLink>
-                  </span>
-                  <!-- Бейджи языков -->
-                  <div v-if="template.allowed_languages && template.allowed_languages.length > 0" class="flex items-center gap-1 ml-2">
+                <!-- Языки -->
+                <td class="px-6 py-4">
+                  <div v-if="template.allowed_languages && template.allowed_languages.length > 0" class="flex items-center gap-1">
                     <span
                       v-for="lang in template.allowed_languages"
                       :key="lang"
@@ -232,50 +281,137 @@
                   <span v-else class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400" title="Все языки доступны">
                     🌐 Все
                   </span>
+                </td>
+
+                <!-- Статус -->
+                <td class="px-6 py-4">
+                  <span
+                    :class="[
+                      'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                      template.is_active
+                        ? 'bg-success/10 text-success'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    ]"
+                  >
+                    {{ template.is_active ? 'Активен' : 'Неактивен' }}
+                  </span>
+                </td>
+
+                <!-- Действия -->
+                <td class="px-6 py-4 text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <button
+                      @click="viewTemplate(template)"
+                      class="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                      title="Настроить"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
+                    <button
+                      v-if="canManageTemplates"
+                      @click="openEditModal(template)"
+                      class="p-2 text-gray-500 hover:text-warning hover:bg-warning/10 rounded-lg transition-colors"
+                      title="Редактировать"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      v-if="canManageTemplates"
+                      @click="confirmDelete(template)"
+                      class="p-2 text-gray-500 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
+                      title="Удалить"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Карточки на мобильных -->
+        <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-700">
+          <div
+            v-for="template in templates"
+            :key="template.id"
+            class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-medium text-gray-900 dark:text-white">{{ template.name }}</div>
+                  <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-800 dark:text-gray-200">
+                    {{ template.code }}
+                  </span>
                 </div>
               </div>
+              <span
+                :class="[
+                  'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                  template.is_active
+                    ? 'bg-success/10 text-success'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                ]"
+              >
+                {{ template.is_active ? 'Активен' : 'Неактивен' }}
+              </span>
             </div>
 
-            <!-- Характеристики теста -->
-            <div class="flex flex-wrap items-center gap-3 md:gap-4">
-              <!-- Вопросы -->
-              <div class="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
+            <div v-if="template.description" class="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+              {{ template.description }}
+            </div>
+
+            <div class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              Банк: <NuxtLink :to="`/test-bank/${template.bank_id}`" class="text-primary hover:underline">{{ template.bank_name }}</NuxtLink>
+            </div>
+
+            <div class="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
+              <span class="flex items-center gap-1">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>{{ getQuestionsLabel(template) }}</span>
-              </div>
-
-              <!-- Время -->
-              <div class="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
+                {{ getQuestionsLabel(template) }}
+              </span>
+              <span class="flex items-center gap-1">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>{{ template.time_limit_minutes ? `${template.time_limit_minutes} мин` : 'Без лимита' }}</span>
-              </div>
+                {{ template.time_limit_minutes ? `${template.time_limit_minutes} мин` : 'Без лимита' }}
+              </span>
+            </div>
 
-              <!-- Проходной балл -->
-              <div class="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ template.passing_score }}%</span>
+            <div class="flex items-center justify-between">
+              <div v-if="template.allowed_languages && template.allowed_languages.length > 0" class="flex items-center gap-1">
+                <span
+                  v-for="lang in template.allowed_languages"
+                  :key="lang"
+                  :class="languageBadgeClasses[lang]"
+                  :title="languageLabels[lang]"
+                >
+                  {{ languageFlags[lang] }}
+                </span>
               </div>
+              <span v-else class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400" title="Все языки доступны">
+                🌐 Все
+              </span>
 
-              <!-- Попытки -->
-              <div class="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>{{ template.max_attempts === 1 ? '1 попытка' : `${template.max_attempts} попыток` }}</span>
-              </div>
-
-              <!-- Действия -->
-              <div class="flex items-center gap-1 ml-auto md:ml-0">
+              <div class="flex items-center gap-2">
                 <button
                   @click="viewTemplate(template)"
                   class="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                  title="Настроить"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -286,7 +422,6 @@
                   v-if="canManageTemplates"
                   @click="openEditModal(template)"
                   class="p-2 text-gray-500 hover:text-warning hover:bg-warning/10 rounded-lg transition-colors"
-                  title="Редактировать"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -296,7 +431,6 @@
                   v-if="canManageTemplates"
                   @click="confirmDelete(template)"
                   class="p-2 text-gray-500 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
-                  title="Удалить"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

@@ -628,6 +628,14 @@
       />
     </template>
 
+    <!-- Модалка выбора языка для Preview -->
+    <TestsLanguageSelectModal
+      :is-open="showLanguageModal"
+      :custom-languages="availableLanguagesForModal"
+      @close="showLanguageModal = false"
+      @confirm="handleLanguageConfirm"
+    />
+
     <!-- Уведомления -->
     <UiNotification
       v-if="notification.show"
@@ -656,6 +664,24 @@ const questionsLoading = ref(false);
 const error = ref(null);
 const template = ref(null);
 const questions = ref([]);
+
+// Модалка выбора языка
+const showLanguageModal = ref(false);
+const availableLanguagesForModal = computed(() => {
+  if (!template.value?.allowed_languages || template.value.allowed_languages.length === 0) {
+    // Если ограничений нет, предлагаем стандартные языки (или все доступные в системе)
+    return [
+      { value: 'ru', label: 'Русский', flag: '🇷🇺' },
+      { value: 'uz', label: "O'zbek", flag: '🇺🇿' },
+      { value: 'en', label: 'English', flag: '🇬🇧' },
+    ];
+  }
+  return template.value.allowed_languages.map(lang => ({
+    value: lang,
+    label: languageLabels[lang] || lang,
+    flag: languageFlags[lang] || '',
+  }));
+});
 
 // Константы
 const questionsModeLabels = {
@@ -803,10 +829,32 @@ const loadQuestions = async () => {
 
 // Предпросмотр теста
 const previewTest = async () => {
+  if (!template.value) return;
+
+  // Открываем модалку, если не указан конкретный одиночный язык
+  // (т.е. если "Все языки" или выбрано несколько)
+  const allowed = template.value.allowed_languages;
+  const isSingleLanguage = allowed && allowed.length === 1;
+
+  if (!isSingleLanguage) {
+    showLanguageModal.value = true;
+  } else {
+    // В противном случае запускаем с единственным языком
+    await startPreview(allowed[0]);
+  }
+};
+
+const handleLanguageConfirm = async (language) => {
+  showLanguageModal.value = false;
+  await startPreview(language);
+};
+
+const startPreview = async (language = null) => {
   try {
     // Создаём preview-сессию
     const response = await authFetch(`/api/test-bank/templates/${route.params.id}/preview`, {
       method: 'POST',
+      body: { language },
     });
 
     if (response.success && response.session_id) {

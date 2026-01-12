@@ -114,23 +114,38 @@
     <!-- Прохождение теста -->
     <div v-else class="flex flex-col min-h-screen">
       <!-- Баннер preview-режима -->
-      <div v-if="isPreviewMode" class="bg-primary/10 border-b-2 border-primary">
+      <div v-if="isPreviewMode" class="bg-amber-500 border-b border-amber-600 sticky top-0 z-[60]">
         <div class="max-w-5xl mx-auto px-4 py-2">
-          <div class="flex items-center gap-3">
-            <svg class="w-5 h-5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
-            <p class="text-sm text-gray-700 dark:text-gray-300">
-              <span class="font-medium text-primary">Режим предпросмотра.</span>
-              Пройдите тест как студент, чтобы проверить его работу. Результаты не сохраняются.
-            </p>
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 text-white">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <p class="text-sm font-bold uppercase tracking-wider">
+                Режим предпросмотра
+              </p>
+              <span class="hidden md:inline-block text-xs opacity-90 border-l border-white/30 pl-2">
+                Вы видите тест именно так, как его увидит студент
+              </span>
+            </div>
+            <UiButton 
+              variant="white" 
+              size="xs" 
+              class="!text-amber-600 !py-1"
+              @click="navigateTo('/test-bank/templates')"
+            >
+              Выйти из режима
+            </UiButton>
           </div>
         </div>
       </div>
 
       <!-- Верхняя панель -->
-      <header class="bg-white dark:bg-boxdark shadow-sm sticky top-0 z-50">
+      <header 
+        class="bg-white dark:bg-boxdark shadow-sm sticky z-50 transition-all duration-300"
+        :style="{ top: isPreviewMode ? '41px' : '0' }"
+      >
         <div class="max-w-5xl mx-auto px-4 py-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
@@ -546,10 +561,8 @@ const loadSession = async () => {
     if (!isCompleted.value) {
       await loadTemplateInfo(response.templateSettings);
       initTimer();
-      // Отключаем антипрокторинг в preview-режиме
-      if (!isPreviewMode.value) {
-        initProctoring();
-      }
+      // Включаем прокторинг (в preview режиме он будет показывать предупреждения, но не завершать тест принудительно)
+      initProctoring();
     }
   } catch (err) {
     console.error('Ошибка загрузки сессии:', err);
@@ -570,9 +583,15 @@ const loadTemplateInfo = async (apiTemplateSettings = null) => {
           name: parsed.name || 'Тест',
           allow_back: parsed.allow_back !== false,
           time_limit_minutes: parsed.time_limit_minutes || null,
-          proctoring_enabled: false, // Отключено для preview
-          proctoring_settings: null,
+          proctoring_enabled: parsed.proctoring_enabled || false,
+          proctoring_settings: parsed.proctoring_settings || null,
         };
+        
+        // Устанавливаем настройки прокторинга если включен
+        if (parsed.proctoring_enabled) {
+          proctoringEnabled.value = true;
+          proctoringSettings.value = parsed.proctoring_settings || null;
+        }
         // Устанавливаем лимит времени
         if (parsed.time_limit_minutes) {
           timeLimit.value = parsed.time_limit_minutes;
@@ -707,6 +726,13 @@ const preventPaste = (e) => {
 };
 
 const recordViolation = async (type) => {
+  // Для обучения/предпросмотра просто показываем что произошло бы
+  if (isPreviewMode.value) {
+    violationsCount.value++;
+    showViolationWarning.value = true;
+    return;
+  }
+
   // Если лимит уже превышен, не накапливаем дальше — тест должен быть завершён
   if (violationsCount.value >= maxViolations.value) {
     // Тест уже должен был быть завершён, принудительно завершаем
