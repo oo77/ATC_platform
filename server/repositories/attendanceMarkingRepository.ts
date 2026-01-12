@@ -2,9 +2,13 @@
  * Репозиторий для системы допуска отметок посещаемости инструкторами
  */
 
-import { executeQuery, executeTransaction } from '../utils/db';
-import { v4 as uuidv4 } from 'uuid';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import { executeQuery, executeTransaction } from "../utils/db";
+import { v4 as uuidv4 } from "uuid";
+import type {
+  PoolConnection,
+  ResultSetHeader,
+  RowDataPacket,
+} from "mysql2/promise";
 import type {
   AttendanceMarkingStatus,
   AttendanceMarkingStatusRecord,
@@ -17,7 +21,7 @@ import type {
   CreateMarkingRequestInput,
   ReviewMarkingRequestInput,
   DEFAULT_ATTENDANCE_SETTINGS,
-} from '../types/attendanceMarking';
+} from "../types/attendanceMarking";
 
 // ============================================================================
 // ROW TYPES
@@ -84,7 +88,9 @@ interface SettingRow extends RowDataPacket {
 // MAPPING FUNCTIONS
 // ============================================================================
 
-function mapRowToMarkingStatus(row: MarkingStatusRow): AttendanceMarkingStatusRecord {
+function mapRowToMarkingStatus(
+  row: MarkingStatusRow
+): AttendanceMarkingStatusRecord {
   const record: AttendanceMarkingStatusRecord = {
     id: row.id,
     scheduleEventId: row.schedule_event_id,
@@ -108,7 +114,7 @@ function mapRowToMarkingStatus(row: MarkingStatusRow): AttendanceMarkingStatusRe
       title: row.event_title,
       startTime: row.event_start_time!,
       endTime: row.event_end_time!,
-      eventType: row.event_type || 'other',
+      eventType: row.event_type || "other",
       disciplineId: row.discipline_id || null,
       groupId: row.group_id || null,
       groupCode: row.group_code || null,
@@ -127,7 +133,9 @@ function mapRowToMarkingStatus(row: MarkingStatusRow): AttendanceMarkingStatusRe
   return record;
 }
 
-function mapRowToMarkingRequest(row: MarkingRequestRow): AttendanceMarkingRequest {
+function mapRowToMarkingRequest(
+  row: MarkingRequestRow
+): AttendanceMarkingRequest {
   const request: AttendanceMarkingRequest = {
     id: row.id,
     scheduleEventId: row.schedule_event_id,
@@ -177,7 +185,7 @@ function mapRowToMarkingRequest(row: MarkingRequestRow): AttendanceMarkingReques
  */
 export async function getAttendanceSettings(): Promise<AttendanceSettings> {
   const rows = await executeQuery<SettingRow[]>(
-    'SELECT * FROM attendance_settings'
+    "SELECT * FROM attendance_settings"
   );
 
   const settings: Record<string, string> = {};
@@ -186,13 +194,28 @@ export async function getAttendanceSettings(): Promise<AttendanceSettings> {
   }
 
   return {
-    ATTENDANCE_MARK_DEADLINE_HOURS: parseInt(settings.ATTENDANCE_MARK_DEADLINE_HOURS || '24', 10),
-    ATTENDANCE_EDIT_DEADLINE_HOURS: parseInt(settings.ATTENDANCE_EDIT_DEADLINE_HOURS || '72', 10),
-    ATTENDANCE_LATE_MARK_ALLOWED: settings.ATTENDANCE_LATE_MARK_ALLOWED !== 'false',
-    ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE: settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE !== 'false',
-    ATTENDANCE_REMINDER_HOURS_BEFORE: parseInt(settings.ATTENDANCE_REMINDER_HOURS_BEFORE || '2', 10),
-    ATTENDANCE_NOTIFICATION_ADMIN_THRESHOLD: parseInt(settings.ATTENDANCE_NOTIFICATION_ADMIN_THRESHOLD || '48', 10),
-    ATTENDANCE_AUTO_CREATE_STATUS: settings.ATTENDANCE_AUTO_CREATE_STATUS !== 'false',
+    ATTENDANCE_MARK_DEADLINE_HOURS: parseInt(
+      settings.ATTENDANCE_MARK_DEADLINE_HOURS || "24",
+      10
+    ),
+    ATTENDANCE_EDIT_DEADLINE_HOURS: parseInt(
+      settings.ATTENDANCE_EDIT_DEADLINE_HOURS || "72",
+      10
+    ),
+    ATTENDANCE_LATE_MARK_ALLOWED:
+      settings.ATTENDANCE_LATE_MARK_ALLOWED !== "false",
+    ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE:
+      settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE !== "false",
+    ATTENDANCE_REMINDER_HOURS_BEFORE: parseInt(
+      settings.ATTENDANCE_REMINDER_HOURS_BEFORE || "2",
+      10
+    ),
+    ATTENDANCE_NOTIFICATION_ADMIN_THRESHOLD: parseInt(
+      settings.ATTENDANCE_NOTIFICATION_ADMIN_THRESHOLD || "48",
+      10
+    ),
+    ATTENDANCE_AUTO_CREATE_STATUS:
+      settings.ATTENDANCE_AUTO_CREATE_STATUS !== "false",
   };
 }
 
@@ -260,50 +283,51 @@ export async function getMarkingStatuses(
   const params: any[] = [];
 
   if (filters.instructorId) {
-    conditions.push('se.instructor_id = ?');
+    conditions.push("se.instructor_id = ?");
     params.push(filters.instructorId);
   }
 
   if (filters.groupId) {
-    conditions.push('se.group_id = ?');
+    conditions.push("se.group_id = ?");
     params.push(filters.groupId);
   }
 
   if (filters.status) {
     if (Array.isArray(filters.status)) {
-      const placeholders = filters.status.map(() => '?').join(', ');
+      const placeholders = filters.status.map(() => "?").join(", ");
       conditions.push(`ams.status IN (${placeholders})`);
       params.push(...filters.status);
     } else {
-      conditions.push('ams.status = ?');
+      conditions.push("ams.status = ?");
       params.push(filters.status);
     }
   }
 
   if (filters.dateFrom) {
-    conditions.push('se.start_time >= ?');
+    conditions.push("se.start_time >= ?");
     params.push(filters.dateFrom);
   }
 
   if (filters.dateTo) {
-    conditions.push('se.start_time <= ?');
+    conditions.push("se.start_time <= ?");
     params.push(filters.dateTo);
   }
 
   if (filters.onlyOverdue) {
-    conditions.push('ams.status = ?');
-    params.push('overdue');
+    conditions.push("ams.status = ?");
+    params.push("overdue");
   }
 
   if (filters.onlyPending) {
-    conditions.push('ams.status IN (?, ?)');
-    params.push('pending', 'in_progress');
+    conditions.push("ams.status IN (?, ?)");
+    params.push("pending", "in_progress");
   }
 
   // Только прошедшие занятия
-  conditions.push('se.end_time <= NOW()');
+  conditions.push("se.end_time <= NOW()");
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const rows = await executeQuery<MarkingStatusRow[]>(
     `SELECT 
@@ -346,7 +370,9 @@ export async function getPendingMarkingsForInstructor(
 /**
  * Получить просроченные отметки (для администраторов)
  */
-export async function getOverdueMarkings(): Promise<AttendanceMarkingStatusRecord[]> {
+export async function getOverdueMarkings(): Promise<
+  AttendanceMarkingStatusRecord[]
+> {
   // Обновляем статусы на overdue, если прошёл late_deadline
   await executeQuery(
     `UPDATE attendance_marking_status 
@@ -382,13 +408,17 @@ export async function ensureMarkingStatus(
   );
 
   if (!event) {
-    throw new Error('Занятие не найдено');
+    throw new Error("Занятие не найдено");
   }
 
   const settings = await getAttendanceSettings();
   const endTime = new Date(event.end_time);
-  const deadline = new Date(endTime.getTime() + settings.ATTENDANCE_MARK_DEADLINE_HOURS * 60 * 60 * 1000);
-  const lateDeadline = new Date(endTime.getTime() + settings.ATTENDANCE_EDIT_DEADLINE_HOURS * 60 * 60 * 1000);
+  const deadline = new Date(
+    endTime.getTime() + settings.ATTENDANCE_MARK_DEADLINE_HOURS * 60 * 60 * 1000
+  );
+  const lateDeadline = new Date(
+    endTime.getTime() + settings.ATTENDANCE_EDIT_DEADLINE_HOURS * 60 * 60 * 1000
+  );
 
   const id = uuidv4();
 
@@ -419,30 +449,30 @@ export async function updateMarkingStatus(
   const params: any[] = [];
 
   if (data.status !== undefined) {
-    updates.push('status = ?');
+    updates.push("status = ?");
     params.push(data.status);
   }
 
   if (data.markedBy !== undefined) {
-    updates.push('marked_by = ?');
+    updates.push("marked_by = ?");
     params.push(data.markedBy);
-    updates.push('marked_at = NOW()');
+    updates.push("marked_at = NOW()");
   }
 
   if (data.markedCount !== undefined) {
-    updates.push('marked_count = ?');
+    updates.push("marked_count = ?");
     params.push(data.markedCount);
   }
 
   if (data.lateReason !== undefined) {
-    updates.push('late_reason = ?');
+    updates.push("late_reason = ?");
     params.push(data.lateReason);
   }
 
   if (data.approvedBy !== undefined) {
-    updates.push('approved_by = ?');
+    updates.push("approved_by = ?");
     params.push(data.approvedBy);
-    updates.push('approved_at = NOW()');
+    updates.push("approved_at = NOW()");
   }
 
   if (updates.length === 0) {
@@ -451,11 +481,77 @@ export async function updateMarkingStatus(
 
   params.push(scheduleEventId);
   await executeQuery(
-    `UPDATE attendance_marking_status SET ${updates.join(', ')} WHERE schedule_event_id = ?`,
+    `UPDATE attendance_marking_status SET ${updates.join(
+      ", "
+    )} WHERE schedule_event_id = ?`,
     params
   );
 
   return getMarkingStatusByEventId(scheduleEventId);
+}
+
+// ============================================================================
+// СИНХРОНИЗАЦИЯ
+// ============================================================================
+
+/**
+ * Синхронизировать статусы отметок (создать недостающие)
+ */
+export async function syncMarkingStatuses(): Promise<void> {
+  // Находим занятия, у которых нет статуса отметки, но они уже прошли
+  // Ограничиваем последними 30 днями, чтобы не грузить базу
+  const missingEvents = await executeQuery<RowDataPacket[]>(
+    `SELECT se.id, se.end_time, se.group_id 
+     FROM schedule_events se
+     LEFT JOIN attendance_marking_status ams ON se.id = ams.schedule_event_id
+     WHERE se.end_time <= NOW() 
+       AND se.end_time >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+       AND ams.id IS NULL
+     LIMIT 100`
+  );
+
+  if (missingEvents.length === 0) return;
+
+  const settings = await getAttendanceSettings();
+
+  for (const event of missingEvents) {
+    try {
+      const endTime = new Date(event.end_time);
+      const deadline = new Date(
+        endTime.getTime() +
+          settings.ATTENDANCE_MARK_DEADLINE_HOURS * 60 * 60 * 1000
+      );
+      const lateDeadline = new Date(
+        endTime.getTime() +
+          settings.ATTENDANCE_EDIT_DEADLINE_HOURS * 60 * 60 * 1000
+      );
+
+      // Получаем количество студентов
+      const [countResult] = await executeQuery<RowDataPacket[]>(
+        "SELECT COUNT(*) as count FROM study_group_students WHERE group_id = ?",
+        [event.group_id]
+      );
+      const studentsCount = countResult?.[0]?.count || 0;
+
+      const id = uuidv4();
+
+      // Определяем начальный статус
+      let initialStatus = "pending";
+      const now = new Date();
+      if (now > lateDeadline) {
+        initialStatus = "overdue";
+      }
+
+      await executeQuery(
+        `INSERT INTO attendance_marking_status 
+         (id, schedule_event_id, status, deadline, late_deadline, students_count)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [id, event.id, initialStatus, deadline, lateDeadline, studentsCount]
+      );
+    } catch (e) {
+      console.error(`Error syncing status for event ${event.id}:`, e);
+    }
+  }
 }
 
 // ============================================================================
@@ -480,10 +576,10 @@ export async function checkMarkingAccess(
   if (!event) {
     return {
       allowed: false,
-      status: 'denied',
+      status: "denied",
       deadline: new Date(),
       lateDeadline: new Date(),
-      message: 'Занятие не найдено',
+      message: "Занятие не найдено",
     };
   }
 
@@ -495,37 +591,59 @@ export async function checkMarkingAccess(
   if (now < startTime) {
     return {
       allowed: false,
-      status: 'denied',
+      status: "denied",
       deadline: new Date(),
       lateDeadline: new Date(),
-      message: 'Отметка посещаемости доступна только после начала занятия',
+      message: "Отметка посещаемости доступна только после начала занятия",
+    };
+  }
+
+  // 1.5. Проверяем, может быть статус уже "approved" (одобрено админом)
+  // Получаем текущий статус отметки из таблицы
+  const [existingStatus] = await executeQuery<RowDataPacket[]>(
+    `SELECT status, deadline, late_deadline FROM attendance_marking_status WHERE schedule_event_id = ?`,
+    [scheduleEventId]
+  );
+
+  if (existingStatus && existingStatus.status === "approved") {
+    return {
+      allowed: true,
+      status: "allowed",
+      deadline: existingStatus.deadline,
+      lateDeadline: existingStatus.lateDeadline,
+      message: "Отметка разрешена администратором",
+      isApprovedByAdmin: true,
     };
   }
 
   // 2. Для роли TEACHER — проверка, что это его занятие
-  if (userRole === 'TEACHER') {
+  if (userRole === "TEACHER") {
     if (event.instructor_id !== instructorId) {
       return {
         allowed: false,
-        status: 'denied',
+        status: "denied",
         deadline: new Date(),
         lateDeadline: new Date(),
-        message: 'Вы не назначены инструктором на это занятие',
+        message: "Вы не назначены инструктором на это занятие",
       };
     }
   }
 
   // 3. Получаем настройки и считаем дедлайны
   const settings = await getAttendanceSettings();
-  const deadline = new Date(endTime.getTime() + settings.ATTENDANCE_MARK_DEADLINE_HOURS * 60 * 60 * 1000);
-  const lateDeadline = new Date(endTime.getTime() + settings.ATTENDANCE_EDIT_DEADLINE_HOURS * 60 * 60 * 1000);
+  const deadline = new Date(
+    endTime.getTime() + settings.ATTENDANCE_MARK_DEADLINE_HOURS * 60 * 60 * 1000
+  );
+  const lateDeadline = new Date(
+    endTime.getTime() + settings.ATTENDANCE_EDIT_DEADLINE_HOURS * 60 * 60 * 1000
+  );
 
   // 4. Определяем статус доступа
   if (now <= deadline) {
     // В пределах основного дедлайна
     return {
       allowed: true,
-      status: 'allowed',
+      status: "allowed",
       deadline,
       lateDeadline,
     };
@@ -533,20 +651,20 @@ export async function checkMarkingAccess(
     // Опоздание, но разрешено
     return {
       allowed: true,
-      status: 'late',
+      status: "late",
       deadline,
       lateDeadline,
       message: 'Срок отметки истёк. Отметка будет помечена как "Опоздание"',
     };
   } else if (settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE) {
     // Требуется одобрение — но админы могут без одобрения
-    if (userRole === 'ADMIN' || userRole === 'MANAGER') {
+    if (userRole === "ADMIN" || userRole === "MANAGER") {
       return {
         allowed: true,
-        status: 'late',
+        status: "late",
         deadline,
         lateDeadline,
-        message: 'Срок истёк, но вы можете отметить как администратор',
+        message: "Срок истёк, но вы можете отметить как администратор",
       };
     }
 
@@ -554,36 +672,36 @@ export async function checkMarkingAccess(
     const [approvedRequest] = await executeQuery<RowDataPacket[]>(
       `SELECT id FROM attendance_marking_requests 
        WHERE schedule_event_id = ? AND instructor_id = ? AND status = 'approved'`,
-      [scheduleEventId, instructorId || '']
+      [scheduleEventId, instructorId || ""]
     );
 
     if (approvedRequest) {
       return {
         allowed: true,
-        status: 'allowed',
+        status: "allowed",
         deadline,
         lateDeadline,
-        message: 'Отметка разрешена по одобренному запросу',
+        message: "Отметка разрешена по одобренному запросу",
         existingRequestId: approvedRequest.id,
       };
     }
 
     return {
       allowed: false,
-      status: 'requires_approval',
+      status: "requires_approval",
       deadline,
       lateDeadline,
-      message: 'Срок отметки истёк. Требуется одобрение администратора',
+      message: "Срок отметки истёк. Требуется одобрение администратора",
       requiresApproval: true,
     };
   } else {
     // Опоздание разрешено без одобрения
     return {
       allowed: true,
-      status: 'late',
+      status: "late",
       deadline,
       lateDeadline,
-      message: 'Срок отметки истёк',
+      message: "Срок отметки истёк",
     };
   }
 }
@@ -653,16 +771,17 @@ export async function getMarkingRequests(filters: {
   const params: any[] = [];
 
   if (filters.status) {
-    conditions.push('amr.status = ?');
+    conditions.push("amr.status = ?");
     params.push(filters.status);
   }
 
   if (filters.instructorId) {
-    conditions.push('amr.instructor_id = ?');
+    conditions.push("amr.instructor_id = ?");
     params.push(filters.instructorId);
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const rows = await executeQuery<MarkingRequestRow[]>(
     `SELECT 
@@ -689,8 +808,10 @@ export async function getMarkingRequests(filters: {
 /**
  * Получить ожидающие запросы (для администраторов)
  */
-export async function getPendingMarkingRequests(): Promise<AttendanceMarkingRequest[]> {
-  return getMarkingRequests({ status: 'pending' });
+export async function getPendingMarkingRequests(): Promise<
+  AttendanceMarkingRequest[]
+> {
+  return getMarkingRequests({ status: "pending" });
 }
 
 /**
@@ -706,7 +827,9 @@ export async function reviewMarkingRequest(
     return null;
   }
 
-  const newStatus: MarkingRequestStatus = data.approved ? 'approved' : 'rejected';
+  const newStatus: MarkingRequestStatus = data.approved
+    ? "approved"
+    : "rejected";
 
   await executeQuery(
     `UPDATE attendance_marking_requests 
@@ -718,7 +841,7 @@ export async function reviewMarkingRequest(
   // Если одобрено — обновляем статус отметки
   if (data.approved) {
     await updateMarkingStatus(request.scheduleEventId, {
-      status: 'approved',
+      status: "approved",
       approvedBy: reviewedBy,
     });
   }
@@ -740,11 +863,14 @@ export async function getMarkingStatistics(instructorId?: string): Promise<{
   onTime: number;
   pendingRequests: number;
 }> {
+  // Синхронизируем недостающие статусы перед получением статистики
+  await syncMarkingStatuses();
+
   const params: any[] = [];
-  let instructorCondition = '';
+  let instructorCondition = "";
 
   if (instructorId) {
-    instructorCondition = 'AND se.instructor_id = ?';
+    instructorCondition = "AND se.instructor_id = ?";
     params.push(instructorId);
   }
 
@@ -752,7 +878,7 @@ export async function getMarkingStatistics(instructorId?: string): Promise<{
     `SELECT 
       SUM(CASE WHEN ams.status = 'pending' THEN 1 ELSE 0 END) as pending,
       SUM(CASE WHEN ams.status = 'overdue' THEN 1 ELSE 0 END) as overdue,
-      SUM(CASE WHEN ams.status = 'late' THEN 1 ELSE 0 END) as late,
+      SUM(CASE WHEN ams.status = 'late' OR ams.status = 'approved' THEN 1 ELSE 0 END) as late,
       SUM(CASE WHEN ams.status = 'on_time' THEN 1 ELSE 0 END) as on_time
     FROM attendance_marking_status ams
     JOIN schedule_events se ON ams.schedule_event_id = se.id
@@ -762,9 +888,9 @@ export async function getMarkingStatistics(instructorId?: string): Promise<{
 
   // Ожидающие запросы
   const requestParams: any[] = [];
-  let requestCondition = '';
+  let requestCondition = "";
   if (instructorId) {
-    requestCondition = 'AND instructor_id = ?';
+    requestCondition = "AND instructor_id = ?";
     requestParams.push(instructorId);
   }
 
@@ -785,7 +911,9 @@ export async function getMarkingStatistics(instructorId?: string): Promise<{
 /**
  * Обновить количество отмеченных студентов
  */
-export async function updateMarkedCount(scheduleEventId: string): Promise<void> {
+export async function updateMarkedCount(
+  scheduleEventId: string
+): Promise<void> {
   await executeQuery(
     `UPDATE attendance_marking_status ams
      SET marked_count = (

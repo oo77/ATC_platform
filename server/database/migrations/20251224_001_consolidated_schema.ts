@@ -1,13 +1,13 @@
-import type { PoolConnection } from 'mysql2/promise';
-import bcrypt from 'bcryptjs';
-import { randomUUID } from 'crypto';
+import type { PoolConnection } from "mysql2/promise";
+import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 
 /**
  * Консолидированная миграция: Полная схема базы данных ATC Platform
  * Дата: 2025-12-24
  * Описание: Объединённая миграция всех таблиц с актуальной структурой.
  *           Включает все изменения из предыдущих миграций.
- * 
+ *
  * Таблицы (в порядке создания с учётом зависимостей):
  * 1. users - Пользователи системы
  * 2. students - Слушатели
@@ -31,10 +31,11 @@ import { randomUUID } from 'crypto';
  * 20. telegram_bot_sessions - Сессии Telegram-бота
  */
 
-export const description = 'Консолидированная миграция: полная схема базы данных';
+export const description =
+  "Консолидированная миграция: полная схема базы данных";
 
 export const up = async (connection: PoolConnection): Promise<void> => {
-  console.log('🔄 Running consolidated migration: Full database schema');
+  console.log("🔄 Running consolidated migration: Full database schema");
 
   // ============================================================
   // 1. USERS - Пользователи системы
@@ -249,9 +250,13 @@ export const up = async (connection: PoolConnection): Promise<void> => {
   console.log('✅ Table "disciplines" created');
 
   // Триггеры для автоматического вычисления hours
-  await connection.query(`DROP TRIGGER IF EXISTS disciplines_calculate_hours_insert`);
-  await connection.query(`DROP TRIGGER IF EXISTS disciplines_calculate_hours_update`);
-  
+  await connection.query(
+    `DROP TRIGGER IF EXISTS disciplines_calculate_hours_insert`
+  );
+  await connection.query(
+    `DROP TRIGGER IF EXISTS disciplines_calculate_hours_update`
+  );
+
   await connection.query(`
     CREATE TRIGGER disciplines_calculate_hours_insert
     BEFORE INSERT ON disciplines
@@ -260,7 +265,7 @@ export const up = async (connection: PoolConnection): Promise<void> => {
       SET NEW.hours = NEW.theory_hours + NEW.practice_hours + NEW.assessment_hours;
     END
   `);
-  
+
   await connection.query(`
     CREATE TRIGGER disciplines_calculate_hours_update
     BEFORE UPDATE ON disciplines
@@ -269,7 +274,7 @@ export const up = async (connection: PoolConnection): Promise<void> => {
       SET NEW.hours = NEW.theory_hours + NEW.practice_hours + NEW.assessment_hours;
     END
   `);
-  console.log('✅ Triggers for disciplines.hours auto-calculation created');
+  console.log("✅ Triggers for disciplines.hours auto-calculation created");
 
   // ============================================================
   // 9. DISCIPLINE_INSTRUCTORS - Связь дисциплин и инструкторов
@@ -649,16 +654,16 @@ export const up = async (connection: PoolConnection): Promise<void> => {
   // ============================================================
   // SEED DATA - Начальные данные
   // ============================================================
-  console.log('🌱 Seeding initial data...');
+  console.log("🌱 Seeding initial data...");
 
   // Администратор по умолчанию
   const [existingAdmin] = await connection.query<any[]>(
-    'SELECT id FROM users WHERE email = ? LIMIT 1',
-    ['admin@atc.uz']
+    "SELECT id FROM users WHERE email = ? LIMIT 1",
+    ["admin@atc.uz"]
   );
 
   if (!existingAdmin || existingAdmin.length === 0) {
-    const adminPassword = 'admin123';
+    const adminPassword = "admin123";
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
     const adminId = randomUUID();
 
@@ -667,21 +672,33 @@ export const up = async (connection: PoolConnection): Promise<void> => {
        VALUES (?, 'ADMIN', 'Администратор', 'admin@atc.uz', ?, NOW(3), NOW(3))`,
       [adminId, hashedPassword]
     );
-    console.log('✅ Default admin user created (admin@atc.uz / admin123)');
+    console.log("✅ Default admin user created (admin@atc.uz / admin123)");
   } else {
-    console.log('ℹ️  Admin user already exists');
+    console.log("ℹ️  Admin user already exists");
   }
 
   // Шаблоны сертификатов
   const [existingTemplates] = await connection.query<any[]>(
-    'SELECT COUNT(*) as count FROM certificate_templates'
+    "SELECT COUNT(*) as count FROM certificate_templates"
   );
-  
+
   if (existingTemplates[0].count === 0) {
     const templates = [
-      { id: randomUUID(), name: 'Стандартный сертификат', description: 'Базовый шаблон сертификата о прохождении курса' },
-      { id: randomUUID(), name: 'Сертификат с отличием', description: 'Шаблон для студентов, окончивших курс с отличием' },
-      { id: randomUUID(), name: 'Сертификат повышения квалификации', description: 'Официальный шаблон для курсов повышения квалификации' }
+      {
+        id: randomUUID(),
+        name: "Стандартный сертификат",
+        description: "Базовый шаблон сертификата о прохождении курса",
+      },
+      {
+        id: randomUUID(),
+        name: "Сертификат с отличием",
+        description: "Шаблон для студентов, окончивших курс с отличием",
+      },
+      {
+        id: randomUUID(),
+        name: "Сертификат повышения квалификации",
+        description: "Официальный шаблон для курсов повышения квалификации",
+      },
     ];
 
     for (const template of templates) {
@@ -690,21 +707,22 @@ export const up = async (connection: PoolConnection): Promise<void> => {
         [template.id, template.name, template.description]
       );
     }
-    console.log('✅ Certificate templates created');
+    console.log("✅ Certificate templates created");
   }
 
   // Системные папки
   const [existingFolders] = await connection.query<any[]>(
-    'SELECT COUNT(*) as count FROM folders WHERE is_system = TRUE'
+    "SELECT COUNT(*) as count FROM folders WHERE is_system = TRUE"
   );
 
   if (existingFolders[0].count === 0) {
     const systemFolders = [
-      { name: 'Курсы', path: '/Курсы' },
-      { name: 'Сертификаты', path: '/Сертификаты' },
-      { name: 'Профили', path: '/Профили' },
-      { name: 'Группы', path: '/Группы' },
-      { name: 'Прочее', path: '/Прочее' },
+      { name: "Courses", path: "/Courses" },
+      { name: "Certificates", path: "/Certificates" },
+      { name: "Profiles", path: "/Profiles" },
+      { name: "Groups", path: "/Groups" },
+      { name: "Misc", path: "/Misc" },
+      { name: "Documents", path: "/Documents" },
     ];
 
     for (const folder of systemFolders) {
@@ -713,35 +731,65 @@ export const up = async (connection: PoolConnection): Promise<void> => {
         [randomUUID(), folder.name, folder.path]
       );
     }
-    console.log('✅ System folders created');
+    console.log("✅ System folders created");
   }
 
   // Аудитории
   const [existingClassrooms] = await connection.query<any[]>(
-    'SELECT COUNT(*) as count FROM classrooms'
+    "SELECT COUNT(*) as count FROM classrooms"
   );
 
   if (existingClassrooms[0].count === 0) {
     const classrooms = [
-      { id: randomUUID(), name: '101', capacity: 30, description: 'Учебная аудитория' },
-      { id: randomUUID(), name: '102', capacity: 25, description: 'Учебная аудитория' },
-      { id: randomUUID(), name: '201', capacity: 40, description: 'Лекционный зал' },
-      { id: randomUUID(), name: '202', capacity: 20, description: 'Компьютерный класс' },
-      { id: randomUUID(), name: 'Конференц-зал', capacity: 100, description: 'Большой конференц-зал' },
+      {
+        id: randomUUID(),
+        name: "101",
+        capacity: 30,
+        description: "Учебная аудитория",
+      },
+      {
+        id: randomUUID(),
+        name: "102",
+        capacity: 25,
+        description: "Учебная аудитория",
+      },
+      {
+        id: randomUUID(),
+        name: "201",
+        capacity: 40,
+        description: "Лекционный зал",
+      },
+      {
+        id: randomUUID(),
+        name: "202",
+        capacity: 20,
+        description: "Компьютерный класс",
+      },
+      {
+        id: randomUUID(),
+        name: "Конференц-зал",
+        capacity: 100,
+        description: "Большой конференц-зал",
+      },
     ];
 
     for (const classroom of classrooms) {
       await connection.query(
         `INSERT INTO classrooms (id, name, capacity, description) VALUES (?, ?, ?, ?)`,
-        [classroom.id, classroom.name, classroom.capacity, classroom.description]
+        [
+          classroom.id,
+          classroom.name,
+          classroom.capacity,
+          classroom.description,
+        ]
       );
     }
-    console.log('✅ Classrooms created');
+    console.log("✅ Classrooms created");
   }
 
   // Академические часы
   const [existingPeriods] = await connection.query<any[]>(
-    'SELECT COUNT(*) as count FROM schedule_periods'
+    "SELECT COUNT(*) as count FROM schedule_periods"
   );
 
   if (existingPeriods[0].count === 0) {
@@ -760,12 +808,12 @@ export const up = async (connection: PoolConnection): Promise<void> => {
       (11, '17:00', '17:40', FALSE),
       (12, '17:40', '18:20', FALSE)
     `);
-    console.log('✅ Schedule periods created');
+    console.log("✅ Schedule periods created");
   }
 
   // Настройки расписания
   const [existingSettings] = await connection.query<any[]>(
-    'SELECT COUNT(*) as count FROM schedule_settings'
+    "SELECT COUNT(*) as count FROM schedule_settings"
   );
 
   if (existingSettings[0].count === 0) {
@@ -778,43 +826,49 @@ export const up = async (connection: PoolConnection): Promise<void> => {
       ('snap_to_periods', 'true', 'Привязка событий к академическим часам'),
       ('show_period_numbers', 'true', 'Показывать номера пар в календаре')
     `);
-    console.log('✅ Schedule settings created');
+    console.log("✅ Schedule settings created");
   }
 
-  console.log('');
-  console.log('🎉 Consolidated migration completed successfully!');
-  console.log('📊 Created 20 tables with all indexes, constraints, and seed data');
+  console.log("");
+  console.log("🎉 Consolidated migration completed successfully!");
+  console.log(
+    "📊 Created 20 tables with all indexes, constraints, and seed data"
+  );
 };
 
 export const down = async (connection: PoolConnection): Promise<void> => {
-  console.log('🔄 Rolling back consolidated migration...');
+  console.log("🔄 Rolling back consolidated migration...");
 
   // Удаляем триггеры
-  await connection.query(`DROP TRIGGER IF EXISTS disciplines_calculate_hours_insert`);
-  await connection.query(`DROP TRIGGER IF EXISTS disciplines_calculate_hours_update`);
+  await connection.query(
+    `DROP TRIGGER IF EXISTS disciplines_calculate_hours_insert`
+  );
+  await connection.query(
+    `DROP TRIGGER IF EXISTS disciplines_calculate_hours_update`
+  );
 
   // Удаляем таблицы в обратном порядке (из-за foreign keys)
   const tables = [
-    'telegram_bot_sessions',
-    'organization_representatives',
-    'schedule_settings',
-    'schedule_periods',
-    'schedule_events',
-    'classrooms',
-    'study_group_students',
-    'study_groups',
-    'activity_logs',
-    'files',
-    'folders',
-    'discipline_instructors',
-    'disciplines',
-    'courses',
-    'certificate_templates',
-    'instructors',
-    'certificates',
-    'students',
-    'organizations',
-    'users',
+    "telegram_bot_sessions",
+    "organization_representatives",
+    "schedule_settings",
+    "schedule_periods",
+    "schedule_events",
+    "classrooms",
+    "study_group_students",
+    "study_groups",
+    "activity_logs",
+    "files",
+    "folders",
+    "discipline_instructors",
+    "disciplines",
+    "courses",
+    "certificate_templates",
+    "instructors",
+    "certificates",
+    "students",
+    "organizations",
+    "users",
   ];
 
   for (const table of tables) {
@@ -822,5 +876,5 @@ export const down = async (connection: PoolConnection): Promise<void> => {
     console.log(`✅ Table "${table}" dropped`);
   }
 
-  console.log('🎉 Rollback completed');
+  console.log("🎉 Rollback completed");
 };

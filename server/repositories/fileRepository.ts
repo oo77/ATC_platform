@@ -2,16 +2,16 @@
  * Репозиторий для работы с файлами в MySQL
  */
 
-import { executeQuery } from '../utils/db';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
-import { v4 as uuidv4 } from 'uuid';
-import type { FileCategory } from '../utils/storage';
+import { executeQuery } from "../utils/db";
+import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
+import { v4 as uuidv4 } from "uuid";
+import type { FileCategory } from "../utils/storage";
 
 // ============================================================================
 // ИНТЕРФЕЙСЫ
 // ============================================================================
 
-export type FileAccessLevel = 'public' | 'authenticated' | 'owner' | 'admin';
+export type FileAccessLevel = "public" | "authenticated" | "owner" | "admin";
 
 export interface FileRecord {
   id: number;
@@ -141,6 +141,25 @@ function mapRowToFile(row: FileRow): FileRecord {
 // ============================================================================
 
 /**
+ * Проверить существование файла в папке (по имени)
+ */
+export async function checkFileExists(
+  folderId: number,
+  filename: string
+): Promise<FileRecord | null> {
+  const rows = await executeQuery<FileRow[]>(
+    "SELECT * FROM files WHERE folder_id = ? AND filename = ? AND deleted_at IS NULL LIMIT 1",
+    [folderId, filename]
+  );
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  return mapRowToFile(rows[0]);
+}
+
+/**
  * Создать запись о файле
  */
 export async function createFile(data: CreateFileInput): Promise<FileRecord> {
@@ -171,7 +190,7 @@ export async function createFile(data: CreateFileInput): Promise<FileRecord> {
       data.assignmentId || null,
       data.metadata ? JSON.stringify(data.metadata) : null,
       data.isPublic || false,
-      data.accessLevel || 'authenticated',
+      data.accessLevel || "authenticated",
       data.uploadedBy,
       now,
       now,
@@ -181,7 +200,7 @@ export async function createFile(data: CreateFileInput): Promise<FileRecord> {
   // Возвращаем созданный файл
   const file = await getFileByUuid(data.uuid);
   if (!file) {
-    throw new Error('Failed to create file record');
+    throw new Error("Failed to create file record");
   }
 
   return file;
@@ -192,7 +211,7 @@ export async function createFile(data: CreateFileInput): Promise<FileRecord> {
  */
 export async function getFileByUuid(uuid: string): Promise<FileRecord | null> {
   const rows = await executeQuery<FileRow[]>(
-    'SELECT * FROM files WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+    "SELECT * FROM files WHERE uuid = ? AND deleted_at IS NULL LIMIT 1",
     [uuid]
   );
 
@@ -206,7 +225,9 @@ export async function getFileByUuid(uuid: string): Promise<FileRecord | null> {
 /**
  * Получить файлы с пагинацией и фильтрацией
  */
-export async function getFilesPaginated(params: PaginationParams = {}): Promise<PaginatedResult<FileRecord>> {
+export async function getFilesPaginated(
+  params: PaginationParams = {}
+): Promise<PaginatedResult<FileRecord>> {
   const {
     page = 1,
     limit = 20,
@@ -219,46 +240,47 @@ export async function getFilesPaginated(params: PaginationParams = {}): Promise<
   } = params;
 
   // Строим WHERE условия
-  const conditions: string[] = ['deleted_at IS NULL'];
+  const conditions: string[] = ["deleted_at IS NULL"];
   const queryParams: any[] = [];
 
   // Универсальный поиск по имени файла
   if (search) {
-    conditions.push('filename LIKE ?');
+    conditions.push("filename LIKE ?");
     queryParams.push(`%${search}%`);
   }
 
   // Фильтр по категории
   if (category) {
-    conditions.push('category = ?');
+    conditions.push("category = ?");
     queryParams.push(category);
   }
 
   // Фильтр по пользователю
   if (userId) {
-    conditions.push('user_id = ?');
+    conditions.push("user_id = ?");
     queryParams.push(userId);
   }
 
   // Фильтр по курсу
   if (courseId) {
-    conditions.push('course_id = ?');
+    conditions.push("course_id = ?");
     queryParams.push(courseId);
   }
 
   // Фильтр по группе
   if (groupId) {
-    conditions.push('group_id = ?');
+    conditions.push("group_id = ?");
     queryParams.push(groupId);
   }
 
   // Фильтр по загрузившему
   if (uploadedBy) {
-    conditions.push('uploaded_by = ?');
+    conditions.push("uploaded_by = ?");
     queryParams.push(uploadedBy);
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // Получаем общее количество
   const countQuery = `SELECT COUNT(*) as total FROM files ${whereClause}`;
@@ -292,9 +314,9 @@ export async function getFilesPaginated(params: PaginationParams = {}): Promise<
  */
 export async function deleteFile(uuid: string): Promise<boolean> {
   const now = new Date();
-  
+
   const result = await executeQuery<ResultSetHeader>(
-    'UPDATE files SET deleted_at = ? WHERE uuid = ? AND deleted_at IS NULL',
+    "UPDATE files SET deleted_at = ? WHERE uuid = ? AND deleted_at IS NULL",
     [now, uuid]
   );
 
@@ -305,23 +327,23 @@ export async function deleteFile(uuid: string): Promise<boolean> {
  * Получить файлы по связанной сущности
  */
 export async function getFilesByRelatedEntity(
-  entityType: 'user' | 'course' | 'group' | 'assignment',
+  entityType: "user" | "course" | "group" | "assignment",
   entityId: number
 ): Promise<FileRecord[]> {
   let column: string;
-  
+
   switch (entityType) {
-    case 'user':
-      column = 'user_id';
+    case "user":
+      column = "user_id";
       break;
-    case 'course':
-      column = 'course_id';
+    case "course":
+      column = "course_id";
       break;
-    case 'group':
-      column = 'group_id';
+    case "group":
+      column = "group_id";
       break;
-    case 'assignment':
-      column = 'assignment_id';
+    case "assignment":
+      column = "assignment_id";
       break;
   }
 
@@ -336,9 +358,11 @@ export async function getFilesByRelatedEntity(
 /**
  * Получить файлы по категории
  */
-export async function getFilesByCategory(category: FileCategory): Promise<FileRecord[]> {
+export async function getFilesByCategory(
+  category: FileCategory
+): Promise<FileRecord[]> {
   const rows = await executeQuery<FileRow[]>(
-    'SELECT * FROM files WHERE category = ? AND deleted_at IS NULL ORDER BY created_at DESC',
+    "SELECT * FROM files WHERE category = ? AND deleted_at IS NULL ORDER BY created_at DESC",
     [category]
   );
 
@@ -348,13 +372,16 @@ export async function getFilesByCategory(category: FileCategory): Promise<FileRe
 /**
  * Обновить файл
  */
-export async function updateFile(id: number, updates: Partial<{ filename: string }>): Promise<boolean> {
+export async function updateFile(
+  id: number,
+  updates: Partial<{ filename: string }>
+): Promise<boolean> {
   const now = new Date();
   const fields: string[] = [];
   const values: any[] = [];
 
   if (updates.filename !== undefined) {
-    fields.push('filename = ?');
+    fields.push("filename = ?");
     values.push(updates.filename);
   }
 
@@ -362,11 +389,13 @@ export async function updateFile(id: number, updates: Partial<{ filename: string
     return false;
   }
 
-  fields.push('updated_at = ?');
+  fields.push("updated_at = ?");
   values.push(now);
   values.push(id);
 
-  const query = `UPDATE files SET ${fields.join(', ')} WHERE id = ? AND deleted_at IS NULL`;
+  const query = `UPDATE files SET ${fields.join(
+    ", "
+  )} WHERE id = ? AND deleted_at IS NULL`;
   const result = await executeQuery<ResultSetHeader>(query, values);
 
   return result.affectedRows > 0;

@@ -5,19 +5,23 @@
 // ============ Статусы ============
 
 /** Статус отметки посещаемости для занятия */
-export type AttendanceMarkingStatus = 
-  | 'pending'      // Не отмечено (занятие прошло)
-  | 'in_progress'  // Идёт отметка (занятие идёт)
-  | 'on_time'      // Отмечено вовремя (до 24ч)
-  | 'late'         // Отмечено с опозданием (24-72ч)
-  | 'overdue'      // Просрочено (более 72ч, не отмечено)
-  | 'approved';    // Одобрено администратором (просроченная отметка)
+export type AttendanceMarkingStatus =
+  | "pending" // Не отмечено (занятие прошло)
+  | "in_progress" // Идёт отметка (занятие идёт)
+  | "on_time" // Отмечено вовремя (до 24ч)
+  | "late" // Отмечено с опозданием (24-72ч)
+  | "overdue" // Просрочено (более 72ч, не отмечено)
+  | "approved"; // Одобрено администратором (просроченная отметка)
 
 /** Статус запроса на разрешение */
-export type MarkingRequestStatus = 'pending' | 'approved' | 'rejected';
+export type MarkingRequestStatus = "pending" | "approved" | "rejected";
 
 /** Результат проверки доступа к отметке */
-export type MarkingAccessStatus = 'allowed' | 'late' | 'requires_approval' | 'denied';
+export type MarkingAccessStatus =
+  | "allowed"
+  | "late"
+  | "requires_approval"
+  | "denied";
 
 // ============ Основные интерфейсы ============
 
@@ -108,6 +112,7 @@ export interface MarkingAccessCheckResult {
   message?: string;
   requiresApproval?: boolean;
   existingRequestId?: string;
+  isApprovedByAdmin?: boolean;
 }
 
 /** Статистика по отметкам */
@@ -122,42 +127,47 @@ export interface MarkingStatistics {
 // ============ Константы для UI ============
 
 export const MARKING_STATUS_LABELS: Record<AttendanceMarkingStatus, string> = {
-  pending: 'Не отмечено',
-  in_progress: 'В процессе',
-  on_time: 'Вовремя',
-  late: 'С опозданием',
-  overdue: 'Просрочено',
-  approved: 'Одобрено',
+  pending: "Не отмечено",
+  in_progress: "В процессе",
+  on_time: "Вовремя",
+  late: "С опозданием",
+  overdue: "Просрочено",
+  approved: "Одобрено",
 };
 
 export const MARKING_STATUS_COLORS: Record<AttendanceMarkingStatus, string> = {
-  pending: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-  in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  on_time: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  late: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  overdue: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  approved: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  pending: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+  in_progress:
+    "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  on_time:
+    "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  late: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  overdue: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  approved:
+    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
 };
 
 export const MARKING_STATUS_ICONS: Record<AttendanceMarkingStatus, string> = {
-  pending: 'heroicons:clock',
-  in_progress: 'heroicons:pencil-square',
-  on_time: 'heroicons:check-circle',
-  late: 'heroicons:exclamation-triangle',
-  overdue: 'heroicons:x-circle',
-  approved: 'heroicons:shield-check',
+  pending: "heroicons:clock",
+  in_progress: "heroicons:pencil-square",
+  on_time: "heroicons:check-circle",
+  late: "heroicons:exclamation-triangle",
+  overdue: "heroicons:x-circle",
+  approved: "heroicons:shield-check",
 };
 
 export const REQUEST_STATUS_LABELS: Record<MarkingRequestStatus, string> = {
-  pending: 'Ожидает',
-  approved: 'Одобрено',
-  rejected: 'Отклонено',
+  pending: "Ожидает",
+  approved: "Одобрено",
+  rejected: "Отклонено",
 };
 
 export const REQUEST_STATUS_COLORS: Record<MarkingRequestStatus, string> = {
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  pending:
+    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+  approved:
+    "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 };
 
 // ============ Значения по умолчанию ============

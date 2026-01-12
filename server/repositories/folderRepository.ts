@@ -2,9 +2,9 @@
  * Репозиторий для работы с папками в MySQL
  */
 
-import { executeQuery } from '../utils/db';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
-import { v4 as uuidv4 } from 'uuid';
+import { executeQuery } from "../utils/db";
+import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
+import { v4 as uuidv4 } from "uuid";
 
 // ============================================================================
 // ИНТЕРФЕЙСЫ
@@ -78,11 +78,11 @@ export async function createFolder(data: CreateFolderInput): Promise<Folder> {
   const now = new Date();
 
   // Получение пути родительской папки
-  let parentPath = '';
+  let parentPath = "";
   if (data.parentId) {
     const parent = await getFolderById(data.parentId);
     if (!parent) {
-      throw new Error('Parent folder not found');
+      throw new Error("Parent folder not found");
     }
     parentPath = parent.path;
   }
@@ -94,30 +94,41 @@ export async function createFolder(data: CreateFolderInput): Promise<Folder> {
   await executeQuery(
     `INSERT INTO folders (uuid, name, parent_id, path, user_id, is_system, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [uuid, data.name, data.parentId || null, fullPath, data.userId || null, data.isSystem || false, now, now]
+    [
+      uuid,
+      data.name,
+      data.parentId || null,
+      fullPath,
+      data.userId || null,
+      data.isSystem || false,
+      now,
+      now,
+    ]
   );
 
-  // Создание физической папки в storage/uploads
+  // Создание физической папки в storage
   try {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    
+    const fs = await import("fs/promises");
+    const path = await import("path");
+
     // Убираем начальный слеш и формируем путь к физической папке
-    const relativePath = fullPath.startsWith('/') ? fullPath.substring(1) : fullPath;
-    const physicalPath = path.resolve(process.cwd(), 'storage/uploads', relativePath);
-    
+    const relativePath = fullPath.startsWith("/")
+      ? fullPath.substring(1)
+      : fullPath;
+    const physicalPath = path.resolve(process.cwd(), "storage", relativePath);
+
     // Создаем папку (recursive: true создаст все родительские папки)
     await fs.mkdir(physicalPath, { recursive: true });
-    
+
     console.log(`✓ Физическая папка создана: ${physicalPath}`);
   } catch (error) {
-    console.error('Ошибка создания физической папки:', error);
+    console.error("Ошибка создания физической папки:", error);
     // Не бросаем ошибку, так как запись в БД уже создана
   }
 
   const folder = await getFolderByUuid(uuid);
   if (!folder) {
-    throw new Error('Failed to create folder');
+    throw new Error("Failed to create folder");
   }
 
   return folder;
@@ -128,7 +139,7 @@ export async function createFolder(data: CreateFolderInput): Promise<Folder> {
  */
 export async function getFolderById(id: number): Promise<Folder | null> {
   const rows = await executeQuery<FolderRow[]>(
-    'SELECT * FROM folders WHERE id = ? AND deleted_at IS NULL LIMIT 1',
+    "SELECT * FROM folders WHERE id = ? AND deleted_at IS NULL LIMIT 1",
     [id]
   );
 
@@ -144,7 +155,7 @@ export async function getFolderById(id: number): Promise<Folder | null> {
  */
 export async function getFolderByUuid(uuid: string): Promise<Folder | null> {
   const rows = await executeQuery<FolderRow[]>(
-    'SELECT * FROM folders WHERE uuid = ? AND deleted_at IS NULL LIMIT 1',
+    "SELECT * FROM folders WHERE uuid = ? AND deleted_at IS NULL LIMIT 1",
     [uuid]
   );
 
@@ -160,7 +171,7 @@ export async function getFolderByUuid(uuid: string): Promise<Folder | null> {
  */
 export async function getFolderByPath(path: string): Promise<Folder | null> {
   const rows = await executeQuery<FolderRow[]>(
-    'SELECT * FROM folders WHERE path = ? AND deleted_at IS NULL LIMIT 1',
+    "SELECT * FROM folders WHERE path = ? AND deleted_at IS NULL LIMIT 1",
     [path]
   );
 
@@ -174,10 +185,13 @@ export async function getFolderByPath(path: string): Promise<Folder | null> {
 /**
  * Получить подпапки
  */
-export async function getSubFolders(parentId: number | null = null): Promise<Folder[]> {
-  const query = parentId === null
-    ? 'SELECT * FROM folders WHERE parent_id IS NULL AND deleted_at IS NULL ORDER BY is_system DESC, name ASC'
-    : 'SELECT * FROM folders WHERE parent_id = ? AND deleted_at IS NULL ORDER BY is_system DESC, name ASC';
+export async function getSubFolders(
+  parentId: number | null = null
+): Promise<Folder[]> {
+  const query =
+    parentId === null
+      ? "SELECT * FROM folders WHERE parent_id IS NULL AND deleted_at IS NULL ORDER BY is_system DESC, name ASC"
+      : "SELECT * FROM folders WHERE parent_id = ? AND deleted_at IS NULL ORDER BY is_system DESC, name ASC";
 
   const params = parentId === null ? [] : [parentId];
   const rows = await executeQuery<FolderRow[]>(query, params);
@@ -195,7 +209,10 @@ export async function getRootFolders(): Promise<Folder[]> {
 /**
  * Переименовать папку
  */
-export async function renameFolder(id: number, newName: string): Promise<boolean> {
+export async function renameFolder(
+  id: number,
+  newName: string
+): Promise<boolean> {
   const folder = await getFolderById(id);
   if (!folder) {
     return false;
@@ -203,42 +220,59 @@ export async function renameFolder(id: number, newName: string): Promise<boolean
 
   // Системные папки нельзя переименовывать
   if (folder.isSystem) {
-    throw new Error('Cannot rename system folder');
+    throw new Error("Cannot rename system folder");
   }
 
   // Формирование нового пути
   const oldPath = folder.path;
-  const pathParts = oldPath.split('/').filter(Boolean);
+  const pathParts = oldPath.split("/").filter(Boolean);
   pathParts[pathParts.length - 1] = newName;
-  const newPath = '/' + pathParts.join('/');
+  const newPath = "/" + pathParts.join("/");
 
   // Переименование физической папки
   try {
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    
-    const oldRelativePath = oldPath.startsWith('/') ? oldPath.substring(1) : oldPath;
-    const newRelativePath = newPath.startsWith('/') ? newPath.substring(1) : newPath;
-    
-    const oldPhysicalPath = path.resolve(process.cwd(), 'storage/uploads', oldRelativePath);
-    const newPhysicalPath = path.resolve(process.cwd(), 'storage/uploads', newRelativePath);
-    
+    const fs = await import("fs/promises");
+    const path = await import("path");
+
+    const oldRelativePath = oldPath.startsWith("/")
+      ? oldPath.substring(1)
+      : oldPath;
+    const newRelativePath = newPath.startsWith("/")
+      ? newPath.substring(1)
+      : newPath;
+
+    const oldPhysicalPath = path.resolve(
+      process.cwd(),
+      "storage",
+      oldRelativePath
+    );
+    const newPhysicalPath = path.resolve(
+      process.cwd(),
+      "storage",
+      newRelativePath
+    );
+
     // Проверяем существование старой папки
     try {
       await fs.access(oldPhysicalPath);
       // Переименовываем физическую папку
       await fs.rename(oldPhysicalPath, newPhysicalPath);
-      console.log(`✓ Физическая папка переименована: ${oldPhysicalPath} → ${newPhysicalPath}`);
+      console.log(
+        `✓ Физическая папка переименована: ${oldPhysicalPath} → ${newPhysicalPath}`
+      );
     } catch (error) {
-      console.warn('Физическая папка не найдена или не может быть переименована:', error);
+      console.warn(
+        "Физическая папка не найдена или не может быть переименована:",
+        error
+      );
     }
   } catch (error) {
-    console.error('Ошибка переименования физической папки:', error);
+    console.error("Ошибка переименования физической папки:", error);
   }
 
   // Обновление в БД
   const result = await executeQuery<ResultSetHeader>(
-    'UPDATE folders SET name = ?, path = ?, updated_at = ? WHERE id = ?',
+    "UPDATE folders SET name = ?, path = ?, updated_at = ? WHERE id = ?",
     [newName, newPath, new Date(), id]
   );
 
@@ -256,7 +290,10 @@ export async function renameFolder(id: number, newName: string): Promise<boolean
 /**
  * Переместить папку
  */
-export async function moveFolder(id: number, newParentId: number | null): Promise<boolean> {
+export async function moveFolder(
+  id: number,
+  newParentId: number | null
+): Promise<boolean> {
   const folder = await getFolderById(id);
   if (!folder) {
     return false;
@@ -264,20 +301,20 @@ export async function moveFolder(id: number, newParentId: number | null): Promis
 
   // Системные папки нельзя перемещать
   if (folder.isSystem) {
-    throw new Error('Cannot move system folder');
+    throw new Error("Cannot move system folder");
   }
 
   // Получение нового родителя
-  let newParentPath = '';
+  let newParentPath = "";
   if (newParentId) {
     const newParent = await getFolderById(newParentId);
     if (!newParent) {
-      throw new Error('New parent folder not found');
+      throw new Error("New parent folder not found");
     }
 
     // Нельзя переместить папку в свою подпапку
-    if (newParent.path.startsWith(folder.path + '/')) {
-      throw new Error('Cannot move folder into its own subfolder');
+    if (newParent.path.startsWith(folder.path + "/")) {
+      throw new Error("Cannot move folder into its own subfolder");
     }
 
     newParentPath = newParent.path;
@@ -285,10 +322,12 @@ export async function moveFolder(id: number, newParentId: number | null): Promis
 
   // Формирование нового пути
   const oldPath = folder.path;
-  const newPath = newParentPath ? `${newParentPath}/${folder.name}` : `/${folder.name}`;
+  const newPath = newParentPath
+    ? `${newParentPath}/${folder.name}`
+    : `/${folder.name}`;
 
   const result = await executeQuery<ResultSetHeader>(
-    'UPDATE folders SET parent_id = ?, path = ?, updated_at = ? WHERE id = ?',
+    "UPDATE folders SET parent_id = ?, path = ?, updated_at = ? WHERE id = ?",
     [newParentId, newPath, new Date(), id]
   );
 
@@ -314,7 +353,7 @@ export async function deleteFolder(id: number): Promise<boolean> {
 
   // Системные папки нельзя удалять
   if (folder.isSystem) {
-    throw new Error('Cannot delete system folder');
+    throw new Error("Cannot delete system folder");
   }
 
   const now = new Date();
@@ -335,7 +374,7 @@ export async function deleteFolder(id: number): Promise<boolean> {
  */
 export async function getSubFoldersCount(folderId: number): Promise<number> {
   const rows = await executeQuery<RowDataPacket[]>(
-    'SELECT COUNT(*) as count FROM folders WHERE parent_id = ? AND deleted_at IS NULL',
+    "SELECT COUNT(*) as count FROM folders WHERE parent_id = ? AND deleted_at IS NULL",
     [folderId]
   );
 
