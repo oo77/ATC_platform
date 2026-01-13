@@ -83,6 +83,7 @@ export interface CreateScheduleEventInput {
   notes?: string;
   testTemplateId?: string; // New: optional test template for assessment events
   allowedStudentIds?: string[]; // New: limit access to specific students
+  originalEventId?: string; // New: link to original event for retakes
 }
 
 export interface UpdateScheduleEventInput {
@@ -409,8 +410,9 @@ export async function createScheduleEvent(
   await executeQuery(
     `INSERT INTO schedule_events (
       id, title, description, group_id, discipline_id, instructor_id, classroom_id,
-      start_time, end_time, is_all_day, color, event_type, is_recurring, recurrence_rule, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      start_time, end_time, is_all_day, color, event_type, is_recurring, recurrence_rule, notes,
+      allowed_student_ids, original_event_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.title,
@@ -427,6 +429,8 @@ export async function createScheduleEvent(
       data.isRecurring || false,
       data.recurrenceRule || null,
       data.notes || null,
+      data.allowedStudentIds ? JSON.stringify(data.allowedStudentIds) : null,
+      data.originalEventId || null,
     ]
   );
 
