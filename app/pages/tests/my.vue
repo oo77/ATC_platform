@@ -640,6 +640,7 @@ const tabs = computed(() => [
 ]);
 
 // Статистика
+// Статистика
 const stats = computed(() => {
   const now = new Date();
 
@@ -648,27 +649,22 @@ const stats = computed(() => {
     const startDate = parseLocalDateTime(a.start_date);
     const notStartedYet = startDate && startDate > now;
 
-    // Отладка
-    if (notStartedYet) {
-      console.log(
-        `[Tests/My] Future test found: ${
-          a.template_name
-        }, Start: ${startDate.toLocaleString()}`
-      );
-    } else {
-      /* console.log(`[Tests/My] Not future: ${a.template_name}, Start: ${startDate ? startDate.toLocaleString() : 'NULL'}`); */
-    }
+    // allow empty status for future tests if data inconsistency
+    const isScheduled = !a.status || a.status === "scheduled";
 
-    return a.status === "scheduled" && !a.has_active_session && notStartedYet;
+    return isScheduled && !a.has_active_session && notStartedYet;
   }).length;
 
   // Тесты, доступные для прохождения сейчас
   const pending = assignments.value.filter((a) => {
     const isExpired = a.end_date && parseLocalDateTime(a.end_date) < now;
-    const notStartedYet =
-      a.start_date && parseLocalDateTime(a.start_date) > now;
+    const startDate = parseLocalDateTime(a.start_date);
+    const notStartedYet = startDate && startDate > now;
+
+    const isScheduled = !a.status || a.status === "scheduled";
+
     return (
-      a.status === "scheduled" &&
+      isScheduled &&
       !a.has_active_session &&
       (a.attempts_used || 0) < (a.max_attempts || 1) &&
       !isExpired &&
@@ -706,7 +702,9 @@ const filteredAssignments = computed(() => {
     return assignments.value.filter((a) => {
       const startDate = parseLocalDateTime(a.start_date);
       const notStartedYet = startDate && startDate > now;
-      return a.status === "scheduled" && !a.has_active_session && notStartedYet;
+      const isScheduled = !a.status || a.status === "scheduled";
+
+      return isScheduled && !a.has_active_session && notStartedYet;
     });
   }
 
@@ -715,8 +713,10 @@ const filteredAssignments = computed(() => {
       const isExpired = a.end_date && parseLocalDateTime(a.end_date) < now;
       const startDate = parseLocalDateTime(a.start_date);
       const notStartedYet = startDate && startDate > now;
+      const isScheduled = !a.status || a.status === "scheduled";
+
       return (
-        a.status === "scheduled" &&
+        isScheduled &&
         !a.has_active_session &&
         (a.attempts_used || 0) < (a.max_attempts || 1) &&
         !isExpired &&
