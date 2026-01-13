@@ -32,6 +32,8 @@ import * as attendanceMarkingSystem from "./migrations/20260109_038_attendance_m
 import * as fixAttendanceTrigger from "./migrations/20260109_039_fix_attendance_trigger";
 import * as backfillMarkingStatus from "./migrations/20260109_040_backfill_marking_status";
 import * as retakeSystem from "./migrations/20260113_041_retake_system";
+import * as retakeLinkedEvents from "./migrations/20260113_042_retake_linked_events";
+import * as scheduleEventsAllowedStudents from "./migrations/20260113_043_schedule_events_allowed_students";
 
 /**
  * ============================================================================
@@ -274,6 +276,24 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: retakeSystem.up,
     down: retakeSystem.down,
     description: retakeSystem.description,
+  },
+  // ============================================================
+  // Миграция 042: Связанные пересдачи (original_event_id)
+  // ============================================================
+  {
+    name: "20260113_042_retake_linked_events",
+    up: retakeLinkedEvents.up,
+    down: retakeLinkedEvents.down,
+    description: retakeLinkedEvents.description,
+  },
+  // ============================================================
+  // Миграция 043: Разрешенные студенты для событий (allowed_student_ids)
+  // ============================================================
+  {
+    name: "20260113_043_schedule_events_allowed_students",
+    up: scheduleEventsAllowedStudents.up,
+    down: scheduleEventsAllowedStudents.down,
+    description: scheduleEventsAllowedStudents.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

@@ -19,6 +19,9 @@ interface JournalColumn {
     endTime: string;
     eventType: "theory" | "practice" | "assessment" | "other";
     academicHours: number;
+    isRetake: boolean;
+    allowedStudentIds: string[] | null;
+    originalEventId: string | null; // ID оригинального события для пересдач
   };
   hasGrade: boolean;
 }
@@ -40,6 +43,7 @@ interface JournalCell {
     isModified: boolean;
     originalGrade: number | null;
   };
+  isHidden?: boolean;
 }
 
 interface JournalRow {
@@ -87,29 +91,56 @@ export default defineEventHandler(async (event) => {
     );
 
     // Формируем столбцы (занятия)
-    const columns: JournalColumn[] = data.events.map((evt) => ({
-      scheduleEvent: {
-        id: evt.id,
-        title: evt.title,
-        date: evt.start_time.toISOString().split("T")[0],
-        startTime: evt.start_time.toISOString(),
-        endTime: evt.end_time.toISOString(),
-        eventType: evt.event_type as
-          | "theory"
-          | "practice"
-          | "assessment"
-          | "other",
-        academicHours: calculateAcademicHours(evt.start_time, evt.end_time),
-      },
-      // Оценки доступны для проверки знаний (assessment) и практики (practice)
-      hasGrade:
-        evt.event_type === "assessment" || evt.event_type === "practice",
-    }));
+    const columns: JournalColumn[] = data.events.map((evt) => {
+      const allowedStudentIds = evt.allowed_student_ids
+        ? JSON.parse(evt.allowed_student_ids)
+        : null;
+
+      return {
+        scheduleEvent: {
+          id: evt.id,
+          title: evt.title,
+          date: evt.start_time.toISOString().split("T")[0],
+          startTime: evt.start_time.toISOString(),
+          endTime: evt.end_time.toISOString(),
+          eventType: evt.event_type as
+            | "theory"
+            | "practice"
+            | "assessment"
+            | "other",
+          academicHours: calculateAcademicHours(evt.start_time, evt.end_time),
+          isRetake: allowedStudentIds !== null && allowedStudentIds.length > 0,
+          allowedStudentIds: allowedStudentIds,
+          originalEventId: evt.original_event_id || null, // Связь с оригинальным занятием
+        },
+        // Оценки доступны для проверки знаний (assessment) и практики (practice)
+        hasGrade:
+          evt.event_type === "assessment" || evt.event_type === "practice",
+      };
+    });
 
     // Формируем строки (студенты)
     const rows: JournalRow[] = data.students.map((student) => {
       // Ячейки для каждого занятия
       const cells: JournalCell[] = data.events.map((evt) => {
+        // Проверяем, является ли это пересдачей
+        const allowedStudentIds = evt.allowed_student_ids
+          ? JSON.parse(evt.allowed_student_ids)
+          : null;
+        const isRetake =
+          allowedStudentIds !== null && allowedStudentIds.length > 0;
+
+        // Если это пересдача и студент не в списке разрешенных - возвращаем пустую ячейку
+        if (isRetake && !allowedStudentIds.includes(student.student_id)) {
+          return {
+            studentId: student.student_id,
+            scheduleEventId: evt.id,
+            attendance: undefined,
+            grade: undefined,
+            isHidden: true, // Маркер для фронтенда
+          };
+        }
+
         const attendance = data.attendances.find(
           (a) =>
             a.studentId === student.student_id && a.scheduleEventId === evt.id
@@ -140,6 +171,7 @@ export default defineEventHandler(async (event) => {
                 originalGrade: grade.originalGrade,
               }
             : undefined,
+          isHidden: false,
         };
       });
 
@@ -159,10 +191,38 @@ export default defineEventHandler(async (event) => {
         return sum + (col?.scheduleEvent.academicHours || 0);
       }, 0);
 
-      // Средняя оценка
-      const gradeValues = cells
-        .filter((cell) => cell.grade)
-        .map((cell) => cell.grade!.grade);
+      // Средняя оценка с учётом связанных пересдач
+      // Для каждого "базового" занятия берём только последнюю оценку
+      const gradesByBaseEvent = new Map<
+        string,
+        { grade: number; date: Date }
+      >();
+
+      cells.forEach((cell, index) => {
+        if (cell.isHidden || !cell.grade) return;
+
+        const column = columns[index];
+        if (!column) return;
+
+        // Определяем базовое событие (оригинал или само событие)
+        const baseEventId =
+          column.scheduleEvent.originalEventId || cell.scheduleEventId;
+        const eventDate = new Date(column.scheduleEvent.startTime);
+
+        const existing = gradesByBaseEvent.get(baseEventId);
+
+        // Берём более позднюю оценку (пересдача всегда позже)
+        if (!existing || eventDate > existing.date) {
+          gradesByBaseEvent.set(baseEventId, {
+            grade: cell.grade.grade,
+            date: eventDate,
+          });
+        }
+      });
+
+      const gradeValues = Array.from(gradesByBaseEvent.values()).map(
+        (g) => g.grade
+      );
       const averageGrade =
         gradeValues.length > 0
           ? Math.round(

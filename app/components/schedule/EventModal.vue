@@ -350,8 +350,8 @@
           <input
             v-model="form.date"
             type="date"
-            :min="selectedGroupInfo?.startDate"
-            :max="selectedGroupInfo?.endDate"
+            :min="!isRetake ? selectedGroupInfo?.startDate : undefined"
+            :max="!isRetake ? selectedGroupInfo?.endDate : undefined"
             class="w-full rounded-lg border border-stroke bg-transparent py-2.5 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
             :class="{ 'border-danger': errors.date }"
           />
@@ -1405,7 +1405,8 @@ const validate = (): boolean => {
 
   if (!form.value.date) {
     errors.value.date = "Укажите дату занятия";
-  } else if (selectedGroupInfo.value) {
+  } else if (selectedGroupInfo.value && !isRetake.value) {
+    // В режиме пересдачи не проверяем пределы курса
     const date = form.value.date;
     if (
       date < selectedGroupInfo.value.startDate ||

@@ -327,10 +327,7 @@
             <UiButton
               variant="primary"
               size="sm"
-              :disabled="
-                !selectedEventId ||
-                (markingAccess && markingAccess.status === 'denied')
-              "
+              :disabled="!selectedEventId || markingAccess?.status === 'denied'"
               @click="openBulkAttendanceModal"
             >
               <svg
@@ -456,19 +453,33 @@
                   class="px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[80px]"
                 >
                   <div class="flex flex-col items-center gap-1">
-                    <span
-                      class="inline-block w-2 h-2 rounded-full"
-                      :class="{
-                        'bg-blue-500':
-                          column.scheduleEvent.eventType === 'theory',
-                        'bg-green-500':
-                          column.scheduleEvent.eventType === 'practice',
-                        'bg-orange-500':
-                          column.scheduleEvent.eventType === 'assessment',
-                        'bg-gray-500':
-                          column.scheduleEvent.eventType === 'other',
-                      }"
-                    ></span>
+                    <div class="flex items-center gap-1">
+                      <span
+                        class="inline-block w-2 h-2 rounded-full"
+                        :class="{
+                          'bg-purple-500': column.scheduleEvent.isRetake,
+                          'bg-blue-500':
+                            !column.scheduleEvent.isRetake &&
+                            column.scheduleEvent.eventType === 'theory',
+                          'bg-green-500':
+                            !column.scheduleEvent.isRetake &&
+                            column.scheduleEvent.eventType === 'practice',
+                          'bg-orange-500':
+                            !column.scheduleEvent.isRetake &&
+                            column.scheduleEvent.eventType === 'assessment',
+                          'bg-gray-500':
+                            !column.scheduleEvent.isRetake &&
+                            column.scheduleEvent.eventType === 'other',
+                        }"
+                      ></span>
+                      <span
+                        v-if="column.scheduleEvent.isRetake"
+                        class="inline-flex items-center justify-center w-4 h-4 text-[8px] font-bold bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded"
+                        title="Режим пересдачи"
+                      >
+                        П
+                      </span>
+                    </div>
                     <span class="text-xs">{{
                       formatColumnDate(column.scheduleEvent.date)
                     }}</span>
@@ -533,6 +544,8 @@
                     :cell="cell"
                     :column="columns[cellIndex]!"
                     :student-id="row.student.id"
+                    :is-retake-target="getRetakeInfo(row.student.id, columns[cellIndex]!.scheduleEvent.id).isRetakeTarget"
+                    :replacement-grade="getRetakeInfo(row.student.id, columns[cellIndex]!.scheduleEvent.id).replacementGrade"
                     @update="handleCellUpdate"
                     @require-approval="handleRequireApproval"
                   />
@@ -594,6 +607,10 @@
           <span class="flex items-center gap-1">
             <span class="w-3 h-3 rounded-full bg-orange-500"></span>
             Проверка знаний (с оценкой)
+          </span>
+          <span class="flex items-center gap-1">
+            <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+            Пересдача
           </span>
 
           <span class="mx-2 text-gray-300 dark:text-gray-600">|</span>
@@ -837,6 +854,9 @@ interface JournalColumn {
     endTime: string;
     eventType: "theory" | "practice" | "assessment" | "other";
     academicHours: number;
+    isRetake?: boolean;
+    allowedStudentIds?: string[] | null;
+    originalEventId?: string | null;
   };
   hasGrade: boolean;
 }
@@ -858,6 +878,7 @@ interface JournalCell {
     isModified?: boolean;
     originalGrade?: number | null;
   };
+  isHidden?: boolean;
 }
 
 interface FinalGrade {
@@ -1068,6 +1089,46 @@ const getAttendanceColor = (percent: number) => {
   if (percent >= 75) return "text-success bg-success/10";
   if (percent >= 50) return "text-warning bg-warning/10";
   return "text-danger bg-danger/10";
+};
+
+// Получение информации о пересдаче для конкретной ячейки
+const getRetakeInfo = (studentId: string, currentEventId: string) => {
+  // Находим все колонки, которые являются пересдачами для текущего события
+  const retakeColumns = columns.value.filter(
+    (col) => col.scheduleEvent.originalEventId === currentEventId
+  );
+
+  if (retakeColumns.length === 0)
+    return { isRetakeTarget: false, replacementGrade: null };
+
+  // Если есть пересдачи, ищем оценку студента за самую позднюю пересдачу
+  const studentRow = rows.value.find((r) => r.student.id === studentId);
+  if (!studentRow) return { isRetakeTarget: false, replacementGrade: null };
+
+  let latestGrade: number | null = null;
+  let latestDate: string | null = null;
+
+  retakeColumns.forEach((retakeCol) => {
+    const retakeColIndex = columns.value.findIndex(
+      (c) => c.scheduleEvent.id === retakeCol.scheduleEvent.id
+    );
+    if (retakeColIndex === -1) return;
+
+    const cell = studentRow.cells[retakeColIndex];
+    // Учитываем только видимые ячейки с оценками
+    if (cell && cell.grade && !cell.isHidden) {
+      if (!latestDate || retakeCol.scheduleEvent.date >= latestDate) {
+        latestGrade = cell.grade.grade;
+        latestDate = retakeCol.scheduleEvent.date;
+      }
+    }
+  });
+
+  if (latestGrade !== null) {
+    return { isRetakeTarget: true, replacementGrade: latestGrade };
+  }
+
+  return { isRetakeTarget: true, replacementGrade: null };
 };
 
 // Event handlers

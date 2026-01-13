@@ -1,0 +1,40 @@
+const interopDefault = r => r.default || r || [];
+const styles = {
+  "pages/tests/take/[id].vue": () => import('./_id_-styles.DI_5xm4K.mjs').then(interopDefault),
+  "pages/certificates/templates/[id]/editor.vue": () => import('./editor-styles.CrhJzLeb.mjs').then(interopDefault),
+  "pages/certificates/templates/[id]/editor.vue?vue&type=style&index=0&scoped=21e3a97f&lang.css": () => import('./editor-styles.CrhJzLeb.mjs').then(interopDefault),
+  "pages/tests/take/[id].vue?vue&type=style&index=0&scoped=1d1bb2bf&lang.css": () => import('./_id_-styles.DI_5xm4K.mjs').then(interopDefault),
+  "../node_modules/nuxt/dist/app/components/error-404.vue": () => import('./error-404-styles.SO9LtFGn.mjs').then(interopDefault),
+  "../node_modules/nuxt/dist/app/components/error-500.vue": () => import('./error-500-styles.Dw-4YpQp.mjs').then(interopDefault),
+  "../node_modules/nuxt/dist/app/components/error-404.vue?vue&type=style&index=0&scoped=cd31e6b7&lang.css": () => import('./error-404-styles.SO9LtFGn.mjs').then(interopDefault),
+  "../node_modules/nuxt/dist/app/components/error-500.vue?vue&type=style&index=0&scoped=8851f357&lang.css": () => import('./error-500-styles.Dw-4YpQp.mjs').then(interopDefault),
+  "components/dashboard/Manager.vue": () => import('./Manager-styles.DAfH2l6N.mjs').then(interopDefault),
+  "components/dashboard/Admin.vue": () => import('./Admin-styles.DV5kgqot.mjs').then(interopDefault),
+  "components/dashboard/Manager.vue?vue&type=style&index=0&scoped=0c7364a3&lang.css": () => import('./Manager-styles.DAfH2l6N.mjs').then(interopDefault),
+  "components/dashboard/Admin.vue?vue&type=style&index=0&scoped=8d5d5418&lang.css": () => import('./Admin-styles.DV5kgqot.mjs').then(interopDefault),
+  "components/schedule/CalendarView.vue": () => import('./CalendarView-styles.zX0OByof.mjs').then(interopDefault),
+  "components/certificates/BulkIssueModal.vue": () => import('./BulkIssueModal-styles.CVNezFGg.mjs').then(interopDefault),
+  "components/schedule/CalendarView.vue?vue&type=style&index=0&lang.css": () => import('./CalendarView-styles.zX0OByof.mjs').then(interopDefault),
+  "components/certificates/BulkIssueModal.vue?vue&type=style&index=0&scoped=9464bcca&lang.css": () => import('./BulkIssueModal-styles.CVNezFGg.mjs').then(interopDefault),
+  "components/charts/DynamicBarChart.vue": () => import('./DynamicBarChart-styles.FGTnd6WC.mjs').then(interopDefault),
+  "components/files/FilePreviewModal.vue": () => import('./FilePreviewModal-styles.Swc5O0QI.mjs').then(interopDefault),
+  "components/common/FileUploader.vue": () => import('./FileUploader-styles.BoDA7hGY.mjs').then(interopDefault),
+  "components/certificates/editor/CertificateEditor.vue": () => import('./CertificateEditor-styles.AnxlDd7D.mjs').then(interopDefault),
+  "components/charts/DynamicBarChart.vue?vue&type=style&index=0&scoped=c7ea2314&lang.css": () => import('./DynamicBarChart-styles.FGTnd6WC.mjs').then(interopDefault),
+  "components/files/FilePreviewModal.vue?vue&type=style&index=0&scoped=c69c090c&lang.css": () => import('./FilePreviewModal-styles.Swc5O0QI.mjs').then(interopDefault),
+  "components/common/FileUploader.vue?vue&type=style&index=0&scoped=460c0dbf&lang.css": () => import('./FileUploader-styles.BoDA7hGY.mjs').then(interopDefault),
+  "components/certificates/editor/CertificateEditor.vue?vue&type=style&index=0&scoped=cadaac10&lang.css": () => import('./CertificateEditor-styles.AnxlDd7D.mjs').then(interopDefault),
+  "layouts/blank.vue": () => import('./blank-styles.Bgtv8CJ8.mjs').then(interopDefault),
+  "layouts/blank.vue?vue&type=style&index=0&scoped=194ac346&lang.css": () => import('./blank-styles.Bgtv8CJ8.mjs').then(interopDefault),
+  "components/layout/AppSidebar.vue": () => import('./AppSidebar-styles.Dfn363bV.mjs').then(interopDefault),
+  "components/layout/AppSidebar.vue?vue&type=style&index=0&scoped=04de0dbd&lang.css": () => import('./AppSidebar-styles.Dfn363bV.mjs').then(interopDefault),
+  "components/certificates/editor/EditorToolbar.vue": () => import('./EditorToolbar-styles.DdJ7YoTT.mjs').then(interopDefault),
+  "components/certificates/editor/EditorSidebar.vue": () => import('./EditorSidebar-styles.4bFPM-0Z.mjs').then(interopDefault),
+  "components/certificates/editor/EditorCanvas.vue": () => import('./EditorCanvas-styles.0X0TDCdu.mjs').then(interopDefault),
+  "components/certificates/editor/EditorToolbar.vue?vue&type=style&index=0&scoped=8ded248d&lang.css": () => import('./EditorToolbar-styles.DdJ7YoTT.mjs').then(interopDefault),
+  "components/certificates/editor/EditorSidebar.vue?vue&type=style&index=0&scoped=7634383e&lang.css": () => import('./EditorSidebar-styles.4bFPM-0Z.mjs').then(interopDefault),
+  "components/certificates/editor/EditorCanvas.vue?vue&type=style&index=0&scoped=faee0f2c&lang.css": () => import('./EditorCanvas-styles.0X0TDCdu.mjs').then(interopDefault)
+};
+
+export { styles as default };
+//# sourceMappingURL=styles.mjs.map

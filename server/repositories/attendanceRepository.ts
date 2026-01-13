@@ -999,6 +999,8 @@ interface JournalEventRow extends RowDataPacket {
   start_time: Date;
   end_time: Date;
   event_type: string;
+  allowed_student_ids: string | null;
+  original_event_id: string | null; // ID оригинального события для пересдач
 }
 
 interface JournalStudentRow extends RowDataPacket {
@@ -1022,10 +1024,18 @@ export async function getJournalData(
 }> {
   // Занятия по дисциплине
   const eventsSql = `
-    SELECT id, title, start_time, end_time, event_type
-    FROM schedule_events
-    WHERE group_id = ? AND discipline_id = ?
-    ORDER BY start_time
+    SELECT 
+      se.id, 
+      se.title, 
+      se.start_time, 
+      se.end_time, 
+      se.event_type,
+      se.original_event_id,
+      ta.allowed_student_ids
+    FROM schedule_events se
+    LEFT JOIN test_assignments ta ON se.id = ta.schedule_event_id
+    WHERE se.group_id = ? AND se.discipline_id = ?
+    ORDER BY se.start_time
   `;
 
   console.log(
