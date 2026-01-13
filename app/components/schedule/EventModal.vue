@@ -1751,12 +1751,26 @@ const initForm = () => {
       endTime: endTimePart,
       description: props.event.description || "",
       testTemplateId: "", // Will be loaded by loadCurrentAssignment
-      allowedStudentIds: [], // Will be loaded by loadCurrentAssignment
+      allowedStudentIds: props.event.allowedStudentIds || [],
     };
+
+    // Определяем, является ли это пересдачей
+    if (
+      (props.event.allowedStudentIds &&
+        props.event.allowedStudentIds.length > 0) ||
+      props.event.originalEventId
+    ) {
+      isRetake.value = true;
+    }
 
     // Загружаем дисциплины если есть группа (с сохранением выбранных значений)
     if (form.value.groupId) {
       loadGroupDisciplines(form.value.groupId, true);
+
+      // Если это пересдача, сразу загружаем студентов
+      if (isRetake.value) {
+        loadGroupStudents(form.value.groupId);
+      }
     }
 
     // Загружаем тесты если это проверка знаний
@@ -1764,6 +1778,7 @@ const initForm = () => {
       loadAllActiveTemplates().then(() => {
         loadCurrentAssignment(props.event!.id).then(() => {
           // Если после загрузки назначения выяснилось, что это пересдача (isRetake=true), загружаем студентов
+          // (хотя мы уже могли загрузить их выше, проверка не повредит)
           if (isRetake.value && form.value.groupId) {
             loadGroupStudents(form.value.groupId);
           }

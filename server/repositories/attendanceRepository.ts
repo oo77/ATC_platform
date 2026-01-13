@@ -1031,9 +1031,8 @@ export async function getJournalData(
       se.end_time, 
       se.event_type,
       se.original_event_id,
-      ta.allowed_student_ids
+      se.allowed_student_ids
     FROM schedule_events se
-    LEFT JOIN test_assignments ta ON se.id = ta.schedule_event_id
     WHERE se.group_id = ? AND se.discipline_id = ?
     ORDER BY se.start_time
   `;

@@ -2,7 +2,7 @@
  * Типы для расписания занятий
  */
 
-import type { StudyGroup } from './group';
+import type { StudyGroup } from "./group";
 
 // ============ Аудитории ============
 
@@ -18,8 +18,8 @@ export interface Classroom {
 
 // ============ События расписания ============
 
-export type ScheduleEventType = 'theory' | 'practice' | 'assessment' | 'other';
-export type ScheduleEventColor = 'primary' | 'success' | 'warning' | 'danger';
+export type ScheduleEventType = "theory" | "practice" | "assessment" | "other";
+export type ScheduleEventColor = "primary" | "success" | "warning" | "danger";
 
 export interface ScheduleEvent {
   id: string;
@@ -49,6 +49,8 @@ export interface ScheduleEvent {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  allowedStudentIds?: string[] | null;
+  originalEventId?: string | null;
 }
 
 // ============ Данные для создания/обновления ============
@@ -140,17 +142,20 @@ export interface CalendarEvent {
 }
 
 // Цветовая схема событий
-export const EVENT_COLORS: Record<ScheduleEventColor, { bg: string; border: string; text: string }> = {
-  primary: { bg: '#3C50E0', border: '#3C50E0', text: '#ffffff' },
-  success: { bg: '#10B981', border: '#10B981', text: '#ffffff' },
-  warning: { bg: '#F59E0B', border: '#F59E0B', text: '#ffffff' },
-  danger: { bg: '#EF4444', border: '#EF4444', text: '#ffffff' },
+export const EVENT_COLORS: Record<
+  ScheduleEventColor,
+  { bg: string; border: string; text: string }
+> = {
+  primary: { bg: "#3C50E0", border: "#3C50E0", text: "#ffffff" },
+  success: { bg: "#10B981", border: "#10B981", text: "#ffffff" },
+  warning: { bg: "#F59E0B", border: "#F59E0B", text: "#ffffff" },
+  danger: { bg: "#EF4444", border: "#EF4444", text: "#ffffff" },
 };
 
 // Типы событий
 export const EVENT_TYPES: Record<ScheduleEventType, string> = {
-  theory: 'Теория',
-  practice: 'Практика',
-  assessment: 'Проверка знаний',
-  other: 'Другое',
+  theory: "Теория",
+  practice: "Практика",
+  assessment: "Проверка знаний",
+  other: "Другое",
 };

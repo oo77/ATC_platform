@@ -32,6 +32,9 @@ export interface ScheduleEvent {
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
+  // Retake fields
+  originalEventId?: string | null;
+  allowedStudentIds?: string[] | null;
   // Joined fields
   group?: {
     id: string;
@@ -134,6 +137,8 @@ interface ScheduleEventRow extends RowDataPacket {
   notes: string | null;
   created_at: Date;
   updated_at: Date;
+  original_event_id?: string | null;
+  allowed_student_ids?: any; // JSON string or object depending on driver parsing
   // Joined fields
   group_code?: string;
   course_name?: string;
@@ -176,6 +181,12 @@ function mapRowToScheduleEvent(row: ScheduleEventRow): ScheduleEvent {
     notes: row.notes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    originalEventId: row.original_event_id,
+    allowedStudentIds: row.allowed_student_ids
+      ? typeof row.allowed_student_ids === "string"
+        ? JSON.parse(row.allowed_student_ids)
+        : row.allowed_student_ids
+      : null,
   };
 
   if (row.group_code) {
@@ -326,6 +337,7 @@ export async function getScheduleEvents(
   const query = `
     SELECT 
       se.*,
+      se.allowed_student_ids,
       sg.code as group_code,
       c.name as course_name,
       i.full_name as instructor_full_name,
@@ -579,6 +591,7 @@ export async function checkScheduleConflicts(
   const query = `
     SELECT 
       se.*,
+      se.allowed_student_ids,
       sg.code as group_code,
       c.name as course_name,
       i.full_name as instructor_full_name,
