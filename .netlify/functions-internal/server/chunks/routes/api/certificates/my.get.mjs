@@ -1,4 +1,4 @@
-import { d as defineEventHandler, e as executeQuery, c as createError } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, e as executeQuery, c as createError } from '../../../nitro/nitro.mjs';
 import { b as requirePermission, g as getStudentByUserId, P as Permission } from '../../../_/permissions.mjs';
 import { l as logActivity } from '../../../_/activityLogger.mjs';
 import 'grammy';

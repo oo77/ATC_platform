@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, r as readBody } from '../../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, r as readBody } from '../../../../../nitro/nitro.mjs';
 import { a as getTestSessionById, e as addViolation, h as updateSessionStatus } from '../../../../../_/testSessionRepository.mjs';
 import { a as getTestAssignmentById } from '../../../../../_/testAssignmentRepository.mjs';
 import { g as getTestTemplateById } from '../../../../../_/testTemplateRepository.mjs';

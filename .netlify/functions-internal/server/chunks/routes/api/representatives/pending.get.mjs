@@ -1,4 +1,4 @@
-import { d as defineEventHandler, T as getPendingRepresentatives } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, P as getPendingRepresentatives } from '../../../nitro/nitro.mjs';
 import 'grammy';
 import 'uuid';
 import 'node:http';

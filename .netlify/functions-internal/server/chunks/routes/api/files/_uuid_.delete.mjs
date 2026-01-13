@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, c as createError } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, c as createError } from '../../../nitro/nitro.mjs';
 import { g as getFileByUuid, d as deleteFile } from '../../../_/fileRepository.mjs';
 import { s as storage } from '../../../_/index.mjs';
 import { l as logActivity } from '../../../_/activityLogger.mjs';

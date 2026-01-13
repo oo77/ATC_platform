@@ -351,6 +351,7 @@
       @close="closeDetailModal"
       @edit="handleEditFromDetail"
       @retake="handleRetakeFromDetail"
+      @deleted="handleEventDeleted"
     />
 
     <!-- Модальное окно создания/редактирования события -->
@@ -1361,6 +1362,7 @@ const handleEventSaved = () => {
 
 const handleEventDeleted = () => {
   closeEventModal();
+  closeDetailModal();
   if (currentDateRange.value) {
     loadEvents(currentDateRange.value.start, currentDateRange.value.end);
   }

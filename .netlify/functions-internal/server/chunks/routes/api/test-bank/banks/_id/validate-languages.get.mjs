@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, a as getQuery } from '../../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, g as getQuery } from '../../../../../nitro/nitro.mjs';
 import { v as validateLanguagesQuestionCount } from '../../../../../_/testTemplateRepository.mjs';
 import 'grammy';
 import 'uuid';

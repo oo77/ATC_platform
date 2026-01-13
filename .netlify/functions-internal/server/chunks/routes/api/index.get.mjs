@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, a as getQuery } from '../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, g as getQuery } from '../../nitro/nitro.mjs';
 import { g as getActivityLogsPaginated } from '../../_/activityLogRepository.mjs';
 import 'grammy';
 import 'uuid';

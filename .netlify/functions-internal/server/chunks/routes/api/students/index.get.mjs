@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError } from '../../../nitro/nitro.mjs';
 import { b as getStudentCourses } from '../../../_/studentCourseRepository.mjs';
 import 'grammy';
 import 'uuid';

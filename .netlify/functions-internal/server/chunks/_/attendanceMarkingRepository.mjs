@@ -1,4 +1,4 @@
-import { e as executeQuery } from './nitro.mjs';
+import { e as executeQuery } from '../nitro/nitro.mjs';
 import { v4 } from 'uuid';
 
 function mapRowToMarkingStatus(row) {
@@ -333,6 +333,7 @@ async function syncMarkingStatuses() {
   }
 }
 async function checkMarkingAccess(scheduleEventId, userId, userRole, instructorId) {
+  console.log(`[checkMarkingAccess] Called with: scheduleEventId=${scheduleEventId}, userId=${userId}, userRole=${userRole}, instructorId=${instructorId}`);
   const [event] = await executeQuery(
     `SELECT * FROM schedule_events WHERE id = ?`,
     [scheduleEventId]
@@ -390,6 +391,8 @@ async function checkMarkingAccess(scheduleEventId, userId, userRole, instructorI
   const lateDeadline = new Date(
     endTime.getTime() + settings.ATTENDANCE_EDIT_DEADLINE_HOURS * 60 * 60 * 1e3
   );
+  console.log(`[checkMarkingAccess] Time check: now=${now.toISOString()}, deadline=${deadline.toISOString()}, lateDeadline=${lateDeadline.toISOString()}`);
+  console.log(`[checkMarkingAccess] Settings: LATE_MARK_ALLOWED=${settings.ATTENDANCE_LATE_MARK_ALLOWED}, REQUIRE_APPROVAL=${settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE}`);
   if (now <= deadline) {
     return {
       allowed: true,
@@ -405,47 +408,51 @@ async function checkMarkingAccess(scheduleEventId, userId, userRole, instructorI
       lateDeadline,
       message: '\u0421\u0440\u043E\u043A \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u0438\u0441\u0442\u0451\u043A. \u041E\u0442\u043C\u0435\u0442\u043A\u0430 \u0431\u0443\u0434\u0435\u0442 \u043F\u043E\u043C\u0435\u0447\u0435\u043D\u0430 \u043A\u0430\u043A "\u041E\u043F\u043E\u0437\u0434\u0430\u043D\u0438\u0435"'
     };
-  } else if (settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE) {
+  } else {
+    console.log(`[checkMarkingAccess] Deadline passed. Checking role: userRole="${userRole}", isAdmin=${userRole === "ADMIN"}, isManager=${userRole === "MANAGER"}`);
     if (userRole === "ADMIN" || userRole === "MANAGER") {
+      console.log(`[checkMarkingAccess] Admin/Manager detected - granting access without approval`);
       return {
         allowed: true,
         status: "late",
         deadline,
         lateDeadline,
-        message: "\u0421\u0440\u043E\u043A \u0438\u0441\u0442\u0451\u043A, \u043D\u043E \u0432\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u043E\u0442\u043C\u0435\u0442\u0438\u0442\u044C \u043A\u0430\u043A \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u043E\u0440"
+        message: "\u0421\u0440\u043E\u043A \u0438\u0441\u0442\u0451\u043A, \u043D\u043E \u0432\u044B \u043C\u043E\u0436\u0435\u0442\u0435 \u043E\u0442\u043C\u0435\u0442\u0438\u0442\u044C \u043A\u0430\u043A \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u043E\u0440/\u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440"
       };
     }
-    const [approvedRequest] = await executeQuery(
-      `SELECT id FROM attendance_marking_requests 
-       WHERE schedule_event_id = ? AND instructor_id = ? AND status = 'approved'`,
-      [scheduleEventId, instructorId || ""]
-    );
-    if (approvedRequest) {
+    if (settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE) {
+      const [approvedRequest] = await executeQuery(
+        `SELECT id FROM attendance_marking_requests 
+         WHERE schedule_event_id = ? AND instructor_id = ? AND status = 'approved'`,
+        [scheduleEventId, instructorId || ""]
+      );
+      if (approvedRequest) {
+        return {
+          allowed: true,
+          status: "allowed",
+          deadline,
+          lateDeadline,
+          message: "\u041E\u0442\u043C\u0435\u0442\u043A\u0430 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043D\u0430 \u043F\u043E \u043E\u0434\u043E\u0431\u0440\u0435\u043D\u043D\u043E\u043C\u0443 \u0437\u0430\u043F\u0440\u043E\u0441\u0443",
+          existingRequestId: approvedRequest.id
+        };
+      }
       return {
-        allowed: true,
-        status: "allowed",
+        allowed: false,
+        status: "requires_approval",
         deadline,
         lateDeadline,
-        message: "\u041E\u0442\u043C\u0435\u0442\u043A\u0430 \u0440\u0430\u0437\u0440\u0435\u0448\u0435\u043D\u0430 \u043F\u043E \u043E\u0434\u043E\u0431\u0440\u0435\u043D\u043D\u043E\u043C\u0443 \u0437\u0430\u043F\u0440\u043E\u0441\u0443",
-        existingRequestId: approvedRequest.id
+        message: "\u0421\u0440\u043E\u043A \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u0438\u0441\u0442\u0451\u043A. \u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u043E\u0434\u043E\u0431\u0440\u0435\u043D\u0438\u0435 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u043E\u0440\u0430",
+        requiresApproval: true
+      };
+    } else {
+      return {
+        allowed: true,
+        status: "late",
+        deadline,
+        lateDeadline,
+        message: "\u0421\u0440\u043E\u043A \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u0438\u0441\u0442\u0451\u043A"
       };
     }
-    return {
-      allowed: false,
-      status: "requires_approval",
-      deadline,
-      lateDeadline,
-      message: "\u0421\u0440\u043E\u043A \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u0438\u0441\u0442\u0451\u043A. \u0422\u0440\u0435\u0431\u0443\u0435\u0442\u0441\u044F \u043E\u0434\u043E\u0431\u0440\u0435\u043D\u0438\u0435 \u0430\u0434\u043C\u0438\u043D\u0438\u0441\u0442\u0440\u0430\u0442\u043E\u0440\u0430",
-      requiresApproval: true
-    };
-  } else {
-    return {
-      allowed: true,
-      status: "late",
-      deadline,
-      lateDeadline,
-      message: "\u0421\u0440\u043E\u043A \u043E\u0442\u043C\u0435\u0442\u043A\u0438 \u0438\u0441\u0442\u0451\u043A"
-    };
   }
 }
 async function createMarkingRequest(data) {

@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, a as getQuery } from '../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, g as getQuery } from '../../nitro/nitro.mjs';
 import { a as getFilesPaginated } from '../../_/fileRepository.mjs';
 import { s as storage } from '../../_/index.mjs';
 import 'grammy';

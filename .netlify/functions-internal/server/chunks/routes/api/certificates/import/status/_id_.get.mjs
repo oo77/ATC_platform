@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, c as createError } from '../../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, c as createError } from '../../../../../nitro/nitro.mjs';
 import { r as requireAuth, a as requireAnyPermission, P as Permission } from '../../../../../_/permissions.mjs';
 import { g as getCertificateImportJobStatus } from '../../../../../_/certificateImportUtils.mjs';
 import 'grammy';

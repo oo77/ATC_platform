@@ -1,4 +1,4 @@
-import { d as defineEventHandler } from '../../../_/nitro.mjs';
+import { d as defineEventHandler } from '../../../nitro/nitro.mjs';
 import { c as getPermissionContext, e as getTeacherGroups } from '../../../_/permissions.mjs';
 import 'grammy';
 import 'uuid';

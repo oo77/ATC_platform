@@ -1,4 +1,4 @@
-import { d as defineEventHandler, o as getHeader, X as verifyWebhookSecret, c as createError, r as readBody, Y as handleUpdate } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, l as getHeader, S as verifyWebhookSecret, c as createError, r as readBody, T as handleUpdate } from '../../../nitro/nitro.mjs';
 import 'grammy';
 import 'uuid';
 import 'node:http';

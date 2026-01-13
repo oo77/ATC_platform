@@ -1,4 +1,4 @@
-import { e as executeQuery } from './nitro.mjs';
+import { e as executeQuery } from '../nitro/nitro.mjs';
 
 async function markNotificationAsRead(id, studentId) {
   await executeQuery(

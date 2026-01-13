@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, c as createError, a as getQuery } from '../../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, c as createError, g as getQuery } from '../../../../../nitro/nitro.mjs';
 import { a as getInstructorById, c as checkInstructorHoursLimit } from '../../../../../_/instructorRepository.mjs';
 import 'grammy';
 import 'uuid';

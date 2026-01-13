@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, a as getQuery } from '../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, g as getQuery } from '../../nitro/nitro.mjs';
 import { getRootFolders, getSubFolders } from '../../_/folderRepository.mjs';
 import 'grammy';
 import 'uuid';

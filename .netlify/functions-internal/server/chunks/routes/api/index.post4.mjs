@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody, c as createError } from '../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody, c as createError } from '../../nitro/nitro.mjs';
 import { a as upsertFinalGrade } from '../../_/attendanceRepository.mjs';
 import { l as logActivity } from '../../_/activityLogger.mjs';
 import 'grammy';

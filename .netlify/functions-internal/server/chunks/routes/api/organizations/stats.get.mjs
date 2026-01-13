@@ -1,4 +1,4 @@
-import { d as defineEventHandler, K as getOrganizationsStats, c as createError } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, G as getOrganizationsStats, c as createError } from '../../../nitro/nitro.mjs';
 import 'grammy';
 import 'uuid';
 import 'node:http';

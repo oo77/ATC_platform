@@ -1,4 +1,4 @@
-import { t as testConnection, B as runMigrations, d as defineEventHandler, c as createError } from '../../../_/nitro.mjs';
+import { t as testConnection, x as runMigrations, d as defineEventHandler, c as createError } from '../../../nitro/nitro.mjs';
 import 'grammy';
 import 'uuid';
 import 'node:http';

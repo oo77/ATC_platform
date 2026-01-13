@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam } from '../../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam } from '../../../../../nitro/nitro.mjs';
 import { a as getTestAssignmentById } from '../../../../../_/testAssignmentRepository.mjs';
 import { f as getAvailableLanguagesForTemplate } from '../../../../../_/testTemplateRepository.mjs';
 import { L as LANGUAGE_FLAGS, a as LANGUAGE_LABELS } from '../../../../../_/questionRepository.mjs';

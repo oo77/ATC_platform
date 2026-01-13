@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody } from '../../../../nitro/nitro.mjs';
 import { Q as QuestionType, e as bulkCreateQuestions } from '../../../../_/questionRepository.mjs';
 import { g as getQuestionBankById } from '../../../../_/questionBankRepository.mjs';
 import 'grammy';

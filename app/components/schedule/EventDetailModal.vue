@@ -36,13 +36,21 @@
             {{ event.description }}
           </p>
         </div>
-        <span
-          v-if="event.eventType"
-          class="px-3 py-1 rounded-full text-xs font-medium"
-          :class="getEventTypeBadgeClass(event.eventType)"
-        >
-          {{ getEventTypeLabel(event.eventType) }}
-        </span>
+        <div class="flex items-center gap-2">
+          <span
+            v-if="isRetake"
+            class="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+          >
+            Пересдача
+          </span>
+          <span
+            v-if="event.eventType"
+            class="px-3 py-1 rounded-full text-xs font-medium"
+            :class="getEventTypeBadgeClass(event.eventType)"
+          >
+            {{ getEventTypeLabel(event.eventType) }}
+          </span>
+        </div>
       </div>
 
       <!-- Детали занятия -->
@@ -307,7 +315,7 @@
 
     <template #footer>
       <div class="flex justify-between items-center">
-        <div>
+        <div class="flex gap-2">
           <!-- Кнопка создания пересдачи (для типов assessment и practice) -->
           <UiButton
             v-if="
@@ -337,6 +345,50 @@
             </svg>
             Создать пересдачу
           </UiButton>
+
+          <!-- Кнопка удаления (для пересдач) -->
+          <div v-if="canEditSchedule && isRetake" class="flex items-center gap-2">
+            <UiButton
+              v-if="!showDeleteConfirm"
+              variant="danger"
+              size="sm"
+              :loading="deleting"
+              @click="handleDelete"
+            >
+              <svg
+                class="w-4 h-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              Удалить
+            </UiButton>
+            <template v-else>
+              <span class="text-sm text-danger font-medium">Удалить пересдачу?</span>
+              <UiButton
+                variant="danger"
+                size="sm"
+                :loading="deleting"
+                @click="handleDelete"
+              >
+                Да
+              </UiButton>
+              <UiButton
+                variant="outline"
+                size="sm"
+                @click="cancelDelete"
+              >
+                Отмена
+              </UiButton>
+            </template>
+          </div>
         </div>
         <div class="flex gap-3">
           <UiButton variant="outline" @click="handleClose"> Закрыть </UiButton>
@@ -388,6 +440,7 @@ const emit = defineEmits<{
   close: [];
   edit: [event: ScheduleEvent];
   retake: [event: ScheduleEvent];
+  deleted: [];
 }>();
 
 const { authFetch } = useAuthFetch();
@@ -399,6 +452,19 @@ const { canEditSchedule } = usePermissions();
 const loading = ref(false);
 const loadingStudents = ref(false);
 const students = ref<Student[]>([]);
+const deleting = ref(false);
+const showDeleteConfirm = ref(false);
+
+// Проверяем, является ли это пересдачей
+const isRetake = computed(() => {
+  return (
+    (props.event?.allowedStudentIds &&
+      props.event.allowedStudentIds.length > 0) ||
+    !!props.event?.originalEventId
+  );
+});
+
+const toast = useNotification();
 
 // Загрузка списка студентов группы
 const loadStudents = async (groupId: string) => {
@@ -514,6 +580,42 @@ const handleRetake = () => {
   if (props.event) {
     emit("retake", props.event);
   }
+};
+
+// Удаление занятия
+const handleDelete = async () => {
+  if (!props.event || deleting.value) return;
+
+  if (!showDeleteConfirm.value) {
+    showDeleteConfirm.value = true;
+    return;
+  }
+
+  deleting.value = true;
+  try {
+    const response = await authFetch<{ success: boolean; message?: string }>(
+      `/api/schedule/${props.event.id}`,
+      { method: "DELETE" }
+    );
+
+    if (response.success) {
+      toast.success("Занятие удалено");
+      emit("deleted");
+      emit("close");
+    } else {
+      toast.error(response.message || "Ошибка удаления");
+    }
+  } catch (error: any) {
+    toast.error(error.data?.message || error.message || "Ошибка удаления");
+  } finally {
+    deleting.value = false;
+    showDeleteConfirm.value = false;
+  }
+};
+
+// Отмена удаления
+const cancelDelete = () => {
+  showDeleteConfirm.value = false;
 };
 
 // Watchers

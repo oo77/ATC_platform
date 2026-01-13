@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam } from '../../../../nitro/nitro.mjs';
 import { g as getTestTemplateById, d as deleteTestTemplate } from '../../../../_/testTemplateRepository.mjs';
 import { e as getDisciplinesByTestTemplateId } from '../../../../_/disciplineTestRepository.mjs';
 import 'grammy';

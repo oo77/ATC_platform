@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, r as readBody } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, r as readBody } from '../../../nitro/nitro.mjs';
 import { c as createSupportTicket } from '../../../_/supportTicketRepository.mjs';
 import { l as logActivity } from '../../../_/activityLogger.mjs';
 import { z } from 'zod';

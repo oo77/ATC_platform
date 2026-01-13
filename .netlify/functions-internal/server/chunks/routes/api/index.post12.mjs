@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, r as readBody, e as executeQuery, m as hashPassword, k as toPublicUser } from '../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, r as readBody, e as executeQuery, k as hashPassword, i as toPublicUser } from '../../nitro/nitro.mjs';
 import { randomUUID } from 'crypto';
 import { v as validate, r as registerSchema } from '../../_/validation.mjs';
 import { l as logActivity } from '../../_/activityLogger.mjs';

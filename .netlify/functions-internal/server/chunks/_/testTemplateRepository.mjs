@@ -1,4 +1,4 @@
-import { e as executeQuery, x as executeTransaction } from './nitro.mjs';
+import { e as executeQuery, p as executeTransaction } from '../nitro/nitro.mjs';
 import { v4 } from 'uuid';
 import { g as getQuestionCountByLanguage, L as LANGUAGE_FLAGS, a as LANGUAGE_LABELS, b as getQuestionStatsByLanguage } from './questionRepository.mjs';
 

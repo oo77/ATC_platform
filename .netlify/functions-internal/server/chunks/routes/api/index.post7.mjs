@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody } from '../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody } from '../../nitro/nitro.mjs';
 import { z } from 'zod';
 import { a as groupCodeExists, c as courseExists, b as checkStudentConflicts, i as createGroup } from '../../_/groupRepository.mjs';
 import { l as logActivity } from '../../_/activityLogger.mjs';

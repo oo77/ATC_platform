@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody, c as createError, e as executeQuery } from '../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody, c as createError, e as executeQuery } from '../../nitro/nitro.mjs';
 import { f as formatDateOnly, b as formatDateForDisplay, c as checkScheduleConflicts, j as createScheduleEvent, h as dateToLocalIso } from '../../_/scheduleRepository.mjs';
 import { c as checkInstructorHoursLimit } from '../../_/instructorRepository.mjs';
 import { c as createTestAssignment } from '../../_/testAssignmentRepository.mjs';

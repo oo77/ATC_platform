@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody, c as createError } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody, c as createError } from '../../../nitro/nitro.mjs';
 import { n as updateScheduleSettings } from '../../../_/scheduleRepository.mjs';
 import 'grammy';
 import 'uuid';

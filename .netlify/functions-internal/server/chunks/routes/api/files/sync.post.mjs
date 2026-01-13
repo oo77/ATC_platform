@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, e as executeQuery } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, e as executeQuery } from '../../../nitro/nitro.mjs';
 import fs from 'fs/promises';
 import path__default from 'path';
 import { v4 } from 'uuid';

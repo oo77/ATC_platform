@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody, c as createError } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody, c as createError } from '../../../../nitro/nitro.mjs';
 import { r as requireAuth, a as requireAnyPermission, P as Permission } from '../../../../_/permissions.mjs';
 import { c as cleanupOldCertificateImportJobs, b as createCertificateImportJob, e as executeCertificateImport } from '../../../../_/certificateImportUtils.mjs';
 import { z } from 'zod';

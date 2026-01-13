@@ -1,6 +1,6 @@
 import { a as getCertificateByNumber, c as createStandaloneCertificate } from '../../../_/certificateTemplateRepository.mjs';
 import { g as getStudentByPinfl, c as createStudent, a as getStudentById } from '../../../_/studentRepository.mjs';
-import { d as defineEventHandler, r as readBody, c as createError } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody, c as createError } from '../../../nitro/nitro.mjs';
 import { l as logActivity } from '../../../_/activityLogger.mjs';
 import 'uuid';
 import 'grammy';

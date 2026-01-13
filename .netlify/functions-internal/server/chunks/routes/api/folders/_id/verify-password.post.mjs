@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, b as getRouterParam, r as readBody } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, a as getRouterParam, r as readBody } from '../../../../nitro/nitro.mjs';
 import bcrypt from 'bcryptjs';
 import { getFolderById } from '../../../../_/folderRepository.mjs';
 import 'grammy';

@@ -1,4 +1,4 @@
-import { d as defineEventHandler, a as getQuery } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, g as getQuery } from '../../../../nitro/nitro.mjs';
 import { k as getFullLanguageStats } from '../../../../_/questionRepository.mjs';
 import 'grammy';
 import 'uuid';

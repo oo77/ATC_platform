@@ -1,4 +1,4 @@
-import { e as executeQuery, z as getOrCreateOrganizationByName, x as executeTransaction, A as updateStudentsCount } from './nitro.mjs';
+import { e as executeQuery, u as getOrCreateOrganizationByName, p as executeTransaction, w as updateStudentsCount } from '../nitro/nitro.mjs';
 import { v4 } from 'uuid';
 
 function mapRowToStudent(row, certificates = []) {
@@ -274,7 +274,7 @@ async function batchUpsertStudentsWithProgress(students, onProgress, batchSize =
   if (students.length === 0) {
     return result;
   }
-  const { hashPassword } = await import('./nitro.mjs').then(function (n) { return n.as; });
+  const { hashPassword } = await import('../nitro/nitro.mjs').then(function (n) { return n.aq; });
   const organizationCache = /* @__PURE__ */ new Map();
   const affectedOrganizationIds = /* @__PURE__ */ new Set();
   const uniqueOrganizations = [...new Set(students.map((s) => s.organization.trim()))];

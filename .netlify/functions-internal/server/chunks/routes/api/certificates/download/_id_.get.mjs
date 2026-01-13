@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, a as getQuery, c as createError, s as setHeader } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, g as getQuery, c as createError, s as setHeader } from '../../../../nitro/nitro.mjs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { g as getIssuedCertificateById } from '../../../../_/certificateTemplateRepository.mjs';

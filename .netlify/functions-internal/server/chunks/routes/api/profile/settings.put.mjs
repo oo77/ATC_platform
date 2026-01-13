@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, r as readBody } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, r as readBody } from '../../../nitro/nitro.mjs';
 import { u as updateUserSettings } from '../../../_/userSettingsRepository.mjs';
 import { l as logActivity } from '../../../_/activityLogger.mjs';
 import { z } from 'zod';

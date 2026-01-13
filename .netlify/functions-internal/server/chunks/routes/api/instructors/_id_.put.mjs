@@ -1,4 +1,4 @@
-import { e as executeQuery, d as defineEventHandler, b as getRouterParam, r as readBody } from '../../../_/nitro.mjs';
+import { e as executeQuery, d as defineEventHandler, a as getRouterParam, r as readBody } from '../../../nitro/nitro.mjs';
 import { a as getInstructorById, i as instructorEmailExists, l as linkInstructorToUser, u as updateInstructor } from '../../../_/instructorRepository.mjs';
 import { v4 } from 'uuid';
 import bcrypt from 'bcryptjs';

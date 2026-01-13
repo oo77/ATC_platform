@@ -1,4 +1,4 @@
-import { d as defineEventHandler, a as getQuery, c as createError } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, g as getQuery, c as createError } from '../../../nitro/nitro.mjs';
 import { g as getJournalData, c as calculateAcademicHours } from '../../../_/attendanceRepository.mjs';
 import { l as logActivity } from '../../../_/activityLogger.mjs';
 import 'grammy';
@@ -40,21 +40,40 @@ const journal_get = defineEventHandler(async (event) => {
       "students:",
       data.students.length
     );
-    const columns = data.events.map((evt) => ({
-      scheduleEvent: {
-        id: evt.id,
-        title: evt.title,
-        date: evt.start_time.toISOString().split("T")[0],
-        startTime: evt.start_time.toISOString(),
-        endTime: evt.end_time.toISOString(),
-        eventType: evt.event_type,
-        academicHours: calculateAcademicHours(evt.start_time, evt.end_time)
-      },
-      // Оценки доступны для проверки знаний (assessment) и практики (practice)
-      hasGrade: evt.event_type === "assessment" || evt.event_type === "practice"
-    }));
+    const columns = data.events.map((evt) => {
+      const allowedStudentIds = evt.allowed_student_ids ? JSON.parse(evt.allowed_student_ids) : null;
+      return {
+        scheduleEvent: {
+          id: evt.id,
+          title: evt.title,
+          date: evt.start_time.toISOString().split("T")[0],
+          startTime: evt.start_time.toISOString(),
+          endTime: evt.end_time.toISOString(),
+          eventType: evt.event_type,
+          academicHours: calculateAcademicHours(evt.start_time, evt.end_time),
+          isRetake: allowedStudentIds !== null && allowedStudentIds.length > 0,
+          allowedStudentIds,
+          originalEventId: evt.original_event_id || null
+          // Связь с оригинальным занятием
+        },
+        // Оценки доступны для проверки знаний (assessment) и практики (practice)
+        hasGrade: evt.event_type === "assessment" || evt.event_type === "practice"
+      };
+    });
     const rows = data.students.map((student) => {
       const cells = data.events.map((evt) => {
+        const allowedStudentIds = evt.allowed_student_ids ? JSON.parse(evt.allowed_student_ids) : null;
+        const isRetake = allowedStudentIds !== null && allowedStudentIds.length > 0;
+        if (isRetake && !allowedStudentIds.includes(student.student_id)) {
+          return {
+            studentId: student.student_id,
+            scheduleEventId: evt.id,
+            attendance: void 0,
+            grade: void 0,
+            isHidden: true
+            // Маркер для фронтенда
+          };
+        }
         const attendance = data.attendances.find(
           (a) => a.studentId === student.student_id && a.scheduleEventId === evt.id
         );
@@ -77,7 +96,8 @@ const journal_get = defineEventHandler(async (event) => {
             isFromTest: grade.isFromTest,
             isModified: grade.isModified,
             originalGrade: grade.originalGrade
-          } : void 0
+          } : void 0,
+          isHidden: false
         };
       });
       const totalHoursAttended = cells.reduce(
@@ -93,7 +113,24 @@ const journal_get = defineEventHandler(async (event) => {
         );
         return sum + (col?.scheduleEvent.academicHours || 0);
       }, 0);
-      const gradeValues = cells.filter((cell) => cell.grade).map((cell) => cell.grade.grade);
+      const gradesByBaseEvent = /* @__PURE__ */ new Map();
+      cells.forEach((cell, index) => {
+        if (cell.isHidden || !cell.grade) return;
+        const column = columns[index];
+        if (!column) return;
+        const baseEventId = column.scheduleEvent.originalEventId || cell.scheduleEventId;
+        const eventDate = new Date(column.scheduleEvent.startTime);
+        const existing = gradesByBaseEvent.get(baseEventId);
+        if (!existing || eventDate > existing.date) {
+          gradesByBaseEvent.set(baseEventId, {
+            grade: cell.grade.grade,
+            date: eventDate
+          });
+        }
+      });
+      const gradeValues = Array.from(gradesByBaseEvent.values()).map(
+        (g) => g.grade
+      );
       const averageGrade = gradeValues.length > 0 ? Math.round(
         gradeValues.reduce((a, b) => a + b, 0) / gradeValues.length * 100
       ) / 100 : void 0;

@@ -1,4 +1,4 @@
-import { U as UserRole, c as createError, e as executeQuery, o as getHeader, q as verifyToken } from './nitro.mjs';
+import { U as UserRole, c as createError, e as executeQuery, l as getHeader, n as verifyToken } from '../nitro/nitro.mjs';
 
 var Permission = /* @__PURE__ */ ((Permission2) => {
   Permission2["DASHBOARD_VIEW"] = "dashboard:view";

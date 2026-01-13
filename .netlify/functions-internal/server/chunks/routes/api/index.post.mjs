@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody, c as createError } from '../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody, c as createError } from '../../nitro/nitro.mjs';
 import { b as bulkUpsertAttendance, u as upsertAttendance } from '../../_/attendanceRepository.mjs';
 import { e as ensureMarkingStatus, c as checkMarkingAccess, u as updateMarkingStatus, a as updateMarkedCount } from '../../_/attendanceMarkingRepository.mjs';
 import { g as getInstructorByUserId } from '../../_/instructorRepository.mjs';
@@ -21,8 +21,8 @@ import '../../_/activityLogRepository.mjs';
 const index_post = defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const userId = event.context.auth?.userId;
-    const role = event.context.auth?.role;
+    const userId = event.context.user?.id;
+    const role = event.context.user?.role;
     const scheduleEventId = body.scheduleEventId;
     if (!scheduleEventId) {
       throw createError({

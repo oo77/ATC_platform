@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, e as executeQuery } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, e as executeQuery } from '../../../../nitro/nitro.mjs';
 import 'grammy';
 import 'uuid';
 import 'node:http';

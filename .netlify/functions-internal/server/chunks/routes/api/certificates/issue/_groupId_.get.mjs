@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, c as createError } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, c as createError } from '../../../../nitro/nitro.mjs';
 import { b as getTemplateById, e as getIssuedCertificatesByGroup, f as checkStudentEligibility } from '../../../../_/certificateTemplateRepository.mjs';
 import { g as getGroupById } from '../../../../_/groupRepository.mjs';
 import 'grammy';

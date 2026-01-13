@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody } from '../../../nitro/nitro.mjs';
 import { q as questionBankCodeExists, c as createQuestionBank } from '../../../_/questionBankRepository.mjs';
 import { l as logActivity } from '../../../_/activityLogger.mjs';
 import 'grammy';

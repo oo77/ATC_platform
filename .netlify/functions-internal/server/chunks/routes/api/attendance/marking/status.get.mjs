@@ -1,4 +1,4 @@
-import { d as defineEventHandler, a as getQuery, c as createError } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, g as getQuery, c as createError } from '../../../../nitro/nitro.mjs';
 import { n as getMarkingStatuses } from '../../../../_/attendanceMarkingRepository.mjs';
 import { g as getInstructorByUserId } from '../../../../_/instructorRepository.mjs';
 import 'grammy';

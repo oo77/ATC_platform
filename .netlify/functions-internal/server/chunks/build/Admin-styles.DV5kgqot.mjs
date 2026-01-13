@@ -1,8 +1,0 @@
-const Admin_vue_vue_type_style_index_0_scoped_8d5d5418_lang = ".rounded-lg[data-v-8d5d5418]{animation:fadeInUp-8d5d5418 .5s ease-out backwards}.rounded-lg[data-v-8d5d5418]:first-child{animation-delay:.05s}.rounded-lg[data-v-8d5d5418]:nth-child(2){animation-delay:.1s}.rounded-lg[data-v-8d5d5418]:nth-child(3){animation-delay:.15s}.rounded-lg[data-v-8d5d5418]:nth-child(4){animation-delay:.2s}@keyframes fadeInUp-8d5d5418{0%{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.hover\\:bg-gray-100[data-v-8d5d5418],.hover\\:bg-gray-50[data-v-8d5d5418],.hover\\:scale-105[data-v-8d5d5418],.hover\\:shadow-lg[data-v-8d5d5418],button[data-v-8d5d5418]{transition:all .3s cubic-bezier(.4,0,.2,1)}button[data-v-8d5d5418]:active{transform:scale(.95)}[data-v-8d5d5418] .apexcharts-canvas{animation:chartFadeIn-8d5d5418 .8s ease-out}@keyframes chartFadeIn-8d5d5418{0%{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}tbody tr[data-v-8d5d5418]{animation:slideInLeft-8d5d5418 .4s ease-out backwards}tbody tr[data-v-8d5d5418]:first-child{animation-delay:.05s}tbody tr[data-v-8d5d5418]:nth-child(2){animation-delay:.1s}tbody tr[data-v-8d5d5418]:nth-child(3){animation-delay:.15s}tbody tr[data-v-8d5d5418]:nth-child(4){animation-delay:.2s}tbody tr[data-v-8d5d5418]:nth-child(5){animation-delay:.25s}@keyframes slideInLeft-8d5d5418{0%{opacity:0;transform:translate(-20px)}to{opacity:1;transform:translate(0)}}.animate-spin[data-v-8d5d5418]{animation:spin-8d5d5418 1s linear infinite}@keyframes spin-8d5d5418{0%{transform:rotate(0)}to{transform:rotate(1turn)}}";
-
-const AdminStyles_DV5kgqot = [
-  Admin_vue_vue_type_style_index_0_scoped_8d5d5418_lang
-];
-
-export { AdminStyles_DV5kgqot as default };
-//# sourceMappingURL=Admin-styles.DV5kgqot.mjs.map

@@ -1,5 +1,5 @@
 import process from 'node:process';globalThis._importMeta_=globalThis._importMeta_||{url:"file:///_entry.js",env:process.env};import { defineComponent, shallowRef, getCurrentInstance, provide, cloneVNode, h, createElementBlock, computed, readonly, toRef, isRef, hasInjectionContext, inject, ref, defineAsyncComponent, unref, shallowReactive, Suspense, Fragment, useSSRContext, createApp, withCtx, createVNode, onErrorCaptured, onServerPrefetch, resolveDynamicComponent, reactive, effectScope, isReadonly, isShallow, isReactive, toRaw, nextTick, mergeProps, getCurrentScope } from 'vue';
-import { a5 as withQuery, a3 as destr, a6 as klona, a7 as hasProtocol, a8 as isScriptProtocol, a9 as joinURL, aa as parse, ab as getRequestHeader, ac as isEqual, ad as sanitizeStatusCode, ae as getContext, af as setCookie, ag as getCookie, ah as deleteCookie, ai as $fetch$1, aj as createHooks, ak as executeAsync, c as createError$1, al as toRouteMatcher, am as createRouter$1, an as defu } from '../_/nitro.mjs';
+import { a2 as withQuery, $ as destr, a3 as klona, a4 as hasProtocol, a5 as isScriptProtocol, a6 as joinURL, a7 as parse, a8 as getRequestHeader, a9 as isEqual, aa as sanitizeStatusCode, ab as getContext, ac as setCookie, ad as getCookie, ae as deleteCookie, af as $fetch$1, ag as createHooks, ah as executeAsync, c as createError$1, ai as toRouteMatcher, aj as createRouter$1, ak as defu } from '../nitro/nitro.mjs';
 import { u as useHead$1, h as headSymbol, b as baseURL } from '../routes/renderer.mjs';
 import { useRoute as useRoute$1, RouterView, createMemoryHistory, createRouter, START_LOCATION } from 'vue-router';
 import { ssrRenderAttrs, ssrRenderComponent, ssrRenderSuspense, ssrRenderVNode } from 'vue/server-renderer';
@@ -502,248 +502,248 @@ const _routes = [
   {
     name: "blank",
     path: "/blank",
-    component: () => import('./blank-CJyjHnaB.mjs')
+    component: () => import('./blank-BBwJhrfP.mjs')
   },
   {
     name: "index",
     path: "/",
     meta: __nuxt_page_meta$z || {},
-    component: () => import('./index-DySuMggF.mjs')
+    component: () => import('./index-_KKa6sCs.mjs')
   },
   {
     name: "profile",
     path: "/profile",
     meta: __nuxt_page_meta$y || {},
-    component: () => import('./profile-_YhEbRrK.mjs')
+    component: () => import('./profile-CQ2lbj-7.mjs')
   },
   {
     name: "support",
     path: "/support",
     meta: __nuxt_page_meta$x || {},
-    component: () => import('./support-Chn3G-7A.mjs')
+    component: () => import('./support-DqEUImTG.mjs')
   },
   {
     name: "calendar",
     path: "/calendar",
-    component: () => import('./calendar-CvWoHzlS.mjs')
+    component: () => import('./calendar-Biaa0pZW.mjs')
   },
   {
     name: "schedule",
     path: "/schedule",
     meta: __nuxt_page_meta$w || {},
-    component: () => import('./schedule-CC1MNRZA.mjs')
+    component: () => import('./schedule-BKTgzoQf.mjs')
   },
   {
     name: "settings",
     path: "/settings",
     meta: __nuxt_page_meta$v || {},
-    component: () => import('./settings-lYsKfcrF.mjs')
+    component: () => import('./settings-CaCdn84i.mjs')
   },
   {
     name: "tests-my",
     path: "/tests/my",
     meta: __nuxt_page_meta$u || {},
-    component: () => import('./my-CvM6yd-G.mjs')
+    component: () => import('./my-EV3BAu2j.mjs')
   },
   {
     name: "error-404",
     path: "/error-404",
-    component: () => import('./error-404-CRNUchWC.mjs')
+    component: () => import('./error-404-Dy5JGT37.mjs')
   },
   {
     name: "users-id",
     path: "/users/:id()",
     meta: __nuxt_page_meta$t || {},
-    component: () => import('./_id_-CDhcH9Io.mjs')
+    component: () => import('./_id_-Dxrvpu0o.mjs')
   },
   {
     name: "auth-signin",
     path: "/auth/signin",
     meta: __nuxt_page_meta$s || {},
-    component: () => import('./signin-DbLxBjcb.mjs')
+    component: () => import('./signin-C-J68nU7.mjs')
   },
   {
     name: "files",
     path: "/files",
     meta: __nuxt_page_meta$r || {},
-    component: () => import('./index-67M29JNd.mjs')
+    component: () => import('./index-Bb6xRtpQ.mjs')
   },
   {
     name: "users",
     path: "/users",
     meta: __nuxt_page_meta$q || {},
-    component: () => import('./index-B5z0RIIG.mjs')
+    component: () => import('./index-BTqZX1ih.mjs')
   },
   {
     name: "basic-tables",
     path: "/basic-tables",
-    component: () => import('./basic-tables-Cwh64MZh.mjs')
+    component: () => import('./basic-tables-D78IZTG5.mjs')
   },
   {
     name: "groups",
     path: "/groups",
     meta: __nuxt_page_meta$p || {},
-    component: () => import('./index-Br1bTP-5.mjs')
+    component: () => import('./index-hW3iswlu.mjs')
   },
   {
     name: "form-elements",
     path: "/form-elements",
-    component: () => import('./form-elements-Bh9FMVr1.mjs')
+    component: () => import('./form-elements-BcEbYmHX.mjs')
   },
   {
     name: "programs-id",
     path: "/programs/:id()",
     meta: __nuxt_page_meta$o || {},
-    component: () => import('./_id_-SpOb1jEb.mjs')
+    component: () => import('./_id_-CZd0MNrh.mjs')
   },
   {
     name: "students-id",
     path: "/students/:id()",
-    component: () => import('./_id_-C3CDdhea.mjs')
+    component: () => import('./_id_-Cuc_YVMe.mjs')
   },
   {
     name: "database",
     path: "/database",
     meta: __nuxt_page_meta$n || {},
-    component: () => import('./index-lVGNA8En.mjs')
+    component: () => import('./index-BhY0CcU7.mjs')
   },
   {
     name: "programs",
     path: "/programs",
     meta: __nuxt_page_meta$m || {},
-    component: () => import('./index-DlxnoJVr.mjs')
+    component: () => import('./index-B-Zt3E8e.mjs')
   },
   {
     name: "test-bank-id",
     path: "/test-bank/:id()",
     meta: __nuxt_page_meta$l || {},
-    component: () => import('./_id_-Co-YaXbh.mjs')
+    component: () => import('./_id_-CAWl8Ehk.mjs')
   },
   {
     name: "database-import",
     path: "/database/import",
     meta: __nuxt_page_meta$k || {},
-    component: () => import('./import-ps6GzaWf.mjs')
+    component: () => import('./import-C18le5i3.mjs')
   },
   {
     name: "my-certificates",
     path: "/my-certificates",
     meta: __nuxt_page_meta$j || {},
-    component: () => import('./my-certificates-CuPLrJGh.mjs')
+    component: () => import('./my-certificates-JrcKPWgw.mjs')
   },
   {
     name: "my-courses-id",
     path: "/my-courses/:id()",
     meta: __nuxt_page_meta$i || {},
-    component: () => import('./_id_-COYH4coz.mjs')
+    component: () => import('./_id_-BHYNcoNA.mjs')
   },
   {
     name: "programs-create",
     path: "/programs/create",
     meta: __nuxt_page_meta$h || {},
-    component: () => import('./create-xSKv6Y46.mjs')
+    component: () => import('./create-D5o0JgCl.mjs')
   },
   {
     name: "test-bank",
     path: "/test-bank",
     meta: __nuxt_page_meta$g || {},
-    component: () => import('./index-CFJI9VB2.mjs')
+    component: () => import('./index-wZl7I2iA.mjs')
   },
   {
     name: "tests-take-id",
     path: "/tests/take/:id()",
     meta: __nuxt_page_meta$f || {},
-    component: () => import('./_id_-Dpk5RVmg.mjs')
+    component: () => import('./_id_-D72KzP90.mjs')
   },
   {
     name: "instructors-id",
     path: "/instructors/:id()",
     meta: __nuxt_page_meta$e || {},
-    component: () => import('./_id_-CEOxeI-b.mjs')
+    component: () => import('./_id_-DdLBXpdZ.mjs')
   },
   {
     name: "my-courses",
     path: "/my-courses",
     meta: __nuxt_page_meta$d || {},
-    component: () => import('./index-ipcGrIHG.mjs')
+    component: () => import('./index-BUZxTsg0.mjs')
   },
   {
     name: "groups-id",
     path: "/groups/:id()",
     meta: __nuxt_page_meta$c || {},
-    component: () => import('./index-Bdv9Xafq.mjs')
+    component: () => import('./index-DYv3mvSr.mjs')
   },
   {
     name: "attendance-pending",
     path: "/attendance/pending",
     meta: __nuxt_page_meta$b || {},
-    component: () => import('./pending-nNS7-ScM.mjs')
+    component: () => import('./pending-B0W60LLa.mjs')
   },
   {
     name: "programs-edit-id",
     path: "/programs/edit/:id()",
     meta: __nuxt_page_meta$a || {},
-    component: () => import('./_id_-CrAJTGAM.mjs')
+    component: () => import('./_id_-CWZaVDOx.mjs')
   },
   {
     name: "activity-logs",
     path: "/activity-logs",
     meta: __nuxt_page_meta$9 || {},
-    component: () => import('./index-3aV-fx3d.mjs')
+    component: () => import('./index-B52Q7pyM.mjs')
   },
   {
     name: "groups-journal-slug",
     path: "/groups/journal/:slug()",
     meta: __nuxt_page_meta$8 || {},
-    component: () => import('./_slug_-B9HcgwAb.mjs')
+    component: () => import('./_slug_-ClcBR3Ei.mjs')
   },
   {
     name: "groups-id-certificates",
     path: "/groups/:id()/certificates",
     meta: __nuxt_page_meta$7 || {},
-    component: () => import('./certificates-C7ws068A.mjs')
+    component: () => import('./certificates-D6koI6oo.mjs')
   },
   {
     name: "test-bank-templates-id",
     path: "/test-bank/templates/:id()",
     meta: __nuxt_page_meta$6 || {},
-    component: () => import('./_id_-Dmva_w7d.mjs')
+    component: () => import('./_id_-Bhz4mipx.mjs')
   },
   {
     name: "admin-attendance-requests",
     path: "/admin/attendance-requests",
     meta: __nuxt_page_meta$5 || {},
-    component: () => import('./attendance-requests-DOBmwkv7.mjs')
+    component: () => import('./attendance-requests-DSZXiy7C.mjs')
   },
   {
     name: "test-bank-templates",
     path: "/test-bank/templates",
     meta: __nuxt_page_meta$4 || {},
-    component: () => import('./index-W6t2ENh6.mjs')
+    component: () => import('./index-E1CK6RVR.mjs')
   },
   {
     name: "certificates-templates",
     path: "/certificates/templates",
     meta: __nuxt_page_meta$3 || {},
-    component: () => import('./index-CiEPuEbW.mjs')
+    component: () => import('./index-BzXQUu7n.mjs')
   },
   {
     name: "database-import-certificates",
     path: "/database/import-certificates",
     meta: __nuxt_page_meta$2 || {},
-    component: () => import('./import-certificates-DoD4KUw7.mjs')
+    component: () => import('./import-certificates-B4O9uaI5.mjs')
   },
   {
     name: "certificates-templates-id",
     path: "/certificates/templates/:id()",
     meta: __nuxt_page_meta$1 || {},
-    component: () => import('./index-DCjdGMP1.mjs')
+    component: () => import('./index-HFgH4BqO.mjs')
   },
   {
     name: "certificates-templates-id-editor",
     path: "/certificates/templates/:id()/editor",
     meta: __nuxt_page_meta || {},
-    component: () => import('./editor-DdNXv7id.mjs')
+    component: () => import('./editor-CzKTThQN.mjs')
   }
 ];
 const _wrapInTransition = (props, children) => {
@@ -1908,8 +1908,8 @@ const plugins = [
   auth_H8gVM_hLMR4kH70PZQlWNqJIB9Rdr0rL0wFPPsoYoYA
 ];
 const layouts = {
-  blank: defineAsyncComponent(() => import('./blank-B23Om9U0.mjs').then((m) => m.default || m)),
-  default: defineAsyncComponent(() => import('./default-TOwgaEGk.mjs').then((m) => m.default || m)),
+  blank: defineAsyncComponent(() => import('./blank-ygFNG1IG.mjs').then((m) => m.default || m)),
+  default: defineAsyncComponent(() => import('./default-Cwij_DkT.mjs').then((m) => m.default || m)),
   fullscreen: defineAsyncComponent(() => import('./fullscreen-DdeUcnuK.mjs').then((m) => m.default || m))
 };
 const LayoutLoader = defineComponent({
@@ -2188,8 +2188,8 @@ const _sfc_main$1 = {
     const statusMessage = _error.statusMessage ?? (is404 ? "Page Not Found" : "Internal Server Error");
     const description = _error.message || _error.toString();
     const stack = void 0;
-    const _Error404 = defineAsyncComponent(() => import('./error-404-ByHQpyUJ.mjs'));
-    const _Error = defineAsyncComponent(() => import('./error-500-CPQzRHl5.mjs'));
+    const _Error404 = defineAsyncComponent(() => import('./error-404-K5AE6Y4Q.mjs'));
+    const _Error = defineAsyncComponent(() => import('./error-500-CicXqg7l.mjs'));
     const ErrorTemplate = is404 ? _Error404 : _Error;
     return (_ctx, _push, _parent, _attrs) => {
       _push(ssrRenderComponent(unref(ErrorTemplate), mergeProps({ statusCode: unref(statusCode), statusMessage: unref(statusMessage), description: unref(description), stack: unref(stack) }, _attrs), null, _parent));

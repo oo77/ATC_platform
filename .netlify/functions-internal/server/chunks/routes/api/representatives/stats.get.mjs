@@ -1,4 +1,4 @@
-import { d as defineEventHandler, V as getRepresentativeStats } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, Q as getRepresentativeStats } from '../../../nitro/nitro.mjs';
 import 'grammy';
 import 'uuid';
 import 'node:http';

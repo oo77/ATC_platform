@@ -1,4 +1,4 @@
-import { d as defineEventHandler } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler } from '../../../../nitro/nitro.mjs';
 import { a as getQuestionBankCategories } from '../../../../_/questionBankRepository.mjs';
 import 'grammy';
 import 'uuid';

@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody } from '../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody } from '../../nitro/nitro.mjs';
 import { c as courseCodeExists, h as createCourse } from '../../_/courseRepository.mjs';
 import { l as logActivity } from '../../_/activityLogger.mjs';
 import { z } from 'zod';

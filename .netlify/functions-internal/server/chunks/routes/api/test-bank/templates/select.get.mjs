@@ -1,4 +1,4 @@
-import { d as defineEventHandler, a as getQuery } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, g as getQuery } from '../../../../nitro/nitro.mjs';
 import { e as getActiveTemplatesForSelect } from '../../../../_/testTemplateRepository.mjs';
 import 'grammy';
 import 'uuid';

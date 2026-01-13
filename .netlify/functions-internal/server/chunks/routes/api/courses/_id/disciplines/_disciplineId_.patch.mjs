@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, c as createError, r as readBody } from '../../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, c as createError, r as readBody } from '../../../../../nitro/nitro.mjs';
 import { b as updateDiscipline } from '../../../../../_/courseRepository.mjs';
 import { l as logActivity } from '../../../../../_/activityLogger.mjs';
 import 'grammy';

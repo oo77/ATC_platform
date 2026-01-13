@@ -1,4 +1,4 @@
-import { d as defineEventHandler, U as UserRole, c as createError, e as executeQuery } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, U as UserRole, c as createError, e as executeQuery } from '../../../../nitro/nitro.mjs';
 import { f as requireAllPermissions, P as Permission } from '../../../../_/permissions.mjs';
 import 'grammy';
 import 'uuid';

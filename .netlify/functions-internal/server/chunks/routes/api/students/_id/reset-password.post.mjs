@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, c as createError, r as readBody, e as executeQuery, m as hashPassword } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, c as createError, r as readBody, e as executeQuery, k as hashPassword } from '../../../../nitro/nitro.mjs';
 import { z } from 'zod';
 import { a as getStudentById } from '../../../../_/studentRepository.mjs';
 import { l as logActivity } from '../../../../_/activityLogger.mjs';

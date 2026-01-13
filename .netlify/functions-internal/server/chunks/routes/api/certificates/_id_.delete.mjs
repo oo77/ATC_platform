@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam } from '../../../nitro/nitro.mjs';
 import { g as getIssuedCertificateById, d as deleteCertificate } from '../../../_/certificateTemplateRepository.mjs';
 import { g as getFileByUuid, d as deleteFile } from '../../../_/fileRepository.mjs';
 import { s as storage } from '../../../_/index.mjs';

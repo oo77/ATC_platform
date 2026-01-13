@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody } from '../../../../nitro/nitro.mjs';
 import { j as updateQuestionsOrder } from '../../../../_/questionRepository.mjs';
 import 'grammy';
 import 'uuid';

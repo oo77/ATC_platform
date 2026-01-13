@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, c as createError, r as readBody } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, c as createError, r as readBody } from '../../../../nitro/nitro.mjs';
 import { z } from 'zod';
 import * as fs from 'fs';
 import * as path from 'path';

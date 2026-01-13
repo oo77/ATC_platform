@@ -1,4 +1,4 @@
-import { x as executeTransaction, e as executeQuery } from './nitro.mjs';
+import { p as executeTransaction, e as executeQuery } from '../nitro/nitro.mjs';
 import { v4 } from 'uuid';
 
 function mapRowToAttendance(row) {
@@ -393,10 +393,17 @@ async function upsertFinalGrade(data) {
 }
 async function getJournalData(groupId, disciplineId) {
   const eventsSql = `
-    SELECT id, title, start_time, end_time, event_type
-    FROM schedule_events
-    WHERE group_id = ? AND discipline_id = ?
-    ORDER BY start_time
+    SELECT 
+      se.id, 
+      se.title, 
+      se.start_time, 
+      se.end_time, 
+      se.event_type,
+      se.original_event_id,
+      se.allowed_student_ids
+    FROM schedule_events se
+    WHERE se.group_id = ? AND se.discipline_id = ?
+    ORDER BY se.start_time
   `;
   console.log(
     "[getJournalData] Query params - groupId:",

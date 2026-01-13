@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody, Z as getHeaders } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody, V as getHeaders } from '../../../../nitro/nitro.mjs';
 import { i as getActiveSessionForStudent, j as getStudentAttemptCount, c as createTestSession } from '../../../../_/testSessionRepository.mjs';
 import { a as getTestAssignmentById } from '../../../../_/testAssignmentRepository.mjs';
 import { g as getTestTemplateById, f as getAvailableLanguagesForTemplate, a as getTemplateQuestions } from '../../../../_/testTemplateRepository.mjs';

@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody } from '../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody } from '../../nitro/nitro.mjs';
 import { b as disciplineTestExists, c as createDisciplineTest } from '../../_/disciplineTestRepository.mjs';
 import { g as getTestTemplateById } from '../../_/testTemplateRepository.mjs';
 import { l as logActivity } from '../../_/activityLogger.mjs';

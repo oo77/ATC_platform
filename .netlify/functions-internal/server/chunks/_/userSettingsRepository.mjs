@@ -1,4 +1,4 @@
-import { e as executeQuery } from './nitro.mjs';
+import { e as executeQuery } from '../nitro/nitro.mjs';
 
 const DEFAULT_SETTINGS = {
   theme: "light",

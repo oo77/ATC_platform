@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, a as getQuery } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, g as getQuery } from '../../../../nitro/nitro.mjs';
 import { a as getTestSessionById, b as getSessionAnswers } from '../../../../_/testSessionRepository.mjs';
 import { l as getQuestionsByIds } from '../../../../_/questionRepository.mjs';
 import { a as getTestAssignmentById } from '../../../../_/testAssignmentRepository.mjs';

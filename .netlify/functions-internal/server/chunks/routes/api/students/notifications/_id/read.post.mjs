@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, c as createError } from '../../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, c as createError } from '../../../../../nitro/nitro.mjs';
 import { h as getStudentByUserId } from '../../../../../_/studentRepository.mjs';
 import { m as markNotificationAsRead } from '../../../../../_/studentNotificationService.mjs';
 import 'grammy';

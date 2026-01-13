@@ -1,4 +1,4 @@
-import { d as defineEventHandler, a as getQuery, e as executeQuery, c as createError } from '../../_/nitro.mjs';
+import { d as defineEventHandler, g as getQuery, e as executeQuery, c as createError } from '../../nitro/nitro.mjs';
 import { z } from 'zod';
 import { l as logActivity } from '../../_/activityLogger.mjs';
 import 'grammy';

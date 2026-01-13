@@ -1,4 +1,4 @@
-import { d as defineEventHandler, w as readMultipartFormData, c as createError } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, o as readMultipartFormData, c as createError } from '../../../../nitro/nitro.mjs';
 import { r as requireAuth, a as requireAnyPermission, P as Permission } from '../../../../_/permissions.mjs';
 import { p as parseCertificateExcel, a as analyzeCertificateImportData } from '../../../../_/certificateImportUtils.mjs';
 import { z } from 'zod';

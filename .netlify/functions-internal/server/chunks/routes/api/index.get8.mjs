@@ -1,4 +1,4 @@
-import { d as defineEventHandler, a as getQuery, c as createError, U as UserRole } from '../../_/nitro.mjs';
+import { d as defineEventHandler, g as getQuery, c as createError, U as UserRole } from '../../nitro/nitro.mjs';
 import { f as getGroups, h as getGroupsStats } from '../../_/groupRepository.mjs';
 import { c as getPermissionContext, d as roleHasPermission, P as Permission, e as getTeacherGroups } from '../../_/permissions.mjs';
 import { l as logActivity } from '../../_/activityLogger.mjs';

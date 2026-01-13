@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, b as getRouterParam, e as executeQuery } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, a as getRouterParam, e as executeQuery } from '../../../../nitro/nitro.mjs';
 import { getFolderById } from '../../../../_/folderRepository.mjs';
 import 'grammy';
 import 'uuid';

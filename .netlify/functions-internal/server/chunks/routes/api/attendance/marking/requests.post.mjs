@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody, c as createError } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody, c as createError } from '../../../../nitro/nitro.mjs';
 import { c as checkMarkingAccess, j as createMarkingRequest } from '../../../../_/attendanceMarkingRepository.mjs';
 import { g as getInstructorByUserId } from '../../../../_/instructorRepository.mjs';
 import { l as logActivity } from '../../../../_/activityLogger.mjs';
@@ -48,7 +48,7 @@ const requests_post = defineEventHandler(async (event) => {
     } else if (body.instructorId) {
       instructorId = body.instructorId;
     } else {
-      const { executeQuery } = await import('../../../../_/nitro.mjs').then(function (n) { return n.ar; });
+      const { executeQuery } = await import('../../../../nitro/nitro.mjs').then(function (n) { return n.ap; });
       const [event2] = await executeQuery(
         "SELECT instructor_id FROM schedule_events WHERE id = ?",
         [body.scheduleEventId]

@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, r as readBody } from '../../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, r as readBody } from '../../../../../nitro/nitro.mjs';
 import { z } from 'zod';
 import { g as getGroupById, b as checkStudentConflicts, t as transferStudent } from '../../../../../_/groupRepository.mjs';
 import 'grammy';

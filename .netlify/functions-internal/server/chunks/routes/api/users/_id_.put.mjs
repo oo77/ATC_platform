@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, e as executeQuery, r as readBody, k as toPublicUser } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, e as executeQuery, r as readBody, i as toPublicUser } from '../../../nitro/nitro.mjs';
 import { v as validate, u as updateProfileSchema } from '../../../_/validation.mjs';
 import { l as logActivity } from '../../../_/activityLogger.mjs';
 import 'grammy';

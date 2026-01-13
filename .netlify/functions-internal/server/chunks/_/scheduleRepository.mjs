@@ -1,4 +1,4 @@
-import { e as executeQuery } from './nitro.mjs';
+import { e as executeQuery } from '../nitro/nitro.mjs';
 import { v4 } from 'uuid';
 
 function isoToMySqlDatetime(isoString) {
@@ -58,7 +58,9 @@ function mapRowToScheduleEvent(row) {
     recurrenceRule: row.recurrence_rule,
     notes: row.notes,
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    originalEventId: row.original_event_id,
+    allowedStudentIds: row.allowed_student_ids ? typeof row.allowed_student_ids === "string" ? JSON.parse(row.allowed_student_ids) : row.allowed_student_ids : null
   };
   if (row.group_code) {
     event.group = {
@@ -164,6 +166,8 @@ async function getScheduleEvents(filters = {}) {
   const query = `
     SELECT 
       se.*,
+      se.allowed_student_ids,
+      se.original_event_id,
       sg.code as group_code,
       c.name as course_name,
       i.full_name as instructor_full_name,
@@ -186,6 +190,8 @@ async function getScheduleEventById(id) {
   const rows = await executeQuery(
     `SELECT 
       se.*,
+      se.allowed_student_ids,
+      se.original_event_id,
       sg.code as group_code,
       c.name as course_name,
       i.full_name as instructor_full_name,
@@ -303,6 +309,12 @@ async function updateScheduleEvent(id, data) {
     updates.push("notes = ?");
     params.push(data.notes);
   }
+  if (data.allowedStudentIds !== void 0) {
+    updates.push("allowed_student_ids = ?");
+    params.push(
+      data.allowedStudentIds && data.allowedStudentIds.length > 0 ? JSON.stringify(data.allowedStudentIds) : null
+    );
+  }
   if (updates.length === 0) {
     return existing;
   }
@@ -357,6 +369,7 @@ async function checkScheduleConflicts(startTime, endTime, options = {}) {
   const query = `
     SELECT 
       se.*,
+      se.allowed_student_ids,
       sg.code as group_code,
       c.name as course_name,
       i.full_name as instructor_full_name,

@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam } from '../../../../nitro/nitro.mjs';
 import { c as getQuestionById, d as deleteQuestion } from '../../../../_/questionRepository.mjs';
 import { l as logActivity } from '../../../../_/activityLogger.mjs';
 import 'grammy';

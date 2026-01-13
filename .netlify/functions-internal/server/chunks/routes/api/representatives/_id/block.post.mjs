@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError, L as getRepresentativeById, r as readBody, R as blockRepresentative } from '../../../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError, H as getRepresentativeById, r as readBody, N as blockRepresentative } from '../../../../nitro/nitro.mjs';
 import { l as logActivity } from '../../../../_/activityLogger.mjs';
 import { a as notifyRepresentativeAboutBlock } from '../../../../_/notificationService.mjs';
 import 'grammy';

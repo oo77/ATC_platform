@@ -338,6 +338,7 @@ export async function getScheduleEvents(
     SELECT 
       se.*,
       se.allowed_student_ids,
+      se.original_event_id,
       sg.code as group_code,
       c.name as course_name,
       i.full_name as instructor_full_name,
@@ -367,6 +368,8 @@ export async function getScheduleEventById(
   const rows = await executeQuery<ScheduleEventRow[]>(
     `SELECT 
       se.*,
+      se.allowed_student_ids,
+      se.original_event_id,
       sg.code as group_code,
       c.name as course_name,
       i.full_name as instructor_full_name,
@@ -505,6 +508,14 @@ export async function updateScheduleEvent(
   if (data.notes !== undefined) {
     updates.push("notes = ?");
     params.push(data.notes);
+  }
+  if (data.allowedStudentIds !== undefined) {
+    updates.push("allowed_student_ids = ?");
+    params.push(
+      data.allowedStudentIds && data.allowedStudentIds.length > 0
+        ? JSON.stringify(data.allowedStudentIds)
+        : null
+    );
   }
 
   if (updates.length === 0) {

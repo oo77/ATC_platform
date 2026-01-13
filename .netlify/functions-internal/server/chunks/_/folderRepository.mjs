@@ -1,4 +1,4 @@
-import { e as executeQuery } from './nitro.mjs';
+import { e as executeQuery } from '../nitro/nitro.mjs';
 import { v4 } from 'uuid';
 import 'grammy';
 import 'node:http';

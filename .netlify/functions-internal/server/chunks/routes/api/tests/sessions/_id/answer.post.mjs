@@ -1,4 +1,4 @@
-import { d as defineEventHandler, b as getRouterParam, r as readBody } from '../../../../../_/nitro.mjs';
+import { d as defineEventHandler, a as getRouterParam, r as readBody } from '../../../../../nitro/nitro.mjs';
 import { a as getTestSessionById, s as saveAnswer, u as updateCurrentQuestionIndex } from '../../../../../_/testSessionRepository.mjs';
 import { c as getQuestionById } from '../../../../../_/questionRepository.mjs';
 import 'grammy';

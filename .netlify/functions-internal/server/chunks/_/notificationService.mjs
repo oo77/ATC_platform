@@ -1,4 +1,4 @@
-import { L as getRepresentativeById, P as sendMessage, Q as BOT_MESSAGES } from './nitro.mjs';
+import { H as getRepresentativeById, L as sendMessage, M as BOT_MESSAGES } from '../nitro/nitro.mjs';
 
 async function notifyRepresentativeAboutApproval(representativeId) {
   try {

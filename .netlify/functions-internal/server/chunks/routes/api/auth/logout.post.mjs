@@ -1,4 +1,4 @@
-import { d as defineEventHandler, c as createError } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, c as createError } from '../../../nitro/nitro.mjs';
 import { l as logActivity } from '../../../_/activityLogger.mjs';
 import 'grammy';
 import 'uuid';

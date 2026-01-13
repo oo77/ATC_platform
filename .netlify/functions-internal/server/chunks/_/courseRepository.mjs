@@ -1,4 +1,4 @@
-import { e as executeQuery, x as executeTransaction } from './nitro.mjs';
+import { e as executeQuery, p as executeTransaction } from '../nitro/nitro.mjs';
 import { v4 } from 'uuid';
 
 function mapRowToCourse(row) {

@@ -1,4 +1,4 @@
-import { d as defineEventHandler, r as readBody } from '../../../_/nitro.mjs';
+import { d as defineEventHandler, r as readBody } from '../../../nitro/nitro.mjs';
 import { t as testAssignmentExistsForEventAndTemplate, c as createTestAssignment } from '../../../_/testAssignmentRepository.mjs';
 import { g as getTestTemplateById } from '../../../_/testTemplateRepository.mjs';
 import 'grammy';
