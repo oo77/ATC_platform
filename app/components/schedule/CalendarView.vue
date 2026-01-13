@@ -364,12 +364,14 @@
       @deleted="handleEventDeleted"
     />
 
-    <!-- Модальное окно создания пересдачи -->
+    <!-- Модальное окно создания/редактирования пересдачи -->
     <ScheduleRetakeModal
       :is-open="showRetakeModal"
       :original-event="retakeOriginalEvent"
+      :retake-event="editingRetakeEvent"
       @close="closeRetakeModal"
       @created="handleRetakeCreated"
+      @updated="handleRetakeUpdated"
     />
   </div>
 </template>
@@ -457,6 +459,7 @@ const showRetakeModal = ref(false);
 const selectedEvent = ref<ScheduleEvent | null>(null);
 const editingEvent = ref<ScheduleEvent | null>(null);
 const retakeOriginalEvent = ref<any | null>(null);
+const editingRetakeEvent = ref<any | null>(null); // Для редактирования пересдачи
 const defaultEventStart = ref<Date | undefined>(undefined);
 const defaultEventEnd = ref<Date | undefined>(undefined);
 
@@ -1233,10 +1236,63 @@ const closeDetailModal = () => {
 };
 
 const handleEditFromDetail = (event: ScheduleEvent) => {
-  // Закрываем модальное окно деталей и открываем окно редактирования
+  // Проверяем, является ли это пересдачей
+  const isRetake = (event.allowedStudentIds && event.allowedStudentIds.length > 0) || event.originalEventId;
+  
   showDetailModal.value = false;
-  editingEvent.value = event;
-  showEventModal.value = true;
+  
+  if (isRetake) {
+    // Открываем форму редактирования пересдачи
+    editingRetakeEvent.value = event;
+    // Загружаем оригинальное событие, если есть originalEventId
+    if (event.originalEventId) {
+      const originalEvent = events.value.find(e => e.id === event.originalEventId);
+      if (originalEvent) {
+        retakeOriginalEvent.value = {
+          id: originalEvent.id,
+          title: originalEvent.title,
+          startTime: originalEvent.startTime,
+          endTime: originalEvent.endTime,
+          eventType: originalEvent.eventType,
+          groupId: originalEvent.groupId,
+          disciplineId: originalEvent.disciplineId,
+          instructorId: originalEvent.instructorId,
+          classroomId: originalEvent.classroomId,
+        };
+      } else {
+        // Если оригинал не найден, используем само событие как оригинал
+        retakeOriginalEvent.value = {
+          id: event.id,
+          title: event.title,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          eventType: event.eventType,
+          groupId: event.groupId,
+          disciplineId: event.disciplineId,
+          instructorId: event.instructorId,
+          classroomId: event.classroomId,
+        };
+      }
+    } else {
+      // Если нет originalEventId, используем само событие
+      retakeOriginalEvent.value = {
+        id: event.id,
+        title: event.title,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        eventType: event.eventType,
+        groupId: event.groupId,
+        disciplineId: event.disciplineId,
+        instructorId: event.instructorId,
+        classroomId: event.classroomId,
+      };
+    }
+    showRetakeModal.value = true;
+  } else {
+    // Открываем обычную форму редактирования
+    editingEvent.value = event;
+    showEventModal.value = true;
+  }
 };
 
 // Обработчик создания пересдачи из модального окна деталей
@@ -1260,6 +1316,7 @@ const handleRetakeFromDetail = (event: ScheduleEvent) => {
 const closeRetakeModal = () => {
   showRetakeModal.value = false;
   retakeOriginalEvent.value = null;
+  editingRetakeEvent.value = null;
 };
 
 const handleRetakeCreated = (retakeEventId: string) => {
@@ -1268,6 +1325,19 @@ const handleRetakeCreated = (retakeEventId: string) => {
     type: "success",
     title: "Пересдача создана",
     message: "События пересдачи добавлено в расписание",
+  });
+  // Перезагружаем события
+  if (currentDateRange.value) {
+    loadEvents(currentDateRange.value.start, currentDateRange.value.end);
+  }
+};
+
+const handleRetakeUpdated = () => {
+  closeRetakeModal();
+  notification.show({
+    type: "success",
+    title: "Пересдача обновлена",
+    message: "Изменения успешно сохранены",
   });
   // Перезагружаем события
   if (currentDateRange.value) {

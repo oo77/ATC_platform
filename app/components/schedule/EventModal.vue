@@ -294,44 +294,6 @@
           </div>
         </div>
 
-        <!-- Ограничение доступа (Пересдача) -->
-        <div
-          v-if="form.testTemplateId"
-          class="mt-4 border-t border-primary/20 pt-4"
-        >
-          <div class="flex items-center gap-2 mb-2">
-            <input
-              type="checkbox"
-              id="isRetakeCheckbox"
-              :checked="isRetake"
-              @change="handleRetakeToggle"
-              class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-            />
-            <label
-              for="isRetakeCheckbox"
-              class="text-sm font-medium text-gray-700 dark:text-gray-300 select-none cursor-pointer"
-            >
-              Ограничить доступ (режим пересдачи)
-            </label>
-          </div>
-
-          <div v-if="isRetake" class="pl-6">
-            <p class="text-xs text-gray-500 mb-2">
-              Выберите студентов, которым будет доступен этот тест. Остальные
-              студенты группы не увидят это назначение.
-            </p>
-            <UiMultiSelect
-              v-model="form.allowedStudentIds"
-              :options="groupStudents"
-              placeholder="Выберите студентов..."
-              label="Студенты"
-            />
-            <div v-if="loadingStudents" class="text-xs text-primary mt-1">
-              Загрузка списка студентов...
-            </div>
-          </div>
-        </div>
-
         <p v-if="!form.testTemplateId" class="mt-2 text-xs text-warning">
           Внимание: Тест не выбран. Студенты не смогут пройти тестирование
           онлайн.

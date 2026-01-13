@@ -1,7 +1,7 @@
 <template>
   <UiModal
     :is-open="isOpen"
-    title="Создать пересдачу"
+    :title="isEditMode ? 'Редактировать пересдачу' : 'Создать пересдачу'"
     size="lg"
     @close="handleClose"
   >
@@ -228,7 +228,7 @@
               d="M12 6v6m0 0v6m0-6h6m-6 0H6"
             />
           </svg>
-          Создать пересдачу
+          {{ isEditMode ? 'Сохранить изменения' : 'Создать пересдачу' }}
         </UiButton>
       </div>
     </form>
@@ -279,11 +279,13 @@ const props = defineProps<{
   isOpen: boolean;
   originalEvent: OriginalEvent | null;
   students?: Student[];
+  retakeEvent?: any; // Существующая пересдача для редактирования
 }>();
 
 const emit = defineEmits<{
   (e: "close"): void;
   (e: "created", retakeEventId: string): void;
+  (e: "updated"): void;
 }>();
 
 const { authFetch } = useAuthFetch();
@@ -295,6 +297,9 @@ const eventTypeLabels: Record<string, string> = {
   assessment: "Проверка знаний",
   other: "Другое",
 };
+
+// Режим редактирования
+const isEditMode = computed(() => !!props.retakeEvent);
 
 // Состояние формы
 const form = reactive({
@@ -407,21 +412,33 @@ const loadData = async () => {
       form.classroomId = props.originalEvent.classroomId;
     }
 
-    // Устанавливаем время из оригинального занятия
-    const originalStart = new Date(props.originalEvent.startTime);
-    const originalEnd = new Date(props.originalEvent.endTime);
-    form.startTime = originalStart.toTimeString().slice(0, 5);
-    form.endTime = originalEnd.toTimeString().slice(0, 5);
+    // Если режим редактирования, загружаем данные пересдачи
+    if (isEditMode.value && props.retakeEvent) {
+      const retakeStart = new Date(props.retakeEvent.startTime);
+      const retakeEnd = new Date(props.retakeEvent.endTime);
+      form.date = retakeStart.toISOString().split("T")[0] || "";
+      form.startTime = retakeStart.toTimeString().slice(0, 5);
+      form.endTime = retakeEnd.toTimeString().slice(0, 5);
+      form.instructorId = props.retakeEvent.instructorId || "";
+      form.classroomId = props.retakeEvent.classroomId || "";
+      form.studentIds = props.retakeEvent.allowedStudentIds || [];
+    } else {
+      // Устанавливаем время из оригинального занятия
+      const originalStart = new Date(props.originalEvent.startTime);
+      const originalEnd = new Date(props.originalEvent.endTime);
+      form.startTime = originalStart.toTimeString().slice(0, 5);
+      form.endTime = originalEnd.toTimeString().slice(0, 5);
 
-    // Дату ставим завтра по умолчанию
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    form.date = tomorrow.toISOString().split("T")[0] || "";
+      // Дату ставим завтра по умолчанию
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      form.date = tomorrow.toISOString().split("T")[0] || "";
 
-    // Автоматически выбираем студентов с низкой оценкой
-    form.studentIds = students.value
-      .filter((s) => s.grade !== undefined && s.grade < 60)
-      .map((s) => s.id);
+      // Автоматически выбираем студентов с низкой оценкой
+      form.studentIds = students.value
+        .filter((s) => s.grade !== undefined && s.grade < 60)
+        .map((s) => s.id);
+    }
   } catch (err) {
     console.error("[RetakeModal] Error loading data:", err);
     showError("Ошибка загрузки данных");
@@ -485,34 +502,62 @@ const validate = (): boolean => {
 
 // Отправка формы
 const handleSubmit = async () => {
-  if (!validate() || !props.originalEvent) return;
+  if (!validate()) return;
 
   submitting.value = true;
 
   try {
-    const response = await authFetch("/api/schedule/retake", {
-      method: "POST",
-      body: {
-        originalEventId: props.originalEvent.id,
-        studentIds: form.studentIds,
-        date: form.date,
-        startTime: form.startTime,
-        endTime: form.endTime,
-        instructorId: form.instructorId,
-        classroomId: form.classroomId || undefined,
-      },
-    });
+    if (isEditMode.value && props.retakeEvent) {
+      // Режим редактирования
+      const startDateTime = `${form.date}T${form.startTime}:00`;
+      const endDateTime = `${form.date}T${form.endTime}:00`;
 
-    if (response.success) {
-      success(response.message || "Пересдача создана");
-      emit("created", response.retakeEventId);
-      handleClose();
+      const response = await authFetch(`/api/schedule/${props.retakeEvent.id}`, {
+        method: "PUT",
+        body: {
+          startTime: startDateTime,
+          endTime: endDateTime,
+          instructorId: form.instructorId,
+          classroomId: form.classroomId || null,
+          allowedStudentIds: form.studentIds,
+        },
+      });
+
+      if (response.success) {
+        success("Пересдача обновлена");
+        emit("updated");
+        handleClose();
+      } else {
+        showError(response.message || "Ошибка обновления пересдачи");
+      }
     } else {
-      showError(response.message || "Ошибка создания пересдачи");
+      // Режим создания
+      if (!props.originalEvent) return;
+
+      const response = await authFetch("/api/schedule/retake", {
+        method: "POST",
+        body: {
+          originalEventId: props.originalEvent.id,
+          studentIds: form.studentIds,
+          date: form.date,
+          startTime: form.startTime,
+          endTime: form.endTime,
+          instructorId: form.instructorId,
+          classroomId: form.classroomId || undefined,
+        },
+      });
+
+      if (response.success) {
+        success(response.message || "Пересдача создана");
+        emit("created", response.retakeEventId);
+        handleClose();
+      } else {
+        showError(response.message || "Ошибка создания пересдачи");
+      }
     }
   } catch (err: any) {
     console.error("[RetakeModal] Submit error:", err);
-    showError(err.data?.message || err.message || "Ошибка создания пересдачи");
+    showError(err.data?.message || err.message || (isEditMode.value ? "Ошибка обновления пересдачи" : "Ошибка создания пересдачи"));
   } finally {
     submitting.value = false;
   }
