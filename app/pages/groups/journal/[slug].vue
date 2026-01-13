@@ -728,7 +728,10 @@
 
           <div class="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
             <p class="text-sm text-gray-500 dark:text-gray-400">
-              Будет отмечено {{ rows.length }} слушателей
+              Будет отмечено {{ getEligibleStudentsCount() }} слушателей
+              <span v-if="selectedEvent.scheduleEvent.isRetake" class="text-purple-600 dark:text-purple-400">
+                (только участники пересдачи)
+              </span>
             </p>
           </div>
         </div>
@@ -797,7 +800,10 @@
 
           <div class="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
             <p class="text-sm text-gray-500 dark:text-gray-400">
-              Будет выставлено {{ rows.length }} оценок
+              Будет выставлено {{ getEligibleStudentsCount() }} оценок
+              <span v-if="selectedEvent.scheduleEvent.isRetake" class="text-purple-600 dark:text-purple-400">
+                (только участники пересдачи)
+              </span>
             </p>
           </div>
         </div>
@@ -1251,7 +1257,12 @@ const saveBulkAttendanceWithReason = async (lateReason?: string) => {
 
   bulkSaving.value = true;
   try {
-    const attendances = rows.value.map((row) => ({
+    // Фильтруем студентов для пересдачи
+    const eligibleRows = selectedEvent.value.scheduleEvent.isRetake && selectedEvent.value.scheduleEvent.allowedStudentIds
+      ? rows.value.filter(row => selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(row.student.id))
+      : rows.value;
+
+    const attendances = eligibleRows.map((row) => ({
       studentId: row.student.id,
       hoursAttended: bulkAttendanceHours.value,
     }));
@@ -1337,7 +1348,12 @@ const saveBulkGrade = async () => {
 
   bulkSaving.value = true;
   try {
-    const grades = rows.value.map((row) => ({
+    // Фильтруем студентов для пересдачи
+    const eligibleRows = selectedEvent.value.scheduleEvent.isRetake && selectedEvent.value.scheduleEvent.allowedStudentIds
+      ? rows.value.filter(row => selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(row.student.id))
+      : rows.value;
+
+    const grades = eligibleRows.map((row) => ({
       studentId: row.student.id,
       grade: bulkGradeValue.value,
     }));
