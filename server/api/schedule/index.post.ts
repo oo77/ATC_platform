@@ -3,13 +3,21 @@
  * Создание события расписания с валидацией часов и дат группы
  */
 
-import { createScheduleEvent, checkScheduleConflicts } from '../../repositories/scheduleRepository';
-import type { CreateScheduleEventInput } from '../../repositories/scheduleRepository';
-import { checkInstructorHoursLimit } from '../../repositories/instructorRepository';
-import { executeQuery } from '../../utils/db';
-import { logActivity } from '../../utils/activityLogger';
-import { dateToLocalIso, formatDateOnly, formatDateForDisplay } from '../../utils/timeUtils';
-import type { RowDataPacket } from 'mysql2/promise';
+import {
+  createScheduleEvent,
+  checkScheduleConflicts,
+} from "../../repositories/scheduleRepository";
+import type { CreateScheduleEventInput } from "../../repositories/scheduleRepository";
+import { checkInstructorHoursLimit } from "../../repositories/instructorRepository";
+import { createTestAssignment } from "../../repositories/testAssignmentRepository"; // New import
+import { executeQuery } from "../../utils/db";
+import { logActivity } from "../../utils/activityLogger";
+import {
+  dateToLocalIso,
+  formatDateOnly,
+  formatDateForDisplay,
+} from "../../utils/timeUtils";
+import type { RowDataPacket } from "mysql2/promise";
 
 interface GroupRow extends RowDataPacket {
   id: string;
@@ -32,8 +40,11 @@ interface UsedHoursRow extends RowDataPacket {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody<CreateScheduleEventInput>(event);
-    
-    console.log('[Schedule API] Получены данные для создания занятия:', JSON.stringify(body, null, 2));
+
+    console.log(
+      "[Schedule API] Получены данные для создания занятия:",
+      JSON.stringify(body, null, 2)
+    );
 
     // ===============================
     // БАЗОВАЯ ВАЛИДАЦИЯ
@@ -42,14 +53,14 @@ export default defineEventHandler(async (event) => {
     if (!body.title?.trim()) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Название события обязательно',
+        statusMessage: "Название события обязательно",
       });
     }
 
     if (!body.startTime || !body.endTime) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Время начала и окончания обязательны',
+        statusMessage: "Время начала и окончания обязательны",
       });
     }
 
@@ -59,7 +70,7 @@ export default defineEventHandler(async (event) => {
     if (endTime <= startTime) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Время окончания должно быть позже времени начала',
+        statusMessage: "Время окончания должно быть позже времени начала",
       });
     }
 
@@ -69,14 +80,14 @@ export default defineEventHandler(async (event) => {
 
     if (body.groupId) {
       const groupRows = await executeQuery<GroupRow[]>(
-        'SELECT id, start_date, end_date, course_id FROM study_groups WHERE id = ? LIMIT 1',
+        "SELECT id, start_date, end_date, course_id FROM study_groups WHERE id = ? LIMIT 1",
         [body.groupId]
       );
 
       if (groupRows.length === 0) {
         throw createError({
           statusCode: 404,
-          statusMessage: 'Группа не найдена',
+          statusMessage: "Группа не найдена",
         });
       }
 
@@ -90,7 +101,9 @@ export default defineEventHandler(async (event) => {
       if (eventDate < groupStartDate || eventDate > groupEndDate) {
         throw createError({
           statusCode: 400,
-          statusMessage: `Дата занятия должна быть в пределах периода обучения группы (${formatDateForDisplay(groupStartDate)} — ${formatDateForDisplay(groupEndDate)})`,
+          statusMessage: `Дата занятия должна быть в пределах периода обучения группы (${formatDateForDisplay(
+            groupStartDate
+          )} — ${formatDateForDisplay(groupEndDate)})`,
         });
       }
 
@@ -98,31 +111,35 @@ export default defineEventHandler(async (event) => {
       // ВАЛИДАЦИЯ ДИСЦИПЛИНЫ И ЧАСОВ
       // ===============================
 
-      if (body.disciplineId && body.eventType && body.eventType !== 'other') {
+      if (body.disciplineId && body.eventType && body.eventType !== "other") {
         // Получаем информацию о дисциплине
         const disciplineRows = await executeQuery<DisciplineRow[]>(
-          'SELECT id, theory_hours, practice_hours, assessment_hours FROM disciplines WHERE id = ? AND course_id = ? LIMIT 1',
+          "SELECT id, theory_hours, practice_hours, assessment_hours FROM disciplines WHERE id = ? AND course_id = ? LIMIT 1",
           [body.disciplineId, group.course_id]
         );
 
         if (disciplineRows.length === 0) {
           throw createError({
             statusCode: 404,
-            statusMessage: 'Дисциплина не найдена или не принадлежит учебной программе группы',
+            statusMessage:
+              "Дисциплина не найдена или не принадлежит учебной программе группы",
           });
         }
 
         const discipline = disciplineRows[0];
-        
+
         // Получаем выделенные часы для данного типа занятия
         let allocatedHours = 0;
-        const eventType = body.eventType as 'theory' | 'practice' | 'assessment';
-        
-        if (eventType === 'theory') {
+        const eventType = body.eventType as
+          | "theory"
+          | "practice"
+          | "assessment";
+
+        if (eventType === "theory") {
           allocatedHours = discipline.theory_hours;
-        } else if (eventType === 'practice') {
+        } else if (eventType === "practice") {
           allocatedHours = discipline.practice_hours;
-        } else if (eventType === 'assessment') {
+        } else if (eventType === "assessment") {
           allocatedHours = discipline.assessment_hours;
         }
 
@@ -139,16 +156,17 @@ export default defineEventHandler(async (event) => {
         const usedAcademicHours = Math.ceil(usedMinutes / 45);
 
         // Вычисляем длительность нового занятия в академических часах
-        const newEventMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+        const newEventMinutes =
+          (endTime.getTime() - startTime.getTime()) / (1000 * 60);
         const newEventHours = Math.ceil(newEventMinutes / 45);
 
         const remainingHours = allocatedHours - usedAcademicHours;
 
         if (newEventHours > remainingHours) {
           const typeNames = {
-            theory: 'теории',
-            practice: 'практики',
-            assessment: 'проверки знаний',
+            theory: "теории",
+            practice: "практики",
+            assessment: "проверки знаний",
           };
 
           throw createError({
@@ -165,14 +183,20 @@ export default defineEventHandler(async (event) => {
 
     if (body.instructorId) {
       // Вычисляем длительность нового занятия в минутах
-      const eventDurationMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-      
-      const hoursCheck = await checkInstructorHoursLimit(body.instructorId, eventDurationMinutes);
-      
+      const eventDurationMinutes =
+        (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+
+      const hoursCheck = await checkInstructorHoursLimit(
+        body.instructorId,
+        eventDurationMinutes
+      );
+
       if (!hoursCheck.canTake) {
         throw createError({
           statusCode: 400,
-          statusMessage: hoursCheck.message || 'Превышен лимит часов инструктора по договору',
+          statusMessage:
+            hoursCheck.message ||
+            "Превышен лимит часов инструктора по договору",
         });
       }
     }
@@ -182,21 +206,32 @@ export default defineEventHandler(async (event) => {
     // ===============================
 
     if (body.classroomId || body.instructorId || body.groupId) {
-      const conflicts = await checkScheduleConflicts(body.startTime, body.endTime, {
-        classroomId: body.classroomId,
-        instructorId: body.instructorId,
-        groupId: body.groupId,
-      });
+      const conflicts = await checkScheduleConflicts(
+        body.startTime,
+        body.endTime,
+        {
+          classroomId: body.classroomId,
+          instructorId: body.instructorId,
+          groupId: body.groupId,
+        }
+      );
 
       if (conflicts.length > 0) {
         const conflictMessages: string[] = [];
-        
+
         for (const conflict of conflicts) {
           if (conflict.classroomId === body.classroomId && conflict.classroom) {
-            conflictMessages.push(`Аудитория "${conflict.classroom.name}" занята`);
+            conflictMessages.push(
+              `Аудитория "${conflict.classroom.name}" занята`
+            );
           }
-          if (conflict.instructorId === body.instructorId && conflict.instructor) {
-            conflictMessages.push(`Инструктор "${conflict.instructor.fullName}" занят`);
+          if (
+            conflict.instructorId === body.instructorId &&
+            conflict.instructor
+          ) {
+            conflictMessages.push(
+              `Инструктор "${conflict.instructor.fullName}" занят`
+            );
           }
           if (conflict.groupId === body.groupId && conflict.group) {
             conflictMessages.push(`Группа "${conflict.group.code}" занята`);
@@ -206,7 +241,9 @@ export default defineEventHandler(async (event) => {
         if (conflictMessages.length > 0) {
           throw createError({
             statusCode: 409,
-            statusMessage: `Конфликт расписания: ${[...new Set(conflictMessages)].join(', ')}`,
+            statusMessage: `Конфликт расписания: ${[
+              ...new Set(conflictMessages),
+            ].join(", ")}`,
           });
         }
       }
@@ -218,11 +255,36 @@ export default defineEventHandler(async (event) => {
 
     const scheduleEvent = await createScheduleEvent(body);
 
+    // СОЗДАНИЕ НАЗНАЧЕНИЯ ТЕСТА (если выбрано и тип - assessment)
+    if (
+      body.eventType === "assessment" &&
+      body.testTemplateId &&
+      body.groupId
+    ) {
+      try {
+        await createTestAssignment(
+          {
+            schedule_event_id: scheduleEvent.id,
+            test_template_id: body.testTemplateId,
+            group_id: body.groupId,
+            allowed_student_ids: body.allowedStudentIds, // Pass allowedStudentIds
+          },
+          event.context.user?.id
+        );
+
+        console.log(
+          `[Schedule API] Created test assignment for event ${scheduleEvent.id}, template ${body.testTemplateId}`
+        );
+      } catch (err: any) {
+        console.error("[Schedule API] Failed to create test assignment:", err);
+      }
+    }
+
     // Логирование действия
     await logActivity(
       event,
-      'CREATE',
-      'SCHEDULE',
+      "CREATE",
+      "SCHEDULE",
       scheduleEvent.id,
       scheduleEvent.title,
       {
@@ -250,10 +312,10 @@ export default defineEventHandler(async (event) => {
     if (error.statusCode) {
       throw error;
     }
-    console.error('Error creating schedule event:', error);
+    console.error("Error creating schedule event:", error);
     throw createError({
       statusCode: 500,
-      statusMessage: 'Ошибка при создании события',
+      statusMessage: "Ошибка при создании события",
     });
   }
 });

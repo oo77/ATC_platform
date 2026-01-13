@@ -2,14 +2,17 @@
  * Репозиторий для работы с расписанием в MySQL
  */
 
-import { executeQuery, executeTransaction } from '../utils/db';
-import { isoToMySqlDatetime } from '../utils/timeUtils';
-import { v4 as uuidv4 } from 'uuid';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import { executeQuery, executeTransaction } from "../utils/db";
+import { isoToMySqlDatetime } from "../utils/timeUtils";
+import { v4 as uuidv4 } from "uuid";
+import type {
+  PoolConnection,
+  ResultSetHeader,
+  RowDataPacket,
+} from "mysql2/promise";
 
-
-export type ScheduleEventType = 'theory' | 'practice' | 'assessment' | 'other';
-export type ScheduleEventColor = 'primary' | 'success' | 'warning' | 'danger';
+export type ScheduleEventType = "theory" | "practice" | "assessment" | "other";
+export type ScheduleEventColor = "primary" | "success" | "warning" | "danger";
 
 export interface ScheduleEvent {
   id: string;
@@ -75,6 +78,8 @@ export interface CreateScheduleEventInput {
   isRecurring?: boolean;
   recurrenceRule?: string;
   notes?: string;
+  testTemplateId?: string; // New: optional test template for assessment events
+  allowedStudentIds?: string[]; // New: limit access to specific students
 }
 
 export interface UpdateScheduleEventInput {
@@ -92,6 +97,8 @@ export interface UpdateScheduleEventInput {
   isRecurring?: boolean;
   recurrenceRule?: string | null;
   notes?: string | null;
+  testTemplateId?: string; // New: optional test template for assessment events
+  allowedStudentIds?: string[]; // New: limit access to specific students
 }
 
 export interface ScheduleFilters {
@@ -175,7 +182,7 @@ function mapRowToScheduleEvent(row: ScheduleEventRow): ScheduleEvent {
     event.group = {
       id: row.group_id!,
       code: row.group_code,
-      courseName: row.course_name || '',
+      courseName: row.course_name || "",
     };
   }
 
@@ -223,59 +230,80 @@ function mapRowToClassroom(row: ClassroomRow): Classroom {
 /**
  * Получить события расписания с фильтрами
  */
-export async function getScheduleEvents(filters: ScheduleFilters = {}): Promise<ScheduleEvent[]> {
+export async function getScheduleEvents(
+  filters: ScheduleFilters = {}
+): Promise<ScheduleEvent[]> {
   const conditions: string[] = [];
   const params: any[] = [];
 
   // Фильтр по диапазону дат
   if (filters.startDate && filters.endDate) {
     // Если даты без времени (YYYY-MM-DD), расширяем endDate до конца дня
-    const startDateStr = filters.startDate.includes('T') ? filters.startDate : `${filters.startDate} 00:00:00`;
-    const endDateStr = filters.endDate.includes('T') ? filters.endDate : `${filters.endDate} 23:59:59`;
+    const startDateStr = filters.startDate.includes("T")
+      ? filters.startDate
+      : `${filters.startDate} 00:00:00`;
+    const endDateStr = filters.endDate.includes("T")
+      ? filters.endDate
+      : `${filters.endDate} 23:59:59`;
 
-    conditions.push('((se.start_time >= ? AND se.start_time <= ?) OR (se.end_time >= ? AND se.end_time <= ?) OR (se.start_time <= ? AND se.end_time >= ?))');
-    params.push(startDateStr, endDateStr, startDateStr, endDateStr, startDateStr, endDateStr);
+    conditions.push(
+      "((se.start_time >= ? AND se.start_time <= ?) OR (se.end_time >= ? AND se.end_time <= ?) OR (se.start_time <= ? AND se.end_time >= ?))"
+    );
+    params.push(
+      startDateStr,
+      endDateStr,
+      startDateStr,
+      endDateStr,
+      startDateStr,
+      endDateStr
+    );
   } else if (filters.startDate) {
-    const startDateStr = filters.startDate.includes('T') ? filters.startDate : `${filters.startDate} 00:00:00`;
-    conditions.push('se.end_time >= ?');
+    const startDateStr = filters.startDate.includes("T")
+      ? filters.startDate
+      : `${filters.startDate} 00:00:00`;
+    conditions.push("se.end_time >= ?");
     params.push(startDateStr);
   } else if (filters.endDate) {
-    const endDateStr = filters.endDate.includes('T') ? filters.endDate : `${filters.endDate} 23:59:59`;
-    conditions.push('se.start_time <= ?');
+    const endDateStr = filters.endDate.includes("T")
+      ? filters.endDate
+      : `${filters.endDate} 23:59:59`;
+    conditions.push("se.start_time <= ?");
     params.push(endDateStr);
   }
 
   // Фильтр по группе
   if (filters.groupId) {
-    conditions.push('se.group_id = ?');
+    conditions.push("se.group_id = ?");
     params.push(filters.groupId);
   }
 
   // Фильтр по инструктору
   if (filters.instructorId) {
-    conditions.push('se.instructor_id = ?');
+    conditions.push("se.instructor_id = ?");
     params.push(filters.instructorId);
   }
 
   // Фильтр по аудитории
   if (filters.classroomId) {
-    conditions.push('se.classroom_id = ?');
+    conditions.push("se.classroom_id = ?");
     params.push(filters.classroomId);
   }
 
   // Фильтр по типу события
   if (filters.eventType) {
-    conditions.push('se.event_type = ?');
+    conditions.push("se.event_type = ?");
     params.push(filters.eventType);
   }
 
   // Фильтр по конкретным ID групп (для TEACHER/STUDENT) с опциональным orInstructorId
   if (filters.groupIds && filters.groupIds.length > 0) {
-    const placeholders = filters.groupIds.map(() => '?').join(', ');
+    const placeholders = filters.groupIds.map(() => "?").join(", ");
 
     if (filters.orInstructorId) {
       // Для TEACHER: показываем события по его группам ИЛИ где он назначен инструктором
-      conditions.push(`(se.group_id IN (${placeholders}) OR se.instructor_id = ?)`);
+      conditions.push(
+        `(se.group_id IN (${placeholders}) OR se.instructor_id = ?)`
+      );
       params.push(...filters.groupIds, filters.orInstructorId);
     } else {
       conditions.push(`se.group_id IN (${placeholders})`);
@@ -284,7 +312,7 @@ export async function getScheduleEvents(filters: ScheduleFilters = {}): Promise<
   } else if (filters.groupIds && filters.groupIds.length === 0) {
     // Если передан пустой массив групп, но есть orInstructorId — показывать только события инструктора
     if (filters.orInstructorId) {
-      conditions.push('se.instructor_id = ?');
+      conditions.push("se.instructor_id = ?");
       params.push(filters.orInstructorId);
     } else {
       // Нет ни групп, ни инструктора — пустой результат
@@ -292,7 +320,8 @@ export async function getScheduleEvents(filters: ScheduleFilters = {}): Promise<
     }
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const query = `
     SELECT 
@@ -320,7 +349,9 @@ export async function getScheduleEvents(filters: ScheduleFilters = {}): Promise<
 /**
  * Получить событие по ID
  */
-export async function getScheduleEventById(id: string): Promise<ScheduleEvent | null> {
+export async function getScheduleEventById(
+  id: string
+): Promise<ScheduleEvent | null> {
   const rows = await executeQuery<ScheduleEventRow[]>(
     `SELECT 
       se.*,
@@ -351,7 +382,9 @@ export async function getScheduleEventById(id: string): Promise<ScheduleEvent | 
 /**
  * Создать событие расписания
  */
-export async function createScheduleEvent(data: CreateScheduleEventInput): Promise<ScheduleEvent> {
+export async function createScheduleEvent(
+  data: CreateScheduleEventInput
+): Promise<ScheduleEvent> {
   const id = uuidv4();
 
   // Конвертируем ISO время в MySQL формат без конвертации часового пояса
@@ -374,8 +407,8 @@ export async function createScheduleEvent(data: CreateScheduleEventInput): Promi
       startTimeMysql,
       endTimeMysql,
       data.isAllDay || false,
-      data.color || 'primary',
-      data.eventType || 'theory',
+      data.color || "primary",
+      data.eventType || "theory",
       data.isRecurring || false,
       data.recurrenceRule || null,
       data.notes || null,
@@ -384,7 +417,7 @@ export async function createScheduleEvent(data: CreateScheduleEventInput): Promi
 
   const event = await getScheduleEventById(id);
   if (!event) {
-    throw new Error('Failed to create schedule event');
+    throw new Error("Failed to create schedule event");
   }
 
   return event;
@@ -393,7 +426,10 @@ export async function createScheduleEvent(data: CreateScheduleEventInput): Promi
 /**
  * Обновить событие расписания
  */
-export async function updateScheduleEvent(id: string, data: UpdateScheduleEventInput): Promise<ScheduleEvent | null> {
+export async function updateScheduleEvent(
+  id: string,
+  data: UpdateScheduleEventInput
+): Promise<ScheduleEvent | null> {
   const existing = await getScheduleEventById(id);
   if (!existing) {
     return null;
@@ -403,59 +439,59 @@ export async function updateScheduleEvent(id: string, data: UpdateScheduleEventI
   const params: any[] = [];
 
   if (data.title !== undefined) {
-    updates.push('title = ?');
+    updates.push("title = ?");
     params.push(data.title);
   }
   if (data.description !== undefined) {
-    updates.push('description = ?');
+    updates.push("description = ?");
     params.push(data.description);
   }
   if (data.groupId !== undefined) {
-    updates.push('group_id = ?');
+    updates.push("group_id = ?");
     params.push(data.groupId);
   }
   if (data.disciplineId !== undefined) {
-    updates.push('discipline_id = ?');
+    updates.push("discipline_id = ?");
     params.push(data.disciplineId);
   }
   if (data.instructorId !== undefined) {
-    updates.push('instructor_id = ?');
+    updates.push("instructor_id = ?");
     params.push(data.instructorId);
   }
   if (data.classroomId !== undefined) {
-    updates.push('classroom_id = ?');
+    updates.push("classroom_id = ?");
     params.push(data.classroomId);
   }
   if (data.startTime !== undefined) {
-    updates.push('start_time = ?');
+    updates.push("start_time = ?");
     params.push(isoToMySqlDatetime(data.startTime));
   }
   if (data.endTime !== undefined) {
-    updates.push('end_time = ?');
+    updates.push("end_time = ?");
     params.push(isoToMySqlDatetime(data.endTime));
   }
   if (data.isAllDay !== undefined) {
-    updates.push('is_all_day = ?');
+    updates.push("is_all_day = ?");
     params.push(data.isAllDay);
   }
   if (data.color !== undefined) {
-    updates.push('color = ?');
+    updates.push("color = ?");
     params.push(data.color);
   }
   if (data.eventType !== undefined) {
-    updates.push('event_type = ?');
+    updates.push("event_type = ?");
     params.push(data.eventType);
   }
   if (data.isRecurring !== undefined) {
-    updates.push('is_recurring = ?');
+    updates.push("is_recurring = ?");
     params.push(data.isRecurring);
   }
   if (data.recurrenceRule !== undefined) {
-    updates.push('recurrence_rule = ?');
+    updates.push("recurrence_rule = ?");
     params.push(data.recurrenceRule);
   }
   if (data.notes !== undefined) {
-    updates.push('notes = ?');
+    updates.push("notes = ?");
     params.push(data.notes);
   }
 
@@ -464,7 +500,10 @@ export async function updateScheduleEvent(id: string, data: UpdateScheduleEventI
   }
 
   params.push(id);
-  await executeQuery(`UPDATE schedule_events SET ${updates.join(', ')} WHERE id = ?`, params);
+  await executeQuery(
+    `UPDATE schedule_events SET ${updates.join(", ")} WHERE id = ?`,
+    params
+  );
 
   return getScheduleEventById(id);
 }
@@ -474,7 +513,7 @@ export async function updateScheduleEvent(id: string, data: UpdateScheduleEventI
  */
 export async function deleteScheduleEvent(id: string): Promise<boolean> {
   const result = await executeQuery<ResultSetHeader>(
-    'DELETE FROM schedule_events WHERE id = ?',
+    "DELETE FROM schedule_events WHERE id = ?",
     [id]
   );
 
@@ -500,33 +539,40 @@ export async function checkScheduleConflicts(
   const endTimeMysql = isoToMySqlDatetime(endTime);
 
   const conditions: string[] = [
-    '((se.start_time < ? AND se.end_time > ?) OR (se.start_time >= ? AND se.start_time < ?) OR (se.end_time > ? AND se.end_time <= ?))',
+    "((se.start_time < ? AND se.end_time > ?) OR (se.start_time >= ? AND se.start_time < ?) OR (se.end_time > ? AND se.end_time <= ?))",
   ];
-  const params: any[] = [endTimeMysql, startTimeMysql, startTimeMysql, endTimeMysql, startTimeMysql, endTimeMysql];
+  const params: any[] = [
+    endTimeMysql,
+    startTimeMysql,
+    startTimeMysql,
+    endTimeMysql,
+    startTimeMysql,
+    endTimeMysql,
+  ];
 
   const orConditions: string[] = [];
 
   if (options.classroomId) {
-    orConditions.push('se.classroom_id = ?');
+    orConditions.push("se.classroom_id = ?");
     params.push(options.classroomId);
   }
 
   if (options.instructorId) {
-    orConditions.push('se.instructor_id = ?');
+    orConditions.push("se.instructor_id = ?");
     params.push(options.instructorId);
   }
 
   if (options.groupId) {
-    orConditions.push('se.group_id = ?');
+    orConditions.push("se.group_id = ?");
     params.push(options.groupId);
   }
 
   if (orConditions.length > 0) {
-    conditions.push(`(${orConditions.join(' OR ')})`);
+    conditions.push(`(${orConditions.join(" OR ")})`);
   }
 
   if (options.excludeEventId) {
-    conditions.push('se.id != ?');
+    conditions.push("se.id != ?");
     params.push(options.excludeEventId);
   }
 
@@ -545,7 +591,7 @@ export async function checkScheduleConflicts(
     LEFT JOIN instructors i ON se.instructor_id = i.id
     LEFT JOIN classrooms cr ON se.classroom_id = cr.id
     LEFT JOIN disciplines d ON se.discipline_id = d.id
-    WHERE ${conditions.join(' AND ')}
+    WHERE ${conditions.join(" AND ")}
     ORDER BY se.start_time ASC
   `;
 
@@ -561,14 +607,14 @@ export async function checkScheduleConflicts(
  * Получить все активные аудитории
  */
 export async function getClassrooms(activeOnly = true): Promise<Classroom[]> {
-  let query = 'SELECT * FROM classrooms';
+  let query = "SELECT * FROM classrooms";
   const params: any[] = [];
 
   if (activeOnly) {
-    query += ' WHERE is_active = true';
+    query += " WHERE is_active = true";
   }
 
-  query += ' ORDER BY name ASC';
+  query += " ORDER BY name ASC";
 
   const rows = await executeQuery<ClassroomRow[]>(query, params);
   return rows.map(mapRowToClassroom);
@@ -579,7 +625,7 @@ export async function getClassrooms(activeOnly = true): Promise<Classroom[]> {
  */
 export async function getClassroomById(id: string): Promise<Classroom | null> {
   const rows = await executeQuery<ClassroomRow[]>(
-    'SELECT * FROM classrooms WHERE id = ? LIMIT 1',
+    "SELECT * FROM classrooms WHERE id = ? LIMIT 1",
     [id]
   );
 
@@ -607,7 +653,7 @@ export async function createClassroom(data: {
 
   const classroom = await getClassroomById(id);
   if (!classroom) {
-    throw new Error('Failed to create classroom');
+    throw new Error("Failed to create classroom");
   }
 
   return classroom;
@@ -618,7 +664,12 @@ export async function createClassroom(data: {
  */
 export async function updateClassroom(
   id: string,
-  data: { name?: string; capacity?: number; description?: string | null; isActive?: boolean }
+  data: {
+    name?: string;
+    capacity?: number;
+    description?: string | null;
+    isActive?: boolean;
+  }
 ): Promise<Classroom | null> {
   const existing = await getClassroomById(id);
   if (!existing) {
@@ -629,19 +680,19 @@ export async function updateClassroom(
   const params: any[] = [];
 
   if (data.name !== undefined) {
-    updates.push('name = ?');
+    updates.push("name = ?");
     params.push(data.name);
   }
   if (data.capacity !== undefined) {
-    updates.push('capacity = ?');
+    updates.push("capacity = ?");
     params.push(data.capacity);
   }
   if (data.description !== undefined) {
-    updates.push('description = ?');
+    updates.push("description = ?");
     params.push(data.description);
   }
   if (data.isActive !== undefined) {
-    updates.push('is_active = ?');
+    updates.push("is_active = ?");
     params.push(data.isActive);
   }
 
@@ -650,7 +701,10 @@ export async function updateClassroom(
   }
 
   params.push(id);
-  await executeQuery(`UPDATE classrooms SET ${updates.join(', ')} WHERE id = ?`, params);
+  await executeQuery(
+    `UPDATE classrooms SET ${updates.join(", ")} WHERE id = ?`,
+    params
+  );
 
   return getClassroomById(id);
 }
@@ -660,7 +714,7 @@ export async function updateClassroom(
  */
 export async function deleteClassroom(id: string): Promise<boolean> {
   const result = await executeQuery<ResultSetHeader>(
-    'DELETE FROM classrooms WHERE id = ?',
+    "DELETE FROM classrooms WHERE id = ?",
     [id]
   );
 
@@ -738,15 +792,17 @@ function mapRowToScheduleSetting(row: ScheduleSettingRow): ScheduleSetting {
 /**
  * Получить все академические пары (отсортированные по номеру)
  */
-export async function getSchedulePeriods(activeOnly = true): Promise<SchedulePeriod[]> {
-  let query = 'SELECT * FROM schedule_periods';
+export async function getSchedulePeriods(
+  activeOnly = true
+): Promise<SchedulePeriod[]> {
+  let query = "SELECT * FROM schedule_periods";
   const params: any[] = [];
 
   if (activeOnly) {
-    query += ' WHERE is_active = true';
+    query += " WHERE is_active = true";
   }
 
-  query += ' ORDER BY period_number ASC';
+  query += " ORDER BY period_number ASC";
 
   const rows = await executeQuery<SchedulePeriodRow[]>(query, params);
   return rows.map(mapRowToSchedulePeriod);
@@ -755,9 +811,11 @@ export async function getSchedulePeriods(activeOnly = true): Promise<SchedulePer
 /**
  * Получить академическую пару по ID
  */
-export async function getSchedulePeriodById(id: number): Promise<SchedulePeriod | null> {
+export async function getSchedulePeriodById(
+  id: number
+): Promise<SchedulePeriod | null> {
   const rows = await executeQuery<SchedulePeriodRow[]>(
-    'SELECT * FROM schedule_periods WHERE id = ? LIMIT 1',
+    "SELECT * FROM schedule_periods WHERE id = ? LIMIT 1",
     [id]
   );
 
@@ -771,9 +829,11 @@ export async function getSchedulePeriodById(id: number): Promise<SchedulePeriod 
 /**
  * Получить академическую пару по номеру
  */
-export async function getSchedulePeriodByNumber(periodNumber: number): Promise<SchedulePeriod | null> {
+export async function getSchedulePeriodByNumber(
+  periodNumber: number
+): Promise<SchedulePeriod | null> {
   const rows = await executeQuery<SchedulePeriodRow[]>(
-    'SELECT * FROM schedule_periods WHERE period_number = ? LIMIT 1',
+    "SELECT * FROM schedule_periods WHERE period_number = ? LIMIT 1",
     [periodNumber]
   );
 
@@ -789,7 +849,12 @@ export async function getSchedulePeriodByNumber(periodNumber: number): Promise<S
  */
 export async function updateSchedulePeriod(
   id: number,
-  data: { startTime?: string; endTime?: string; isAfterBreak?: boolean; isActive?: boolean }
+  data: {
+    startTime?: string;
+    endTime?: string;
+    isAfterBreak?: boolean;
+    isActive?: boolean;
+  }
 ): Promise<SchedulePeriod | null> {
   const existing = await getSchedulePeriodById(id);
   if (!existing) {
@@ -800,19 +865,19 @@ export async function updateSchedulePeriod(
   const params: any[] = [];
 
   if (data.startTime !== undefined) {
-    updates.push('start_time = ?');
+    updates.push("start_time = ?");
     params.push(data.startTime);
   }
   if (data.endTime !== undefined) {
-    updates.push('end_time = ?');
+    updates.push("end_time = ?");
     params.push(data.endTime);
   }
   if (data.isAfterBreak !== undefined) {
-    updates.push('is_after_break = ?');
+    updates.push("is_after_break = ?");
     params.push(data.isAfterBreak);
   }
   if (data.isActive !== undefined) {
-    updates.push('is_active = ?');
+    updates.push("is_active = ?");
     params.push(data.isActive);
   }
 
@@ -821,7 +886,10 @@ export async function updateSchedulePeriod(
   }
 
   params.push(id);
-  await executeQuery(`UPDATE schedule_periods SET ${updates.join(', ')} WHERE id = ?`, params);
+  await executeQuery(
+    `UPDATE schedule_periods SET ${updates.join(", ")} WHERE id = ?`,
+    params
+  );
 
   return getSchedulePeriodById(id);
 }
@@ -830,14 +898,24 @@ export async function updateSchedulePeriod(
  * Массовое обновление всех академических пар
  */
 export async function updateAllSchedulePeriods(
-  periods: Array<{ periodNumber: number; startTime: string; endTime: string; isAfterBreak?: boolean }>
+  periods: Array<{
+    periodNumber: number;
+    startTime: string;
+    endTime: string;
+    isAfterBreak?: boolean;
+  }>
 ): Promise<SchedulePeriod[]> {
   for (const period of periods) {
     await executeQuery(
       `UPDATE schedule_periods 
        SET start_time = ?, end_time = ?, is_after_break = ?
        WHERE period_number = ?`,
-      [period.startTime, period.endTime, period.isAfterBreak || false, period.periodNumber]
+      [
+        period.startTime,
+        period.endTime,
+        period.isAfterBreak || false,
+        period.periodNumber,
+      ]
     );
   }
 
@@ -849,7 +927,7 @@ export async function updateAllSchedulePeriods(
  */
 export async function getScheduleSettings(): Promise<ScheduleSetting[]> {
   const rows = await executeQuery<ScheduleSettingRow[]>(
-    'SELECT * FROM schedule_settings ORDER BY setting_key ASC'
+    "SELECT * FROM schedule_settings ORDER BY setting_key ASC"
   );
   return rows.map(mapRowToScheduleSetting);
 }
@@ -857,9 +935,11 @@ export async function getScheduleSettings(): Promise<ScheduleSetting[]> {
 /**
  * Получить настройку по ключу
  */
-export async function getScheduleSettingByKey(key: string): Promise<ScheduleSetting | null> {
+export async function getScheduleSettingByKey(
+  key: string
+): Promise<ScheduleSetting | null> {
   const rows = await executeQuery<ScheduleSettingRow[]>(
-    'SELECT * FROM schedule_settings WHERE setting_key = ? LIMIT 1',
+    "SELECT * FROM schedule_settings WHERE setting_key = ? LIMIT 1",
     [key]
   );
 
@@ -873,7 +953,9 @@ export async function getScheduleSettingByKey(key: string): Promise<ScheduleSett
 /**
  * Получить значение настройки по ключу
  */
-export async function getScheduleSettingValue(key: string): Promise<string | null> {
+export async function getScheduleSettingValue(
+  key: string
+): Promise<string | null> {
   const setting = await getScheduleSettingByKey(key);
   return setting ? setting.settingValue : null;
 }
@@ -881,9 +963,12 @@ export async function getScheduleSettingValue(key: string): Promise<string | nul
 /**
  * Обновить настройку по ключу
  */
-export async function updateScheduleSetting(key: string, value: string): Promise<ScheduleSetting | null> {
+export async function updateScheduleSetting(
+  key: string,
+  value: string
+): Promise<ScheduleSetting | null> {
   await executeQuery(
-    'UPDATE schedule_settings SET setting_value = ? WHERE setting_key = ?',
+    "UPDATE schedule_settings SET setting_value = ? WHERE setting_key = ?",
     [value, key]
   );
 
@@ -898,7 +983,7 @@ export async function updateScheduleSettings(
 ): Promise<ScheduleSetting[]> {
   for (const setting of settings) {
     await executeQuery(
-      'UPDATE schedule_settings SET setting_value = ? WHERE setting_key = ?',
+      "UPDATE schedule_settings SET setting_value = ? WHERE setting_key = ?",
       [setting.value, setting.key]
     );
   }
@@ -909,7 +994,9 @@ export async function updateScheduleSettings(
 /**
  * Получить все настройки расписания как объект
  */
-export async function getScheduleSettingsAsObject(): Promise<Record<string, string>> {
+export async function getScheduleSettingsAsObject(): Promise<
+  Record<string, string>
+> {
   const settings = await getScheduleSettings();
   const result: Record<string, string> = {};
 
@@ -923,7 +1010,9 @@ export async function getScheduleSettingsAsObject(): Promise<Record<string, stri
 /**
  * Найти ближайшую академическую пару по времени (HH:MM)
  */
-export async function findNearestPeriod(time: string): Promise<SchedulePeriod | null> {
+export async function findNearestPeriod(
+  time: string
+): Promise<SchedulePeriod | null> {
   const periods = await getSchedulePeriods();
 
   if (periods.length === 0) {
@@ -931,14 +1020,14 @@ export async function findNearestPeriod(time: string): Promise<SchedulePeriod | 
   }
 
   // Преобразуем время в минуты для сравнения
-  const [hours, minutes] = time.split(':').map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
   const timeInMinutes = hours * 60 + minutes;
 
   let nearestPeriod: SchedulePeriod | null = null;
   let minDiff = Infinity;
 
   for (const period of periods) {
-    const [startHours, startMinutes] = period.startTime.split(':').map(Number);
+    const [startHours, startMinutes] = period.startTime.split(":").map(Number);
     const startInMinutes = startHours * 60 + startMinutes;
     const diff = Math.abs(timeInMinutes - startInMinutes);
 
@@ -955,16 +1044,18 @@ export async function findNearestPeriod(time: string): Promise<SchedulePeriod | 
  * Получить пару по времени (HH:MM)
  * Возвращает пару, в которую попадает указанное время
  */
-export async function getPeriodByTime(time: string): Promise<SchedulePeriod | null> {
+export async function getPeriodByTime(
+  time: string
+): Promise<SchedulePeriod | null> {
   const periods = await getSchedulePeriods();
 
   // Преобразуем время в минуты для сравнения
-  const [hours, minutes] = time.split(':').map(Number);
+  const [hours, minutes] = time.split(":").map(Number);
   const timeInMinutes = hours * 60 + minutes;
 
   for (const period of periods) {
-    const [startHours, startMinutes] = period.startTime.split(':').map(Number);
-    const [endHours, endMinutes] = period.endTime.split(':').map(Number);
+    const [startHours, startMinutes] = period.startTime.split(":").map(Number);
+    const [endHours, endMinutes] = period.endTime.split(":").map(Number);
     const startInMinutes = startHours * 60 + startMinutes;
     const endInMinutes = endHours * 60 + endMinutes;
 

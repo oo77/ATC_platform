@@ -3,9 +3,12 @@
  * Получить данные журнала посещаемости и оценок
  */
 
-import { getJournalData, calculateAcademicHours } from '../../repositories/attendanceRepository';
-import { logActivity } from '../../utils/activityLogger';
-import type { RowDataPacket } from 'mysql2/promise';
+import {
+  getJournalData,
+  calculateAcademicHours,
+} from "../../repositories/attendanceRepository";
+import { logActivity } from "../../utils/activityLogger";
+import type { RowDataPacket } from "mysql2/promise";
 
 interface JournalColumn {
   scheduleEvent: {
@@ -14,7 +17,7 @@ interface JournalColumn {
     date: string;
     startTime: string;
     endTime: string;
-    eventType: 'theory' | 'practice' | 'assessment' | 'other';
+    eventType: "theory" | "practice" | "assessment" | "other";
     academicHours: number;
   };
   hasGrade: boolean;
@@ -63,28 +66,44 @@ export default defineEventHandler(async (event) => {
     if (!groupId || !disciplineId) {
       throw createError({
         statusCode: 400,
-        message: 'Необходимо указать groupId и disciplineId',
+        message: "Необходимо указать groupId и disciplineId",
       });
     }
 
-    console.log('[Journal API] Loading journal for groupId:', groupId, 'disciplineId:', disciplineId);
+    console.log(
+      "[Journal API] Loading journal for groupId:",
+      groupId,
+      "disciplineId:",
+      disciplineId
+    );
 
     const data = await getJournalData(groupId, disciplineId);
 
-    console.log('[Journal API] Found events:', data.events.length, 'students:', data.students.length);
+    console.log(
+      "[Journal API] Found events:",
+      data.events.length,
+      "students:",
+      data.students.length
+    );
 
     // Формируем столбцы (занятия)
     const columns: JournalColumn[] = data.events.map((evt) => ({
       scheduleEvent: {
         id: evt.id,
         title: evt.title,
-        date: evt.start_time.toISOString().split('T')[0],
+        date: evt.start_time.toISOString().split("T")[0],
         startTime: evt.start_time.toISOString(),
         endTime: evt.end_time.toISOString(),
-        eventType: evt.event_type as 'theory' | 'practice' | 'assessment' | 'other',
+        eventType: evt.event_type as
+          | "theory"
+          | "practice"
+          | "assessment"
+          | "other",
         academicHours: calculateAcademicHours(evt.start_time, evt.end_time),
       },
-      hasGrade: evt.event_type === 'assessment',
+      // Оценки доступны для проверки знаний (assessment) и практики (practice)
+      hasGrade:
+        evt.event_type === "assessment" || evt.event_type === "practice",
     }));
 
     // Формируем строки (студенты)
@@ -92,42 +111,51 @@ export default defineEventHandler(async (event) => {
       // Ячейки для каждого занятия
       const cells: JournalCell[] = data.events.map((evt) => {
         const attendance = data.attendances.find(
-          (a) => a.studentId === student.student_id && a.scheduleEventId === evt.id
+          (a) =>
+            a.studentId === student.student_id && a.scheduleEventId === evt.id
         );
         const grade = data.grades.find(
-          (g) => g.studentId === student.student_id && g.scheduleEventId === evt.id
+          (g) =>
+            g.studentId === student.student_id && g.scheduleEventId === evt.id
         );
 
         return {
           studentId: student.student_id,
           scheduleEventId: evt.id,
-          attendance: attendance ? {
-            id: attendance.id,
-            hoursAttended: attendance.hoursAttended,
-            maxHours: attendance.maxHours,
-            notes: attendance.notes,
-          } : undefined,
-          grade: grade ? {
-            id: grade.id,
-            grade: grade.grade,
-            notes: grade.notes,
-            isFromTest: grade.isFromTest,
-            isModified: grade.isModified,
-            originalGrade: grade.originalGrade,
-          } : undefined,
+          attendance: attendance
+            ? {
+                id: attendance.id,
+                hoursAttended: attendance.hoursAttended,
+                maxHours: attendance.maxHours,
+                notes: attendance.notes,
+              }
+            : undefined,
+          grade: grade
+            ? {
+                id: grade.id,
+                grade: grade.grade,
+                notes: grade.notes,
+                isFromTest: grade.isFromTest,
+                isModified: grade.isModified,
+                originalGrade: grade.originalGrade,
+              }
+            : undefined,
         };
       });
 
       // Расчёт статистики
-      const totalHoursAttended = cells.reduce((sum: number, cell) =>
-        sum + (cell.attendance?.hoursAttended || 0), 0
+      const totalHoursAttended = cells.reduce(
+        (sum: number, cell) => sum + (cell.attendance?.hoursAttended || 0),
+        0
       );
 
       const totalMaxHours = cells.reduce((sum: number, cell) => {
         if (cell.attendance?.maxHours) {
           return sum + cell.attendance.maxHours;
         }
-        const col = columns.find((c) => c.scheduleEvent.id === cell.scheduleEventId);
+        const col = columns.find(
+          (c) => c.scheduleEvent.id === cell.scheduleEventId
+        );
         return sum + (col?.scheduleEvent.academicHours || 0);
       }, 0);
 
@@ -135,12 +163,19 @@ export default defineEventHandler(async (event) => {
       const gradeValues = cells
         .filter((cell) => cell.grade)
         .map((cell) => cell.grade!.grade);
-      const averageGrade = gradeValues.length > 0
-        ? Math.round(gradeValues.reduce((a: number, b: number) => a + b, 0) / gradeValues.length * 100) / 100
-        : undefined;
+      const averageGrade =
+        gradeValues.length > 0
+          ? Math.round(
+              (gradeValues.reduce((a: number, b: number) => a + b, 0) /
+                gradeValues.length) *
+                100
+            ) / 100
+          : undefined;
 
       // Итоговая оценка
-      const finalGrade = data.finalGrades.find((fg) => fg.studentId === student.student_id);
+      const finalGrade = data.finalGrades.find(
+        (fg) => fg.studentId === student.student_id
+      );
 
       return {
         student: {
@@ -151,9 +186,10 @@ export default defineEventHandler(async (event) => {
         cells,
         totalHoursAttended,
         totalMaxHours,
-        attendancePercent: totalMaxHours > 0
-          ? Math.round((totalHoursAttended / totalMaxHours) * 100 * 100) / 100
-          : 0,
+        attendancePercent:
+          totalMaxHours > 0
+            ? Math.round((totalHoursAttended / totalMaxHours) * 100 * 100) / 100
+            : 0,
         averageGrade,
         assessmentCount: gradeValues.length,
         finalGrade: finalGrade || undefined,
@@ -164,21 +200,30 @@ export default defineEventHandler(async (event) => {
     const summary = {
       totalStudents: rows.length,
       totalEvents: columns.length,
-      averageAttendance: rows.length > 0
-        ? Math.round(rows.reduce((sum: number, r) => sum + r.attendancePercent, 0) / rows.length * 100) / 100
-        : 0,
-      passedCount: data.finalGrades.filter((fg) => fg.status === 'passed').length,
-      failedCount: data.finalGrades.filter((fg) => fg.status === 'failed').length,
-      inProgressCount: data.finalGrades.filter((fg) => fg.status === 'in_progress').length,
+      averageAttendance:
+        rows.length > 0
+          ? Math.round(
+              (rows.reduce((sum: number, r) => sum + r.attendancePercent, 0) /
+                rows.length) *
+                100
+            ) / 100
+          : 0,
+      passedCount: data.finalGrades.filter((fg) => fg.status === "passed")
+        .length,
+      failedCount: data.finalGrades.filter((fg) => fg.status === "failed")
+        .length,
+      inProgressCount: data.finalGrades.filter(
+        (fg) => fg.status === "in_progress"
+      ).length,
     };
 
     // Логируем просмотр журнала
     await logActivity(
       event,
-      'VIEW',
-      'ATTENDANCE',
+      "VIEW",
+      "ATTENDANCE",
       `${groupId}:${disciplineId}`,
-      'Журнал посещаемости',
+      "Журнал посещаемости",
       { groupId, disciplineId }
     );
 
@@ -189,10 +234,10 @@ export default defineEventHandler(async (event) => {
       summary,
     };
   } catch (error: any) {
-    console.error('Error fetching journal data:', error);
+    console.error("Error fetching journal data:", error);
     throw createError({
       statusCode: error.statusCode || 500,
-      message: error.message || 'Ошибка при загрузке журнала',
+      message: error.message || "Ошибка при загрузке журнала",
     });
   }
 });

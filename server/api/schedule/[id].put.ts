@@ -3,13 +3,28 @@
  * Обновление события расписания с валидацией часов и дат группы
  */
 
-import { updateScheduleEvent, checkScheduleConflicts, getScheduleEventById } from '../../repositories/scheduleRepository';
-import type { UpdateScheduleEventInput } from '../../repositories/scheduleRepository';
-import { checkInstructorHoursLimit } from '../../repositories/instructorRepository';
-import { executeQuery } from '../../utils/db';
-import { logActivity } from '../../utils/activityLogger';
-import { dateToLocalIso, dateToLocalIsoString, formatDateOnly, formatDateForDisplay } from '../../utils/timeUtils';
-import type { RowDataPacket } from 'mysql2/promise';
+import {
+  updateScheduleEvent,
+  checkScheduleConflicts,
+  getScheduleEventById,
+} from "../../repositories/scheduleRepository";
+import type { UpdateScheduleEventInput } from "../../repositories/scheduleRepository";
+import { checkInstructorHoursLimit } from "../../repositories/instructorRepository";
+import {
+  createTestAssignment,
+  getTestAssignmentByScheduleEventId,
+  deleteTestAssignment,
+  updateTestAssignment,
+} from "../../repositories/testAssignmentRepository"; // New import
+import { executeQuery } from "../../utils/db";
+import { logActivity } from "../../utils/activityLogger";
+import {
+  dateToLocalIso,
+  dateToLocalIsoString,
+  formatDateOnly,
+  formatDateForDisplay,
+} from "../../utils/timeUtils";
+import type { RowDataPacket } from "mysql2/promise";
 
 interface GroupRow extends RowDataPacket {
   id: string;
@@ -31,12 +46,12 @@ interface UsedHoursRow extends RowDataPacket {
 
 export default defineEventHandler(async (event) => {
   try {
-    const id = getRouterParam(event, 'id');
-    
+    const id = getRouterParam(event, "id");
+
     if (!id) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'ID события обязателен',
+        statusMessage: "ID события обязателен",
       });
     }
 
@@ -44,29 +59,40 @@ export default defineEventHandler(async (event) => {
     if (!existing) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Событие не найдено',
+        statusMessage: "Событие не найдено",
       });
     }
 
     const body = await readBody<UpdateScheduleEventInput>(event);
 
     // Валидация времени
-    const startTime = body.startTime ? new Date(body.startTime) : existing.startTime;
+    const startTime = body.startTime
+      ? new Date(body.startTime)
+      : existing.startTime;
     const endTime = body.endTime ? new Date(body.endTime) : existing.endTime;
 
     if (endTime <= startTime) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Время окончания должно быть позже времени начала',
+        statusMessage: "Время окончания должно быть позже времени начала",
       });
     }
 
     // Определяем финальные значения для валидации
-    const finalGroupId = body.groupId !== undefined ? body.groupId : existing.groupId;
-    const finalDisciplineId = body.disciplineId !== undefined ? body.disciplineId : existing.disciplineId;
-    const finalEventType = body.eventType !== undefined ? body.eventType : existing.eventType;
-    const checkClassroom = body.classroomId !== undefined ? body.classroomId : existing.classroomId;
-    const checkInstructor = body.instructorId !== undefined ? body.instructorId : existing.instructorId;
+    const finalGroupId =
+      body.groupId !== undefined ? body.groupId : existing.groupId;
+    const finalDisciplineId =
+      body.disciplineId !== undefined
+        ? body.disciplineId
+        : existing.disciplineId;
+    const finalEventType =
+      body.eventType !== undefined ? body.eventType : existing.eventType;
+    const checkClassroom =
+      body.classroomId !== undefined ? body.classroomId : existing.classroomId;
+    const checkInstructor =
+      body.instructorId !== undefined
+        ? body.instructorId
+        : existing.instructorId;
 
     // ===============================
     // ВАЛИДАЦИЯ ГРУППЫ И ДАТ
@@ -74,14 +100,14 @@ export default defineEventHandler(async (event) => {
 
     if (finalGroupId) {
       const groupRows = await executeQuery<GroupRow[]>(
-        'SELECT id, start_date, end_date, course_id FROM study_groups WHERE id = ? LIMIT 1',
+        "SELECT id, start_date, end_date, course_id FROM study_groups WHERE id = ? LIMIT 1",
         [finalGroupId]
       );
 
       if (groupRows.length === 0) {
         throw createError({
           statusCode: 404,
-          statusMessage: 'Группа не найдена',
+          statusMessage: "Группа не найдена",
         });
       }
 
@@ -95,7 +121,9 @@ export default defineEventHandler(async (event) => {
       if (eventDate < groupStartDate || eventDate > groupEndDate) {
         throw createError({
           statusCode: 400,
-          statusMessage: `Дата занятия должна быть в пределах периода обучения группы (${formatDateForDisplay(groupStartDate)} — ${formatDateForDisplay(groupEndDate)})`,
+          statusMessage: `Дата занятия должна быть в пределах периода обучения группы (${formatDateForDisplay(
+            groupStartDate
+          )} — ${formatDateForDisplay(groupEndDate)})`,
         });
       }
 
@@ -103,31 +131,35 @@ export default defineEventHandler(async (event) => {
       // ВАЛИДАЦИЯ ДИСЦИПЛИНЫ И ЧАСОВ
       // ===============================
 
-      if (finalDisciplineId && finalEventType && finalEventType !== 'other') {
+      if (finalDisciplineId && finalEventType && finalEventType !== "other") {
         // Получаем информацию о дисциплине
         const disciplineRows = await executeQuery<DisciplineRow[]>(
-          'SELECT id, theory_hours, practice_hours, assessment_hours FROM disciplines WHERE id = ? AND course_id = ? LIMIT 1',
+          "SELECT id, theory_hours, practice_hours, assessment_hours FROM disciplines WHERE id = ? AND course_id = ? LIMIT 1",
           [finalDisciplineId, group.course_id]
         );
 
         if (disciplineRows.length === 0) {
           throw createError({
             statusCode: 404,
-            statusMessage: 'Дисциплина не найдена или не принадлежит учебной программе группы',
+            statusMessage:
+              "Дисциплина не найдена или не принадлежит учебной программе группы",
           });
         }
 
         const discipline = disciplineRows[0];
-        
+
         // Получаем выделенные часы для данного типа занятия
         let allocatedHours = 0;
-        const eventType = finalEventType as 'theory' | 'practice' | 'assessment';
-        
-        if (eventType === 'theory') {
+        const eventType = finalEventType as
+          | "theory"
+          | "practice"
+          | "assessment";
+
+        if (eventType === "theory") {
           allocatedHours = discipline.theory_hours;
-        } else if (eventType === 'practice') {
+        } else if (eventType === "practice") {
           allocatedHours = discipline.practice_hours;
-        } else if (eventType === 'assessment') {
+        } else if (eventType === "assessment") {
           allocatedHours = discipline.assessment_hours;
         }
 
@@ -144,16 +176,17 @@ export default defineEventHandler(async (event) => {
         const usedAcademicHours = Math.ceil(usedMinutes / 45);
 
         // Вычисляем длительность занятия в академических часах
-        const eventMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+        const eventMinutes =
+          (endTime.getTime() - startTime.getTime()) / (1000 * 60);
         const eventHours = Math.ceil(eventMinutes / 45);
 
         const remainingHours = allocatedHours - usedAcademicHours;
 
         if (eventHours > remainingHours) {
           const typeNames = {
-            theory: 'теории',
-            practice: 'практики',
-            assessment: 'проверки знаний',
+            theory: "теории",
+            practice: "практики",
+            assessment: "проверки знаний",
           };
 
           throw createError({
@@ -170,31 +203,41 @@ export default defineEventHandler(async (event) => {
 
     if (checkInstructor) {
       // Вычисляем длительность занятия в минутах
-      const eventDurationMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-      
+      const eventDurationMinutes =
+        (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+
       // Если меняется инструктор или время — проверяем лимит
       // При смене инструктора проверяем нового, иначе — только если изменилось время
-      const instructorChanged = body.instructorId !== undefined && body.instructorId !== existing.instructorId;
-      const timeChanged = body.startTime !== undefined || body.endTime !== undefined;
-      
+      const instructorChanged =
+        body.instructorId !== undefined &&
+        body.instructorId !== existing.instructorId;
+      const timeChanged =
+        body.startTime !== undefined || body.endTime !== undefined;
+
       if (instructorChanged || timeChanged) {
         // Вычисляем старую длительность для учёта в лимите
-        const oldDurationMinutes = instructorChanged 
+        const oldDurationMinutes = instructorChanged
           ? 0 // Новый инструктор не имел этих часов, проверяем полную длительность
-          : (existing.endTime.getTime() - existing.startTime.getTime()) / (1000 * 60);
-        
+          : (existing.endTime.getTime() - existing.startTime.getTime()) /
+            (1000 * 60);
+
         // При смене инструктора проверяем полную длительность, иначе только разницу (если увеличиваем)
-        const additionalMinutes = instructorChanged 
-          ? eventDurationMinutes 
+        const additionalMinutes = instructorChanged
+          ? eventDurationMinutes
           : Math.max(0, eventDurationMinutes - oldDurationMinutes);
-        
+
         if (additionalMinutes > 0) {
-          const hoursCheck = await checkInstructorHoursLimit(checkInstructor, additionalMinutes);
-          
+          const hoursCheck = await checkInstructorHoursLimit(
+            checkInstructor,
+            additionalMinutes
+          );
+
           if (!hoursCheck.canTake) {
             throw createError({
               statusCode: 400,
-              statusMessage: hoursCheck.message || 'Превышен лимит часов инструктора по договору',
+              statusMessage:
+                hoursCheck.message ||
+                "Превышен лимит часов инструктора по договору",
             });
           }
         }
@@ -219,13 +262,20 @@ export default defineEventHandler(async (event) => {
 
       if (conflicts.length > 0) {
         const conflictMessages: string[] = [];
-        
+
         for (const conflict of conflicts) {
           if (conflict.classroomId === checkClassroom && conflict.classroom) {
-            conflictMessages.push(`Аудитория "${conflict.classroom.name}" занята`);
+            conflictMessages.push(
+              `Аудитория "${conflict.classroom.name}" занята`
+            );
           }
-          if (conflict.instructorId === checkInstructor && conflict.instructor) {
-            conflictMessages.push(`Инструктор "${conflict.instructor.fullName}" занят`);
+          if (
+            conflict.instructorId === checkInstructor &&
+            conflict.instructor
+          ) {
+            conflictMessages.push(
+              `Инструктор "${conflict.instructor.fullName}" занят`
+            );
           }
           if (conflict.groupId === finalGroupId && conflict.group) {
             conflictMessages.push(`Группа "${conflict.group.code}" занята`);
@@ -235,11 +285,15 @@ export default defineEventHandler(async (event) => {
         if (conflictMessages.length > 0) {
           throw createError({
             statusCode: 409,
-            statusMessage: `Конфликт расписания: ${[...new Set(conflictMessages)].join(', ')}`,
+            statusMessage: `Конфликт расписания: ${[
+              ...new Set(conflictMessages),
+            ].join(", ")}`,
           });
         }
       }
     }
+
+    // ... (existing imports)
 
     // ===============================
     // ОБНОВЛЕНИЕ СОБЫТИЯ
@@ -250,15 +304,86 @@ export default defineEventHandler(async (event) => {
     if (!scheduleEvent) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Событие не найдено',
+        statusMessage: "Событие не найдено",
       });
+    }
+
+    // ЛОГИКА ОБНОВЛЕНИЯ ТЕСТОВ (только для assessment)
+    // Если eventType меняется на не-assessment, по хорошему надо удалять тесты, но пока оставим как есть или добавим позже.
+    // Обрабатываем, если finalEventType === 'assessment'
+
+    if (finalEventType === "assessment") {
+      const existingAssignment = await getTestAssignmentByScheduleEventId(id);
+
+      // Если передан testTemplateId (строка, возможно пустая)
+      if (typeof body.testTemplateId === "string") {
+        const newTemplateId = body.testTemplateId;
+
+        if (newTemplateId) {
+          // Пользователь выбрал какой-то шаблон
+          if (existingAssignment) {
+            // Если шаблон отличается — пересоздаем
+            if (existingAssignment.test_template_id !== newTemplateId) {
+              // TODO: Проверка, есть ли прохождения у старого теста?
+              await deleteTestAssignment(existingAssignment.id);
+
+              if (finalGroupId) {
+                await createTestAssignment(
+                  {
+                    schedule_event_id: id,
+                    test_template_id: newTemplateId,
+                    group_id: finalGroupId,
+                    allowed_student_ids: body.allowedStudentIds,
+                  },
+                  event.context.user?.id
+                );
+              }
+            } else {
+              // Template is same, update allowedStudentIds if provided or changed
+              // Note: We might want to clear it if empty array is passed?
+              // For now, only update if explicit change logic is needed.
+              // Assuming body.allowedStudentIds is what user wants (including null/empty)
+
+              const wasAllowed = existingAssignment.allowed_student_ids;
+              const isAllowed = body.allowedStudentIds;
+
+              // Simple check if we should update.
+              // If body.allowedStudentIds is undefined, we don't touch it.
+              // If it is defined (array or null), we update.
+              if (isAllowed !== undefined) {
+                await updateTestAssignment(existingAssignment.id, {
+                  allowed_student_ids: isAllowed,
+                });
+              }
+            }
+          } else {
+            // Назначения не было — создаем
+            if (finalGroupId) {
+              await createTestAssignment(
+                {
+                  schedule_event_id: id,
+                  test_template_id: newTemplateId,
+                  group_id: finalGroupId,
+                  allowed_student_ids: body.allowedStudentIds,
+                },
+                event.context.user?.id
+              );
+            }
+          }
+        } else {
+          // Пользователь передал пустую строку — значит "Убрать тест"
+          if (existingAssignment) {
+            await deleteTestAssignment(existingAssignment.id);
+          }
+        }
+      }
     }
 
     // Логирование действия
     await logActivity(
       event,
-      'UPDATE',
-      'SCHEDULE',
+      "UPDATE",
+      "SCHEDULE",
       scheduleEvent.id,
       scheduleEvent.title,
       {
@@ -284,10 +409,10 @@ export default defineEventHandler(async (event) => {
     if (error.statusCode) {
       throw error;
     }
-    console.error('Error updating schedule event:', error);
+    console.error("Error updating schedule event:", error);
     throw createError({
       statusCode: 500,
-      statusMessage: 'Ошибка при обновлении события',
+      statusMessage: "Ошибка при обновлении события",
     });
   }
 });
