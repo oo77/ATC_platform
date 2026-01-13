@@ -1385,6 +1385,19 @@ const saveBulkGrade = async () => {
   }
 };
 
+// Получить количество студентов для массовой операции (с учетом пересдачи)
+const getEligibleStudentsCount = () => {
+  if (!selectedEvent.value) return 0;
+  
+  if (selectedEvent.value.scheduleEvent.isRetake && selectedEvent.value.scheduleEvent.allowedStudentIds) {
+    return rows.value.filter(row => 
+      selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(row.student.id)
+    ).length;
+  }
+  
+  return rows.value.length;
+};
+
 // Initialize
 onMounted(async () => {
   await Promise.all([loadJournal(), loadMeta()]);
