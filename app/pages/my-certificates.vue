@@ -19,6 +19,31 @@
 
     <!-- Контент -->
     <template v-else>
+      <!-- Статистика сверху -->
+      <div
+        v-if="certificates.length > 0"
+        class="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4"
+      >
+        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Всего</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white">
+            {{ certificates.length }}
+          </p>
+        </div>
+        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Действительных</p>
+          <p class="text-2xl font-bold text-success">{{ validCount }}</p>
+        </div>
+        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Истёк срок</p>
+          <p class="text-2xl font-bold text-warning">{{ expiredCount }}</p>
+        </div>
+        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-500 dark:text-gray-400">Отозванных</p>
+          <p class="text-2xl font-bold text-danger">{{ revokedCount }}</p>
+        </div>
+      </div>
+
       <!-- Фильтры -->
       <div class="mb-6 flex flex-wrap gap-4">
         <!-- Фильтр по статусу -->
@@ -265,31 +290,6 @@
               Сертификат отозван
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Статистика внизу -->
-      <div
-        v-if="certificates.length > 0"
-        class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4"
-      >
-        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Всего</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white">
-            {{ certificates.length }}
-          </p>
-        </div>
-        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Действительных</p>
-          <p class="text-2xl font-bold text-success">{{ validCount }}</p>
-        </div>
-        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Истёк срок</p>
-          <p class="text-2xl font-bold text-warning">{{ expiredCount }}</p>
-        </div>
-        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Отозванных</p>
-          <p class="text-2xl font-bold text-danger">{{ revokedCount }}</p>
         </div>
       </div>
     </template>

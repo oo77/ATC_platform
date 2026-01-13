@@ -1,16 +1,17 @@
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import type { JwtPayload, User, UserPublic } from '../types/auth';
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import type { JwtPayload, User, UserPublic } from "../types/auth";
 
 /**
  * Утилиты для аутентификации и авторизации
  */
 
 // Константы
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'your-refresh-secret';
-const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '30d';
+const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+const REFRESH_TOKEN_SECRET =
+  process.env.REFRESH_TOKEN_SECRET || "your-refresh-secret";
+const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || "30d";
 const SALT_ROUNDS = 10;
 
 /**
@@ -28,7 +29,10 @@ export async function hashPassword(password: string): Promise<string> {
  * @param hash - Хешированный пароль
  * @returns true если пароль совпадает
  */
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+export async function verifyPassword(
+  password: string,
+  hash: string
+): Promise<boolean> {
   return await bcrypt.compare(password, hash);
 }
 
@@ -64,7 +68,7 @@ export function verifyToken(token: string): JwtPayload | null {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     return decoded;
   } catch (error) {
-    console.error('Token verification failed:', error);
+    console.error("Token verification failed:", error);
     return null;
   }
 }
@@ -79,7 +83,7 @@ export function verifyRefreshToken(token: string): JwtPayload | null {
     const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET) as JwtPayload;
     return decoded;
   } catch (error) {
-    console.error('Refresh token verification failed:', error);
+    console.error("Refresh token verification failed:", error);
     return null;
   }
 }
@@ -94,8 +98,8 @@ export function extractToken(authHeader: string | undefined): string | null {
     return null;
   }
 
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2 || parts[0] !== "Bearer") {
     return null;
   }
 
@@ -108,8 +112,12 @@ export function extractToken(authHeader: string | undefined): string | null {
  * @returns Публичные данные пользователя
  */
 export function toPublicUser(user: User): UserPublic {
-  const { password_hash, ...publicUser } = user;
-  return publicUser;
+  const { password_hash, student_id, instructor_id, ...rest } = user;
+  return {
+    ...rest,
+    studentId: student_id || null,
+    instructorId: instructor_id || null,
+  };
 }
 
 /**

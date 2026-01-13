@@ -34,6 +34,8 @@ import * as backfillMarkingStatus from "./migrations/20260109_040_backfill_marki
 import * as retakeSystem from "./migrations/20260113_041_retake_system";
 import * as retakeLinkedEvents from "./migrations/20260113_042_retake_linked_events";
 import * as scheduleEventsAllowedStudents from "./migrations/20260113_043_schedule_events_allowed_students";
+import * as addUserRelations from "./migrations/20260113_044_add_user_relations";
+import * as linkExistingUsers from "./migrations/20260113_045_link_existing_users";
 
 /**
  * ============================================================================
@@ -294,6 +296,24 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: scheduleEventsAllowedStudents.up,
     down: scheduleEventsAllowedStudents.down,
     description: scheduleEventsAllowedStudents.description,
+  },
+  // ============================================================
+  // Миграция 044: Связь пользователей со студентами и инструкторами
+  // ============================================================
+  {
+    name: "20260113_044_add_user_relations",
+    up: addUserRelations.up,
+    down: addUserRelations.down,
+    description: addUserRelations.description,
+  },
+  // ============================================================
+  // Миграция 045: Связывание существующих пользователей
+  // ============================================================
+  {
+    name: "20260113_045_link_existing_users",
+    up: linkExistingUsers.up,
+    down: linkExistingUsers.down,
+    description: linkExistingUsers.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

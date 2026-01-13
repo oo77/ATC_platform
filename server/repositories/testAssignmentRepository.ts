@@ -526,7 +526,11 @@ export async function getStudentAssignments(
       ta.status,
       ta.start_date,
       ta.end_date,
+      ta.allowed_student_ids,
       sg.end_date as group_end_date,
+      se.original_event_id,
+      se.start_time as event_start_time,
+      se.end_time as event_end_time,
       tt.name as template_name,
       tt.code as template_code,
       tt.max_attempts,
@@ -563,14 +567,24 @@ export async function getStudentAssignments(
   // Клиент автоматически конвертирует в локальное время браузера
 
   return rows.map((row: any) => {
-    let endDate = row.end_date ? new Date(row.end_date) : null;
+    // Используем время начала и окончания ЗАНЯТИЯ (schedule_events)
+    // а не поля start_date/end_date из test_assignments
+    const eventStartTime = row.event_start_time
+      ? new Date(row.event_start_time)
+      : null;
+    const eventEndTime = row.event_end_time
+      ? new Date(row.event_end_time)
+      : null;
     const groupEndDate = row.group_end_date
       ? new Date(row.group_end_date)
       : null;
 
-    // Если курс завершен раньше дедлайна теста (или дедлайна нет), используем дату завершения курса
-    if (groupEndDate && (!endDate || groupEndDate < endDate)) {
-      endDate = groupEndDate;
+    // Определяем финальную дату окончания теста
+    let finalEndDate = eventEndTime;
+
+    // Если курс завершен раньше времени окончания занятия, используем дату завершения курса
+    if (groupEndDate && eventEndTime && groupEndDate < eventEndTime) {
+      finalEndDate = groupEndDate;
     }
 
     return {
@@ -585,10 +599,9 @@ export async function getStudentAssignments(
       event_date: row.event_date || null,
       event_time: row.event_time || null,
       status: row.status,
-      // Date объекты сериализуются в ISO UTC строки ("2026-01-06T09:40:00.000Z")
-      // Клиент должен использовать new Date() для парсинга
-      start_date: row.start_date || null,
-      end_date: endDate,
+      // Используем время ЗАНЯТИЯ для определения доступности теста
+      start_date: eventStartTime,
+      end_date: finalEndDate,
       time_limit: row.time_limit || null,
       passing_score: row.passing_score || 60,
       max_attempts: row.max_attempts || 1,
@@ -598,6 +611,11 @@ export async function getStudentAssignments(
       passed: Boolean(row.passed),
       has_active_session: !!row.active_session_id,
       active_session_id: row.active_session_id || null,
+      // Добавляем поля для определения перездачи
+      allowed_student_ids: row.allowed_student_ids
+        ? JSON.parse(row.allowed_student_ids)
+        : null,
+      original_event_id: row.original_event_id || null,
     };
   });
 }

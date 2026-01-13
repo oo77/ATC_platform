@@ -5,10 +5,10 @@
 
 // Роли пользователей
 export enum UserRole {
-  ADMIN = 'ADMIN',
-  MANAGER = 'MANAGER',
-  TEACHER = 'TEACHER',
-  STUDENT = 'STUDENT',
+  ADMIN = "ADMIN",
+  MANAGER = "MANAGER",
+  TEACHER = "TEACHER",
+  STUDENT = "STUDENT",
 }
 
 // Публичные данные пользователя (без пароля)
@@ -21,6 +21,8 @@ export interface UserPublic {
   workplace?: string | null;
   position?: string | null;
   pinfl?: string | null;
+  studentId?: string | null; // Связь с таблицей students
+  instructorId?: string | null; // Связь с таблицей instructors
   created_at: Date;
   updated_at: Date;
 }

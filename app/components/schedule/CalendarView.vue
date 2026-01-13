@@ -418,6 +418,7 @@ interface Classroom {
 
 const { authFetch } = useAuthFetch();
 const notification = useNotification();
+const { user } = useAuth();
 
 // Проверка прав доступа
 const {
@@ -561,13 +562,32 @@ const transformEventForCalendar = (event: ScheduleEvent): EventInput => {
   const defaultColors = { bg: "#3C50E0", border: "#3C50E0", text: "#ffffff" };
   const colors = eventColors[event.color] ?? defaultColors;
 
+  // Проверяем, является ли это перездачей
+  const isRetake =
+    (event.allowedStudentIds && event.allowedStudentIds.length > 0) ||
+    event.originalEventId;
+
   // Формируем заголовок с аудиторией если она указана
-  const titleWithClassroom = event.classroom?.name
+  let titleWithClassroom = event.classroom?.name
     ? `${event.title} (${event.classroom.name})`
     : event.title;
 
+  // Добавляем иконку перездачи к заголовку
+  if (isRetake) {
+    titleWithClassroom = `🔄 ${titleWithClassroom}`;
+  }
+
   // Получаем цвет группы для полосы слева
   const groupColor = getGroupColor(event.groupId || undefined);
+
+  // Определяем CSS-классы
+  const classNames = [];
+  if (event.groupId) {
+    classNames.push(`group-stripe-${hashStringToIndex(event.groupId)}`);
+  }
+  if (isRetake) {
+    classNames.push("event-retake");
+  }
 
   return {
     id: event.id,
@@ -579,9 +599,7 @@ const transformEventForCalendar = (event: ScheduleEvent): EventInput => {
     borderColor: colors.border,
     textColor: colors.text,
     // Добавляем класс с data-атрибутом для CSS-стилизации полосы группы
-    classNames: event.groupId
-      ? [`group-stripe-${hashStringToIndex(event.groupId)}`]
-      : [],
+    classNames: classNames,
     extendedProps: {
       description: event.description || undefined,
       groupId: event.groupId || undefined,
@@ -593,6 +611,9 @@ const transformEventForCalendar = (event: ScheduleEvent): EventInput => {
       classroomName: event.classroom?.name,
       eventType: event.eventType,
       color: event.color,
+      isRetake: isRetake,
+      allowedStudentIds: event.allowedStudentIds,
+      originalEventId: event.originalEventId,
     },
   };
 };
@@ -860,6 +881,14 @@ const onEventDidMount = (arg: EventMountArg) => {
       <span class="event-tooltip-text">${getEventTypeLabel(
         extendedProps.eventType
       )}</span>
+    </div>`);
+  }
+
+  // Индикатор перездачи
+  if (extendedProps.isRetake) {
+    parts.push(`<div class="event-tooltip-row">
+      <span class="event-tooltip-icon">🔄</span>
+      <span class="event-tooltip-text" style="color: #9333ea; font-weight: 600;">Перездача</span>
     </div>`);
   }
 
@@ -1215,8 +1244,75 @@ const updateCalendarEvents = () => {
   // Сначала удаляем все существующие события
   api.removeAllEvents();
 
-  // Затем добавляем новые
-  const transformedEvents = events.value.map(transformEventForCalendar);
+  // Фильтруем события для студентов
+  let filteredEvents = events.value;
+
+  if (isStudent.value) {
+    const currentStudentId = user.value?.studentId;
+
+    console.log("[CalendarView] Фильтрация для студента:", {
+      userId: user.value?.id,
+      studentId: currentStudentId,
+      totalEvents: events.value.length,
+      isStudent: isStudent.value,
+    });
+
+    if (!currentStudentId) {
+      console.warn("[CalendarView] У студента нет связанного studentId");
+      // Если нет studentId, показываем только обычные занятия (не перездачи)
+      filteredEvents = events.value.filter((event) => {
+        const isRetake =
+          (event.allowedStudentIds && event.allowedStudentIds.length > 0) ||
+          event.originalEventId;
+        return !isRetake;
+      });
+    } else {
+      filteredEvents = events.value.filter((event) => {
+        // Проверяем, является ли это перездачей
+        const isRetake =
+          (event.allowedStudentIds && event.allowedStudentIds.length > 0) ||
+          event.originalEventId;
+
+        console.log("[CalendarView] Проверка события:", {
+          title: event.title,
+          isRetake,
+          allowedStudentIds: event.allowedStudentIds,
+          originalEventId: event.originalEventId,
+          currentStudentId,
+        });
+
+        // Если это не перездача, показываем всем
+        if (!isRetake) {
+          console.log("[CalendarView] → Показываем (не перездача)");
+          return true;
+        }
+
+        // Если это перездача, показываем только если студент в списке allowedStudentIds
+        if (event.allowedStudentIds && event.allowedStudentIds.length > 0) {
+          const isAllowed = event.allowedStudentIds.includes(currentStudentId);
+          console.log(
+            "[CalendarView] → Перездача, студент в списке:",
+            isAllowed
+          );
+          return isAllowed;
+        }
+
+        // Если allowedStudentIds пустой или не определен, не показываем
+        console.log(
+          "[CalendarView] → Скрываем (перездача без списка студентов)"
+        );
+        return false;
+      });
+    }
+
+    console.log("[CalendarView] После фильтрации:", {
+      filteredCount: filteredEvents.length,
+      hiddenCount: events.value.length - filteredEvents.length,
+    });
+  }
+
+  // Затем добавляем новые (отфильтрованные) события
+  const transformedEvents = filteredEvents.map(transformEventForCalendar);
   transformedEvents.forEach((event) => {
     api.addEvent(event);
   });
@@ -1238,16 +1334,20 @@ const closeDetailModal = () => {
 
 const handleEditFromDetail = (event: ScheduleEvent) => {
   // Проверяем, является ли это пересдачей
-  const isRetake = (event.allowedStudentIds && event.allowedStudentIds.length > 0) || event.originalEventId;
-  
+  const isRetake =
+    (event.allowedStudentIds && event.allowedStudentIds.length > 0) ||
+    event.originalEventId;
+
   showDetailModal.value = false;
-  
+
   if (isRetake) {
     // Открываем форму редактирования пересдачи
     editingRetakeEvent.value = event;
     // Загружаем оригинальное событие, если есть originalEventId
     if (event.originalEventId) {
-      const originalEvent = events.value.find(e => e.id === event.originalEventId);
+      const originalEvent = events.value.find(
+        (e) => e.id === event.originalEventId
+      );
       if (originalEvent) {
         retakeOriginalEvent.value = {
           id: originalEvent.id,
@@ -2087,5 +2187,59 @@ onUnmounted(() => {
 
 .dark .event-tooltip-description .event-tooltip-text {
   color: #94a3b8;
+}
+
+/* ============================================
+   СТИЛИ ДЛЯ ПЕРЕЗДАЧ
+   ============================================ */
+
+/* Основной стиль для перездач */
+.schedule-calendar .fc-event.event-retake {
+  border: 2px solid #9333ea !important;
+  box-shadow: 0 0 0 1px rgba(147, 51, 234, 0.2),
+    0 2px 8px rgba(147, 51, 234, 0.15) !important;
+  position: relative;
+}
+
+/* Пульсирующая анимация для перездач */
+.schedule-calendar .fc-event.event-retake::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid #9333ea;
+  border-radius: 4px;
+  opacity: 0;
+  animation: retake-pulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes retake-pulse {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.05);
+  }
+}
+
+/* Hover эффект для перездач */
+.schedule-calendar .fc-event.event-retake:hover {
+  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3),
+    0 4px 12px rgba(147, 51, 234, 0.25) !important;
+}
+
+/* Дополнительный фон для перездач в темной теме */
+.dark .schedule-calendar .fc-event.event-retake {
+  background: linear-gradient(
+    135deg,
+    rgba(147, 51, 234, 0.15) 0%,
+    rgba(147, 51, 234, 0.05) 100%
+  ) !important;
 }
 </style>

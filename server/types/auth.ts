@@ -4,10 +4,10 @@
 
 // Роли пользователей в системе
 export enum UserRole {
-  ADMIN = 'ADMIN',
-  MANAGER = 'MANAGER',
-  TEACHER = 'TEACHER',
-  STUDENT = 'STUDENT',
+  ADMIN = "ADMIN",
+  MANAGER = "MANAGER",
+  TEACHER = "TEACHER",
+  STUDENT = "STUDENT",
 }
 
 // Интерфейс пользователя в БД
@@ -21,6 +21,8 @@ export interface User {
   workplace?: string | null;
   position?: string | null;
   pinfl?: string | null;
+  student_id?: string | null; // Связь с таблицей students
+  instructor_id?: string | null; // Связь с таблицей instructors
   created_at: Date;
   updated_at: Date;
 }
@@ -35,6 +37,8 @@ export interface UserPublic {
   workplace?: string | null;
   position?: string | null;
   pinfl?: string | null;
+  studentId?: string | null; // Связь с таблицей students (camelCase для клиента)
+  instructorId?: string | null; // Связь с таблицей instructors (camelCase для клиента)
   created_at: Date;
   updated_at: Date;
 }
