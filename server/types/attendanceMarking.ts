@@ -5,7 +5,7 @@
 // ============ Статусы ============
 
 /** Статус отметки посещаемости для занятия */
-export type AttendanceMarkingStatus = 
+export type AttendanceMarkingStatus =
   | 'pending'      // Не отмечено (занятие прошло)
   | 'in_progress'  // Идёт отметка (занятие идёт)
   | 'on_time'      // Отмечено вовремя (до 24ч)
@@ -44,6 +44,7 @@ export interface AttendanceMarkingStatusRecord {
     startTime: Date;
     endTime: Date;
     eventType: string;
+    disciplineId?: string | null;
     groupId: string | null;
     groupCode: string | null;
     instructorId: string | null;
@@ -128,6 +129,7 @@ export interface MarkingAccessCheckResult {
   message?: string;
   requiresApproval?: boolean;
   existingRequestId?: string;
+  isApprovedByAdmin?: boolean;
 }
 
 /** Запрос на отметку посещаемости */

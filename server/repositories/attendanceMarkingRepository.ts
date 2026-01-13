@@ -657,14 +657,14 @@ export async function checkMarkingAccess(
       message: 'Срок отметки истёк. Отметка будет помечена как "Опоздание"',
     };
   } else if (settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE) {
-    // Требуется одобрение — но админы могут без одобрения
+    // Требуется одобрение — но админы и модераторы могут без одобрения
     if (userRole === "ADMIN" || userRole === "MANAGER") {
       return {
         allowed: true,
         status: "late",
         deadline,
         lateDeadline,
-        message: "Срок истёк, но вы можете отметить как администратор",
+        message: "Срок истёк, но вы можете отметить как администратор/модератор",
       };
     }
 

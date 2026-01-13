@@ -315,7 +315,9 @@
               event &&
               event.groupId &&
               (event.eventType === 'assessment' ||
-                event.eventType === 'practice')
+                event.eventType === 'practice') &&
+              !event.originalEventId &&
+              !(event.allowedStudentIds && event.allowedStudentIds.length > 0)
             "
             variant="warning"
             @click="handleRetake"
@@ -417,7 +419,7 @@ const loadStudents = async (groupId: string) => {
     }>(`/api/groups/${groupId}`);
 
     if (response.success && response.group?.students) {
-      students.value = response.group.students
+      let allStudents = response.group.students
         .filter((s) => s.student)
         .map((s) => ({
           id: s.student!.id,
@@ -425,6 +427,15 @@ const loadStudents = async (groupId: string) => {
           organization: s.student!.organization,
           position: s.student!.position,
         }));
+
+      // Если это пересдача, показываем только студентов из allowedStudentIds
+      if (props.event?.allowedStudentIds && props.event.allowedStudentIds.length > 0) {
+        allStudents = allStudents.filter((student) =>
+          props.event!.allowedStudentIds!.includes(student.id)
+        );
+      }
+
+      students.value = allStudents;
     }
   } catch (error) {
     console.error("Error loading students:", error);
