@@ -519,11 +519,11 @@ export async function syncMarkingStatuses(): Promise<void> {
       const endTime = new Date(event.end_time);
       const deadline = new Date(
         endTime.getTime() +
-          settings.ATTENDANCE_MARK_DEADLINE_HOURS * 60 * 60 * 1000
+        settings.ATTENDANCE_MARK_DEADLINE_HOURS * 60 * 60 * 1000
       );
       const lateDeadline = new Date(
         endTime.getTime() +
-          settings.ATTENDANCE_EDIT_DEADLINE_HOURS * 60 * 60 * 1000
+        settings.ATTENDANCE_EDIT_DEADLINE_HOURS * 60 * 60 * 1000
       );
 
       // Получаем количество студентов
@@ -656,8 +656,10 @@ export async function checkMarkingAccess(
       lateDeadline,
       message: 'Срок отметки истёк. Отметка будет помечена как "Опоздание"',
     };
-  } else if (settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE) {
-    // Требуется одобрение — но админы и модераторы могут без одобрения
+  } else {
+    // Срок истёк полностью (после lateDeadline)
+
+    // Админы и модераторы ВСЕГДА могут отмечать без одобрения
     if (userRole === "ADMIN" || userRole === "MANAGER") {
       return {
         allowed: true,
@@ -668,41 +670,44 @@ export async function checkMarkingAccess(
       };
     }
 
-    // Проверяем, есть ли одобренный запрос
-    const [approvedRequest] = await executeQuery<RowDataPacket[]>(
-      `SELECT id FROM attendance_marking_requests 
-       WHERE schedule_event_id = ? AND instructor_id = ? AND status = 'approved'`,
-      [scheduleEventId, instructorId || ""]
-    );
+    // Для инструкторов проверяем настройки
+    if (settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE) {
+      // Проверяем, есть ли одобренный запрос
+      const [approvedRequest] = await executeQuery<RowDataPacket[]>(
+        `SELECT id FROM attendance_marking_requests 
+         WHERE schedule_event_id = ? AND instructor_id = ? AND status = 'approved'`,
+        [scheduleEventId, instructorId || ""]
+      );
 
-    if (approvedRequest) {
+      if (approvedRequest) {
+        return {
+          allowed: true,
+          status: "allowed",
+          deadline,
+          lateDeadline,
+          message: "Отметка разрешена по одобренному запросу",
+          existingRequestId: approvedRequest.id,
+        };
+      }
+
       return {
-        allowed: true,
-        status: "allowed",
+        allowed: false,
+        status: "requires_approval",
         deadline,
         lateDeadline,
-        message: "Отметка разрешена по одобренному запросу",
-        existingRequestId: approvedRequest.id,
+        message: "Срок отметки истёк. Требуется одобрение администратора",
+        requiresApproval: true,
+      };
+    } else {
+      // Опоздание разрешено без одобрения
+      return {
+        allowed: true,
+        status: "late",
+        deadline,
+        lateDeadline,
+        message: "Срок отметки истёк",
       };
     }
-
-    return {
-      allowed: false,
-      status: "requires_approval",
-      deadline,
-      lateDeadline,
-      message: "Срок отметки истёк. Требуется одобрение администратора",
-      requiresApproval: true,
-    };
-  } else {
-    // Опоздание разрешено без одобрения
-    return {
-      allowed: true,
-      status: "late",
-      deadline,
-      lateDeadline,
-      message: "Срок отметки истёк",
-    };
   }
 }
 

@@ -729,10 +729,26 @@
           <div class="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
             <p class="text-sm text-gray-500 dark:text-gray-400">
               Будет отмечено {{ getEligibleStudentsCount() }} слушателей
-              <span v-if="selectedEvent.scheduleEvent.isRetake" class="text-purple-600 dark:text-purple-400">
+              <span v-if="selectedEvent.scheduleEvent.isRetake" class="text-purple-600 dark:text-purple-400 font-medium">
                 (только участники пересдачи)
               </span>
             </p>
+            
+            <!-- Список участников пересдачи -->
+            <div v-if="selectedEvent.scheduleEvent.isRetake && selectedEvent.scheduleEvent.allowedStudentIds" class="mt-3">
+              <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Участники пересдачи:</p>
+              <div class="max-h-32 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
+                <div class="space-y-1">
+                  <div 
+                    v-for="student in getEligibleStudents()" 
+                    :key="student.id"
+                    class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                    {{ student.fullName }}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -801,10 +817,26 @@
           <div class="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
             <p class="text-sm text-gray-500 dark:text-gray-400">
               Будет выставлено {{ getEligibleStudentsCount() }} оценок
-              <span v-if="selectedEvent.scheduleEvent.isRetake" class="text-purple-600 dark:text-purple-400">
+              <span v-if="selectedEvent.scheduleEvent.isRetake" class="text-purple-600 dark:text-purple-400 font-medium">
                 (только участники пересдачи)
               </span>
             </p>
+            
+            <!-- Список участников пересдачи -->
+            <div v-if="selectedEvent.scheduleEvent.isRetake && selectedEvent.scheduleEvent.allowedStudentIds" class="mt-3">
+              <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Участники пересдачи:</p>
+              <div class="max-h-32 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
+                <div class="space-y-1">
+                  <div 
+                    v-for="student in getEligibleStudents()" 
+                    :key="student.id"
+                    class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                    {{ student.fullName }}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1396,6 +1428,19 @@ const getEligibleStudentsCount = () => {
   }
   
   return rows.value.length;
+};
+
+// Получить список студентов для массовой операции (с учетом пересдачи)
+const getEligibleStudents = () => {
+  if (!selectedEvent.value) return [];
+  
+  if (selectedEvent.value.scheduleEvent.isRetake && selectedEvent.value.scheduleEvent.allowedStudentIds) {
+    return rows.value
+      .filter(row => selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(row.student.id))
+      .map(row => row.student);
+  }
+  
+  return rows.value.map(row => row.student);
 };
 
 // Initialize
