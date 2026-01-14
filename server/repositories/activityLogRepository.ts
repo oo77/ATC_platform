@@ -109,7 +109,12 @@ export async function createActivityLog(
     [result.insertId]
   );
 
-  return mapRowToActivityLog(rows[0]);
+  const row = rows[0];
+  if (!row) {
+    throw new Error('Failed to retrieve created activity log');
+  }
+
+  return mapRowToActivityLog(row);
 }
 
 /**

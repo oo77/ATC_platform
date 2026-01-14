@@ -1,4 +1,4 @@
-import { Kysely, sql } from "kysely";
+import type { Kysely } from "kysely";
 
 export async function up(db: Kysely<any>): Promise<void> {
   // Добавляем поля для архивации, если их нет

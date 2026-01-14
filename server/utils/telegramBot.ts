@@ -183,7 +183,7 @@ export const BOT_MESSAGES = {
 
 `,
 
-  CERTIFICATE_SENT: (studentName: string, certificateNumber: string) => 
+  CERTIFICATE_SENT: (studentName: string, certificateNumber: string) =>
     `✅ Сертификат *${certificateNumber}* слушателя *${studentName}* отправлен.`,
 
   CERTIFICATE_SEND_ERROR: (studentName: string) =>
@@ -238,17 +238,17 @@ export function validatePhone(phone: string): boolean {
  */
 export function normalizePhone(phone: string): string {
   let cleaned = phone.replace(/[^\d+]/g, '');
-  
+
   // Если начинается с 998 без +, добавляем +
   if (cleaned.startsWith('998') && !cleaned.startsWith('+')) {
     cleaned = '+' + cleaned;
   }
-  
+
   // Если начинается с 8 или 9 (местный формат)
   if (cleaned.startsWith('9') && cleaned.length === 9) {
     cleaned = '+998' + cleaned;
   }
-  
+
   return cleaned;
 }
 
@@ -301,13 +301,13 @@ export function formatStudentsList(students: FormattedStudent[]): string {
   for (const [groupName, group] of Object.entries(byGroup)) {
     message += `*Группа: ${groupName}* (${group.startDate} - ${group.endDate})\n`;
     message += `📖 _${group.courseName}_\n`;
-    
+
     group.students.forEach((name, index) => {
       const prefix = index === group.students.length - 1 ? '└' : '├';
       message += `${prefix} ${name}\n`;
       totalStudents++;
     });
-    
+
     message += '\n';
   }
 
@@ -329,7 +329,10 @@ export function formatSchedule(events: FormattedScheduleEvent[]): string {
     if (!acc[event.date]) {
       acc[event.date] = [];
     }
-    acc[event.date].push(event);
+    const dateEvents = acc[event.date];
+    if (dateEvents) {
+      dateEvents.push(event);
+    }
     return acc;
   }, {} as Record<string, FormattedScheduleEvent[]>);
 
@@ -341,11 +344,11 @@ export function formatSchedule(events: FormattedScheduleEvent[]): string {
     message += `🗓 *${formatDate(date)}* (${dayName})\n\n`;
 
     for (const event of dateEvents) {
-      const typeEmoji = event.eventType === 'theory' ? '📖' : 
-                        event.eventType === 'practice' ? '💻' : '📝';
+      const typeEmoji = event.eventType === 'theory' ? '📖' :
+        event.eventType === 'practice' ? '💻' : '📝';
       const typeName = event.eventType === 'theory' ? 'Теория' :
-                       event.eventType === 'practice' ? 'Практика' : 'Проверка знаний';
-      
+        event.eventType === 'practice' ? 'Практика' : 'Проверка знаний';
+
       message += `${event.startTime} - ${event.endTime} | ${typeName}\n`;
       message += `${typeEmoji} ${event.disciplineName}\n`;
       message += `👨‍🏫 Преподаватель: ${event.instructorName}\n`;
@@ -383,17 +386,17 @@ export function formatCertificatesList(certificates: FormattedCertificate[]): st
 
   for (const [courseGroup, certs] of Object.entries(byCourse)) {
     message += `📚 *${courseGroup}*\n`;
-    
+
     for (const cert of certs) {
       const statusIcon = cert.status === 'issued' ? '✅' : '❌';
       const passedIcon = cert.hasPassed ? '🎓' : '⚠️';
       const passedText = cert.hasPassed ? 'Прошёл обучение' : 'Не соответствует требованиям';
-      
+
       message += `${statusIcon} *${cert.studentName}*\n`;
       message += `   📜 № ${cert.certificateNumber}\n`;
       message += `   📅 Выдан: ${cert.issueDate}\n`;
       message += `   ${passedIcon} ${passedText}`;
-      
+
       if (cert.attendancePercent !== null && cert.attendancePercent !== undefined) {
         const percent = Number(cert.attendancePercent);
         if (!isNaN(percent)) {
@@ -401,14 +404,14 @@ export function formatCertificatesList(certificates: FormattedCertificate[]): st
         }
       }
       message += '\n';
-      
+
       if (cert.status === 'revoked') {
         message += `   ⛔ _Сертификат отозван_\n`;
         totalRevoked++;
       } else {
         totalIssued++;
       }
-      
+
       message += '\n';
     }
   }
@@ -435,7 +438,7 @@ export function createPhoneKeyboard(): InlineKeyboard {
  */
 export function createOrganizationsKeyboard(organizations: { id: string; name: string }[]): InlineKeyboard {
   const keyboard = new InlineKeyboard();
-  
+
   organizations.forEach((org, index) => {
     keyboard.text(org.name, `org_${org.id}`);
     // По 1 кнопке в ряд для лучшей читаемости
@@ -443,7 +446,7 @@ export function createOrganizationsKeyboard(organizations: { id: string; name: s
       keyboard.row();
     }
   });
-  
+
   return keyboard;
 }
 
@@ -463,11 +466,11 @@ export function getBot(): Bot<Context> | null {
       console.warn('[TelegramBot] TELEGRAM_BOT_TOKEN не задан в переменных окружения');
       return null;
     }
-    
+
     botInstance = new Bot(token);
     console.log('[TelegramBot] Бот инициализирован');
   }
-  
+
   return botInstance;
 }
 

@@ -8,7 +8,7 @@ import {
   checkStudentEligibility,
   getTemplateById,
 } from "../../../repositories/certificateTemplateRepository";
-import { getGroupById } from "../../repositories/groupRepository";
+import { getGroupById } from "../../../repositories/groupRepository";
 import type { CertificateJournalRow } from "../../../types/certificate";
 
 export default defineEventHandler(async (event) => {
@@ -81,8 +81,7 @@ export default defineEventHandler(async (event) => {
     );
 
     console.log(
-      `[GET /api/certificates/issue/${groupId}] Загружен журнал: ${
-        journalRows.length
+      `[GET /api/certificates/issue/${groupId}] Загружен журнал: ${journalRows.length
       } записей, шаблон: ${template?.name || "не назначен"}`
     );
 
@@ -93,10 +92,10 @@ export default defineEventHandler(async (event) => {
         code: group.code,
         course: group.course
           ? {
-              ...group.course,
-              certificateTemplateId: group.course.certificateTemplateId,
-              certificateValidityMonths: group.course.certificateValidityMonths,
-            }
+            ...group.course,
+            certificateTemplateId: group.course.certificateTemplateId,
+            certificateValidityMonths: group.course.certificateValidityMonths,
+          }
           : null,
         startDate: group.startDate,
         endDate: group.endDate,

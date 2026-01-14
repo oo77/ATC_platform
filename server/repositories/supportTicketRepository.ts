@@ -26,14 +26,14 @@ export type CreateSupportTicketInput = Pick<
   'user_id' | 'ticket_type' | 'priority' | 'subject' | 'description' | 'attachments'
 >;
 
-interface SupportTicketRow extends RowDataPacket, SupportTicket {}
+interface SupportTicketRow extends RowDataPacket, SupportTicket { }
 
 /**
  * Создание нового тикета поддержки
  */
 export async function createSupportTicket(data: CreateSupportTicketInput): Promise<SupportTicket> {
   const id = uuidv4();
-  
+
   await executeQuery(
     `INSERT INTO support_tickets (
       id, user_id, ticket_type, priority, subject, description, attachments
@@ -52,7 +52,7 @@ export async function createSupportTicket(data: CreateSupportTicketInput): Promi
   // Возвращаем созданный тикет
   const row = await getTicketById(id);
   if (!row) throw new Error('Failed to create support ticket');
-  
+
   return row;
 }
 
@@ -64,11 +64,14 @@ export async function getTicketById(id: string): Promise<SupportTicket | null> {
     'SELECT * FROM support_tickets WHERE id = ? LIMIT 1',
     [id]
   );
-  
+
   if (rows.length === 0) return null;
-  
+
   // Парсинг JSON поля attachments если оно string
   const ticket = rows[0];
+
+  if (!ticket) return null;
+
   if (typeof ticket.attachments === 'string') {
     try {
       ticket.attachments = JSON.parse(ticket.attachments);
@@ -76,7 +79,7 @@ export async function getTicketById(id: string): Promise<SupportTicket | null> {
       ticket.attachments = null;
     }
   }
-  
+
   return ticket;
 }
 
@@ -88,7 +91,7 @@ export async function getUserTickets(userId: string): Promise<SupportTicket[]> {
     'SELECT * FROM support_tickets WHERE user_id = ? ORDER BY created_at DESC',
     [userId]
   );
-  
+
   return rows.map(ticket => {
     if (typeof ticket.attachments === 'string') {
       try {
@@ -107,16 +110,16 @@ export async function getUserTickets(userId: string): Promise<SupportTicket[]> {
 export async function getAllTickets(status?: string): Promise<SupportTicket[]> {
   let query = 'SELECT * FROM support_tickets';
   const params: any[] = [];
-  
+
   if (status) {
     query += ' WHERE status = ?';
     params.push(status);
   }
-  
+
   query += ' ORDER BY created_at DESC';
-  
+
   const rows = await executeQuery<SupportTicketRow[]>(query, params);
-  
+
   return rows.map(ticket => {
     if (typeof ticket.attachments === 'string') {
       try {

@@ -20,7 +20,7 @@ export interface UserSettings {
 
 export type UpdateUserSettingsInput = Partial<Omit<UserSettings, 'user_id' | 'updated_at'>>;
 
-interface UserSettingsRow extends RowDataPacket, UserSettings {}
+interface UserSettingsRow extends RowDataPacket, UserSettings { }
 
 const DEFAULT_SETTINGS: Omit<UserSettings, 'user_id' | 'updated_at'> = {
   theme: 'light',
@@ -46,6 +46,11 @@ export async function getUserSettings(userId: string): Promise<UserSettings> {
   if (rows.length > 0) {
     // Преобразование boolean полей из 0/1 (MySQL) в true/false
     const settings = rows[0];
+
+    if (!settings) {
+      return await createUserSettings(userId);
+    }
+
     return {
       ...settings,
       notifications_email: Boolean(settings.notifications_email),

@@ -7,11 +7,11 @@ import type { JwtPayload, User, UserPublic } from "../types/auth";
  */
 
 // Константы
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key";
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
-const REFRESH_TOKEN_SECRET =
+const JWT_SECRET: string = process.env.JWT_SECRET || "your-super-secret-jwt-key";
+const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || "7d";
+const REFRESH_TOKEN_SECRET: string =
   process.env.REFRESH_TOKEN_SECRET || "your-refresh-secret";
-const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || "30d";
+const REFRESH_TOKEN_EXPIRES_IN: string = process.env.REFRESH_TOKEN_EXPIRES_IN || "30d";
 const SALT_ROUNDS = 10;
 
 /**
@@ -42,9 +42,9 @@ export async function verifyPassword(
  * @returns JWT токен
  */
 export function generateToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET as jwt.Secret, {
-    expiresIn: JWT_EXPIRES_IN as string,
-  });
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
+  } as jwt.SignOptions);
 }
 
 /**
@@ -53,9 +53,9 @@ export function generateToken(payload: JwtPayload): string {
  * @returns Refresh токен
  */
 export function generateRefreshToken(payload: JwtPayload): string {
-  return jwt.sign(payload, REFRESH_TOKEN_SECRET as jwt.Secret, {
-    expiresIn: REFRESH_TOKEN_EXPIRES_IN as string,
-  });
+  return jwt.sign(payload, REFRESH_TOKEN_SECRET, {
+    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
+  } as jwt.SignOptions);
 }
 
 /**
@@ -103,7 +103,7 @@ export function extractToken(authHeader: string | undefined): string | null {
     return null;
   }
 
-  return parts[1];
+  return parts[1] || null;
 }
 
 /**

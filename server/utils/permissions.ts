@@ -7,10 +7,12 @@ import { UserRole, type JwtPayload } from '../types/auth'
 import {
   Permission,
   ROLE_PERMISSIONS,
+  API_PERMISSIONS,
+} from '../types/permissions'
+import type {
   PermissionContext,
   AccessCheckResult,
   ApiPermissionConfig,
-  API_PERMISSIONS,
 } from '../types/permissions'
 import { executeQuery } from './db'
 import { verifyToken } from './auth'
@@ -437,7 +439,8 @@ export function matchApiPattern(url: string, method: string, config: ApiPermissi
 
   // Проверяем URL по паттерну
   const patternParts = config.pattern.split('/')
-  const urlParts = url.split('?')[0].split('/') // Убираем query params
+  const urlWithoutQuery = url.split('?')[0]
+  const urlParts = urlWithoutQuery ? urlWithoutQuery.split('/') : [] // Убираем query params
 
   if (patternParts.length !== urlParts.length) {
     return false

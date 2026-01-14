@@ -87,13 +87,22 @@ function normalizeHeader(header: string): string {
 export function parseExcelFile(buffer: Buffer): ExcelStudentRow[] {
   const workbook = XLSX.read(buffer, { type: 'buffer' });
   const sheetName = workbook.SheetNames[0];
+
+  if (!sheetName) {
+    throw new Error('Файл не содержит листов');
+  }
+
   const worksheet = workbook.Sheets[sheetName];
+
+  if (!worksheet) {
+    throw new Error('Не удалось прочитать лист Excel');
+  }
 
   // Преобразуем в JSON с заголовками
   const data = XLSX.utils.sheet_to_json(worksheet, {
     header: 1,
     defval: '',
-  }) as ExcelStudentRow[];
+  }) as any[][];
 
   // Первая строка - заголовки
   if (data.length === 0) {

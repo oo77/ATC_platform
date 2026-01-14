@@ -118,16 +118,20 @@ function parseDate(value: any): Date | null {
 
     // Формат DD.MM.YYYY
     const ddmmyyyy = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-    if (ddmmyyyy) {
-        const [, day, month, year] = ddmmyyyy;
+    if (ddmmyyyy && ddmmyyyy[1] && ddmmyyyy[2] && ddmmyyyy[3]) {
+        const day = ddmmyyyy[1];
+        const month = ddmmyyyy[2];
+        const year = ddmmyyyy[3];
         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         return isNaN(date.getTime()) ? null : date;
     }
 
     // Формат YYYY-MM-DD
     const yyyymmdd = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (yyyymmdd) {
-        const [, year, month, day] = yyyymmdd;
+    if (yyyymmdd && yyyymmdd[1] && yyyymmdd[2] && yyyymmdd[3]) {
+        const year = yyyymmdd[1];
+        const month = yyyymmdd[2];
+        const day = yyyymmdd[3];
         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
         return isNaN(date.getTime()) ? null : date;
     }
@@ -143,7 +147,16 @@ function parseDate(value: any): Date | null {
 export function parseCertificateExcel(buffer: Buffer): ExcelCertificateRow[] {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
+
+    if (!sheetName) {
+        throw new Error('Файл не содержит листов');
+    }
+
     const worksheet = workbook.Sheets[sheetName];
+
+    if (!worksheet) {
+        throw new Error('Не удалось прочитать лист Excel');
+    }
 
     // Преобразуем в JSON с заголовками
     const data = XLSX.utils.sheet_to_json(worksheet, {
@@ -333,6 +346,12 @@ export async function analyzeCertificateImportData(
     // Обрабатываем каждую строку
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
+
+        // Проверка на undefined
+        if (!row) {
+            continue;
+        }
+
         const rowNumber = i + 2; // +1 для заголовка, +1 для 1-based индекса
 
         // Валидация
@@ -361,13 +380,35 @@ export async function analyzeCertificateImportData(
             continue;
         }
 
-        // Данные строки
-        const pinfl = row.ПИНФЛ.trim();
-        const fullName = row.ФИО.trim();
+        // Данные строки (после валидации эти поля гарантированно заполнены)
+        const pinfl = row.ПИНФЛ?.trim() || '';
+        const fullName = row.ФИО?.trim() || '';
         const organization = row.Организация?.trim() || '';
         const position = row.Должность?.trim() || '';
-        const certificateNumber = row['Серия/Номер'].trim();
-        const issueDateStr = row['Дата выдачи'].trim();
+        const certificateNumber = row['Серия/Номер']?.trim() || '';
+        const issueDateStr = row['Дата выдачи']?.trim() || '';
+
+        // Дополнительная проверка на случай если валидация пропустила
+        if (!pinfl || !fullName || !certificateNumber || !issueDateStr) {
+            errorRows++;
+            errors.push({ rowNumber, errors: ['Отсутствуют обязательные поля'] });
+            processedRows.push({
+                rowNumber,
+                pinfl,
+                fullName,
+                organization,
+                position,
+                certificateNumber,
+                issueDate: issueDateStr,
+                generatedUrl: '',
+                status: 'error',
+                studentStatus: 'not_found',
+                certificateStatus: 'new',
+                errors: ['Отсутствуют обязательные поля'],
+                warnings: [],
+            });
+            continue;
+        }
 
         // Проверяем студента в БД
         const existingStudent = await getStudentByPinfl(pinfl);
@@ -557,6 +598,11 @@ export async function executeCertificateImport(
     try {
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
+
+            // Проверка на undefined
+            if (!row) {
+                continue;
+            }
 
             // Пропускаем строки с ошибками
             if (row.status === 'error') {

@@ -90,7 +90,10 @@ async function loadResource(url: string): Promise<string> {
     const bytes = new Uint8Array(buffer);
     const len = bytes.byteLength;
     for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(bytes[i]);
+        const byte = bytes[i];
+        if (byte !== undefined) {
+            binary += String.fromCharCode(byte);
+        }
     }
     return window.btoa(binary);
 }

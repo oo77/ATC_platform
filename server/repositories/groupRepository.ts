@@ -157,14 +157,14 @@ function mapGroupRow(row: any): StudyGroup {
     updatedAt: row.updated_at,
     course: row.course_name
       ? {
-          id: row.course_id,
-          name: row.course_name,
-          shortName: row.course_short_name,
-          code: row.course_code,
-          totalHours: row.course_total_hours,
-          certificateTemplateId: row.certificate_template_id,
-          certificateValidityMonths: row.certificate_validity_months,
-        }
+        id: row.course_id,
+        name: row.course_name,
+        shortName: row.course_short_name,
+        code: row.course_code,
+        totalHours: row.course_total_hours,
+        certificateTemplateId: row.certificate_template_id,
+        certificateValidityMonths: row.certificate_validity_months,
+      }
       : null,
   };
 }
@@ -269,7 +269,7 @@ export async function getGroupById(id: string): Promise<StudyGroup | null> {
   );
 
   if (studentRows.length > 0) {
-    group.students = studentRows.map((row) => ({
+    group.students = studentRows.map((row: RowDataPacket) => ({
       id: row.link_id,
       groupId: group.id,
       studentId: row.student_id,

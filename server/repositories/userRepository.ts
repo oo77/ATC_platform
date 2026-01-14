@@ -112,6 +112,9 @@ export async function getUserById(id: string): Promise<User | null> {
   );
   if (rows.length === 0) return null;
   const row = rows[0];
+
+  if (!row) return null;
+
   return {
     ...row,
     password: row.password_hash, // Map hash to password property required by User interface
@@ -128,6 +131,9 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   );
   if (rows.length === 0) return null;
   const row = rows[0];
+
+  if (!row) return null;
+
   return {
     ...row,
     password: row.password_hash,
