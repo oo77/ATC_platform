@@ -1,13 +1,13 @@
 /**
  * Система разрешений (Permissions)
- * 
+ *
  * Архитектура:
  * - УРОВЕНЬ 1: Роли (UserRole) — КТО
  * - УРОВЕНЬ 2: Разрешения (Permission) — ЧТО МОЖНО ДЕЛАТЬ
  * - УРОВЕНЬ 3: Маппинг (ROLE_PERMISSIONS) — Связь ролей с разрешениями
  */
 
-import { UserRole } from './auth'
+import { UserRole } from "./auth";
 
 // ========================================
 // УРОВЕНЬ 2: РАЗРЕШЕНИЯ (Permissions)
@@ -15,120 +15,121 @@ import { UserRole } from './auth'
 
 export enum Permission {
   // ========== DASHBOARD ==========
-  DASHBOARD_VIEW = 'dashboard:view',
-  DASHBOARD_STATS = 'dashboard:stats',
+  DASHBOARD_VIEW = "dashboard:view",
+  DASHBOARD_STATS = "dashboard:stats",
 
   // ========== USERS ==========
-  USERS_VIEW = 'users:view',
-  USERS_CREATE = 'users:create',
-  USERS_UPDATE = 'users:update',
-  USERS_DELETE = 'users:delete',
-  USERS_MANAGE_ROLES = 'users:manage_roles',
+  USERS_VIEW = "users:view",
+  USERS_CREATE = "users:create",
+  USERS_UPDATE = "users:update",
+  USERS_DELETE = "users:delete",
+  USERS_MANAGE_ROLES = "users:manage_roles",
 
   // ========== STUDENTS ==========
-  STUDENTS_VIEW = 'students:view',
-  STUDENTS_VIEW_OWN = 'students:view_own',       // Только свои данные
-  STUDENTS_VIEW_ALL = 'students:view_all',       // Все слушатели
-  STUDENTS_CREATE = 'students:create',
-  STUDENTS_UPDATE = 'students:update',
-  STUDENTS_DELETE = 'students:delete',
-  STUDENTS_IMPORT = 'students:import',
-  STUDENTS_EXPORT = 'students:export',
+  STUDENTS_VIEW = "students:view",
+  STUDENTS_VIEW_OWN = "students:view_own", // Только свои данные
+  STUDENTS_VIEW_ALL = "students:view_all", // Все слушатели
+  STUDENTS_CREATE = "students:create",
+  STUDENTS_UPDATE = "students:update",
+  STUDENTS_DELETE = "students:delete",
+  STUDENTS_IMPORT = "students:import",
+  STUDENTS_EXPORT = "students:export",
 
   // ========== INSTRUCTORS ==========
-  INSTRUCTORS_VIEW = 'instructors:view',
-  INSTRUCTORS_CREATE = 'instructors:create',
-  INSTRUCTORS_UPDATE = 'instructors:update',
-  INSTRUCTORS_DELETE = 'instructors:delete',
-  INSTRUCTORS_HOURS = 'instructors:hours',       // Просмотр часов
+  INSTRUCTORS_VIEW = "instructors:view",
+  INSTRUCTORS_CREATE = "instructors:create",
+  INSTRUCTORS_UPDATE = "instructors:update",
+  INSTRUCTORS_DELETE = "instructors:delete",
+  INSTRUCTORS_HOURS = "instructors:hours", // Просмотр часов
 
   // ========== ORGANIZATIONS ==========
-  ORGANIZATIONS_VIEW = 'organizations:view',
-  ORGANIZATIONS_CREATE = 'organizations:create',
-  ORGANIZATIONS_UPDATE = 'organizations:update',
-  ORGANIZATIONS_DELETE = 'organizations:delete',
+  ORGANIZATIONS_VIEW = "organizations:view",
+  ORGANIZATIONS_CREATE = "organizations:create",
+  ORGANIZATIONS_UPDATE = "organizations:update",
+  ORGANIZATIONS_DELETE = "organizations:delete",
 
   // ========== REPRESENTATIVES ==========
-  REPRESENTATIVES_VIEW = 'representatives:view',
-  REPRESENTATIVES_APPROVE = 'representatives:approve',
-  REPRESENTATIVES_BLOCK = 'representatives:block',
-  REPRESENTATIVES_MANAGE = 'representatives:manage',
+  REPRESENTATIVES_VIEW = "representatives:view",
+  REPRESENTATIVES_APPROVE = "representatives:approve",
+  REPRESENTATIVES_BLOCK = "representatives:block",
+  REPRESENTATIVES_MANAGE = "representatives:manage",
 
   // ========== COURSES ==========
-  COURSES_VIEW = 'courses:view',
-  COURSES_CREATE = 'courses:create',
-  COURSES_UPDATE = 'courses:update',
-  COURSES_DELETE = 'courses:delete',
+  COURSES_VIEW = "courses:view",
+  COURSES_CREATE = "courses:create",
+  COURSES_UPDATE = "courses:update",
+  COURSES_DELETE = "courses:delete",
+  COURSES_ARCHIVE = "courses:archive",
 
   // ========== DISCIPLINES ==========
-  DISCIPLINES_VIEW = 'disciplines:view',
-  DISCIPLINES_MANAGE = 'disciplines:manage',
+  DISCIPLINES_VIEW = "disciplines:view",
+  DISCIPLINES_MANAGE = "disciplines:manage",
 
   // ========== GROUPS ==========
-  GROUPS_VIEW = 'groups:view',
-  GROUPS_VIEW_OWN = 'groups:view_own',           // Свои группы (для инструктора)
-  GROUPS_VIEW_ALL = 'groups:view_all',           // Все группы
-  GROUPS_CREATE = 'groups:create',
-  GROUPS_UPDATE = 'groups:update',
-  GROUPS_DELETE = 'groups:delete',
-  GROUPS_MANAGE_STUDENTS = 'groups:manage_students',
+  GROUPS_VIEW = "groups:view",
+  GROUPS_VIEW_OWN = "groups:view_own", // Свои группы (для инструктора)
+  GROUPS_VIEW_ALL = "groups:view_all", // Все группы
+  GROUPS_CREATE = "groups:create",
+  GROUPS_UPDATE = "groups:update",
+  GROUPS_DELETE = "groups:delete",
+  GROUPS_MANAGE_STUDENTS = "groups:manage_students",
 
   // ========== SCHEDULE ==========
-  SCHEDULE_VIEW = 'schedule:view',
-  SCHEDULE_VIEW_OWN = 'schedule:view_own',       // Своё расписание
-  SCHEDULE_VIEW_ALL = 'schedule:view_all',       // Все события
-  SCHEDULE_CREATE = 'schedule:create',
-  SCHEDULE_UPDATE = 'schedule:update',
-  SCHEDULE_DELETE = 'schedule:delete',
+  SCHEDULE_VIEW = "schedule:view",
+  SCHEDULE_VIEW_OWN = "schedule:view_own", // Своё расписание
+  SCHEDULE_VIEW_ALL = "schedule:view_all", // Все события
+  SCHEDULE_CREATE = "schedule:create",
+  SCHEDULE_UPDATE = "schedule:update",
+  SCHEDULE_DELETE = "schedule:delete",
 
   // ========== ATTENDANCE ==========
-  ATTENDANCE_VIEW = 'attendance:view',
-  ATTENDANCE_MARK = 'attendance:mark',
-  ATTENDANCE_EDIT = 'attendance:edit',
-  ATTENDANCE_MANAGE = 'attendance:manage',
+  ATTENDANCE_VIEW = "attendance:view",
+  ATTENDANCE_MARK = "attendance:mark",
+  ATTENDANCE_EDIT = "attendance:edit",
+  ATTENDANCE_MANAGE = "attendance:manage",
 
   // ========== GRADES ==========
-  GRADES_VIEW = 'grades:view',
-  GRADES_MANAGE = 'grades:manage',
+  GRADES_VIEW = "grades:view",
+  GRADES_MANAGE = "grades:manage",
 
   // ========== CERTIFICATES ==========
-  CERTIFICATES_VIEW = 'certificates:view',
-  CERTIFICATES_VIEW_OWN = 'certificates:view_own',
-  CERTIFICATES_ISSUE = 'certificates:issue',
-  CERTIFICATES_REVOKE = 'certificates:revoke',
-  CERTIFICATES_DOWNLOAD = 'certificates:download',
+  CERTIFICATES_VIEW = "certificates:view",
+  CERTIFICATES_VIEW_OWN = "certificates:view_own",
+  CERTIFICATES_ISSUE = "certificates:issue",
+  CERTIFICATES_REVOKE = "certificates:revoke",
+  CERTIFICATES_DOWNLOAD = "certificates:download",
 
   // ========== CERTIFICATE TEMPLATES ==========
-  TEMPLATES_VIEW = 'templates:view',
-  TEMPLATES_CREATE = 'templates:create',
-  TEMPLATES_UPDATE = 'templates:update',
-  TEMPLATES_DELETE = 'templates:delete',
+  TEMPLATES_VIEW = "templates:view",
+  TEMPLATES_CREATE = "templates:create",
+  TEMPLATES_UPDATE = "templates:update",
+  TEMPLATES_DELETE = "templates:delete",
 
   // ========== FILES ==========
-  FILES_VIEW = 'files:view',
-  FILES_UPLOAD = 'files:upload',
-  FILES_DELETE = 'files:delete',
-  FILES_MANAGE = 'files:manage',
+  FILES_VIEW = "files:view",
+  FILES_UPLOAD = "files:upload",
+  FILES_DELETE = "files:delete",
+  FILES_MANAGE = "files:manage",
 
   // ========== SETTINGS ==========
-  SETTINGS_VIEW = 'settings:view',
-  SETTINGS_MANAGE = 'settings:manage',
+  SETTINGS_VIEW = "settings:view",
+  SETTINGS_MANAGE = "settings:manage",
 
   // ========== ACTIVITY LOGS ==========
-  LOGS_VIEW = 'logs:view',
+  LOGS_VIEW = "logs:view",
 
   // ========== TEST BANKS ==========
-  TEST_BANKS_VIEW = 'test_banks:view',
-  TEST_BANKS_MANAGE = 'test_banks:manage',
+  TEST_BANKS_VIEW = "test_banks:view",
+  TEST_BANKS_MANAGE = "test_banks:manage",
 
   // ========== TEST TEMPLATES ==========
-  TEST_TEMPLATES_VIEW = 'test_templates:view',
-  TEST_TEMPLATES_MANAGE = 'test_templates:manage',
+  TEST_TEMPLATES_VIEW = "test_templates:view",
+  TEST_TEMPLATES_MANAGE = "test_templates:manage",
 
   // ========== TESTS ==========
-  TESTS_ASSIGN = 'tests:assign',
-  TESTS_TAKE = 'tests:take',
-  TESTS_VIEW_RESULTS = 'tests:view_results',
+  TESTS_ASSIGN = "tests:assign",
+  TESTS_TAKE = "tests:take",
+  TESTS_VIEW_RESULTS = "tests:view_results",
 }
 
 // ========================================
@@ -163,8 +164,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
     // Instructors
     Permission.INSTRUCTORS_VIEW,
-    Permission.INSTRUCTORS_CREATE,   // Может создавать инструкторов
-    Permission.INSTRUCTORS_UPDATE,   // Может редактировать инструкторов
+    Permission.INSTRUCTORS_CREATE, // Может создавать инструкторов
+    Permission.INSTRUCTORS_UPDATE, // Может редактировать инструкторов
     Permission.INSTRUCTORS_HOURS,
     // НЕ может удалять инструкторов
 
@@ -182,6 +183,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
     // Courses (только просмотр)
     Permission.COURSES_VIEW,
+    Permission.COURSES_ARCHIVE, // Может архивировать курсы
 
     // Disciplines (только просмотр)
     Permission.DISCIPLINES_VIEW,
@@ -317,7 +319,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Tests (прохождение тестов)
     Permission.TESTS_TAKE,
   ],
-}
+};
 
 // ========================================
 // ТИПЫ ДЛЯ ПРОВЕРКИ РАЗРЕШЕНИЙ
@@ -326,37 +328,37 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 /** Контекст проверки разрешений (для фильтрации по владельцу) */
 export interface PermissionContext {
   /** ID текущего пользователя */
-  userId: string
+  userId: string;
   /** Роль текущего пользователя */
-  role: UserRole
+  role: UserRole;
   /** ID связанного инструктора (если роль TEACHER) */
-  instructorId?: string
+  instructorId?: string;
   /** ID связанного студента (если роль STUDENT) */
-  studentId?: string
+  studentId?: string;
 }
 
 /** Результат проверки доступа */
 export interface AccessCheckResult {
   /** Разрешён ли доступ */
-  allowed: boolean
+  allowed: boolean;
   /** Причина отказа (если не разрешено) */
-  reason?: string
+  reason?: string;
   /** Требуется ли фильтрация по владельцу */
-  requiresOwnerFilter?: boolean
+  requiresOwnerFilter?: boolean;
 }
 
 /** Конфигурация разрешений для маршрута/API */
 export interface RoutePermissionConfig {
   /** Путь или паттерн маршрута */
-  path: string
+  path: string;
   /** Необходимые разрешения (AND) */
-  requiredPermissions?: Permission[]
+  requiredPermissions?: Permission[];
   /** Альтернативные разрешения (OR) */
-  anyPermissions?: Permission[]
+  anyPermissions?: Permission[];
   /** Разрешённые роли (если нужен доступ по роли напрямую) */
-  allowedRoles?: UserRole[]
+  allowedRoles?: UserRole[];
   /** Требуется ли проверка владельца ресурса */
-  requiresOwnerCheck?: boolean
+  requiresOwnerCheck?: boolean;
 }
 
 // ========================================
@@ -365,63 +367,133 @@ export interface RoutePermissionConfig {
 
 export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
   // Публичные страницы (без проверки)
-  { path: '/login', allowedRoles: [] },
-  { path: '/register', allowedRoles: [] },
+  { path: "/login", allowedRoles: [] },
+  { path: "/register", allowedRoles: [] },
 
   // Dashboard
-  { path: '/', requiredPermissions: [Permission.DASHBOARD_VIEW] },
+  { path: "/", requiredPermissions: [Permission.DASHBOARD_VIEW] },
 
   // Users
-  { path: '/users', requiredPermissions: [Permission.USERS_VIEW] },
-  { path: '/users/create', requiredPermissions: [Permission.USERS_CREATE] },
+  { path: "/users", requiredPermissions: [Permission.USERS_VIEW] },
+  { path: "/users/create", requiredPermissions: [Permission.USERS_CREATE] },
 
   // Programs (Courses)
-  { path: '/programs', requiredPermissions: [Permission.COURSES_VIEW] },
-  { path: '/programs/create', requiredPermissions: [Permission.COURSES_CREATE] },
-  { path: '/programs/[id]', requiredPermissions: [Permission.COURSES_VIEW] },
-  { path: '/programs/edit/[id]', requiredPermissions: [Permission.COURSES_UPDATE] },
+  { path: "/programs", requiredPermissions: [Permission.COURSES_VIEW] },
+  {
+    path: "/programs/create",
+    requiredPermissions: [Permission.COURSES_CREATE],
+  },
+  { path: "/programs/[id]", requiredPermissions: [Permission.COURSES_VIEW] },
+  {
+    path: "/programs/edit/[id]",
+    requiredPermissions: [Permission.COURSES_UPDATE],
+  },
 
   // Groups
-  { path: '/groups', anyPermissions: [Permission.GROUPS_VIEW_ALL, Permission.GROUPS_VIEW_OWN] },
-  { path: '/groups/create', requiredPermissions: [Permission.GROUPS_CREATE] },
-  { path: '/groups/[id]', anyPermissions: [Permission.GROUPS_VIEW_ALL, Permission.GROUPS_VIEW_OWN], requiresOwnerCheck: true },
-  { path: '/groups/journal/[id]', anyPermissions: [Permission.ATTENDANCE_VIEW, Permission.ATTENDANCE_MARK], requiresOwnerCheck: true },
-  { path: '/groups/[id]/certificates', requiredPermissions: [Permission.CERTIFICATES_ISSUE] },
+  {
+    path: "/groups",
+    anyPermissions: [Permission.GROUPS_VIEW_ALL, Permission.GROUPS_VIEW_OWN],
+  },
+  { path: "/groups/create", requiredPermissions: [Permission.GROUPS_CREATE] },
+  {
+    path: "/groups/[id]",
+    anyPermissions: [Permission.GROUPS_VIEW_ALL, Permission.GROUPS_VIEW_OWN],
+    requiresOwnerCheck: true,
+  },
+  {
+    path: "/groups/journal/[id]",
+    anyPermissions: [Permission.ATTENDANCE_VIEW, Permission.ATTENDANCE_MARK],
+    requiresOwnerCheck: true,
+  },
+  {
+    path: "/groups/[id]/certificates",
+    requiredPermissions: [Permission.CERTIFICATES_ISSUE],
+  },
 
   // Schedule
-  { path: '/schedule', anyPermissions: [Permission.SCHEDULE_VIEW_ALL, Permission.SCHEDULE_VIEW_OWN] },
+  {
+    path: "/schedule",
+    anyPermissions: [
+      Permission.SCHEDULE_VIEW_ALL,
+      Permission.SCHEDULE_VIEW_OWN,
+    ],
+  },
 
   // Database (Students/Instructors)
-  { path: '/database', requiredPermissions: [Permission.STUDENTS_VIEW_ALL] },
-  { path: '/database/import', requiredPermissions: [Permission.STUDENTS_IMPORT] },
-  { path: '/students/[id]', anyPermissions: [Permission.STUDENTS_VIEW_ALL, Permission.STUDENTS_VIEW_OWN], requiresOwnerCheck: true },
-  { path: '/instructors/[id]', requiredPermissions: [Permission.INSTRUCTORS_VIEW], requiresOwnerCheck: true },
+  { path: "/database", requiredPermissions: [Permission.STUDENTS_VIEW_ALL] },
+  {
+    path: "/database/import",
+    requiredPermissions: [Permission.STUDENTS_IMPORT],
+  },
+  {
+    path: "/students/[id]",
+    anyPermissions: [
+      Permission.STUDENTS_VIEW_ALL,
+      Permission.STUDENTS_VIEW_OWN,
+    ],
+    requiresOwnerCheck: true,
+  },
+  {
+    path: "/instructors/[id]",
+    requiredPermissions: [Permission.INSTRUCTORS_VIEW],
+    requiresOwnerCheck: true,
+  },
 
   // Files
-  { path: '/files', requiredPermissions: [Permission.FILES_VIEW] },
+  { path: "/files", requiredPermissions: [Permission.FILES_VIEW] },
 
   // Certificates
-  { path: '/certificates/templates', requiredPermissions: [Permission.TEMPLATES_VIEW] },
-  { path: '/certificates/templates/create', requiredPermissions: [Permission.TEMPLATES_CREATE] },
-  { path: '/certificates/templates/[id]', requiredPermissions: [Permission.TEMPLATES_UPDATE] },
-  { path: '/my-certificates', requiredPermissions: [Permission.CERTIFICATES_VIEW_OWN] },
+  {
+    path: "/certificates/templates",
+    requiredPermissions: [Permission.TEMPLATES_VIEW],
+  },
+  {
+    path: "/certificates/templates/create",
+    requiredPermissions: [Permission.TEMPLATES_CREATE],
+  },
+  {
+    path: "/certificates/templates/[id]",
+    requiredPermissions: [Permission.TEMPLATES_UPDATE],
+  },
+  {
+    path: "/my-certificates",
+    requiredPermissions: [Permission.CERTIFICATES_VIEW_OWN],
+  },
 
   // Settings
-  { path: '/settings', requiredPermissions: [Permission.SETTINGS_VIEW] },
+  { path: "/settings", requiredPermissions: [Permission.SETTINGS_VIEW] },
 
   // Activity Logs
-  { path: '/activity-logs', requiredPermissions: [Permission.LOGS_VIEW] },
+  { path: "/activity-logs", requiredPermissions: [Permission.LOGS_VIEW] },
 
   // Test Banks
-  { path: '/test-bank', anyPermissions: [Permission.TEST_BANKS_VIEW, Permission.TEST_BANKS_MANAGE] },
-  { path: '/test-bank/[id]', anyPermissions: [Permission.TEST_BANKS_VIEW, Permission.TEST_BANKS_MANAGE] },
-  { path: '/test-bank/templates', anyPermissions: [Permission.TEST_TEMPLATES_VIEW, Permission.TEST_TEMPLATES_MANAGE] },
-  { path: '/test-bank/templates/[id]', anyPermissions: [Permission.TEST_TEMPLATES_VIEW, Permission.TEST_TEMPLATES_MANAGE] },
+  {
+    path: "/test-bank",
+    anyPermissions: [Permission.TEST_BANKS_VIEW, Permission.TEST_BANKS_MANAGE],
+  },
+  {
+    path: "/test-bank/[id]",
+    anyPermissions: [Permission.TEST_BANKS_VIEW, Permission.TEST_BANKS_MANAGE],
+  },
+  {
+    path: "/test-bank/templates",
+    anyPermissions: [
+      Permission.TEST_TEMPLATES_VIEW,
+      Permission.TEST_TEMPLATES_MANAGE,
+    ],
+  },
+  {
+    path: "/test-bank/templates/[id]",
+    anyPermissions: [
+      Permission.TEST_TEMPLATES_VIEW,
+      Permission.TEST_TEMPLATES_MANAGE,
+    ],
+  },
 
   // Tests (Student)
-  { path: '/tests/my', requiredPermissions: [Permission.TESTS_TAKE] },
-  { path: '/tests/take/[id]', requiredPermissions: [Permission.TESTS_TAKE] },
-]
+  { path: "/tests/my", requiredPermissions: [Permission.TESTS_TAKE] },
+  { path: "/tests/take/[id]", requiredPermissions: [Permission.TESTS_TAKE] },
+];
 
 // ========================================
 // ХЕЛПЕРЫ ДЛЯ ИСПОЛЬЗОВАНИЯ В КЛИЕНТЕ
@@ -430,28 +502,37 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
 /**
  * Проверяет, есть ли у роли указанное разрешение
  */
-export function roleHasPermission(role: UserRole, permission: Permission): boolean {
-  const permissions = ROLE_PERMISSIONS[role]
-  return permissions?.includes(permission) ?? false
+export function roleHasPermission(
+  role: UserRole,
+  permission: Permission
+): boolean {
+  const permissions = ROLE_PERMISSIONS[role];
+  return permissions?.includes(permission) ?? false;
 }
 
 /**
  * Проверяет, есть ли у роли все указанные разрешения (AND)
  */
-export function roleHasAllPermissions(role: UserRole, permissions: Permission[]): boolean {
-  return permissions.every(p => roleHasPermission(role, p))
+export function roleHasAllPermissions(
+  role: UserRole,
+  permissions: Permission[]
+): boolean {
+  return permissions.every((p) => roleHasPermission(role, p));
 }
 
 /**
  * Проверяет, есть ли у роли хотя бы одно из указанных разрешений (OR)
  */
-export function roleHasAnyPermission(role: UserRole, permissions: Permission[]): boolean {
-  return permissions.some(p => roleHasPermission(role, p))
+export function roleHasAnyPermission(
+  role: UserRole,
+  permissions: Permission[]
+): boolean {
+  return permissions.some((p) => roleHasPermission(role, p));
 }
 
 /**
  * Получает все разрешения для роли
  */
 export function getRolePermissions(role: UserRole): Permission[] {
-  return ROLE_PERMISSIONS[role] || []
+  return ROLE_PERMISSIONS[role] || [];
 }

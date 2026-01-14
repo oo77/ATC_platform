@@ -1,22 +1,26 @@
 /**
  * API endpoint для получения списка учебных групп с пагинацией
  * GET /api/groups?page=1&limit=10&search=...
- * 
+ *
  * Фильтрация по ролям:
  * - ADMIN/MANAGER: все группы
  * - TEACHER: только группы, где пользователь назначен инструктором
  * - STUDENT: недоступен (нет разрешения)
  */
 
-import { getGroups, getGroupsStats, type GroupFilters } from '../../repositories/groupRepository';
+import {
+  getGroups,
+  getGroupsStats,
+  type GroupFilters,
+} from "../../repositories/groupRepository";
 import {
   getPermissionContext,
   roleHasPermission,
-  getTeacherGroups
-} from '../../utils/permissions';
-import { Permission } from '../../types/permissions';
-import { UserRole } from '../../types/auth';
-import { logActivity } from '../../utils/activityLogger';
+  getTeacherGroups,
+} from "../../utils/permissions";
+import { Permission } from "../../types/permissions";
+import { UserRole } from "../../types/auth";
+import { logActivity } from "../../utils/activityLogger";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -28,20 +32,26 @@ export default defineEventHandler(async (event) => {
     if (!context) {
       throw createError({
         statusCode: 401,
-        statusMessage: 'Unauthorized',
-        message: 'Требуется авторизация',
+        statusMessage: "Unauthorized",
+        message: "Требуется авторизация",
       });
     }
 
     // Проверяем разрешение на просмотр групп
-    const canViewAll = roleHasPermission(context.role, Permission.GROUPS_VIEW_ALL);
-    const canViewOwn = roleHasPermission(context.role, Permission.GROUPS_VIEW_OWN);
+    const canViewAll = roleHasPermission(
+      context.role,
+      Permission.GROUPS_VIEW_ALL
+    );
+    const canViewOwn = roleHasPermission(
+      context.role,
+      Permission.GROUPS_VIEW_OWN
+    );
 
     if (!canViewAll && !canViewOwn) {
       throw createError({
         statusCode: 403,
-        statusMessage: 'Forbidden',
-        message: 'Недостаточно прав для просмотра групп',
+        statusMessage: "Forbidden",
+        message: "Недостаточно прав для просмотра групп",
       });
     }
 
@@ -57,7 +67,11 @@ export default defineEventHandler(async (event) => {
     }
 
     if (query.isActive !== undefined) {
-      filters.isActive = query.isActive === 'true';
+      filters.isActive = query.isActive === "true";
+    }
+
+    if (query.isArchived !== undefined) {
+      filters.isArchived = query.isArchived === "true";
     }
 
     if (query.startDateFrom) {
@@ -74,10 +88,14 @@ export default defineEventHandler(async (event) => {
         const teacherGroupIds = await getTeacherGroups(context.instructorId);
         filters.groupIds = teacherGroupIds;
 
-        console.log(`[API Groups] TEACHER ${context.userId} фильтрация по своим группам: ${teacherGroupIds.length} групп`);
+        console.log(
+          `[API Groups] TEACHER ${context.userId} фильтрация по своим группам: ${teacherGroupIds.length} групп`
+        );
       } else {
         // Если инструктор не связан — возвращаем пустой список
-        console.warn(`[API Groups] TEACHER ${context.userId} не имеет связанного instructorId`);
+        console.warn(
+          `[API Groups] TEACHER ${context.userId} не имеет связанного instructorId`
+        );
         return {
           success: true,
           groups: [],
@@ -92,24 +110,22 @@ export default defineEventHandler(async (event) => {
 
     // Парсим параметры пагинации
     const page = query.page ? parseInt(query.page as string, 10) : 1;
-    const limit = query.limit ? Math.min(parseInt(query.limit as string, 10), 100) : 10;
+    const limit = query.limit
+      ? Math.min(parseInt(query.limit as string, 10), 100)
+      : 10;
 
     const result = await getGroups({ page, limit, filters });
 
     // Получаем статистику (для TEACHER — только по своим группам)
-    const stats = context.role === UserRole.TEACHER && filters.groupIds
-      ? await getGroupsStats(filters.groupIds)
-      : await getGroupsStats();
+    const stats =
+      context.role === UserRole.TEACHER && filters.groupIds
+        ? await getGroupsStats(filters.groupIds)
+        : await getGroupsStats();
 
     // Логируем действие
-    await logActivity(
-      event,
-      'VIEW',
-      'GROUP',
-      undefined,
-      undefined,
-      { message: `Просмотр списка групп (${result.total} результатов)` }
-    );
+    await logActivity(event, "VIEW", "GROUP", undefined, undefined, {
+      message: `Просмотр списка групп (${result.total} результатов)`,
+    });
 
     return {
       success: true,
@@ -126,11 +142,11 @@ export default defineEventHandler(async (event) => {
       throw error;
     }
 
-    console.error('Ошибка получения списка групп:', error);
+    console.error("Ошибка получения списка групп:", error);
 
     return {
       success: false,
-      message: 'Ошибка при получении списка групп',
+      message: "Ошибка при получении списка групп",
       groups: [],
       total: 0,
       page: 1,
@@ -140,4 +156,3 @@ export default defineEventHandler(async (event) => {
     };
   }
 });
-

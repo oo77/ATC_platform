@@ -92,6 +92,9 @@ export interface Course {
   certificateTemplate?: CertificateTemplate;
   certificateValidityMonths?: number; // Срок действия сертификата в месяцах
   isActive: boolean;
+  isArchived: boolean;
+  archivedAt?: string;
+  archivedBy?: string;
   disciplines?: Discipline[];
   disciplineCount?: number;
   createdAt: string;
@@ -109,8 +112,12 @@ export interface CreateCourseData {
   disciplines?: CreateDisciplineData[];
 }
 
-export interface UpdateCourseData extends Partial<Omit<CreateCourseData, 'disciplines'>> {
-  disciplines?: (CreateDisciplineData | UpdateDisciplineData & { id?: string })[];
+export interface UpdateCourseData
+  extends Partial<Omit<CreateCourseData, "disciplines">> {
+  disciplines?: (
+    | CreateDisciplineData
+    | (UpdateDisciplineData & { id?: string })
+  )[];
 }
 
 // ============ Фильтры и пагинация ============
@@ -118,6 +125,7 @@ export interface UpdateCourseData extends Partial<Omit<CreateCourseData, 'discip
 export interface CourseFilters {
   search?: string;
   isActive?: boolean;
+  isArchived?: boolean;
   certificateTemplateId?: string;
 }
 

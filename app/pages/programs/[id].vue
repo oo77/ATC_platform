@@ -148,6 +148,25 @@
                   {{ course.isActive ? "Активна" : "Неактивна" }}
                 </span>
                 <span
+                  v-if="course.isArchived"
+                  class="inline-flex items-center gap-1.5 rounded-full bg-gray-500/10 px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-400"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                    />
+                  </svg>
+                  В архиве
+                </span>
+                <span
                   class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary"
                 >
                   <svg
@@ -171,7 +190,7 @@
             <!-- Action Buttons -->
             <div class="flex gap-3">
               <UiButton
-                v-if="canEditCourses"
+                v-if="canEditCourses && !course.isArchived"
                 variant="outline"
                 size="md"
                 @click="editCourse"
@@ -191,6 +210,54 @@
                 </svg>
                 Редактировать
               </UiButton>
+
+              <!-- Кнопка архивации для модераторов и админов -->
+              <UiButton
+                v-if="canArchiveCourses && !course.isArchived"
+                variant="warning"
+                size="md"
+                @click="handleArchive"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+                  />
+                </svg>
+                В архив
+              </UiButton>
+
+              <!-- Кнопка восстановления из архива -->
+              <UiButton
+                v-if="canArchiveCourses && course.isArchived"
+                variant="success"
+                size="md"
+                @click="handleRestore"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Восстановить
+              </UiButton>
+
+              <!-- Кнопка удаления только для админов -->
               <UiButton
                 v-if="canDeleteCourses"
                 variant="danger"
@@ -680,6 +747,29 @@
       @cancel="closeDeleteModal"
     />
 
+    <!-- Archive Confirmation Modal -->
+    <UiConfirmModal
+      :is-open="isArchiveModalOpen"
+      title="Архивация учебной программы"
+      message="Вы уверены, что хотите переместить эту учебную программу в архив?"
+      :item-name="course?.name"
+      warning="Архивная программа не будет доступна для создания новых групп. Вы сможете восстановить её позже."
+      :loading="isArchiving"
+      @confirm="confirmArchive"
+      @cancel="closeArchiveModal"
+    />
+
+    <!-- Restore Confirmation Modal -->
+    <UiConfirmModal
+      :is-open="isRestoreModalOpen"
+      title="Восстановление учебной программы"
+      message="Вы уверены, что хотите восстановить эту учебную программу из архива?"
+      :item-name="course?.name"
+      :loading="isRestoring"
+      @confirm="confirmRestore"
+      @cancel="closeRestoreModal"
+    />
+
     <!-- Discipline Form Modal -->
     <ProgramsDisciplineFormModal
       :is-open="isDisciplineModalOpen"
@@ -715,8 +805,12 @@ const { authFetch } = useAuthFetch();
 const { success: showSuccess, error: showError } = useNotification();
 
 // Проверка прав доступа
-const { canEditCourses, canDeleteCourses, canManageDisciplines } =
-  usePermissions();
+const {
+  canEditCourses,
+  canDeleteCourses,
+  canArchiveCourses,
+  canManageDisciplines,
+} = usePermissions();
 
 // State
 const course = ref<Course | null>(null);
@@ -724,6 +818,10 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 const isDeleteModalOpen = ref(false);
 const isDeleting = ref(false);
+const isArchiveModalOpen = ref(false);
+const isArchiving = ref(false);
+const isRestoreModalOpen = ref(false);
+const isRestoring = ref(false);
 const isDisciplineModalOpen = ref(false);
 const selectedDiscipline = ref<Discipline | undefined>(undefined);
 const isDeleteDisciplineModalOpen = ref(false);
@@ -832,6 +930,75 @@ const confirmDelete = async () => {
   } finally {
     isDeleting.value = false;
     isDeleteModalOpen.value = false;
+  }
+};
+
+// Archive course
+const handleArchive = () => {
+  isArchiveModalOpen.value = true;
+};
+
+const closeArchiveModal = () => {
+  if (!isArchiving.value) {
+    isArchiveModalOpen.value = false;
+  }
+};
+
+const confirmArchive = async () => {
+  isArchiving.value = true;
+
+  try {
+    await authFetch(`/api/courses/${id}/archive`, {
+      method: "PUT",
+      body: { isArchived: true },
+    });
+
+    showSuccess("Учебная программа перемещена в архив", "Успех");
+    await loadCourse();
+  } catch (err: any) {
+    console.error("Error archiving course:", err);
+    showError(
+      err.data?.message || "Не удалось переместить учебную программу в архив",
+      "Ошибка"
+    );
+  } finally {
+    isArchiving.value = false;
+    isArchiveModalOpen.value = false;
+  }
+};
+
+// Restore course
+const handleRestore = () => {
+  isRestoreModalOpen.value = true;
+};
+
+const closeRestoreModal = () => {
+  if (!isRestoring.value) {
+    isRestoreModalOpen.value = false;
+  }
+};
+
+const confirmRestore = async () => {
+  isRestoring.value = true;
+
+  try {
+    await authFetch(`/api/courses/${id}/archive`, {
+      method: "PUT",
+      body: { isArchived: false },
+    });
+
+    showSuccess("Учебная программа восстановлена из архива", "Успех");
+    await loadCourse();
+  } catch (err: any) {
+    console.error("Error restoring course:", err);
+    showError(
+      err.data?.message ||
+        "Не удалось восстановить учебную программу из архива",
+      "Ошибка"
+    );
+  } finally {
+    isRestoring.value = false;
+    isRestoreModalOpen.value = false;
   }
 };
 

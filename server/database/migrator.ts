@@ -36,6 +36,9 @@ import * as retakeLinkedEvents from "./migrations/20260113_042_retake_linked_eve
 import * as scheduleEventsAllowedStudents from "./migrations/20260113_043_schedule_events_allowed_students";
 import * as addUserRelations from "./migrations/20260113_044_add_user_relations";
 import * as linkExistingUsers from "./migrations/20260113_045_link_existing_users";
+import * as groupArchiveSystem from "./migrations/20260114_046_group_archive_system";
+import * as extendFilesForGroups from "./migrations/20260114_047_extend_files_for_groups";
+import * as courseArchiveSystem from "./migrations/20260114_048_course_archive_system";
 
 /**
  * ============================================================================
@@ -314,6 +317,33 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: linkExistingUsers.up,
     down: linkExistingUsers.down,
     description: linkExistingUsers.description,
+  },
+  // ============================================================
+  // Миграция 046: Система архивации групп
+  // ============================================================
+  {
+    name: "20260114_046_group_archive_system",
+    up: groupArchiveSystem.up,
+    down: groupArchiveSystem.down,
+    description: groupArchiveSystem.description,
+  },
+  // ============================================================
+  // Миграция 047: Расширение таблицы files для отчетов групп
+  // ============================================================
+  {
+    name: "20260114_047_extend_files_for_groups",
+    up: extendFilesForGroups.up,
+    down: extendFilesForGroups.down,
+    description: extendFilesForGroups.description,
+  },
+  // ============================================================
+  // Миграция 048: Система архивации учебных программ
+  // ============================================================
+  {
+    name: "20260114_048_course_archive_system",
+    up: courseArchiveSystem.up,
+    down: courseArchiveSystem.down,
+    description: courseArchiveSystem.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

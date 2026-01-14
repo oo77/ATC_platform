@@ -2,9 +2,13 @@
  * Репозиторий для работы с курсами (учебными программами) в MySQL
  */
 
-import { executeQuery, executeTransaction } from '../utils/db';
-import { v4 as uuidv4 } from 'uuid';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import { executeQuery, executeTransaction } from "../utils/db";
+import { v4 as uuidv4 } from "uuid";
+import type {
+  PoolConnection,
+  ResultSetHeader,
+  RowDataPacket,
+} from "mysql2/promise";
 
 // ============================================================================
 // ИНТЕРФЕЙСЫ
@@ -20,6 +24,9 @@ export interface Course {
   certificateTemplateId?: string | null;
   certificateValidityMonths?: number | null;
   isActive: boolean;
+  isArchived: boolean;
+  archivedAt?: Date | null;
+  archivedBy?: string | null;
   createdAt: Date;
   updatedAt: Date;
   certificateTemplate?: CertificateTemplate | null;
@@ -77,6 +84,7 @@ export interface Instructor {
 export interface CourseFilters {
   search?: string;
   isActive?: boolean;
+  isArchived?: boolean;
   certificateTemplateId?: string;
 }
 
@@ -150,6 +158,9 @@ interface CourseRow extends RowDataPacket {
   certificate_template_id: string | null;
   certificate_validity_months: number | null;
   is_active: boolean;
+  is_archived: boolean;
+  archived_at: Date | null;
+  archived_by: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -222,12 +233,17 @@ function mapRowToCourse(row: CourseRow): Course {
     certificateTemplateId: row.certificate_template_id,
     certificateValidityMonths: row.certificate_validity_months,
     isActive: Boolean(row.is_active),
+    isArchived: Boolean(row.is_archived),
+    archivedAt: row.archived_at,
+    archivedBy: row.archived_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
-function mapRowToCertificateTemplate(row: CertificateTemplateRow): CertificateTemplate {
+function mapRowToCertificateTemplate(
+  row: CertificateTemplateRow
+): CertificateTemplate {
   return {
     id: row.id,
     name: row.name,
@@ -274,16 +290,20 @@ function mapRowToInstructor(row: InstructorRow): Instructor {
 // CERTIFICATE TEMPLATES
 // ============================================================================
 
-export async function getAllCertificateTemplates(): Promise<CertificateTemplate[]> {
+export async function getAllCertificateTemplates(): Promise<
+  CertificateTemplate[]
+> {
   const rows = await executeQuery<CertificateTemplateRow[]>(
-    'SELECT * FROM certificate_templates WHERE is_active = true ORDER BY name'
+    "SELECT * FROM certificate_templates WHERE is_active = true ORDER BY name"
   );
   return rows.map(mapRowToCertificateTemplate);
 }
 
-export async function getCertificateTemplateById(id: string): Promise<CertificateTemplate | null> {
+export async function getCertificateTemplateById(
+  id: string
+): Promise<CertificateTemplate | null> {
   const rows = await executeQuery<CertificateTemplateRow[]>(
-    'SELECT * FROM certificate_templates WHERE id = ? LIMIT 1',
+    "SELECT * FROM certificate_templates WHERE id = ? LIMIT 1",
     [id]
   );
   return rows.length > 0 ? mapRowToCertificateTemplate(rows[0]) : null;
@@ -293,28 +313,32 @@ export async function getCertificateTemplateById(id: string): Promise<Certificat
 // DISCIPLINES
 // ============================================================================
 
-async function getDisciplinesByCourseId(courseId: string): Promise<Discipline[]> {
+async function getDisciplinesByCourseId(
+  courseId: string
+): Promise<Discipline[]> {
   const rows = await executeQuery<DisciplineRow[]>(
-    'SELECT * FROM disciplines WHERE course_id = ? ORDER BY order_index, name',
+    "SELECT * FROM disciplines WHERE course_id = ? ORDER BY order_index, name",
     [courseId]
   );
-  
+
   if (rows.length === 0) return [];
-  
+
   // Загружаем инструкторов для всех дисциплин
-  const disciplineIds = rows.map(r => r.id);
+  const disciplineIds = rows.map((r) => r.id);
   const instructorsMap = await getDisciplineInstructors(disciplineIds);
-  
-  return rows.map(row => ({
+
+  return rows.map((row) => ({
     ...mapRowToDiscipline(row),
     instructors: instructorsMap.get(row.id) || [],
   }));
 }
 
-async function getDisciplineInstructors(disciplineIds: string[]): Promise<Map<string, DisciplineInstructor[]>> {
+async function getDisciplineInstructors(
+  disciplineIds: string[]
+): Promise<Map<string, DisciplineInstructor[]>> {
   if (disciplineIds.length === 0) return new Map();
-  
-  const placeholders = disciplineIds.map(() => '?').join(', ');
+
+  const placeholders = disciplineIds.map(() => "?").join(", ");
   const rows = await executeQuery<DisciplineInstructorRow[]>(
     `SELECT di.*, i.full_name as instructor_full_name, i.email as instructor_email
      FROM discipline_instructors di
@@ -322,9 +346,9 @@ async function getDisciplineInstructors(disciplineIds: string[]): Promise<Map<st
      WHERE di.discipline_id IN (${placeholders})`,
     disciplineIds
   );
-  
+
   const result = new Map<string, DisciplineInstructor[]>();
-  
+
   for (const row of rows) {
     const instructor: DisciplineInstructor = {
       id: row.id,
@@ -332,22 +356,24 @@ async function getDisciplineInstructors(disciplineIds: string[]): Promise<Map<st
       instructorId: row.instructor_id,
       isPrimary: Boolean(row.is_primary),
       createdAt: row.created_at,
-      instructor: row.instructor_full_name ? {
-        id: row.instructor_id,
-        fullName: row.instructor_full_name,
-        email: row.instructor_email || null,
-        phone: null,
-        isActive: true,
-        createdAt: row.created_at,
-        updatedAt: row.created_at,
-      } : undefined,
+      instructor: row.instructor_full_name
+        ? {
+            id: row.instructor_id,
+            fullName: row.instructor_full_name,
+            email: row.instructor_email || null,
+            phone: null,
+            isActive: true,
+            createdAt: row.created_at,
+            updatedAt: row.created_at,
+          }
+        : undefined,
     };
-    
+
     const existing = result.get(row.discipline_id) || [];
     existing.push(instructor);
     result.set(row.discipline_id, existing);
   }
-  
+
   return result;
 }
 
@@ -355,38 +381,53 @@ async function getDisciplineInstructors(disciplineIds: string[]): Promise<Map<st
 // COURSES - ОСНОВНЫЕ ОПЕРАЦИИ
 // ============================================================================
 
-export async function getCoursesPaginated(params: PaginationParams = {}): Promise<PaginatedResult<Course>> {
+export async function getCoursesPaginated(
+  params: PaginationParams = {}
+): Promise<PaginatedResult<Course>> {
   const { page = 1, limit = 10, filters = {} } = params;
-  const { search, isActive, certificateTemplateId } = filters;
-  
+  const { search, isActive, isArchived, certificateTemplateId } = filters;
+
   const conditions: string[] = [];
   const queryParams: any[] = [];
-  
+
   if (search) {
-    conditions.push('(name LIKE ? OR short_name LIKE ? OR code LIKE ? OR description LIKE ?)');
+    conditions.push(
+      "(name LIKE ? OR short_name LIKE ? OR code LIKE ? OR description LIKE ?)"
+    );
     const searchPattern = `%${search}%`;
-    queryParams.push(searchPattern, searchPattern, searchPattern, searchPattern);
+    queryParams.push(
+      searchPattern,
+      searchPattern,
+      searchPattern,
+      searchPattern
+    );
   }
-  
+
   if (isActive !== undefined) {
-    conditions.push('is_active = ?');
+    conditions.push("is_active = ?");
     queryParams.push(isActive);
   }
-  
+
+  if (isArchived !== undefined) {
+    conditions.push("is_archived = ?");
+    queryParams.push(isArchived);
+  }
+
   if (certificateTemplateId) {
-    conditions.push('certificate_template_id = ?');
+    conditions.push("certificate_template_id = ?");
     queryParams.push(certificateTemplateId);
   }
-  
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-  
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
   // Count
   const countResult = await executeQuery<CountRow[]>(
     `SELECT COUNT(*) as total FROM courses ${whereClause}`,
     queryParams
   );
   const total = countResult[0]?.total || 0;
-  
+
   // Data with discipline count
   const offset = (page - 1) * limit;
   const dataQuery = `
@@ -401,13 +442,19 @@ export async function getCoursesPaginated(params: PaginationParams = {}): Promis
     dataQuery,
     [...queryParams, limit, offset]
   );
-  
+
   // Load certificate templates
-  const templateIds = [...new Set(rows.filter(r => r.certificate_template_id).map(r => r.certificate_template_id!))];
+  const templateIds = [
+    ...new Set(
+      rows
+        .filter((r) => r.certificate_template_id)
+        .map((r) => r.certificate_template_id!)
+    ),
+  ];
   const templatesMap = new Map<string, CertificateTemplate>();
-  
+
   if (templateIds.length > 0) {
-    const placeholders = templateIds.map(() => '?').join(', ');
+    const placeholders = templateIds.map(() => "?").join(", ");
     const templateRows = await executeQuery<CertificateTemplateRow[]>(
       `SELECT * FROM certificate_templates WHERE id IN (${placeholders})`,
       templateIds
@@ -416,13 +463,15 @@ export async function getCoursesPaginated(params: PaginationParams = {}): Promis
       templatesMap.set(row.id, mapRowToCertificateTemplate(row));
     }
   }
-  
-  const courses: Course[] = rows.map(row => ({
+
+  const courses: Course[] = rows.map((row) => ({
     ...mapRowToCourse(row),
     disciplineCount: row.discipline_count,
-    certificateTemplate: row.certificate_template_id ? templatesMap.get(row.certificate_template_id) : undefined,
+    certificateTemplate: row.certificate_template_id
+      ? templatesMap.get(row.certificate_template_id)
+      : undefined,
   }));
-  
+
   return {
     data: courses,
     total,
@@ -432,47 +481,55 @@ export async function getCoursesPaginated(params: PaginationParams = {}): Promis
   };
 }
 
-export async function getCourseById(id: string, includeDisciplines = true): Promise<Course | null> {
+export async function getCourseById(
+  id: string,
+  includeDisciplines = true
+): Promise<Course | null> {
   const rows = await executeQuery<CourseRow[]>(
-    'SELECT * FROM courses WHERE id = ? LIMIT 1',
+    "SELECT * FROM courses WHERE id = ? LIMIT 1",
     [id]
   );
-  
+
   if (rows.length === 0) return null;
-  
+
   const course = mapRowToCourse(rows[0]);
-  
+
   // Load certificate template
   if (course.certificateTemplateId) {
-    course.certificateTemplate = await getCertificateTemplateById(course.certificateTemplateId) || undefined;
+    course.certificateTemplate =
+      (await getCertificateTemplateById(course.certificateTemplateId)) ||
+      undefined;
   }
-  
+
   // Load disciplines
   if (includeDisciplines) {
     course.disciplines = await getDisciplinesByCourseId(id);
   }
-  
+
   return course;
 }
 
 export async function getCourseByCode(code: string): Promise<Course | null> {
   const rows = await executeQuery<CourseRow[]>(
-    'SELECT * FROM courses WHERE code = ? LIMIT 1',
+    "SELECT * FROM courses WHERE code = ? LIMIT 1",
     [code]
   );
-  
+
   return rows.length > 0 ? mapRowToCourse(rows[0]) : null;
 }
 
-export async function courseCodeExists(code: string, excludeId?: string): Promise<boolean> {
-  let query = 'SELECT 1 FROM courses WHERE code = ?';
+export async function courseCodeExists(
+  code: string,
+  excludeId?: string
+): Promise<boolean> {
+  let query = "SELECT 1 FROM courses WHERE code = ?";
   const params: any[] = [code];
-  
+
   if (excludeId) {
-    query += ' AND id != ?';
+    query += " AND id != ?";
     params.push(excludeId);
   }
-  
+
   const rows = await executeQuery<RowDataPacket[]>(query, params);
   return rows.length > 0;
 }
@@ -480,10 +537,14 @@ export async function courseCodeExists(code: string, excludeId?: string): Promis
 export async function createCourse(data: CreateCourseInput): Promise<Course> {
   const id = uuidv4();
   const now = new Date();
-  
+
   // Подсчитываем общее количество часов из дисциплин
-  const totalHours = data.disciplines?.reduce((sum, d) => sum + d.theoryHours + d.practiceHours + d.assessmentHours, 0) || 0;
-  
+  const totalHours =
+    data.disciplines?.reduce(
+      (sum, d) => sum + d.theoryHours + d.practiceHours + d.assessmentHours,
+      0
+    ) || 0;
+
   await executeTransaction(async (connection: PoolConnection) => {
     // Создаём курс
     await connection.execute(
@@ -500,16 +561,16 @@ export async function createCourse(data: CreateCourseInput): Promise<Course> {
         data.certificateValidityMonths ?? null, // null = бессрочный сертификат
         data.isActive !== false,
         now,
-        now
+        now,
       ]
     );
-    
+
     // Создаём дисциплины
     if (data.disciplines && data.disciplines.length > 0) {
       for (let i = 0; i < data.disciplines.length; i++) {
         const discipline = data.disciplines[i];
         const disciplineId = uuidv4();
-        
+
         await connection.execute(
           `INSERT INTO disciplines (id, course_id, name, description, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -523,10 +584,10 @@ export async function createCourse(data: CreateCourseInput): Promise<Course> {
             discipline.assessmentHours,
             discipline.orderIndex ?? i,
             now,
-            now
+            now,
           ]
         );
-        
+
         // Привязываем инструкторов
         if (discipline.instructorIds && discipline.instructorIds.length > 0) {
           for (let j = 0; j < discipline.instructorIds.length; j++) {
@@ -541,63 +602,66 @@ export async function createCourse(data: CreateCourseInput): Promise<Course> {
       }
     }
   });
-  
+
   const course = await getCourseById(id);
-  if (!course) throw new Error('Failed to create course');
-  
+  if (!course) throw new Error("Failed to create course");
+
   return course;
 }
 
-export async function updateCourse(id: string, data: UpdateCourseInput): Promise<Course | null> {
+export async function updateCourse(
+  id: string,
+  data: UpdateCourseInput
+): Promise<Course | null> {
   const existing = await getCourseById(id, false);
   if (!existing) return null;
-  
+
   const updates: string[] = [];
   const params: any[] = [];
-  
+
   if (data.name !== undefined) {
-    updates.push('name = ?');
+    updates.push("name = ?");
     params.push(data.name);
   }
   if (data.shortName !== undefined) {
-    updates.push('short_name = ?');
+    updates.push("short_name = ?");
     params.push(data.shortName.toUpperCase());
   }
   if (data.code !== undefined) {
-    updates.push('code = ?');
+    updates.push("code = ?");
     params.push(data.code);
   }
   if (data.description !== undefined) {
-    updates.push('description = ?');
+    updates.push("description = ?");
     params.push(data.description);
   }
   if (data.certificateTemplateId !== undefined) {
-    updates.push('certificate_template_id = ?');
+    updates.push("certificate_template_id = ?");
     params.push(data.certificateTemplateId);
   }
   if (data.certificateValidityMonths !== undefined) {
-    updates.push('certificate_validity_months = ?');
+    updates.push("certificate_validity_months = ?");
     params.push(data.certificateValidityMonths);
   }
   if (data.isActive !== undefined) {
-    updates.push('is_active = ?');
+    updates.push("is_active = ?");
     params.push(data.isActive);
   }
-  
+
   if (updates.length === 0) return existing;
-  
+
   params.push(id);
   await executeQuery(
-    `UPDATE courses SET ${updates.join(', ')} WHERE id = ?`,
+    `UPDATE courses SET ${updates.join(", ")} WHERE id = ?`,
     params
   );
-  
+
   return getCourseById(id);
 }
 
 export async function deleteCourse(id: string): Promise<boolean> {
   const result = await executeQuery<ResultSetHeader>(
-    'DELETE FROM courses WHERE id = ?',
+    "DELETE FROM courses WHERE id = ?",
     [id]
   );
   return result.affectedRows > 0;
@@ -607,27 +671,43 @@ export async function deleteCourse(id: string): Promise<boolean> {
 // DISCIPLINE MANAGEMENT
 // ============================================================================
 
-export async function addDisciplineToCourse(courseId: string, data: CreateDisciplineInput): Promise<Discipline | null> {
+export async function addDisciplineToCourse(
+  courseId: string,
+  data: CreateDisciplineInput
+): Promise<Discipline | null> {
   const course = await getCourseById(courseId, false);
   if (!course) return null;
-  
+
   const id = uuidv4();
   const now = new Date();
-  
+
   await executeTransaction(async (connection: PoolConnection) => {
     // Получаем максимальный order_index
-    const [maxOrderRows] = await connection.execute<(RowDataPacket & { max_order: number })[]>(
-      'SELECT COALESCE(MAX(order_index), -1) as max_order FROM disciplines WHERE course_id = ?',
+    const [maxOrderRows] = await connection.execute<
+      (RowDataPacket & { max_order: number })[]
+    >(
+      "SELECT COALESCE(MAX(order_index), -1) as max_order FROM disciplines WHERE course_id = ?",
       [courseId]
     );
     const nextOrder = (maxOrderRows[0]?.max_order ?? -1) + 1;
-    
+
     await connection.execute(
       `INSERT INTO disciplines (id, course_id, name, description, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, courseId, data.name, data.description || null, data.theoryHours, data.practiceHours, data.assessmentHours, data.orderIndex ?? nextOrder, now, now]
+      [
+        id,
+        courseId,
+        data.name,
+        data.description || null,
+        data.theoryHours,
+        data.practiceHours,
+        data.assessmentHours,
+        data.orderIndex ?? nextOrder,
+        now,
+        now,
+      ]
     );
-    
+
     // Привязываем инструкторов
     if (data.instructorIds && data.instructorIds.length > 0) {
       for (let i = 0; i < data.instructorIds.length; i++) {
@@ -639,74 +719,77 @@ export async function addDisciplineToCourse(courseId: string, data: CreateDiscip
         );
       }
     }
-    
+
     // Обновляем total_hours курса
     await connection.execute(
       `UPDATE courses SET total_hours = (SELECT COALESCE(SUM(hours), 0) FROM disciplines WHERE course_id = ?) WHERE id = ?`,
       [courseId, courseId]
     );
   });
-  
+
   // Возвращаем созданную дисциплину
   const disciplines = await getDisciplinesByCourseId(courseId);
-  return disciplines.find(d => d.id === id) || null;
+  return disciplines.find((d) => d.id === id) || null;
 }
 
-export async function updateDiscipline(disciplineId: string, data: UpdateDisciplineInput): Promise<Discipline | null> {
+export async function updateDiscipline(
+  disciplineId: string,
+  data: UpdateDisciplineInput
+): Promise<Discipline | null> {
   const rows = await executeQuery<DisciplineRow[]>(
-    'SELECT * FROM disciplines WHERE id = ? LIMIT 1',
+    "SELECT * FROM disciplines WHERE id = ? LIMIT 1",
     [disciplineId]
   );
-  
+
   if (rows.length === 0) return null;
-  
+
   const courseId = rows[0].course_id;
-  
+
   await executeTransaction(async (connection: PoolConnection) => {
     const updates: string[] = [];
     const params: any[] = [];
-    
+
     if (data.name !== undefined) {
-      updates.push('name = ?');
+      updates.push("name = ?");
       params.push(data.name);
     }
     if (data.description !== undefined) {
-      updates.push('description = ?');
+      updates.push("description = ?");
       params.push(data.description);
     }
     if (data.theoryHours !== undefined) {
-      updates.push('theory_hours = ?');
+      updates.push("theory_hours = ?");
       params.push(data.theoryHours);
     }
     if (data.practiceHours !== undefined) {
-      updates.push('practice_hours = ?');
+      updates.push("practice_hours = ?");
       params.push(data.practiceHours);
     }
     if (data.assessmentHours !== undefined) {
-      updates.push('assessment_hours = ?');
+      updates.push("assessment_hours = ?");
       params.push(data.assessmentHours);
     }
     if (data.orderIndex !== undefined) {
-      updates.push('order_index = ?');
+      updates.push("order_index = ?");
       params.push(data.orderIndex);
     }
-    
+
     if (updates.length > 0) {
       params.push(disciplineId);
       await connection.execute(
-        `UPDATE disciplines SET ${updates.join(', ')} WHERE id = ?`,
+        `UPDATE disciplines SET ${updates.join(", ")} WHERE id = ?`,
         params
       );
     }
-    
+
     // Обновляем инструкторов если указаны
     if (data.instructorIds !== undefined) {
       // Удаляем старые связи
       await connection.execute(
-        'DELETE FROM discipline_instructors WHERE discipline_id = ?',
+        "DELETE FROM discipline_instructors WHERE discipline_id = ?",
         [disciplineId]
       );
-      
+
       // Добавляем новые
       const now = new Date();
       for (let i = 0; i < data.instructorIds.length; i++) {
@@ -718,38 +801,73 @@ export async function updateDiscipline(disciplineId: string, data: UpdateDiscipl
         );
       }
     }
-    
+
     // Обновляем total_hours курса
     await connection.execute(
       `UPDATE courses SET total_hours = (SELECT COALESCE(SUM(hours), 0) FROM disciplines WHERE course_id = ?) WHERE id = ?`,
       [courseId, courseId]
     );
   });
-  
+
   const disciplines = await getDisciplinesByCourseId(courseId);
-  return disciplines.find(d => d.id === disciplineId) || null;
+  return disciplines.find((d) => d.id === disciplineId) || null;
 }
 
 export async function deleteDiscipline(disciplineId: string): Promise<boolean> {
   // Получаем course_id перед удалением
   const rows = await executeQuery<DisciplineRow[]>(
-    'SELECT course_id FROM disciplines WHERE id = ? LIMIT 1',
+    "SELECT course_id FROM disciplines WHERE id = ? LIMIT 1",
     [disciplineId]
   );
-  
+
   if (rows.length === 0) return false;
-  
+
   const courseId = rows[0].course_id;
-  
+
   await executeTransaction(async (connection: PoolConnection) => {
-    await connection.execute('DELETE FROM disciplines WHERE id = ?', [disciplineId]);
-    
+    await connection.execute("DELETE FROM disciplines WHERE id = ?", [
+      disciplineId,
+    ]);
+
     // Обновляем total_hours курса
     await connection.execute(
       `UPDATE courses SET total_hours = (SELECT COALESCE(SUM(hours), 0) FROM disciplines WHERE course_id = ?) WHERE id = ?`,
       [courseId, courseId]
     );
   });
-  
+
   return true;
+}
+
+// ============================================================================
+// COURSE ARCHIVING
+// ============================================================================
+
+/**
+ * Архивирование или разархивирование курса
+ * @param id ID курса
+ * @param isArchived true для архивации, false для разархивирования
+ * @param userId ID пользователя, выполняющего действие
+ * @returns Обновленный курс или null
+ */
+export async function archiveCourse(
+  id: string,
+  isArchived: boolean,
+  userId: string
+): Promise<Course | null> {
+  const existing = await getCourseById(id, false);
+  if (!existing) return null;
+
+  const now = new Date();
+
+  await executeQuery(
+    `UPDATE courses 
+     SET is_archived = ?, 
+         archived_at = ?, 
+         archived_by = ? 
+     WHERE id = ?`,
+    [isArchived, isArchived ? now : null, isArchived ? userId : null, id]
+  );
+
+  return getCourseById(id);
 }

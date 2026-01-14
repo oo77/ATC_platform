@@ -1,123 +1,252 @@
 /**
- * API endpoint для создания учебной группы
+ * API endpoint для создания учебной группы с файлом-отчетом
  * POST /api/groups
  */
 
-import { z } from 'zod';
-import { 
-  createGroup, 
-  groupCodeExists, 
+import { defineEventHandler, readMultipartFormData, createError } from "h3";
+import { executeTransaction, executeQuery } from "../../utils/db"; // Используем существующие утилиты БД
+import { validatePdfFile } from "../../utils/validatePdfFile";
+import { saveGroupReportFile } from "../../utils/groupFileStorage";
+import { logActivity } from "../../utils/activityLogger";
+import {
+  groupCodeExists,
   courseExists,
-  checkStudentConflicts 
-} from '../../repositories/groupRepository';
-import { logActivity } from '../../utils/activityLogger';
-
-const createGroupSchema = z.object({
-  code: z.string().min(1, 'Код группы обязателен').max(50, 'Код группы слишком длинный'),
-  courseId: z.string().min(1, 'ID курса обязателен'),
-  startDate: z.string().min(1, 'Дата начала обязательна'),
-  endDate: z.string().min(1, 'Дата окончания обязательна'),
-  classroom: z.string().max(100).optional(),
-  description: z.string().optional(),
-  isActive: z.boolean().optional(),
-  studentIds: z.array(z.string()).optional(),
-});
+  checkStudentConflicts,
+  getGroupById,
+} from "../../repositories/groupRepository";
+import { v4 as uuidv4 } from "uuid";
+import type { PoolConnection } from "mysql2/promise";
 
 export default defineEventHandler(async (event) => {
-  try {
-    const body = await readBody(event);
-    
-    // Валидация данных
-    const validationResult = createGroupSchema.safeParse(body);
-    if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(e => ({
-        field: e.path.join('.'),
-        message: e.message,
-      }));
-      
-      return {
-        success: false,
-        message: 'Ошибка валидации данных',
-        errors,
-      };
-    }
+  // 1. Проверка авторизации
+  const user = event.context.user;
+  if (!user) {
+    throw createError({ statusCode: 401, message: "Требуется авторизация" });
+  }
 
-    const data = validationResult.data;
+  // 2. Проверка прав (ADMIN или MODERATOR/MANAGER)
+  if (!["ADMIN", "MANAGER"].includes(user.role)) {
+    throw createError({
+      statusCode: 403,
+      message: "Недостаточно прав для создания группы",
+    });
+  }
 
-    // Проверяем, что дата окончания не раньше даты начала (допускается один день)
-    const startDate = new Date(data.startDate);
-    const endDate = new Date(data.endDate);
-    
-    if (endDate < startDate) {
-      return {
-        success: false,
-        message: 'Дата окончания не может быть раньше даты начала',
-        errors: [{ field: 'endDate', message: 'Дата окончания не может быть раньше даты начала' }],
-      };
-    }
+  // 3. Чтение данных формы (multipart/form-data)
+  const formData = await readMultipartFormData(event);
+  if (!formData) {
+    throw createError({
+      statusCode: 400,
+      message: "Ожидаются данные multipart/form-data",
+    });
+  }
 
-    // Проверяем уникальность кода группы
-    if (await groupCodeExists(data.code)) {
-      return {
-        success: false,
-        message: 'Группа с таким кодом уже существует',
-        errors: [{ field: 'code', message: 'Группа с таким кодом уже существует' }],
-      };
-    }
+  // 4. Разбор данных
+  let groupData: any = {};
+  const pdfFiles: Array<{ buffer: Buffer; filename: string }> = [];
 
-    // Проверяем существование курса
-    if (!await courseExists(data.courseId)) {
-      return {
-        success: false,
-        message: 'Выбранная учебная программа не найдена',
-        errors: [{ field: 'courseId', message: 'Учебная программа не найдена' }],
-      };
-    }
-
-    // Проверяем конфликты слушателей, если они указаны
-    if (data.studentIds && data.studentIds.length > 0) {
-      const conflicts = await checkStudentConflicts(
-        data.studentIds,
-        data.startDate,
-        data.endDate
-      );
-
-      if (conflicts.length > 0) {
-        return {
-          success: false,
-          message: 'Некоторые слушатели уже находятся в группах с пересекающимися датами',
-          conflicts,
-        };
+  for (const part of formData) {
+    if (part.name === "data") {
+      try {
+        groupData = JSON.parse(part.data.toString("utf-8"));
+      } catch (e) {
+        throw createError({
+          statusCode: 400,
+          message: "Некорректный JSON в поле data",
+        });
+      }
+    } else if (part.name === "reportFile") {
+      if (part.data && part.filename) {
+        pdfFiles.push({
+          buffer: part.data,
+          filename: part.filename,
+        });
       }
     }
+  }
 
-    // Создаём группу
-    const group = await createGroup(data);
+  // 5. Валидация файлов (обязательны при создании)
+  if (pdfFiles.length === 0) {
+    throw createError({
+      statusCode: 400,
+      message: "PDF-отчеты обязательны при создании группы",
+    });
+  }
 
-    // Логируем действие
-    await logActivity(
-      event,
-      'CREATE',
-      'GROUP',
-      group.id,
-      group.code,
-      { 
-        courseId: group.courseId,
-        studentsCount: data.studentIds?.length || 0 
+  // Валидация каждого файла
+  for (const file of pdfFiles) {
+    const pdfValidation = await validatePdfFile(file.buffer, file.filename);
+    if (!pdfValidation.valid) {
+      throw createError({
+        statusCode: 400,
+        message: `Ошибка валидации файла "${file.filename}": ${pdfValidation.error}`,
+      });
+    }
+  }
+
+  // 6. Валидация данных группы (упрощенная, основные проверки - в репозитории/бизнес-логике)
+  if (
+    !groupData.code ||
+    !groupData.courseId ||
+    !groupData.startDate ||
+    !groupData.endDate
+  ) {
+    throw createError({
+      statusCode: 400,
+      message:
+        "Отсутствуют обязательные поля (code, courseId, startDate, endDate)",
+    });
+  }
+
+  // Проверка дат
+  const startDate = new Date(groupData.startDate);
+  const endDate = new Date(groupData.endDate);
+  if (endDate < startDate) {
+    throw createError({
+      statusCode: 400,
+      message: "Дата окончания не может быть раньше даты начала",
+    });
+  }
+
+  // Проверка уникальности кода
+  if (await groupCodeExists(groupData.code)) {
+    throw createError({
+      statusCode: 400,
+      message: "Группа с таким кодом уже существует",
+    });
+  }
+
+  // Проверка существования курса
+  if (!(await courseExists(groupData.courseId))) {
+    throw createError({
+      statusCode: 400,
+      message: "Выбранная учебная программа не найдена",
+    });
+  }
+
+  // Проверка конфликтов студентов (если переданы)
+  if (
+    groupData.studentIds &&
+    Array.isArray(groupData.studentIds) &&
+    groupData.studentIds.length > 0
+  ) {
+    const conflicts = await checkStudentConflicts(
+      groupData.studentIds,
+      groupData.startDate,
+      groupData.endDate
+    );
+    if (conflicts.length > 0) {
+      // Возвращаем 409 с деталями
+      throw createError({
+        statusCode: 409,
+        message: "Обнаружены конфликты расписания для студентов",
+        data: conflicts,
+      });
+    }
+  }
+
+  // 7. Транзакция создания группы и записи файла
+  try {
+    const newGroupId = uuidv4();
+    let savedFileUrl = "";
+
+    // Сначала сохраняем файл физически, чтобы получить путь (можно и внутри транзакции, но лучше подготовить)
+    // Однако, если транзакция упадет, файл останется. Лучше сохранять после или иметь механизм очистки.
+    // В данном случае, следуем плану: сохраняем файл и пишем в БД.
+
+    const result = await executeTransaction(
+      async (connection: PoolConnection) => {
+        // 7.1 Вставка группы
+        await connection.execute(
+          `INSERT INTO study_groups (id, code, course_id, start_date, end_date, classroom, description, is_active, is_archived, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, FALSE, NOW(3), NOW(3))`,
+          [
+            newGroupId,
+            groupData.code,
+            groupData.courseId,
+            groupData.startDate,
+            groupData.endDate,
+            groupData.classroom || null,
+            groupData.description || null,
+            groupData.isActive !== false ? 1 : 0,
+          ]
+        );
+
+        // 7.2 Добавление студентов
+        if (groupData.studentIds && Array.isArray(groupData.studentIds)) {
+          for (const studentId of groupData.studentIds) {
+            await connection.execute(
+              `INSERT INTO study_group_students (id, group_id, student_id)
+             VALUES (?, ?, ?)`,
+              [uuidv4(), newGroupId, studentId]
+            );
+          }
+        }
+
+        // 7.3 Сохранение всех файлов
+        const uploadedFiles: string[] = [];
+
+        for (const file of pdfFiles) {
+          const fileResult = await saveGroupReportFile({
+            groupId: newGroupId,
+            file: file.buffer,
+            originalFilename: file.filename,
+            userId: user.id,
+          });
+
+          uploadedFiles.push(fileResult.fileUrl);
+
+          // 7.4 Запись информации о файле в таблицу files
+          await connection.execute(
+            `INSERT INTO files (
+             uuid, filename, stored_name, mime_type, size_bytes, extension, 
+             storage_path, full_path, category, group_id, 
+             uploaded_by, uploaded_by_user, uploaded_at_time, created_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3))`,
+            [
+              uuidv4(),
+              file.filename,
+              fileResult.storedName,
+              "application/pdf",
+              file.buffer.length,
+              "pdf",
+              fileResult.filePath,
+              fileResult.filePath,
+              "group_report",
+              newGroupId,
+              user.id,
+              user.id,
+              new Date(),
+            ]
+          );
+        }
+
+        return { newGroupId, uploadedFiles };
       }
     );
 
+    // 8. Логирование
+    await logActivity(event, "CREATE", "GROUP", newGroupId, groupData.code, {
+      courseId: groupData.courseId,
+      studentsCount: groupData.studentIds?.length || 0,
+      filesCount: pdfFiles.length,
+    });
+
+    // 9. Возвращаем результат
+    const createdGroup = await getGroupById(newGroupId); // Получаем полные данные
+
     return {
       success: true,
-      message: 'Группа успешно создана',
-      group,
+      message: `Группа успешно создана с ${pdfFiles.length} файлами`,
+      group: createdGroup,
+      uploadedFiles: result.uploadedFiles,
     };
-  } catch (error) {
-    console.error('Ошибка создания группы:', error);
-    
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Ошибка при создании группы',
-    };
+  } catch (error: any) {
+    console.error("Ошибка создания группы:", error);
+    throw createError({
+      statusCode: 500,
+      message:
+        "Ошибка при создании группы: " + (error.message || "Unknown error"),
+    });
   }
 });

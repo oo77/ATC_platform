@@ -2,9 +2,13 @@
  * Репозиторий для работы с учебными группами в MySQL
  */
 
-import { executeQuery, executeTransaction } from '../utils/db';
-import { v4 as uuidv4 } from 'uuid';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import { executeQuery, executeTransaction } from "../utils/db";
+import { v4 as uuidv4 } from "uuid";
+import type {
+  PoolConnection,
+  ResultSetHeader,
+  RowDataPacket,
+} from "mysql2/promise";
 
 // ============================================================================
 // ИНТЕРФЕЙСЫ
@@ -15,8 +19,8 @@ import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/prom
  */
 function formatDateLocal(date: Date): string {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -29,6 +33,7 @@ export interface StudyGroup {
   classroom: string | null;
   description: string | null;
   isActive: boolean;
+  isArchived?: boolean;
   createdAt: Date;
   updatedAt: Date;
   course?: Course | null;
@@ -76,6 +81,7 @@ export interface GroupFilters {
   search?: string;
   courseId?: string;
   isActive?: boolean;
+  isArchived?: boolean;
   startDateFrom?: string;
   startDateTo?: string;
   groupIds?: string[]; // Для фильтрации по конкретным ID групп (TEACHER)
@@ -129,6 +135,7 @@ interface StudyGroupRow extends RowDataPacket {
   classroom: string | null;
   description: string | null;
   is_active: boolean;
+  is_archived?: number | boolean; // Из БД может прийти 0/1 или boolean
   created_at: Date;
   updated_at: Date;
   // Joined fields
@@ -182,6 +189,7 @@ function mapRowToGroup(row: StudyGroupRow): StudyGroup {
     classroom: row.classroom,
     description: row.description,
     isActive: Boolean(row.is_active),
+    isArchived: Boolean(row.is_archived),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -190,8 +198,8 @@ function mapRowToGroup(row: StudyGroupRow): StudyGroup {
     group.course = {
       id: row.course_id,
       name: row.course_name,
-      shortName: row.course_short_name || '',
-      code: row.course_code || '',
+      shortName: row.course_short_name || "",
+      code: row.course_code || "",
       totalHours: row.course_total_hours || 0,
       certificateTemplateId: row.course_certificate_template_id || null,
       certificateValidityMonths: row.course_certificate_validity_months || null,
@@ -217,10 +225,10 @@ function mapRowToGroupStudent(row: GroupStudentRow): GroupStudent {
     gs.student = {
       id: row.student_id,
       fullName: row.student_full_name,
-      pinfl: row.student_pinfl || '',
-      organization: row.student_organization || '',
+      pinfl: row.student_pinfl || "",
+      organization: row.student_organization || "",
       department: row.student_department || null,
-      position: row.student_position || '',
+      position: row.student_position || "",
     };
   }
 
@@ -234,7 +242,9 @@ function mapRowToGroupStudent(row: GroupStudentRow): GroupStudent {
 /**
  * Получить группы с пагинацией и фильтрами
  */
-export async function getGroups(params: PaginationParams = {}): Promise<PaginatedResult<StudyGroup>> {
+export async function getGroups(
+  params: PaginationParams = {}
+): Promise<PaginatedResult<StudyGroup>> {
   const { page = 1, limit = 10, filters = {} } = params;
 
   const conditions: string[] = [];
@@ -242,38 +252,49 @@ export async function getGroups(params: PaginationParams = {}): Promise<Paginate
 
   // Поиск по коду или описанию
   if (filters.search) {
-    conditions.push('(sg.code LIKE ? OR sg.description LIKE ? OR c.name LIKE ?)');
+    conditions.push(
+      "(sg.code LIKE ? OR sg.description LIKE ? OR c.name LIKE ?)"
+    );
     const searchPattern = `%${filters.search}%`;
     queryParams.push(searchPattern, searchPattern, searchPattern);
   }
 
   // Фильтр по курсу
   if (filters.courseId) {
-    conditions.push('sg.course_id = ?');
+    conditions.push("sg.course_id = ?");
     queryParams.push(filters.courseId);
   }
 
   // Фильтр по статусу
   if (filters.isActive !== undefined) {
-    conditions.push('sg.is_active = ?');
+    conditions.push("sg.is_active = ?");
     queryParams.push(filters.isActive);
+  }
+
+  // Фильтр по архивации (по умолчанию FALSE, если не передан)
+  if (filters.isArchived !== undefined) {
+    conditions.push("sg.is_archived = ?");
+    queryParams.push(filters.isArchived);
+  } else {
+    // По умолчанию скрываем архивированные группы
+    conditions.push("sg.is_archived = FALSE");
   }
 
   // Фильтр по дате начала (от)
   if (filters.startDateFrom) {
-    conditions.push('sg.start_date >= ?');
+    conditions.push("sg.start_date >= ?");
     queryParams.push(filters.startDateFrom);
   }
 
   // Фильтр по дате начала (до)
   if (filters.startDateTo) {
-    conditions.push('sg.start_date <= ?');
+    conditions.push("sg.start_date <= ?");
     queryParams.push(filters.startDateTo);
   }
 
   // Фильтр по конкретным ID групп (для TEACHER)
   if (filters.groupIds && filters.groupIds.length > 0) {
-    const placeholders = filters.groupIds.map(() => '?').join(', ');
+    const placeholders = filters.groupIds.map(() => "?").join(", ");
     conditions.push(`sg.id IN (${placeholders})`);
     queryParams.push(...filters.groupIds);
   } else if (filters.groupIds && filters.groupIds.length === 0) {
@@ -287,7 +308,8 @@ export async function getGroups(params: PaginationParams = {}): Promise<Paginate
     };
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // Получаем общее количество
   const countQuery = `
@@ -380,16 +402,19 @@ export async function getGroupById(id: string): Promise<StudyGroup | null> {
 /**
  * Проверить уникальность кода группы
  */
-export async function groupCodeExists(code: string, excludeId?: string): Promise<boolean> {
-  let query = 'SELECT 1 FROM study_groups WHERE code = ?';
+export async function groupCodeExists(
+  code: string,
+  excludeId?: string
+): Promise<boolean> {
+  let query = "SELECT 1 FROM study_groups WHERE code = ?";
   const params: any[] = [code];
 
   if (excludeId) {
-    query += ' AND id != ?';
+    query += " AND id != ?";
     params.push(excludeId);
   }
 
-  query += ' LIMIT 1';
+  query += " LIMIT 1";
   const rows = await executeQuery<RowDataPacket[]>(query, params);
   return rows.length > 0;
 }
@@ -399,7 +424,7 @@ export async function groupCodeExists(code: string, excludeId?: string): Promise
  */
 export async function courseExists(courseId: string): Promise<boolean> {
   const rows = await executeQuery<RowDataPacket[]>(
-    'SELECT 1 FROM courses WHERE id = ? LIMIT 1',
+    "SELECT 1 FROM courses WHERE id = ? LIMIT 1",
     [courseId]
   );
   return rows.length > 0;
@@ -443,7 +468,7 @@ export async function createGroup(data: CreateGroupInput): Promise<StudyGroup> {
 
   const group = await getGroupById(id);
   if (!group) {
-    throw new Error('Failed to create group');
+    throw new Error("Failed to create group");
   }
 
   return group;
@@ -452,7 +477,10 @@ export async function createGroup(data: CreateGroupInput): Promise<StudyGroup> {
 /**
  * Обновить группу
  */
-export async function updateGroup(id: string, data: UpdateGroupInput): Promise<StudyGroup | null> {
+export async function updateGroup(
+  id: string,
+  data: UpdateGroupInput
+): Promise<StudyGroup | null> {
   const existing = await getGroupById(id);
   if (!existing) {
     return null;
@@ -462,31 +490,31 @@ export async function updateGroup(id: string, data: UpdateGroupInput): Promise<S
   const params: any[] = [];
 
   if (data.code !== undefined) {
-    updates.push('code = ?');
+    updates.push("code = ?");
     params.push(data.code);
   }
   if (data.courseId !== undefined) {
-    updates.push('course_id = ?');
+    updates.push("course_id = ?");
     params.push(data.courseId);
   }
   if (data.startDate !== undefined) {
-    updates.push('start_date = ?');
+    updates.push("start_date = ?");
     params.push(data.startDate);
   }
   if (data.endDate !== undefined) {
-    updates.push('end_date = ?');
+    updates.push("end_date = ?");
     params.push(data.endDate);
   }
   if (data.classroom !== undefined) {
-    updates.push('classroom = ?');
+    updates.push("classroom = ?");
     params.push(data.classroom);
   }
   if (data.description !== undefined) {
-    updates.push('description = ?');
+    updates.push("description = ?");
     params.push(data.description);
   }
   if (data.isActive !== undefined) {
-    updates.push('is_active = ?');
+    updates.push("is_active = ?");
     params.push(data.isActive);
   }
 
@@ -497,7 +525,7 @@ export async function updateGroup(id: string, data: UpdateGroupInput): Promise<S
   params.push(id);
 
   await executeQuery(
-    `UPDATE study_groups SET ${updates.join(', ')} WHERE id = ?`,
+    `UPDATE study_groups SET ${updates.join(", ")} WHERE id = ?`,
     params
   );
 
@@ -510,20 +538,19 @@ export async function updateGroup(id: string, data: UpdateGroupInput): Promise<S
 export async function deleteGroup(id: string): Promise<boolean> {
   return executeTransaction(async (connection: PoolConnection) => {
     // 1. Удаляем все события расписания, связанные с этой группой
-    await connection.execute(
-      'DELETE FROM schedule_events WHERE group_id = ?',
-      [id]
-    );
+    await connection.execute("DELETE FROM schedule_events WHERE group_id = ?", [
+      id,
+    ]);
 
     // 2. Удаляем связи со слушателями (study_group_students)
     await connection.execute(
-      'DELETE FROM study_group_students WHERE group_id = ?',
+      "DELETE FROM study_group_students WHERE group_id = ?",
       [id]
     );
 
     // 3. Удаляем саму группу
     const [result] = await connection.execute<ResultSetHeader>(
-      'DELETE FROM study_groups WHERE id = ?',
+      "DELETE FROM study_groups WHERE id = ?",
       [id]
     );
 
@@ -549,7 +576,7 @@ export async function checkStudentConflicts(
     return [];
   }
 
-  const placeholders = studentIds.map(() => '?').join(', ');
+  const placeholders = studentIds.map(() => "?").join(", ");
 
   let query = `
     SELECT 
@@ -570,13 +597,13 @@ export async function checkStudentConflicts(
   const params: any[] = [...studentIds, endDate, startDate];
 
   if (excludeGroupId) {
-    query += ' AND sg.id != ?';
+    query += " AND sg.id != ?";
     params.push(excludeGroupId);
   }
 
   const rows = await executeQuery<ConflictRow[]>(query, params);
 
-  return rows.map(row => ({
+  return rows.map((row) => ({
     studentId: row.student_id,
     studentName: row.student_name,
     conflictGroupId: row.group_id,
@@ -604,7 +631,7 @@ export async function addStudentsToGroup(
     for (const studentId of studentIds) {
       // Проверяем, не добавлен ли уже
       const [existing] = await connection.execute<RowDataPacket[]>(
-        'SELECT 1 FROM study_group_students WHERE group_id = ? AND student_id = ? LIMIT 1',
+        "SELECT 1 FROM study_group_students WHERE group_id = ? AND student_id = ? LIMIT 1",
         [groupId, studentId]
       );
 
@@ -629,9 +656,12 @@ export async function addStudentsToGroup(
 /**
  * Удалить слушателя из группы
  */
-export async function removeStudentFromGroup(groupId: string, studentId: string): Promise<boolean> {
+export async function removeStudentFromGroup(
+  groupId: string,
+  studentId: string
+): Promise<boolean> {
   const result = await executeQuery<ResultSetHeader>(
-    'DELETE FROM study_group_students WHERE group_id = ? AND student_id = ?',
+    "DELETE FROM study_group_students WHERE group_id = ? AND student_id = ?",
     [groupId, studentId]
   );
 
@@ -649,13 +679,13 @@ export async function transferStudent(
   return executeTransaction(async (connection: PoolConnection) => {
     // Удаляем из текущей группы
     await connection.execute(
-      'DELETE FROM study_group_students WHERE group_id = ? AND student_id = ?',
+      "DELETE FROM study_group_students WHERE group_id = ? AND student_id = ?",
       [fromGroupId, studentId]
     );
 
     // Проверяем, не добавлен ли уже в целевую группу
     const [existing] = await connection.execute<RowDataPacket[]>(
-      'SELECT 1 FROM study_group_students WHERE group_id = ? AND student_id = ? LIMIT 1',
+      "SELECT 1 FROM study_group_students WHERE group_id = ? AND student_id = ? LIMIT 1",
       [toGroupId, studentId]
     );
 
@@ -675,7 +705,9 @@ export async function transferStudent(
 /**
  * Получить все группы для выбора (для перемещения слушателя)
  */
-export async function getGroupsForSelect(excludeGroupId?: string): Promise<Array<{ id: string; code: string; courseName: string }>> {
+export async function getGroupsForSelect(
+  excludeGroupId?: string
+): Promise<Array<{ id: string; code: string; courseName: string }>> {
   let query = `
     SELECT sg.id, sg.code, c.name as course_name
     FROM study_groups sg
@@ -685,15 +717,15 @@ export async function getGroupsForSelect(excludeGroupId?: string): Promise<Array
   const params: any[] = [];
 
   if (excludeGroupId) {
-    query += ' AND sg.id != ?';
+    query += " AND sg.id != ?";
     params.push(excludeGroupId);
   }
 
-  query += ' ORDER BY sg.code';
+  query += " ORDER BY sg.code";
 
   const rows = await executeQuery<RowDataPacket[]>(query, params);
 
-  return rows.map(row => ({
+  return rows.map((row) => ({
     id: row.id,
     code: row.code,
     courseName: row.course_name,
@@ -710,14 +742,14 @@ export async function getGroupsStats(groupIds?: string[]): Promise<{
   completed: number;
   totalStudents: number;
 }> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split("T")[0];
 
   // Формируем условие фильтрации по groupIds
-  let groupCondition = '';
+  let groupCondition = "";
   let groupParams: string[] = [];
 
   if (groupIds && groupIds.length > 0) {
-    const placeholders = groupIds.map(() => '?').join(', ');
+    const placeholders = groupIds.map(() => "?").join(", ");
     groupCondition = `AND id IN (${placeholders})`;
     groupParams = groupIds;
   } else if (groupIds && groupIds.length === 0) {
@@ -741,16 +773,20 @@ export async function getGroupsStats(groupIds?: string[]): Promise<{
   );
 
   // Считаем студентов только в указанных группах
-  let studentsQuery = 'SELECT COUNT(DISTINCT student_id) as total FROM study_group_students';
+  let studentsQuery =
+    "SELECT COUNT(DISTINCT student_id) as total FROM study_group_students";
   let studentsParams: string[] = [];
 
   if (groupIds && groupIds.length > 0) {
-    const placeholders = groupIds.map(() => '?').join(', ');
+    const placeholders = groupIds.map(() => "?").join(", ");
     studentsQuery += ` WHERE group_id IN (${placeholders})`;
     studentsParams = groupIds;
   }
 
-  const [studentsResult] = await executeQuery<CountRow[]>(studentsQuery, studentsParams);
+  const [studentsResult] = await executeQuery<CountRow[]>(
+    studentsQuery,
+    studentsParams
+  );
 
   return {
     total: totalResult[0]?.total || 0,

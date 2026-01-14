@@ -1,0 +1,74 @@
+import type { PoolConnection } from "mysql2/promise";
+
+/**
+ * Миграция 046: Система архивации групп
+ *
+ * Добавляет поля для архивации учебных групп:
+ * - is_archived: флаг архивации
+ * - archived_at: дата архивации
+ * - archived_by: кто архивировал
+ *
+ * Также создаются индексы для оптимизации запросов
+ */
+
+export const description = "Добавление системы архивации групп";
+
+export const up = async (connection: PoolConnection): Promise<void> => {
+  console.log("🔄 Adding archive system to study_groups...");
+
+  // Добавляем поля для архивации
+  await connection.query(`
+    ALTER TABLE study_groups
+    ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'Флаг архивации группы',
+    ADD COLUMN archived_at DATETIME(3) NULL COMMENT 'Дата и время архивации',
+    ADD COLUMN archived_by VARCHAR(191) NULL COMMENT 'ID пользователя, который архивировал группу'
+  `);
+
+  // Добавляем внешний ключ для archived_by
+  await connection.query(`
+    ALTER TABLE study_groups
+    ADD CONSTRAINT fk_study_groups_archived_by
+      FOREIGN KEY (archived_by) REFERENCES users(id)
+      ON DELETE SET NULL ON UPDATE CASCADE
+  `);
+
+  // Создаем индексы для производительности
+  await connection.query(`
+    CREATE INDEX idx_study_groups_archived ON study_groups(is_archived)
+  `);
+
+  await connection.query(`
+    CREATE INDEX idx_study_groups_end_date_idx ON study_groups(end_date)
+  `);
+
+  console.log("✅ Archive system added to study_groups");
+};
+
+export const down = async (connection: PoolConnection): Promise<void> => {
+  console.log("🔄 Removing archive system from study_groups...");
+
+  // Удаляем индексы
+  await connection.query(`
+    DROP INDEX IF EXISTS idx_study_groups_archived ON study_groups
+  `);
+
+  await connection.query(`
+    DROP INDEX IF EXISTS idx_study_groups_end_date_idx ON study_groups
+  `);
+
+  // Удаляем внешний ключ
+  await connection.query(`
+    ALTER TABLE study_groups
+    DROP FOREIGN KEY IF EXISTS fk_study_groups_archived_by
+  `);
+
+  // Удаляем колонки
+  await connection.query(`
+    ALTER TABLE study_groups
+    DROP COLUMN IF EXISTS is_archived,
+    DROP COLUMN IF EXISTS archived_at,
+    DROP COLUMN IF EXISTS archived_by
+  `);
+
+  console.log("✅ Archive system removed from study_groups");
+};

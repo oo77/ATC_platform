@@ -3,15 +3,16 @@
  * PUT /api/groups/[id]
  */
 
-import { z } from 'zod';
-import { 
-  updateGroup, 
+import { defineEventHandler, createError, readBody, getRouterParam } from "h3";
+import { z } from "zod";
+import {
   getGroupById,
-  groupCodeExists, 
+  groupCodeExists,
   courseExists,
-  checkStudentConflicts 
-} from '../../repositories/groupRepository';
-import { logActivity } from '../../utils/activityLogger';
+  checkStudentConflicts,
+} from "../../repositories/groupRepository";
+import { executeQuery } from "../../utils/db";
+import { logActivity } from "../../utils/activityLogger";
 
 const updateGroupSchema = z.object({
   code: z.string().min(1).max(50).optional(),
@@ -21,127 +22,222 @@ const updateGroupSchema = z.object({
   classroom: z.string().max(100).nullable().optional(),
   description: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
+  isArchived: z.boolean().optional(), // Добавлено поле архивации
 });
 
 export default defineEventHandler(async (event) => {
+  // 1. Проверка авторизации
+  const user = event.context.user;
+  if (!user) {
+    throw createError({ statusCode: 401, message: "Требуется авторизация" });
+  }
+
+  // 2. Проверка прав (ADMIN или MODERATOR/MANAGER)
+  if (!["ADMIN", "MANAGER"].includes(user.role)) {
+    throw createError({ statusCode: 403, message: "Недостаточно прав" });
+  }
+
   try {
-    const id = getRouterParam(event, 'id');
-    
+    const id = getRouterParam(event, "id");
     if (!id) {
-      return {
-        success: false,
-        message: 'ID группы не указан',
-      };
+      throw createError({ statusCode: 400, message: "ID группы не указан" });
     }
 
     const body = await readBody(event);
-    
-    // Валидация данных
+
+    // 3. Валидация данных
     const validationResult = updateGroupSchema.safeParse(body);
     if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(e => ({
-        field: e.path.join('.'),
+      const errors = validationResult.error.errors.map((e) => ({
+        field: e.path.join("."),
         message: e.message,
       }));
-      
-      return {
-        success: false,
-        message: 'Ошибка валидации данных',
-        errors,
-      };
+      throw createError({
+        statusCode: 400,
+        message: "Ошибка валидации данных",
+        data: errors,
+      });
     }
 
     const data = validationResult.data;
 
-    // Получаем текущую группу
+    // 4. Получаем текущую группу
     const existingGroup = await getGroupById(id);
     if (!existingGroup) {
-      return {
-        success: false,
-        message: 'Группа не найдена',
-      };
+      throw createError({ statusCode: 404, message: "Группа не найдена" });
     }
 
-    // Проверяем даты, если они обновляются (допускается одинаковые даты для однодневных групп)
-    const newStartDate = data.startDate || existingGroup.startDate.toString().split('T')[0];
-    const newEndDate = data.endDate || existingGroup.endDate.toString().split('T')[0];
-    
+    // 5. Проверка прав на архивацию
+    if (data.isArchived !== undefined) {
+      if (user.role !== "ADMIN") {
+        throw createError({
+          statusCode: 403,
+          message:
+            "Только администратор может архивировать/восстанавливать группы",
+        });
+      }
+    }
+
+    // 6. Проверка прав на изменение дат (для завершенных групп)
+    if (data.startDate || data.endDate) {
+      const now = new Date();
+      // Используем строковое сравнение или приведение типов, так как EndDate может быть строкой или Date
+      const currentEndDate = new Date(existingGroup.endDate);
+
+      // Если группа завершена и пользователь не админ
+      if (now > currentEndDate && user.role !== "ADMIN") {
+        throw createError({
+          statusCode: 403,
+          message:
+            "Редактирование сроков завершенных групп доступно только администраторам. Вы можете изменять другие поля.",
+        });
+      }
+    }
+
+    // 7. Проверки бизнес-логики
+    const newStartDate =
+      data.startDate ||
+      (existingGroup.startDate instanceof Date
+        ? existingGroup.startDate.toISOString().split("T")[0]
+        : existingGroup.startDate);
+    const newEndDate =
+      data.endDate ||
+      (existingGroup.endDate instanceof Date
+        ? existingGroup.endDate.toISOString().split("T")[0]
+        : existingGroup.endDate);
+
+    // 7.1 Проверка корректности дат
     if (new Date(newEndDate) < new Date(newStartDate)) {
-      return {
-        success: false,
-        message: 'Дата окончания не может быть раньше даты начала',
-        errors: [{ field: 'endDate', message: 'Дата окончания не может быть раньше даты начала' }],
-      };
+      throw createError({
+        statusCode: 400,
+        message: "Дата окончания не может быть раньше даты начала",
+      });
     }
 
-    // Проверяем уникальность кода, если он меняется
+    // 7.2 Уникальность кода
     if (data.code && data.code !== existingGroup.code) {
       if (await groupCodeExists(data.code, id)) {
-        return {
-          success: false,
-          message: 'Группа с таким кодом уже существует',
-          errors: [{ field: 'code', message: 'Группа с таким кодом уже существует' }],
-        };
+        throw createError({
+          statusCode: 400,
+          message: "Группа с таким кодом уже существует",
+        });
       }
     }
 
-    // Проверяем существование курса, если он меняется
+    // 7.3 Существование курса
     if (data.courseId && data.courseId !== existingGroup.courseId) {
-      if (!await courseExists(data.courseId)) {
-        return {
-          success: false,
-          message: 'Выбранная учебная программа не найдена',
-          errors: [{ field: 'courseId', message: 'Учебная программа не найдена' }],
-        };
+      if (!(await courseExists(data.courseId))) {
+        throw createError({
+          statusCode: 400,
+          message: "Выбранная учебная программа не найдена",
+        });
       }
     }
 
-    // Если меняются даты и есть слушатели, проверяем конфликты
-    if ((data.startDate || data.endDate) && existingGroup.students && existingGroup.students.length > 0) {
-      const studentIds = existingGroup.students.map(s => s.studentId);
+    // 7.4 Конфликты участников
+    if (
+      (data.startDate || data.endDate) &&
+      existingGroup.students &&
+      existingGroup.students.length > 0
+    ) {
+      const studentIds = existingGroup.students.map((s) => s.studentId);
       const conflicts = await checkStudentConflicts(
         studentIds,
-        newStartDate,
-        newEndDate,
-        id // исключаем текущую группу
+        newStartDate as string,
+        newEndDate as string,
+        id
       );
 
       if (conflicts.length > 0) {
-        return {
-          success: false,
-          message: 'Изменение дат создаст конфликты для некоторых слушателей',
-          conflicts,
-        };
+        throw createError({
+          statusCode: 409,
+          message: "Изменение дат создаст конфликты для некоторых слушателей",
+          data: conflicts,
+        });
       }
     }
 
-    // Обновляем группу
-    const group = await updateGroup(id, data);
+    // 8. Обновление в БД
+    const updates: string[] = [];
+    const params: any[] = [];
 
-    // Логируем действие
+    if (data.code !== undefined)
+      updates.push("code = ?"), params.push(data.code);
+    if (data.courseId !== undefined)
+      updates.push("course_id = ?"), params.push(data.courseId);
+    if (data.startDate !== undefined)
+      updates.push("start_date = ?"), params.push(data.startDate);
+    if (data.endDate !== undefined)
+      updates.push("end_date = ?"), params.push(data.endDate);
+    if (data.classroom !== undefined)
+      updates.push("classroom = ?"), params.push(data.classroom);
+    if (data.description !== undefined)
+      updates.push("description = ?"), params.push(data.description);
+    if (data.isActive !== undefined)
+      updates.push("is_active = ?"), params.push(data.isActive ? 1 : 0);
+
+    // Логика архивации
+    if (data.isArchived !== undefined) {
+      updates.push("is_archived = ?");
+      params.push(data.isArchived ? 1 : 0);
+
+      if (data.isArchived) {
+        updates.push("archived_at = NOW(3)");
+        updates.push("archived_by = ?");
+        params.push(user.id);
+      } else {
+        updates.push("archived_at = NULL");
+        updates.push("archived_by = NULL");
+      }
+    }
+
+    updates.push("updated_at = NOW(3)");
+
+    if (updates.length > 0) {
+      params.push(id);
+      await executeQuery(
+        `UPDATE study_groups SET ${updates.join(", ")} WHERE id = ?`,
+        params
+      );
+    }
+
+    // 9. Логирование
     await logActivity(
       event,
-      'UPDATE',
-      'GROUP',
+      data.isArchived
+        ? "ARCHIVE"
+        : data.isArchived === false
+        ? "RESTORE"
+        : "UPDATE", // кастомные типы действий, если поддерживаются, или просто UPDATE
+      "GROUP",
       id,
-      group.code,
-      { 
+      data.code || existingGroup.code,
+      {
         updatedFields: Object.keys(data),
-        courseId: group.courseId 
+        isArchived: data.isArchived,
       }
     );
 
+    // 10. Возврат обновленной группы
+    const updatedGroup = await getGroupById(id);
+
     return {
       success: true,
-      message: 'Группа успешно обновлена',
-      group,
+      message: data.isArchived
+        ? "Группа архивирована"
+        : data.isArchived === false
+        ? "Группа восстановлена"
+        : "Группа успешно обновлена",
+      group: updatedGroup,
     };
-  } catch (error) {
-    console.error('Ошибка обновления группы:', error);
-    
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Ошибка при обновлении группы',
-    };
+  } catch (error: any) {
+    console.error("Ошибка обновления группы:", error);
+    // Пробрасываем h3 error или создаем новую
+    if (error.statusCode) throw error;
+
+    throw createError({
+      statusCode: 500,
+      message: error.message || "Ошибка при обновлении группы",
+    });
   }
 });
