@@ -58,7 +58,7 @@ export default defineTask({
             for (const student of students) {
                 // 3. Проверяем, сдал ли студент этот тест
                 const [session] = await executeQuery(`
-          SELECT id, passed, best_score 
+          SELECT id, passed 
           FROM test_sessions 
           WHERE assignment_id = ? AND student_id = ? AND status = 'completed' AND passed = 1
           LIMIT 1

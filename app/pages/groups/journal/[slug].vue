@@ -148,6 +148,51 @@
                 </p>
               </div>
             </div>
+
+            <!-- Кнопка скачивания ведомости -->
+            <button
+              v-if="columns.length > 0"
+              @click="downloadReport"
+              :disabled="generatingPdf"
+              class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Скачать ведомость в PDF"
+            >
+              <svg
+                v-if="!generatingPdf"
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              <svg
+                v-else
+                class="w-5 h-5 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              <span class="hidden sm:inline">{{ generatingPdf ? 'Генерация...' : 'Ведомость' }}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -517,7 +562,7 @@
               >
                 <!-- Имя студента -->
                 <td
-                  class="sticky left-0 z-10 bg-white dark:bg-boxdark px-4 py-3 whitespace-nowrap"
+                  class="sticky left-0 z-10 bg-white dark:bg-boxdark px-4 py-3"
                 >
                   <div class="flex items-center gap-3">
                     <div
@@ -526,7 +571,7 @@
                       {{ getInitials(row.student.fullName) }}
                     </div>
                     <span
-                      class="font-medium text-gray-900 dark:text-white text-sm truncate max-w-[150px]"
+                      class="font-medium text-gray-900 dark:text-white text-sm"
                       :title="row.student.fullName"
                     >
                       {{ row.student.fullName }}
@@ -878,6 +923,7 @@ import {
   MARKING_STATUS_COLORS,
   type MarkingAccessCheckResult,
 } from "~/types/attendanceMarking";
+import { generateGroupReport } from "~/utils/pdf/generateGroupReport";
 
 definePageMeta({
   layout: "default",
@@ -983,6 +1029,10 @@ const markingAccess = ref<MarkingAccessCheckResult | null>(null);
 const showLateMarkingModal = ref(false);
 const lateMarkingReason = ref("");
 const accessLoading = ref(false);
+const courseName = ref(""); // Название курса
+
+// PDF generation state
+const generatingPdf = ref(false);
 
 // Computed - выбранное занятие
 const selectedEvent = computed(() => {
@@ -1036,11 +1086,17 @@ const loadMeta = async () => {
     // Загружаем информацию о группе
     const groupResponse = await authFetch<{
       success: boolean;
-      group?: { code: string };
+      group?: { 
+        code: string;
+        course?: { name: string };
+      };
     }>(`/api/groups/${groupId.value}`);
 
     if (groupResponse.success && groupResponse.group) {
       groupCode.value = groupResponse.group.code;
+      if (groupResponse.group.course?.name) {
+        courseName.value = groupResponse.group.course.name;
+      }
     }
 
     // Загружаем дисциплины группы (имеют инструкторов)
@@ -1196,6 +1252,42 @@ const handleRequireApproval = (data: {
 
 const handleFinalGradeUpdate = async () => {
   await loadJournal();
+};
+
+// PDF Report Generation
+const downloadReport = async () => {
+  if (generatingPdf.value) return;
+
+  try {
+    generatingPdf.value = true;
+
+    // Определяем даты начала и окончания
+    const dates = columns.value.map(col => col.scheduleEvent.date).sort();
+    const startDate = dates[0];
+    const endDate = dates[dates.length - 1];
+
+    // Подготавливаем данные для PDF
+    const reportData = {
+      groupCode: groupCode.value,
+      disciplineName: disciplineName.value,
+      courseName: courseName.value,
+      instructorName: instructorName.value,
+      columns: columns.value,
+      rows: rows.value,
+      startDate,
+      endDate,
+    };
+
+    // Генерируем PDF
+    await generateGroupReport(reportData);
+
+    toast.success('Ведомость успешно сформирована');
+  } catch (error: any) {
+    console.error('Error generating PDF:', error);
+    toast.error(error.message || 'Ошибка при формировании ведомости');
+  } finally {
+    generatingPdf.value = false;
+  }
 };
 
 // Bulk operations
