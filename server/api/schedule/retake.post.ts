@@ -143,9 +143,9 @@ export default defineEventHandler(async (event) => {
             retakeEventId,
             retakeTitle,
             originalEvent.description ||
-            `Пересдача занятия от ${new Date(body.date).toLocaleDateString(
-              "ru-RU"
-            )}`,
+              `Пересдача занятия от ${new Date(body.date).toLocaleDateString(
+                "ru-RU"
+              )}`,
             originalEvent.group_id,
             originalEvent.discipline_id,
             body.instructorId || originalEvent.instructor_id,
@@ -228,7 +228,7 @@ export default defineEventHandler(async (event) => {
     await logActivity(
       event,
       "CREATE",
-      "SCHEDULE_EVENT",
+      "SCHEDULE",
       result.retakeEventId,
       result.title,
       {

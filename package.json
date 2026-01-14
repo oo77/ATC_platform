@@ -8,6 +8,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
+    "typecheck": "nuxi typecheck",
     "db:migrate": "tsx server/database/migrate.ts migrate",
     "db:rollback": "tsx server/database/migrate.ts rollback",
     "db:rollback:all": "tsx server/database/migrate.ts rollback:all",

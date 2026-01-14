@@ -589,6 +589,13 @@ const transformEventForCalendar = (event: ScheduleEvent): EventInput => {
     classNames.push("event-retake");
   }
 
+  const isArchivedGroup = event.group?.isArchived;
+
+  if (isArchivedGroup) {
+    titleWithClassroom = `🔒 ${titleWithClassroom}`;
+    classNames.push("opacity-75", "cursor-not-allowed");
+  }
+
   return {
     id: event.id,
     title: titleWithClassroom,
@@ -598,6 +605,9 @@ const transformEventForCalendar = (event: ScheduleEvent): EventInput => {
     backgroundColor: colors.bg,
     borderColor: colors.border,
     textColor: colors.text,
+    editable: !isArchivedGroup,
+    startEditable: !isArchivedGroup,
+    durationEditable: !isArchivedGroup,
     // Добавляем класс с data-атрибутом для CSS-стилизации полосы группы
     classNames: classNames,
     extendedProps: {
@@ -605,6 +615,7 @@ const transformEventForCalendar = (event: ScheduleEvent): EventInput => {
       groupId: event.groupId || undefined,
       groupCode: event.group?.code,
       groupColor: groupColor,
+      isGroupArchived: isArchivedGroup,
       instructorId: event.instructorId || undefined,
       instructorName: event.instructor?.fullName,
       classroomId: event.classroomId || undefined,
@@ -702,6 +713,16 @@ const onEventDrop = async (info: EventDropArg) => {
   const event = events.value.find((e) => e.id === info.event.id);
   if (!event) return;
 
+  if (event.group?.isArchived) {
+    info.revert();
+    notification.show({
+      type: "error",
+      title: "Ошибка",
+      message: "Нельзя изменять события архивной группы",
+    });
+    return;
+  }
+
   // Проверяем, был ли зажат CTRL - тогда дублируем вместо перемещения
   const isCopyMode = info.jsEvent.ctrlKey || info.jsEvent.metaKey;
 
@@ -781,6 +802,16 @@ const onEventDrop = async (info: EventDropArg) => {
 const onEventResize = async (info: EventResizeDoneArg) => {
   const event = events.value.find((e) => e.id === info.event.id);
   if (!event) return;
+
+  if (event.group?.isArchived) {
+    info.revert();
+    notification.show({
+      type: "error",
+      title: "Ошибка",
+      message: "Нельзя изменять события архивной группы",
+    });
+    return;
+  }
 
   try {
     await authFetch(`/api/schedule/${event.id}`, {

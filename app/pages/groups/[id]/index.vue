@@ -119,7 +119,7 @@
             </NuxtLink>
 
             <UiButton
-              v-if="canEditGroups"
+              v-if="canEditGroups && !group.isArchived"
               variant="outline"
               @click="showEditModal = true"
             >
@@ -421,7 +421,7 @@
               Документы группы
             </h3>
             <UiButton
-              v-if="canEditGroups"
+              v-if="canEditGroups && !group.isArchived"
               variant="outline"
               size="sm"
               @click="showUploadReportModal = true"
@@ -550,7 +550,7 @@
               </div>
             </div>
             <UiButton
-              v-if="canManageGroupStudents"
+              v-if="canManageGroupStudents && !group.isArchived"
               @click="showManageStudentsModal = true"
             >
               Управление слушателями

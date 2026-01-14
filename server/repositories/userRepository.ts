@@ -2,17 +2,17 @@
  * Репозиторий для работы с пользователями
  */
 
-import { executeQuery } from '../utils/db';
-import { v4 as uuidv4 } from 'uuid';
-import bcrypt from 'bcryptjs';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
+import { executeQuery } from "../utils/db";
+import { v4 as uuidv4 } from "uuid";
+import bcrypt from "bcryptjs";
+import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
 export interface User {
   id: string;
   email: string;
   password: string;
   name: string;
-  role: 'ADMIN' | 'MANAGER' | 'TEACHER' | 'STUDENT';
+  role: "ADMIN" | "MANAGER" | "TEACHER" | "STUDENT";
   phone?: string | null;
   workplace?: string | null;
   position?: string | null;
@@ -26,7 +26,7 @@ interface UserRow extends RowDataPacket {
   email: string;
   password_hash: string;
   name: string;
-  role: 'ADMIN' | 'MANAGER' | 'TEACHER' | 'STUDENT';
+  role: "ADMIN" | "MANAGER" | "TEACHER" | "STUDENT";
   phone: string | null;
   workplace: string | null;
   position: string | null;
@@ -39,7 +39,7 @@ export interface CreateUserInput {
   email: string;
   password: string; // Уже хэшированный пароль
   name: string;
-  role: 'ADMIN' | 'MANAGER' | 'TEACHER' | 'STUDENT';
+  role: "ADMIN" | "MANAGER" | "TEACHER" | "STUDENT";
   phone?: string;
   workplace?: string;
   position?: string;
@@ -50,27 +50,30 @@ export interface CreateUserInput {
  * Генерация безопасного пароля
  */
 export function generateSecurePassword(length: number = 12): string {
-  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const lowercase = 'abcdefghjkmnpqrstuvwxyz';
-  const numbers = '23456789';
-  const special = '!@#$%&*';
-  
-  let password = '';
-  
+  const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lowercase = "abcdefghjkmnpqrstuvwxyz";
+  const numbers = "23456789";
+  const special = "!@#$%&*";
+
+  let password = "";
+
   // Гарантируем наличие каждого типа символов
   password += uppercase[Math.floor(Math.random() * uppercase.length)];
   password += lowercase[Math.floor(Math.random() * lowercase.length)];
   password += numbers[Math.floor(Math.random() * numbers.length)];
   password += special[Math.floor(Math.random() * special.length)];
-  
+
   // Добавляем остальные символы
   const allChars = uppercase + lowercase + numbers + special;
   for (let i = password.length; i < length; i++) {
     password += allChars[Math.floor(Math.random() * allChars.length)];
   }
-  
+
   // Перемешиваем пароль
-  return password.split('').sort(() => Math.random() - 0.5).join('');
+  return password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("");
 }
 
 /**
@@ -83,15 +86,18 @@ export async function hashPassword(password: string): Promise<string> {
 /**
  * Проверка существования пользователя с указанным email
  */
-export async function userEmailExists(email: string, excludeId?: string): Promise<boolean> {
-  let query = 'SELECT id FROM users WHERE email = ?';
+export async function userEmailExists(
+  email: string,
+  excludeId?: string
+): Promise<boolean> {
+  let query = "SELECT id FROM users WHERE email = ?";
   const params: any[] = [email];
-  
+
   if (excludeId) {
-    query += ' AND id != ?';
+    query += " AND id != ?";
     params.push(excludeId);
   }
-  
+
   const rows = await executeQuery<UserRow[]>(query, params);
   return rows.length > 0;
 }
@@ -100,16 +106,32 @@ export async function userEmailExists(email: string, excludeId?: string): Promis
  * Получение пользователя по ID
  */
 export async function getUserById(id: string): Promise<User | null> {
-  const rows = await executeQuery<UserRow[]>('SELECT * FROM users WHERE id = ? LIMIT 1', [id]);
-  return rows.length > 0 ? rows[0] : null;
+  const rows = await executeQuery<UserRow[]>(
+    "SELECT * FROM users WHERE id = ? LIMIT 1",
+    [id]
+  );
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  return {
+    ...row,
+    password: row.password_hash, // Map hash to password property required by User interface
+  } as unknown as User;
 }
 
 /**
  * Получение пользователя по email
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
-  const rows = await executeQuery<UserRow[]>('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
-  return rows.length > 0 ? rows[0] : null;
+  const rows = await executeQuery<UserRow[]>(
+    "SELECT * FROM users WHERE email = ? LIMIT 1",
+    [email]
+  );
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  return {
+    ...row,
+    password: row.password_hash,
+  } as unknown as User;
 }
 
 /**
@@ -118,7 +140,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 export async function createUser(data: CreateUserInput): Promise<User> {
   const id = uuidv4();
   const now = new Date();
-  
+
   await executeQuery(
     `INSERT INTO users (id, email, password_hash, name, role, phone, workplace, position, pinfl, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -136,7 +158,7 @@ export async function createUser(data: CreateUserInput): Promise<User> {
       now,
     ]
   );
-  
+
   return {
     id,
     email: data.email,
@@ -155,9 +177,12 @@ export async function createUser(data: CreateUserInput): Promise<User> {
 /**
  * Обновление пароля пользователя
  */
-export async function updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
+export async function updateUserPassword(
+  userId: string,
+  hashedPassword: string
+): Promise<void> {
   await executeQuery(
-    'UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?',
+    "UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?",
     [hashedPassword, new Date(), userId]
   );
 }
@@ -166,50 +191,50 @@ export async function updateUserPassword(userId: string, hashedPassword: string)
  * Обновление данных пользователя
  */
 export async function updateUser(
-  id: string, 
-  data: Partial<Omit<CreateUserInput, 'password' | 'email'>>
+  id: string,
+  data: Partial<Omit<CreateUserInput, "password" | "email">>
 ): Promise<User | null> {
   const fields: string[] = [];
   const values: any[] = [];
-  
+
   if (data.name !== undefined) {
-    fields.push('name = ?');
+    fields.push("name = ?");
     values.push(data.name);
   }
   if (data.role !== undefined) {
-    fields.push('role = ?');
+    fields.push("role = ?");
     values.push(data.role);
   }
   if (data.phone !== undefined) {
-    fields.push('phone = ?');
+    fields.push("phone = ?");
     values.push(data.phone || null);
   }
   if (data.workplace !== undefined) {
-    fields.push('workplace = ?');
+    fields.push("workplace = ?");
     values.push(data.workplace || null);
   }
   if (data.position !== undefined) {
-    fields.push('position = ?');
+    fields.push("position = ?");
     values.push(data.position || null);
   }
   if (data.pinfl !== undefined) {
-    fields.push('pinfl = ?');
+    fields.push("pinfl = ?");
     values.push(data.pinfl || null);
   }
-  
+
   if (fields.length === 0) {
     return getUserById(id);
   }
-  
-  fields.push('updated_at = ?');
+
+  fields.push("updated_at = ?");
   values.push(new Date());
   values.push(id);
-  
+
   await executeQuery(
-    `UPDATE users SET ${fields.join(', ')} WHERE id = ?`,
+    `UPDATE users SET ${fields.join(", ")} WHERE id = ?`,
     values
   );
-  
+
   return getUserById(id);
 }
 
@@ -217,6 +242,9 @@ export async function updateUser(
  * Удаление пользователя
  */
 export async function deleteUser(id: string): Promise<boolean> {
-  const result = await executeQuery<ResultSetHeader>('DELETE FROM users WHERE id = ?', [id]);
+  const result = await executeQuery<ResultSetHeader>(
+    "DELETE FROM users WHERE id = ?",
+    [id]
+  );
   return result.affectedRows > 0;
 }

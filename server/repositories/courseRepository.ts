@@ -121,6 +121,9 @@ export interface UpdateCourseInput {
   certificateTemplateId?: string | null;
   certificateValidityMonths?: number | null;
   isActive?: boolean;
+  isArchived?: boolean;
+  archivedAt?: Date | null;
+  archivedBy?: string | null;
 }
 
 export interface CreateDisciplineInput {
@@ -646,6 +649,18 @@ export async function updateCourse(
   if (data.isActive !== undefined) {
     updates.push("is_active = ?");
     params.push(data.isActive);
+  }
+  if (data.isArchived !== undefined) {
+    updates.push("is_archived = ?");
+    params.push(data.isArchived);
+  }
+  if (data.archivedAt !== undefined) {
+    updates.push("archived_at = ?");
+    params.push(data.archivedAt);
+  }
+  if (data.archivedBy !== undefined) {
+    updates.push("archived_by = ?");
+    params.push(data.archivedBy);
   }
 
   if (updates.length === 0) return existing;

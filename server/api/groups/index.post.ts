@@ -10,10 +10,10 @@ import { saveGroupReportFile } from "../../utils/groupFileStorage";
 import { logActivity } from "../../utils/activityLogger";
 import {
   groupCodeExists,
-  courseExists,
   checkStudentConflicts,
   getGroupById,
 } from "../../repositories/groupRepository";
+import { getCourseById } from "../../repositories/courseRepository";
 import { v4 as uuidv4 } from "uuid";
 import type { PoolConnection } from "mysql2/promise";
 
@@ -117,10 +117,18 @@ export default defineEventHandler(async (event) => {
   }
 
   // Проверка существования курса
-  if (!(await courseExists(groupData.courseId))) {
+  const course = await getCourseById(groupData.courseId, false); // Импорт нужно добавить или использовать существующий courseExists, но нам нужен статус архивации
+  if (!course) {
     throw createError({
       statusCode: 400,
       message: "Выбранная учебная программа не найдена",
+    });
+  }
+
+  if (course.isArchived) {
+    throw createError({
+      statusCode: 400,
+      message: "Нельзя создать группу на основе архивной учебной программы",
     });
   }
 

@@ -2,16 +2,16 @@
  * Репозиторий для работы с журналом действий в MySQL
  */
 
-import { executeQuery } from '../utils/db';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
+import { executeQuery } from "../utils/db";
+import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import type {
   ActivityLog,
   CreateActivityLogInput,
   ActivityLogPaginationParams,
   PaginatedActivityLogs,
   ActionType,
-  EntityType
-} from '../types/activityLog';
+  EntityType,
+} from "../types/activityLog";
 
 // ============================================================================
 // ROW TYPES
@@ -20,8 +20,8 @@ import type {
 interface ActivityLogRow extends RowDataPacket {
   id: number;
   user_id: string;
-  user_name?: string;      // Из JOIN с users
-  user_email?: string;     // Из JOIN с users
+  user_name?: string; // Из JOIN с users
+  user_email?: string; // Из JOIN с users
   action_type: ActionType;
   entity_type: EntityType;
   entity_id: string | null;
@@ -45,7 +45,8 @@ function mapRowToActivityLog(row: ActivityLogRow): ActivityLog {
 
   if (row.details) {
     try {
-      details = typeof row.details === 'string' ? JSON.parse(row.details) : row.details;
+      details =
+        typeof row.details === "string" ? JSON.parse(row.details) : row.details;
     } catch {
       details = null;
     }
@@ -74,11 +75,13 @@ function mapRowToActivityLog(row: ActivityLogRow): ActivityLog {
 /**
  * Создать запись в журнале действий
  */
-export async function createActivityLog(data: CreateActivityLogInput): Promise<ActivityLog> {
+export async function createActivityLog(
+  data: CreateActivityLogInput
+): Promise<ActivityLog> {
   const detailsJson = data.details ? JSON.stringify(data.details) : null;
 
   // Отладка: логируем что именно пытаемся записать
-  console.log('[createActivityLog] Attempting to insert:', {
+  console.log("[createActivityLog] Attempting to insert:", {
     userId: data.userId,
     actionType: data.actionType,
     entityType: data.entityType,
@@ -102,7 +105,7 @@ export async function createActivityLog(data: CreateActivityLogInput): Promise<A
   );
 
   const rows = await executeQuery<ActivityLogRow[]>(
-    'SELECT * FROM activity_logs WHERE id = ?',
+    "SELECT * FROM activity_logs WHERE id = ?",
     [result.insertId]
   );
 
@@ -130,33 +133,34 @@ export async function getActivityLogsPaginated(
   const queryParams: any[] = [];
 
   if (userId) {
-    conditions.push('al.user_id = ?');
+    conditions.push("al.user_id = ?");
     queryParams.push(userId);
   }
 
   if (actionType) {
-    conditions.push('al.action_type = ?');
+    conditions.push("al.action_type = ?");
     queryParams.push(actionType);
   }
 
   if (entityType) {
-    conditions.push('al.entity_type = ?');
+    conditions.push("al.entity_type = ?");
     queryParams.push(entityType);
   }
 
   if (startDate) {
-    conditions.push('al.created_at >= ?');
+    conditions.push("al.created_at >= ?");
     const date = startDate instanceof Date ? startDate : new Date(startDate);
     queryParams.push(date);
   }
 
   if (endDate) {
-    conditions.push('al.created_at <= ?');
+    conditions.push("al.created_at <= ?");
     const date = endDate instanceof Date ? endDate : new Date(endDate);
     queryParams.push(date);
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // Получаем общее количество
   const countQuery = `
@@ -225,12 +229,14 @@ export async function getRecentActivityByUserId(
  * Удалить старые записи журнала
  * @param daysToKeep - количество дней для хранения (по умолчанию 365)
  */
-export async function deleteOldActivityLogs(daysToKeep: number = 365): Promise<number> {
+export async function deleteOldActivityLogs(
+  daysToKeep: number = 365
+): Promise<number> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
   const result = await executeQuery<ResultSetHeader>(
-    'DELETE FROM activity_logs WHERE created_at < ?',
+    "DELETE FROM activity_logs WHERE created_at < ?",
     [cutoffDate]
   );
 
@@ -247,13 +253,15 @@ export async function getUserActivityStats(userId: string): Promise<{
 }> {
   // Общее количество действий
   const totalRows = await executeQuery<CountRow[]>(
-    'SELECT COUNT(*) as total FROM activity_logs WHERE user_id = ?',
+    "SELECT COUNT(*) as total FROM activity_logs WHERE user_id = ?",
     [userId]
   );
   const totalActions = totalRows[0]?.total || 0;
 
   // Действия по типам
-  const actionRows = await executeQuery<(RowDataPacket & { action_type: ActionType; count: number })[]>(
+  const actionRows = await executeQuery<
+    (RowDataPacket & { action_type: ActionType; count: number })[]
+  >(
     `SELECT action_type, COUNT(*) as count 
      FROM activity_logs 
      WHERE user_id = ? 
@@ -279,6 +287,9 @@ export async function getUserActivityStats(userId: string): Promise<{
     RESET_PASSWORD: 0,
     ASSIGN: 0,
     UNASSIGN: 0,
+    ARCHIVE: 0,
+    RESTORE: 0,
+    UPLOAD: 0,
   };
 
   for (const row of actionRows) {

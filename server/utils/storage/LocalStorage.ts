@@ -205,6 +205,7 @@ export class LocalStorage implements IStorage {
     try {
       // Попытка использовать sharp для извлечения метаданных
       // Если sharp не установлен, возвращаем undefined
+      // @ts-ignore
       const sharp = await import("sharp").catch(() => null);
 
       if (sharp) {

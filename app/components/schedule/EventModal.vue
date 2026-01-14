@@ -819,6 +819,7 @@ const selectedPairs = ref<number[]>([]);
 interface StudentOption {
   id: string;
   label: string;
+  groupId?: string;
 }
 
 const groupStudents = ref<StudentOption[]>([]);
@@ -906,15 +907,6 @@ const selectedDiscipline = computed(() => {
 
 const disciplineInstructors = computed(() => {
   return selectedDiscipline.value?.instructors || [];
-});
-
-// Первый тест дисциплины (для автоматического режима)
-// This computed property seems unused and related to a previous feature.
-// Keeping it for now as per instruction to not make unrelated edits.
-const disciplineTests = ref([]); // Assuming this was meant to be a ref
-const loadingTests = ref(false); // Assuming this was meant to be a ref
-const firstDisciplineTest = computed(() => {
-  return disciplineTests.value.length > 0 ? disciplineTests.value[0] : null;
 });
 
 const computedTimeRange = computed(() => {
@@ -1215,36 +1207,6 @@ const handleDisciplineChange = () => {
 // Загрузка тестов дисциплины
 // This function seems unused and related to a previous feature.
 // Keeping it for now as per instruction to not make unrelated edits.
-const loadDisciplineTests = async (disciplineId: string) => {
-  if (!disciplineId) {
-    disciplineTests.value = [];
-    return;
-  }
-
-  console.log("[EventModal] Загрузка тестов для дисциплины:", disciplineId);
-
-  loadingTests.value = true;
-  try {
-    const response = await authFetch<{
-      success: boolean;
-      tests: any[]; // Changed from DisciplineTest[] to any[] as DisciplineTest is not defined
-    }>(`/api/discipline-tests?discipline_id=${disciplineId}`);
-    console.log("[EventModal] Ответ API discipline-tests:", response);
-
-    if (response.success) {
-      disciplineTests.value = response.tests || [];
-      console.log(
-        "[EventModal] Загружено тестов:",
-        disciplineTests.value.length
-      );
-    }
-  } catch (err) {
-    console.error("[EventModal] Error loading discipline tests:", err);
-    disciplineTests.value = [];
-  } finally {
-    loadingTests.value = false;
-  }
-};
 
 // Обработчик смены типа события
 const handleEventTypeChange = () => {
@@ -1685,7 +1647,7 @@ const initForm = () => {
   errors.value = {};
 
   // Сброс данных о тестах
-  disciplineTests.value = [];
+
   isRetake.value = false;
   form.value.allowedStudentIds = [];
 
@@ -1789,6 +1751,8 @@ const initForm = () => {
       startTime: hasTimeSelection ? startTimeStr : "",
       endTime: hasTimeSelection ? endTimeStr : "",
       description: "",
+      testTemplateId: "",
+      allowedStudentIds: [],
     };
 
     disciplines.value = [];

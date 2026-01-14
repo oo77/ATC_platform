@@ -14,6 +14,19 @@ import type {
 // ИНТЕРФЕЙСЫ
 // ============================================================================
 
+interface ConflictRow extends RowDataPacket {
+  student_id: string;
+  student_name: string;
+  group_id: string;
+  group_code: string;
+  start_date: Date;
+  end_date: Date;
+}
+
+interface CountRow extends RowDataPacket {
+  total: number;
+}
+
 /**
  * Форматирует дату в строку YYYY-MM-DD без сдвига временной зоны
  */
@@ -120,347 +133,85 @@ export interface UpdateGroupInput {
   classroom?: string | null;
   description?: string | null;
   isActive?: boolean;
+  isArchived?: boolean;
+  archivedAt?: Date | null;
+  archivedBy?: string | null;
 }
 
 // ============================================================================
-// ROW TYPES
+// MAPPING FUNCTIONS & CRUD
 // ============================================================================
 
-interface StudyGroupRow extends RowDataPacket {
-  id: string;
-  code: string;
-  course_id: string;
-  start_date: Date;
-  end_date: Date;
-  classroom: string | null;
-  description: string | null;
-  is_active: boolean;
-  is_archived?: number | boolean; // Из БД может прийти 0/1 или boolean
-  created_at: Date;
-  updated_at: Date;
-  // Joined fields
-  course_name?: string;
-  course_short_name?: string;
-  course_code?: string;
-  course_total_hours?: number;
-  course_certificate_template_id?: string | null;
-  course_certificate_validity_months?: number | null;
-  student_count?: number;
-}
-
-interface GroupStudentRow extends RowDataPacket {
-  id: string;
-  group_id: string;
-  student_id: string;
-  enrolled_at: Date;
-  // Joined fields
-  student_full_name?: string;
-  student_pinfl?: string;
-  student_organization?: string;
-  student_department?: string | null;
-  student_position?: string;
-}
-
-interface CountRow extends RowDataPacket {
-  total: number;
-}
-
-interface ConflictRow extends RowDataPacket {
-  student_id: string;
-  student_name: string;
-  group_id: string;
-  group_code: string;
-  start_date: Date;
-  end_date: Date;
-}
-
-// ============================================================================
-// MAPPING FUNCTIONS
-// ============================================================================
-
-function mapRowToGroup(row: StudyGroupRow): StudyGroup {
-  const group: StudyGroup = {
+function mapGroupRow(row: any): StudyGroup {
+  return {
     id: row.id,
     code: row.code,
     courseId: row.course_id,
-    // Форматируем даты как строки YYYY-MM-DD для избежания сдвига при сериализации
-    startDate: formatDateLocal(row.start_date),
-    endDate: formatDateLocal(row.end_date),
+    startDate: row.start_date,
+    endDate: row.end_date,
     classroom: row.classroom,
     description: row.description,
     isActive: Boolean(row.is_active),
     isArchived: Boolean(row.is_archived),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    course: row.course_name
+      ? {
+          id: row.course_id,
+          name: row.course_name,
+          shortName: row.course_short_name,
+          code: row.course_code,
+          totalHours: row.course_total_hours,
+          certificateTemplateId: row.certificate_template_id,
+          certificateValidityMonths: row.certificate_validity_months,
+        }
+      : null,
   };
-
-  if (row.course_name) {
-    group.course = {
-      id: row.course_id,
-      name: row.course_name,
-      shortName: row.course_short_name || "",
-      code: row.course_code || "",
-      totalHours: row.course_total_hours || 0,
-      certificateTemplateId: row.course_certificate_template_id || null,
-      certificateValidityMonths: row.course_certificate_validity_months || null,
-    };
-  }
-
-  if (row.student_count !== undefined) {
-    group.studentCount = row.student_count;
-  }
-
-  return group;
-}
-
-function mapRowToGroupStudent(row: GroupStudentRow): GroupStudent {
-  const gs: GroupStudent = {
-    id: row.id,
-    groupId: row.group_id,
-    studentId: row.student_id,
-    enrolledAt: row.enrolled_at,
-  };
-
-  if (row.student_full_name) {
-    gs.student = {
-      id: row.student_id,
-      fullName: row.student_full_name,
-      pinfl: row.student_pinfl || "",
-      organization: row.student_organization || "",
-      department: row.student_department || null,
-      position: row.student_position || "",
-    };
-  }
-
-  return gs;
-}
-
-// ============================================================================
-// ОСНОВНЫЕ ОПЕРАЦИИ
-// ============================================================================
-
-/**
- * Получить группы с пагинацией и фильтрами
- */
-export async function getGroups(
-  params: PaginationParams = {}
-): Promise<PaginatedResult<StudyGroup>> {
-  const { page = 1, limit = 10, filters = {} } = params;
-
-  const conditions: string[] = [];
-  const queryParams: any[] = [];
-
-  // Поиск по коду или описанию
-  if (filters.search) {
-    conditions.push(
-      "(sg.code LIKE ? OR sg.description LIKE ? OR c.name LIKE ?)"
-    );
-    const searchPattern = `%${filters.search}%`;
-    queryParams.push(searchPattern, searchPattern, searchPattern);
-  }
-
-  // Фильтр по курсу
-  if (filters.courseId) {
-    conditions.push("sg.course_id = ?");
-    queryParams.push(filters.courseId);
-  }
-
-  // Фильтр по статусу
-  if (filters.isActive !== undefined) {
-    conditions.push("sg.is_active = ?");
-    queryParams.push(filters.isActive);
-  }
-
-  // Фильтр по архивации (по умолчанию FALSE, если не передан)
-  if (filters.isArchived !== undefined) {
-    conditions.push("sg.is_archived = ?");
-    queryParams.push(filters.isArchived);
-  } else {
-    // По умолчанию скрываем архивированные группы
-    conditions.push("sg.is_archived = FALSE");
-  }
-
-  // Фильтр по дате начала (от)
-  if (filters.startDateFrom) {
-    conditions.push("sg.start_date >= ?");
-    queryParams.push(filters.startDateFrom);
-  }
-
-  // Фильтр по дате начала (до)
-  if (filters.startDateTo) {
-    conditions.push("sg.start_date <= ?");
-    queryParams.push(filters.startDateTo);
-  }
-
-  // Фильтр по конкретным ID групп (для TEACHER)
-  if (filters.groupIds && filters.groupIds.length > 0) {
-    const placeholders = filters.groupIds.map(() => "?").join(", ");
-    conditions.push(`sg.id IN (${placeholders})`);
-    queryParams.push(...filters.groupIds);
-  } else if (filters.groupIds && filters.groupIds.length === 0) {
-    // Если передан пустой массив — возвращаем пустой результат
-    return {
-      data: [],
-      total: 0,
-      page,
-      limit,
-      totalPages: 0,
-    };
-  }
-
-  const whereClause =
-    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-
-  // Получаем общее количество
-  const countQuery = `
-    SELECT COUNT(*) as total 
-    FROM study_groups sg
-    LEFT JOIN courses c ON sg.course_id = c.id
-    ${whereClause}
-  `;
-  const countResult = await executeQuery<CountRow[]>(countQuery, queryParams);
-  const total = countResult[0]?.total || 0;
-
-  // Получаем данные с пагинацией
-  const offset = (page - 1) * limit;
-  const dataQuery = `
-    SELECT 
-      sg.*,
-      c.name as course_name,
-      c.short_name as course_short_name,
-      c.code as course_code,
-      c.total_hours as course_total_hours,
-      c.certificate_template_id as course_certificate_template_id,
-      c.certificate_validity_months as course_certificate_validity_months,
-      (SELECT COUNT(*) FROM study_group_students sgs WHERE sgs.group_id = sg.id) as student_count
-    FROM study_groups sg
-    LEFT JOIN courses c ON sg.course_id = c.id
-    ${whereClause}
-    ORDER BY sg.start_date DESC, sg.code ASC
-    LIMIT ? OFFSET ?
-  `;
-  const dataParams = [...queryParams, limit, offset];
-  const rows = await executeQuery<StudyGroupRow[]>(dataQuery, dataParams);
-
-  return {
-    data: rows.map(mapRowToGroup),
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit),
-  };
-}
-
-/**
- * Получить группу по ID с курсом и слушателями
- */
-export async function getGroupById(id: string): Promise<StudyGroup | null> {
-  const rows = await executeQuery<StudyGroupRow[]>(
-    `SELECT 
-      sg.*,
-      c.name as course_name,
-      c.short_name as course_short_name,
-      c.code as course_code,
-      c.total_hours as course_total_hours,
-      c.certificate_template_id as course_certificate_template_id,
-      c.certificate_validity_months as course_certificate_validity_months,
-      (SELECT COUNT(*) FROM study_group_students sgs WHERE sgs.group_id = sg.id) as student_count
-    FROM study_groups sg
-    LEFT JOIN courses c ON sg.course_id = c.id
-    WHERE sg.id = ?
-    LIMIT 1`,
-    [id]
-  );
-
-  if (rows.length === 0) {
-    return null;
-  }
-
-  const group = mapRowToGroup(rows[0]);
-
-  // Загружаем слушателей
-  const studentRows = await executeQuery<GroupStudentRow[]>(
-    `SELECT 
-      sgs.*,
-      s.full_name as student_full_name,
-      s.pinfl as student_pinfl,
-      s.organization as student_organization,
-      s.department as student_department,
-      s.position as student_position
-    FROM study_group_students sgs
-    JOIN students s ON sgs.student_id = s.id
-    WHERE sgs.group_id = ?
-    ORDER BY s.full_name`,
-    [id]
-  );
-
-  group.students = studentRows.map(mapRowToGroupStudent);
-
-  return group;
-}
-
-/**
- * Проверить уникальность кода группы
- */
-export async function groupCodeExists(
-  code: string,
-  excludeId?: string
-): Promise<boolean> {
-  let query = "SELECT 1 FROM study_groups WHERE code = ?";
-  const params: any[] = [code];
-
-  if (excludeId) {
-    query += " AND id != ?";
-    params.push(excludeId);
-  }
-
-  query += " LIMIT 1";
-  const rows = await executeQuery<RowDataPacket[]>(query, params);
-  return rows.length > 0;
-}
-
-/**
- * Проверить существование курса
- */
-export async function courseExists(courseId: string): Promise<boolean> {
-  const rows = await executeQuery<RowDataPacket[]>(
-    "SELECT 1 FROM courses WHERE id = ? LIMIT 1",
-    [courseId]
-  );
-  return rows.length > 0;
 }
 
 /**
  * Создать новую группу
  */
-export async function createGroup(data: CreateGroupInput): Promise<StudyGroup> {
+export async function createGroup(
+  input: CreateGroupInput
+): Promise<StudyGroup> {
   const id = uuidv4();
+  const {
+    code,
+    courseId,
+    startDate,
+    endDate,
+    classroom,
+    description,
+    isActive = true,
+  } = input;
 
-  await executeTransaction(async (connection: PoolConnection) => {
-    // Создаём группу
+  await executeTransaction(async (connection) => {
+    // 1. Создаем группу
     await connection.execute(
-      `INSERT INTO study_groups (id, code, course_id, start_date, end_date, classroom, description, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO study_groups (
+        id, code, course_id, start_date, end_date, 
+        classroom, description, is_active
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
-        data.code,
-        data.courseId,
-        data.startDate,
-        data.endDate,
-        data.classroom || null,
-        data.description || null,
-        data.isActive !== false,
+        code,
+        courseId,
+        startDate,
+        endDate,
+        classroom || null,
+        description || null,
+        isActive,
       ]
     );
 
-    // Добавляем слушателей, если указаны
-    if (data.studentIds && data.studentIds.length > 0) {
-      for (const studentId of data.studentIds) {
-        const gsId = uuidv4();
+    // 2. Добавляем студентов, если переданы
+    if (input.studentIds && input.studentIds.length > 0) {
+      for (const studentId of input.studentIds) {
+        const linkId = uuidv4();
         await connection.execute(
-          `INSERT INTO study_group_students (id, group_id, student_id)
-           VALUES (?, ?, ?)`,
-          [gsId, id, studentId]
+          `INSERT INTO study_group_students (id, group_id, student_id) VALUES (?, ?, ?)`,
+          [linkId, id, studentId]
         );
       }
     }
@@ -468,7 +219,74 @@ export async function createGroup(data: CreateGroupInput): Promise<StudyGroup> {
 
   const group = await getGroupById(id);
   if (!group) {
-    throw new Error("Failed to create group");
+    throw new Error("Не удалось создать группу");
+  }
+
+  return group;
+}
+
+/**
+ * Получить группу по ID
+ */
+export async function getGroupById(id: string): Promise<StudyGroup | null> {
+  const [rows] = await executeQuery<RowDataPacket[]>(
+    `SELECT 
+      g.*,
+      c.name as course_name,
+      c.short_name as course_short_name,
+      c.code as course_code,
+      c.total_hours as course_total_hours,
+      c.certificate_template_id,
+      c.certificate_validity_months
+     FROM study_groups g
+     LEFT JOIN courses c ON g.course_id = c.id
+     WHERE g.id = ?`,
+    [id]
+  );
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const group = mapGroupRow(rows[0]);
+
+  // Загружаем студентов
+  const [studentRows] = await executeQuery<RowDataPacket[]>(
+    `SELECT 
+       sgs.id as link_id,
+       sgs.enrolled_at,
+       s.id as student_id,
+       s.full_name,
+       s.pinfl,
+       s.organization,
+       s.department,
+       s.position
+     FROM study_group_students sgs
+     JOIN students s ON sgs.student_id = s.id
+     WHERE sgs.group_id = ?
+     ORDER BY s.full_name`,
+    [id]
+  );
+
+  if (studentRows.length > 0) {
+    group.students = studentRows.map((row) => ({
+      id: row.link_id,
+      groupId: group.id,
+      studentId: row.student_id,
+      enrolledAt: row.enrolled_at,
+      student: {
+        id: row.student_id,
+        fullName: row.full_name,
+        pinfl: row.pinfl,
+        organization: row.organization,
+        department: row.department,
+        position: row.position,
+      },
+    }));
+    group.studentCount = studentRows.length;
+  } else {
+    group.students = [];
+    group.studentCount = 0;
   }
 
   return group;
@@ -516,6 +334,18 @@ export async function updateGroup(
   if (data.isActive !== undefined) {
     updates.push("is_active = ?");
     params.push(data.isActive);
+  }
+  if (data.isArchived !== undefined) {
+    updates.push("is_archived = ?");
+    params.push(data.isArchived);
+  }
+  if (data.archivedAt !== undefined) {
+    updates.push("archived_at = ?");
+    params.push(data.archivedAt);
+  }
+  if (data.archivedBy !== undefined) {
+    updates.push("archived_by = ?");
+    params.push(data.archivedBy);
   }
 
   if (updates.length === 0) {
@@ -794,4 +624,138 @@ export async function getGroupsStats(groupIds?: string[]): Promise<{
     completed: completedResult[0]?.total || 0,
     totalStudents: studentsResult[0]?.total || 0,
   };
+}
+
+/**
+ * Получить список групп с пагинацией и фильтрацией
+ */
+export async function getGroups(
+  params: PaginationParams
+): Promise<PaginatedResult<StudyGroup>> {
+  const { page = 1, limit = 10, filters = {} } = params;
+  const offset = (page - 1) * limit;
+
+  const conditions: string[] = [];
+  const queryParams: any[] = [];
+
+  if (filters.search) {
+    conditions.push("(g.code LIKE ? OR g.description LIKE ?)");
+    queryParams.push(`%${filters.search}%`, `%${filters.search}%`);
+  }
+
+  if (filters.courseId) {
+    conditions.push("g.course_id = ?");
+    queryParams.push(filters.courseId);
+  }
+
+  if (filters.isActive !== undefined) {
+    conditions.push("g.is_active = ?");
+    queryParams.push(filters.isActive ? 1 : 0);
+  }
+
+  if (filters.isArchived !== undefined) {
+    conditions.push("g.is_archived = ?");
+    queryParams.push(filters.isArchived ? 1 : 0);
+  }
+
+  if (filters.startDateFrom) {
+    conditions.push("g.start_date >= ?");
+    queryParams.push(filters.startDateFrom);
+  }
+
+  if (filters.startDateTo) {
+    conditions.push("g.start_date <= ?");
+    queryParams.push(filters.startDateTo);
+  }
+
+  if (filters.groupIds && filters.groupIds.length > 0) {
+    const placeholders = filters.groupIds.map(() => "?").join(", ");
+    conditions.push(`g.id IN (${placeholders})`);
+    queryParams.push(...filters.groupIds);
+  } else if (filters.groupIds && filters.groupIds.length === 0) {
+    // Если передан пустой список ID — значит доступа нет
+    return {
+      data: [],
+      total: 0,
+      page,
+      limit,
+      totalPages: 0,
+    };
+  }
+
+  // Общее количество
+  let countQuery = `SELECT COUNT(*) as total FROM study_groups g`;
+  if (conditions.length > 0) {
+    countQuery += ` WHERE ${conditions.join(" AND ")}`;
+  }
+  const [countResult] = await executeQuery<CountRow[]>(countQuery, queryParams);
+  const total = countResult[0]?.total || 0;
+
+  // Данные
+  let query = `
+    SELECT 
+      g.*,
+      c.name as course_name,
+      c.short_name as course_short_name,
+      c.code as course_code,
+      c.total_hours as course_total_hours,
+      (SELECT COUNT(*) FROM study_group_students sgs WHERE sgs.group_id = g.id) as student_count
+    FROM study_groups g
+    LEFT JOIN courses c ON g.course_id = c.id
+  `;
+
+  if (conditions.length > 0) {
+    query += ` WHERE ${conditions.join(" AND ")}`;
+  }
+
+  query += ` ORDER BY g.created_at DESC LIMIT ? OFFSET ?`;
+  queryParams.push(limit, offset);
+
+  const rows = await executeQuery<RowDataPacket[]>(query, queryParams);
+
+  const data = rows.map((row) => {
+    const group = mapGroupRow(row);
+    group.studentCount = row.student_count;
+    return group;
+  });
+
+  return {
+    data,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
+/**
+ * Проверить существование кода группы
+ */
+export async function groupCodeExists(
+  code: string,
+  excludeId?: string
+): Promise<boolean> {
+  let query = "SELECT 1 FROM study_groups WHERE code = ?";
+  const params: any[] = [code];
+
+  if (excludeId) {
+    query += " AND id != ?";
+    params.push(excludeId);
+  }
+
+  query += " LIMIT 1";
+
+  const [rows] = await executeQuery<RowDataPacket[]>(query, params);
+  return rows.length > 0;
+}
+
+/**
+ * Проверить существование курса
+ */
+export async function courseExists(id: string): Promise<boolean> {
+  const [rows] = await executeQuery<RowDataPacket[]>(
+    "SELECT 1 FROM courses WHERE id = ? LIMIT 1",
+    [id]
+  );
+  return rows.length > 0;
 }

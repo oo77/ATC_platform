@@ -40,6 +40,7 @@ export interface ScheduleEvent {
     id: string;
     code: string;
     courseName: string;
+    isArchived: boolean;
   } | null;
   instructor?: {
     id: string;
@@ -142,6 +143,7 @@ interface ScheduleEventRow extends RowDataPacket {
   allowed_student_ids?: any; // JSON string or object depending on driver parsing
   // Joined fields
   group_code?: string;
+  group_is_archived?: boolean; // Используем number (0/1) или boolean в зависимости от драйвера, но тип boolean безопаснее
   course_name?: string;
   instructor_full_name?: string;
   classroom_name?: string;
@@ -195,6 +197,7 @@ function mapRowToScheduleEvent(row: ScheduleEventRow): ScheduleEvent {
       id: row.group_id!,
       code: row.group_code,
       courseName: row.course_name || "",
+      isArchived: Boolean(row.group_is_archived),
     };
   }
 
@@ -341,6 +344,7 @@ export async function getScheduleEvents(
       se.allowed_student_ids,
       se.original_event_id,
       sg.code as group_code,
+      sg.is_archived as group_is_archived,
       c.name as course_name,
       i.full_name as instructor_full_name,
       cr.name as classroom_name,
@@ -372,6 +376,7 @@ export async function getScheduleEventById(
       se.allowed_student_ids,
       se.original_event_id,
       sg.code as group_code,
+      sg.is_archived as group_is_archived,
       c.name as course_name,
       i.full_name as instructor_full_name,
       cr.name as classroom_name,
@@ -608,6 +613,7 @@ export async function checkScheduleConflicts(
       se.*,
       se.allowed_student_ids,
       sg.code as group_code,
+      sg.is_archived as group_is_archived,
       c.name as course_name,
       i.full_name as instructor_full_name,
       cr.name as classroom_name,

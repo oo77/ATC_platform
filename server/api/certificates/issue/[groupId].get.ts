@@ -3,22 +3,22 @@
  * Получить журнал выдачи сертификатов для группы
  */
 
-import { 
+import {
   getIssuedCertificatesByGroup,
   checkStudentEligibility,
   getTemplateById,
-} from '../../../repositories/certificateTemplateRepository';
-import { getGroupById } from '../../../repositories/groupRepository';
-import type { CertificateJournalRow } from '../../../types/certificate';
+} from "../../../repositories/certificateTemplateRepository";
+import { getGroupById } from "../../repositories/groupRepository";
+import type { CertificateJournalRow } from "../../../types/certificate";
 
 export default defineEventHandler(async (event) => {
   try {
-    const groupId = getRouterParam(event, 'groupId');
+    const groupId = getRouterParam(event, "groupId");
 
     if (!groupId) {
       throw createError({
         statusCode: 400,
-        message: 'ID группы обязателен',
+        message: "ID группы обязателен",
       });
     }
 
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     if (!group) {
       throw createError({
         statusCode: 404,
-        message: 'Группа не найдена',
+        message: "Группа не найдена",
       });
     }
 
@@ -50,19 +50,19 @@ export default defineEventHandler(async (event) => {
     if (group.students) {
       for (const gs of group.students) {
         const studentId = gs.studentId;
-        
+
         // Проверяем допуск
         const eligibility = await checkStudentEligibility(studentId, groupId);
-        
+
         // Получаем существующий сертификат
         const certificate = certificatesByStudent.get(studentId) || null;
 
         journalRows.push({
           student: {
             id: studentId,
-            fullName: gs.student?.fullName || 'Неизвестно',
-            organization: gs.student?.organization || '',
-            position: gs.student?.position || '',
+            fullName: gs.student?.fullName || "Неизвестно",
+            organization: gs.student?.organization || "",
+            position: gs.student?.position || "",
           },
           disciplines: [], // TODO: Заполнить данными о дисциплинах
           totalAttendancePercent: eligibility.attendancePercent,
@@ -76,20 +76,28 @@ export default defineEventHandler(async (event) => {
     }
 
     // Сортируем по ФИО
-    journalRows.sort((a, b) => a.student.fullName.localeCompare(b.student.fullName, 'ru'));
+    journalRows.sort((a, b) =>
+      a.student.fullName.localeCompare(b.student.fullName, "ru")
+    );
 
-    console.log(`[GET /api/certificates/issue/${groupId}] Загружен журнал: ${journalRows.length} записей, шаблон: ${template?.name || 'не назначен'}`);
+    console.log(
+      `[GET /api/certificates/issue/${groupId}] Загружен журнал: ${
+        journalRows.length
+      } записей, шаблон: ${template?.name || "не назначен"}`
+    );
 
     return {
       success: true,
       group: {
         id: group.id,
         code: group.code,
-        course: group.course ? {
-          ...group.course,
-          certificateTemplateId: group.course.certificateTemplateId,
-          certificateValidityMonths: group.course.certificateValidityMonths,
-        } : null,
+        course: group.course
+          ? {
+              ...group.course,
+              certificateTemplateId: group.course.certificateTemplateId,
+              certificateValidityMonths: group.course.certificateValidityMonths,
+            }
+          : null,
         startDate: group.startDate,
         endDate: group.endDate,
       },
@@ -97,14 +105,18 @@ export default defineEventHandler(async (event) => {
       journal: journalRows,
       stats: {
         totalStudents: journalRows.length,
-        eligible: journalRows.filter(r => r.eligibility.isEligible).length,
-        withWarnings: journalRows.filter(r => !r.eligibility.isEligible && !r.eligibility.hasCertificate).length,
-        issued: journalRows.filter(r => r.certificate?.status === 'issued').length,
-        revoked: journalRows.filter(r => r.certificate?.status === 'revoked').length,
+        eligible: journalRows.filter((r) => r.eligibility.isEligible).length,
+        withWarnings: journalRows.filter(
+          (r) => !r.eligibility.isEligible && !r.eligibility.hasCertificate
+        ).length,
+        issued: journalRows.filter((r) => r.certificate?.status === "issued")
+          .length,
+        revoked: journalRows.filter((r) => r.certificate?.status === "revoked")
+          .length,
       },
     };
   } catch (error: any) {
-    console.error('[GET /api/certificates/issue/[groupId]] Error:', error);
+    console.error("[GET /api/certificates/issue/[groupId]] Error:", error);
 
     if (error.statusCode) {
       throw error;
@@ -112,7 +124,7 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 500,
-      message: error.message || 'Ошибка загрузки журнала',
+      message: error.message || "Ошибка загрузки журнала",
     });
   }
 });

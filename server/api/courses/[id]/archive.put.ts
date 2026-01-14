@@ -1,105 +1,74 @@
-/**
- * API endpoint для архивации/разархивации учебной программы
- * PUT /api/courses/:id/archive
- */
-
+import { defineEventHandler, readBody, createError } from "h3";
 import {
-  archiveCourse,
   getCourseById,
+  updateCourse,
 } from "../../../repositories/courseRepository";
 import { logActivity } from "../../../utils/activityLogger";
-import { z } from "zod";
-
-const archiveSchema = z.object({
-  isArchived: z.boolean(),
-});
+import { getPermissionContext } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
-  try {
-    const id = getRouterParam(event, "id");
-
-    if (!id) {
-      return {
-        success: false,
-        message: "ID курса не указан",
-      };
-    }
-
-    // Проверка авторизации
-    const user = event.context.user;
-    if (!user) {
-      throw createError({
-        statusCode: 401,
-        message: "Требуется авторизация",
-      });
-    }
-
-    // Проверка прав доступа
-    // Только ADMIN и MANAGER могут архивировать курсы
-    if (user.role !== "ADMIN" && user.role !== "MANAGER") {
-      throw createError({
-        statusCode: 403,
-        message: "Недостаточно прав для архивации курса",
-      });
-    }
-
-    // Валидация данных
-    const body = await readBody(event);
-    const validationResult = archiveSchema.safeParse(body);
-
-    if (!validationResult.success) {
-      return {
-        success: false,
-        message: "Неверные данные",
-        errors: (validationResult.error as any).errors,
-      };
-    }
-
-    const { isArchived } = validationResult.data;
-
-    // Получаем курс для логирования
-    const course = await getCourseById(id, false);
-    if (!course) {
-      return {
-        success: false,
-        message: "Курс не найден",
-      };
-    }
-
-    // Архивируем/разархивируем курс
-    const updated = await archiveCourse(id, isArchived, user.id);
-
-    if (!updated) {
-      return {
-        success: false,
-        message: "Не удалось обновить статус архивации курса",
-      };
-    }
-
-    // Логируем действие
-    await logActivity(event, "UPDATE", "COURSE", id, course.name, {
-      action: isArchived ? "archived" : "unarchived",
-      code: course.code,
+  const id = event.context.params?.id;
+  if (!id) {
+    throw createError({
+      statusCode: 400,
+      message: "ID учебной программы обязателен",
     });
-
-    return {
-      success: true,
-      message: isArchived
-        ? "Курс успешно перемещён в архив"
-        : "Курс успешно восстановлен из архива",
-      course: updated,
-    };
-  } catch (error: any) {
-    console.error("Ошибка архивации курса:", error);
-
-    // Если это уже HTTP ошибка, пробрасываем её
-    if (error.statusCode) {
-      throw error;
-    }
-
-    return {
-      success: false,
-      message: "Ошибка при изменении статуса архивации курса",
-    };
   }
+
+  // 1. Проверка авторизации и прав
+  const context = await getPermissionContext(event);
+  if (!context) {
+    throw createError({ statusCode: 401, message: "Требуется авторизация" });
+  }
+
+  // Разрешаем ADMIN и MANAGER (Модератор)
+  if (context.role !== "ADMIN" && context.role !== "MANAGER") {
+    throw createError({
+      statusCode: 403,
+      message: "Недостаточно прав для архивации учебной программы",
+    });
+  }
+
+  // 2. Чтение данных
+  const body = await readBody(event);
+  const { isArchived } = body;
+
+  if (typeof isArchived !== "boolean") {
+    throw createError({
+      statusCode: 400,
+      message: "Поле isArchived (boolean) обязательно",
+    });
+  }
+
+  // 3. Проверка существования курса
+  const course = await getCourseById(id, false);
+  if (!course) {
+    throw createError({
+      statusCode: 404,
+      message: "Учебная программа не найдена",
+    });
+  }
+
+  // 4. Обновление
+  const now = new Date();
+  const updatedCourse = await updateCourse(id, {
+    isArchived,
+    archivedAt: isArchived ? now : null, // Если восстанавливаем, то null
+    archivedBy: isArchived ? context.userId : null,
+  });
+
+  // 5. Логирование
+  await logActivity(event, "UPDATE", "COURSE", id, course.name, {
+    action: isArchived ? "archive" : "restore",
+    previousStatus: course.isArchived,
+    newStatus: isArchived,
+  });
+
+  return {
+    success: true,
+    message: isArchived
+      ? "Учебная программа перенесена в архив"
+      : "Учебная программа восстановлена из архива",
+    course: updatedCourse,
+  };
 });

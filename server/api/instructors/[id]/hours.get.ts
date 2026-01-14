@@ -1,7 +1,7 @@
 /**
  * GET /api/instructors/:id/hours
  * Получение статистики часов инструктора
- * 
+ *
  * Возвращает:
  * - Максимальные часы по договору
  * - Отработанные часы (прошедшие занятия)
@@ -11,17 +11,17 @@
  * - Разбивка по месяцам
  */
 
-import { getInstructorHoursStats } from '../../../repositories/instructorRepository';
-import { logActivity } from '../../../utils/activityLogger';
+import { getInstructorHoursStats } from "../../../repositories/instructorRepository";
+import { logActivity } from "../../../utils/activityLogger";
 
 export default defineEventHandler(async (event) => {
   try {
-    const id = getRouterParam(event, 'id');
-    
+    const id = getRouterParam(event, "id");
+
     if (!id) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'ID инструктора обязателен',
+        statusMessage: "ID инструктора обязателен",
       });
     }
 
@@ -30,24 +30,17 @@ export default defineEventHandler(async (event) => {
     if (!stats) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Инструктор не найден',
+        statusMessage: "Инструктор не найден",
       });
     }
 
     // Логирование просмотра статистики часов
-    await logActivity(
-      event,
-      'READ',
-      'INSTRUCTOR',
-      id,
-      `Статистика часов`,
-      {
-        maxHours: stats.maxHours,
-        totalUsedHours: stats.totalUsedHours,
-        totalScheduledHours: stats.totalScheduledHours,
-        remainingHours: stats.remainingHours,
-      }
-    );
+    await logActivity(event, "VIEW", "INSTRUCTOR", id, `Статистика часов`, {
+      maxHours: stats.maxHours,
+      totalUsedHours: stats.totalUsedHours,
+      totalScheduledHours: stats.totalScheduledHours,
+      remainingHours: stats.remainingHours,
+    });
 
     return {
       success: true,
@@ -57,10 +50,10 @@ export default defineEventHandler(async (event) => {
     if (error.statusCode) {
       throw error;
     }
-    console.error('Error fetching instructor hours stats:', error);
+    console.error("Error fetching instructor hours stats:", error);
     throw createError({
       statusCode: 500,
-      statusMessage: 'Ошибка при получении статистики часов',
+      statusMessage: "Ошибка при получении статистики часов",
     });
   }
 });

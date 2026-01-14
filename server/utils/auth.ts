@@ -42,7 +42,7 @@ export async function verifyPassword(
  * @returns JWT токен
  */
 export function generateToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, JWT_SECRET as jwt.Secret, {
     expiresIn: JWT_EXPIRES_IN as string,
   });
 }
@@ -53,7 +53,7 @@ export function generateToken(payload: JwtPayload): string {
  * @returns Refresh токен
  */
 export function generateRefreshToken(payload: JwtPayload): string {
-  return jwt.sign(payload, REFRESH_TOKEN_SECRET, {
+  return jwt.sign(payload, REFRESH_TOKEN_SECRET as jwt.Secret, {
     expiresIn: REFRESH_TOKEN_EXPIRES_IN as string,
   });
 }

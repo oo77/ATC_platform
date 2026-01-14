@@ -325,7 +325,10 @@
               (event.eventType === 'assessment' ||
                 event.eventType === 'practice') &&
               !event.originalEventId &&
-              !(event.allowedStudentIds && event.allowedStudentIds.length > 0)
+              !(
+                event.allowedStudentIds && event.allowedStudentIds.length > 0
+              ) &&
+              !event.group?.isArchived
             "
             variant="warning"
             @click="handleRetake"
@@ -347,7 +350,10 @@
           </UiButton>
 
           <!-- Кнопка удаления (для пересдач) -->
-          <div v-if="canEditSchedule && isRetake" class="flex items-center gap-2">
+          <div
+            v-if="canEditSchedule && isRetake && !event.group?.isArchived"
+            class="flex items-center gap-2"
+          >
             <UiButton
               v-if="!showDeleteConfirm"
               variant="danger"
@@ -371,7 +377,9 @@
               Удалить
             </UiButton>
             <template v-else>
-              <span class="text-sm text-danger font-medium">Удалить пересдачу?</span>
+              <span class="text-sm text-danger font-medium"
+                >Удалить пересдачу?</span
+              >
               <UiButton
                 variant="danger"
                 size="sm"
@@ -380,11 +388,7 @@
               >
                 Да
               </UiButton>
-              <UiButton
-                variant="outline"
-                size="sm"
-                @click="cancelDelete"
-              >
+              <UiButton variant="outline" size="sm" @click="cancelDelete">
                 Отмена
               </UiButton>
             </template>
@@ -392,7 +396,10 @@
         </div>
         <div class="flex gap-3">
           <UiButton variant="outline" @click="handleClose"> Закрыть </UiButton>
-          <UiButton v-if="canEditSchedule" @click="handleEdit">
+          <UiButton
+            v-if="canEditSchedule && !event.group?.isArchived"
+            @click="handleEdit"
+          >
             <svg
               class="w-4 h-4 mr-2"
               fill="none"
@@ -495,7 +502,10 @@ const loadStudents = async (groupId: string) => {
         }));
 
       // Если это пересдача, показываем только студентов из allowedStudentIds
-      if (props.event?.allowedStudentIds && props.event.allowedStudentIds.length > 0) {
+      if (
+        props.event?.allowedStudentIds &&
+        props.event.allowedStudentIds.length > 0
+      ) {
         allStudents = allStudents.filter((student) =>
           props.event!.allowedStudentIds!.includes(student.id)
         );

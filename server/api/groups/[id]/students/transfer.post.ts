@@ -3,42 +3,42 @@
  * POST /api/groups/[id]/students/transfer
  */
 
-import { z } from 'zod';
-import { 
+import { z } from "zod";
+import {
   getGroupById,
   transferStudent,
-  checkStudentConflicts 
-} from '../../../../repositories/groupRepository';
+  checkStudentConflicts,
+} from "../../../../repositories/groupRepository";
 
 const transferSchema = z.object({
-  studentId: z.string().min(1, 'ID слушателя обязателен'),
-  toGroupId: z.string().min(1, 'ID целевой группы обязателен'),
+  studentId: z.string().min(1, "ID слушателя обязателен"),
+  toGroupId: z.string().min(1, "ID целевой группы обязателен"),
 });
 
 export default defineEventHandler(async (event) => {
   try {
-    const fromGroupId = getRouterParam(event, 'id');
-    
+    const fromGroupId = getRouterParam(event, "id");
+
     if (!fromGroupId) {
       return {
         success: false,
-        message: 'ID группы не указан',
+        message: "ID группы не указан",
       };
     }
 
     const body = await readBody(event);
-    
+
     // Валидация данных
     const validationResult = transferSchema.safeParse(body);
     if (!validationResult.success) {
-      const errors = validationResult.error.errors.map(e => ({
-        field: e.path.join('.'),
+      const errors = (validationResult.error as any).errors.map((e: any) => ({
+        field: e.path.join("."),
         message: e.message,
       }));
-      
+
       return {
         success: false,
-        message: 'Ошибка валидации данных',
+        message: "Ошибка валидации данных",
         errors,
       };
     }
@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     if (!fromGroup) {
       return {
         success: false,
-        message: 'Исходная группа не найдена',
+        message: "Исходная группа не найдена",
       };
     }
 
@@ -59,16 +59,18 @@ export default defineEventHandler(async (event) => {
     if (!toGroup) {
       return {
         success: false,
-        message: 'Целевая группа не найдена',
+        message: "Целевая группа не найдена",
       };
     }
 
     // Проверяем, что слушатель есть в исходной группе
-    const studentInGroup = fromGroup.students?.find(s => s.studentId === studentId);
+    const studentInGroup = fromGroup.students?.find(
+      (s) => s.studentId === studentId
+    );
     if (!studentInGroup) {
       return {
         success: false,
-        message: 'Слушатель не найден в исходной группе',
+        message: "Слушатель не найден в исходной группе",
       };
     }
 
@@ -84,12 +86,14 @@ export default defineEventHandler(async (event) => {
     );
 
     // Фильтруем конфликт с целевой группой (если слушатель уже там)
-    const realConflicts = conflicts.filter(c => c.conflictGroupId !== toGroupId);
+    const realConflicts = conflicts.filter(
+      (c) => c.conflictGroupId !== toGroupId
+    );
 
     if (realConflicts.length > 0) {
       return {
         success: false,
-        message: 'Перемещение создаст конфликт с другой группой',
+        message: "Перемещение создаст конфликт с другой группой",
         conflicts: realConflicts,
       };
     }
@@ -102,11 +106,14 @@ export default defineEventHandler(async (event) => {
       message: `Слушатель перемещён в группу ${toGroup.code}`,
     };
   } catch (error) {
-    console.error('Ошибка перемещения слушателя:', error);
-    
+    console.error("Ошибка перемещения слушателя:", error);
+
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Ошибка при перемещении слушателя',
+      message:
+        error instanceof Error
+          ? error.message
+          : "Ошибка при перемещении слушателя",
     };
   }
 });
@@ -115,7 +122,7 @@ export default defineEventHandler(async (event) => {
 function formatDateLocal(date: Date | string): string {
   const d = date instanceof Date ? date : new Date(date);
   const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
