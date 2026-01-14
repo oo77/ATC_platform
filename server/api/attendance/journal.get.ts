@@ -176,12 +176,16 @@ export default defineEventHandler(async (event) => {
       });
 
       // Расчёт статистики
-      const totalHoursAttended = cells.reduce(
-        (sum: number, cell) => sum + (cell.attendance?.hoursAttended || 0),
-        0
-      );
+      // Исключаем скрытые ячейки (перездачи для других студентов)
+      const totalHoursAttended = cells.reduce((sum: number, cell) => {
+        if (cell.isHidden) return sum;
+        return sum + (cell.attendance?.hoursAttended || 0);
+      }, 0);
 
       const totalMaxHours = cells.reduce((sum: number, cell) => {
+        // Пропускаем скрытые ячейки (перездачи для других студентов)
+        if (cell.isHidden) return sum;
+
         if (cell.attendance?.maxHours) {
           return sum + cell.attendance.maxHours;
         }

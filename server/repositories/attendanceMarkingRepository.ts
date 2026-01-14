@@ -519,11 +519,11 @@ export async function syncMarkingStatuses(): Promise<void> {
       const endTime = new Date(event.end_time);
       const deadline = new Date(
         endTime.getTime() +
-        settings.ATTENDANCE_MARK_DEADLINE_HOURS * 60 * 60 * 1000
+          settings.ATTENDANCE_MARK_DEADLINE_HOURS * 60 * 60 * 1000
       );
       const lateDeadline = new Date(
         endTime.getTime() +
-        settings.ATTENDANCE_EDIT_DEADLINE_HOURS * 60 * 60 * 1000
+          settings.ATTENDANCE_EDIT_DEADLINE_HOURS * 60 * 60 * 1000
       );
 
       // Получаем количество студентов
@@ -567,7 +567,9 @@ export async function checkMarkingAccess(
   userRole: string,
   instructorId?: string
 ): Promise<MarkingAccessCheckResult> {
-  console.log(`[checkMarkingAccess] Called with: scheduleEventId=${scheduleEventId}, userId=${userId}, userRole=${userRole}, instructorId=${instructorId}`);
+  console.log(
+    `[checkMarkingAccess] Called with: scheduleEventId=${scheduleEventId}, userId=${userId}, userRole=${userRole}, instructorId=${instructorId}`
+  );
 
   // Получаем данные занятия
   const [event] = await executeQuery<RowDataPacket[]>(
@@ -641,8 +643,12 @@ export async function checkMarkingAccess(
   );
 
   // 4. Определяем статус доступа
-  console.log(`[checkMarkingAccess] Time check: now=${now.toISOString()}, deadline=${deadline.toISOString()}, lateDeadline=${lateDeadline.toISOString()}`);
-  console.log(`[checkMarkingAccess] Settings: LATE_MARK_ALLOWED=${settings.ATTENDANCE_LATE_MARK_ALLOWED}, REQUIRE_APPROVAL=${settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE}`);
+  console.log(
+    `[checkMarkingAccess] Time check: now=${now.toISOString()}, deadline=${deadline.toISOString()}, lateDeadline=${lateDeadline.toISOString()}`
+  );
+  console.log(
+    `[checkMarkingAccess] Settings: LATE_MARK_ALLOWED=${settings.ATTENDANCE_LATE_MARK_ALLOWED}, REQUIRE_APPROVAL=${settings.ATTENDANCE_REQUIRE_APPROVAL_AFTER_DEADLINE}`
+  );
 
   if (now <= deadline) {
     // В пределах основного дедлайна
@@ -663,17 +669,25 @@ export async function checkMarkingAccess(
     };
   } else {
     // Срок истёк полностью (после lateDeadline)
-    console.log(`[checkMarkingAccess] Deadline passed. Checking role: userRole="${userRole}", isAdmin=${userRole === "ADMIN"}, isManager=${userRole === "MANAGER"}`);
+    console.log(
+      `[checkMarkingAccess] Deadline passed. Checking role: userRole="${userRole}", isAdmin=${
+        userRole === "ADMIN"
+      }, isManager=${userRole === "MANAGER"}`
+    );
 
     // Админы и модераторы ВСЕГДА могут отмечать без одобрения
     if (userRole === "ADMIN" || userRole === "MANAGER") {
-      console.log(`[checkMarkingAccess] Admin/Manager detected - granting access without approval`);
+      console.log(
+        `[checkMarkingAccess] Admin/Manager detected - granting access without approval`
+      );
       return {
         allowed: true,
         status: "late",
         deadline,
         lateDeadline,
-        message: "Срок истёк, но вы можете отметить как администратор/модератор",
+        message:
+          "Срок истёк, но вы можете отметить как администратор/модератор",
+        bypassApprovalRequired: true, // Флаг для фронтенда: не требовать подтверждения
       };
     }
 

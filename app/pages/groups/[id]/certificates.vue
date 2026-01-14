@@ -244,6 +244,49 @@
             </svg>
             Выдать выбранным ({{ selectedStudentIds.length }})
           </UiButton>
+
+          <!-- Скачать ведомость -->
+          <UiButton
+            @click="downloadReport"
+            :disabled="generatingPdf || journal.length === 0"
+            variant="secondary"
+          >
+            <svg
+              v-if="!generatingPdf"
+              class="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <svg
+              v-else
+              class="w-4 h-4 mr-2 animate-spin"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            {{ generatingPdf ? "Генерация..." : "Ведомость" }}
+          </UiButton>
         </div>
 
         <!-- Индикатор активной фоновой выдачи -->
@@ -661,6 +704,7 @@ const isIssuing = ref(false);
 const issuingStudentId = ref<string | null>(null);
 const issueResults = ref<IssueCertificatesResponse["results"]>([]);
 const resultsModalOpen = ref(false);
+const generatingPdf = ref(false); // Состояние генерации ведомости
 
 // Bulk issue modal
 const bulkIssueModalOpen = ref(false);
@@ -948,6 +992,53 @@ const issueToStudents = async (
   } finally {
     isIssuing.value = false;
     issuingStudentId.value = null;
+  }
+};
+
+// Download certificate report
+const downloadReport = async () => {
+  if (generatingPdf.value) return;
+
+  generatingPdf.value = true;
+  try {
+    // Получаем данные для ведомости
+    const reportData = await authFetch<{
+      success: boolean;
+      groupCode: string;
+      courseName: string;
+      instructors: string[];
+      students: any[];
+      startDate?: string;
+      endDate?: string;
+      generatedBy: string;
+    }>(`/api/certificates/report/${groupId.value}`);
+
+    if (!reportData.success) {
+      throw new Error("Не удалось получить данные для ведомости");
+    }
+
+    // Импортируем функцию генерации PDF
+    const { generateCertificateReport } = await import(
+      "~/utils/pdf/generateCertificateReport"
+    );
+
+    // Генерируем PDF
+    await generateCertificateReport({
+      groupCode: reportData.groupCode,
+      courseName: reportData.courseName,
+      instructors: reportData.instructors,
+      students: reportData.students,
+      startDate: reportData.startDate,
+      endDate: reportData.endDate,
+      generatedBy: reportData.generatedBy,
+    });
+
+    showSuccess("Ведомость успешно сформирована");
+  } catch (error: any) {
+    console.error("Error generating certificate report:", error);
+    showError(error.message || "Ошибка при формировании ведомости");
+  } finally {
+    generatingPdf.value = false;
   }
 };
 

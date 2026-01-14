@@ -2,9 +2,13 @@
  * Репозиторий для работы с шаблонами сертификатов
  */
 
-import { executeQuery, executeTransaction } from '../utils/db';
-import { v4 as uuidv4 } from 'uuid';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import { executeQuery, executeTransaction } from "../utils/db";
+import { v4 as uuidv4 } from "uuid";
+import type {
+  PoolConnection,
+  ResultSetHeader,
+  RowDataPacket,
+} from "mysql2/promise";
 import type {
   CertificateTemplate,
   CertificateTemplateData,
@@ -18,8 +22,8 @@ import type {
   StudentEligibility,
   IssuedCertificateStatus,
   CertificateSourceType,
-  TemplateLayout
-} from '../types/certificate';
+  TemplateLayout,
+} from "../types/certificate";
 
 // ============================================================================
 // ИНТЕРФЕЙСЫ
@@ -107,7 +111,7 @@ function mapRowToTemplate(row: TemplateRow): CertificateTemplate {
     originalFileUrl: row.original_file_url,
     variables: row.variables ? JSON.parse(row.variables) : null,
     qrSettings: row.qr_settings ? JSON.parse(row.qr_settings) : null,
-    numberFormat: row.number_format || 'ATC{YY}_{CODE}_{NUM}',
+    numberFormat: row.number_format || "ATC{YY}_{CODE}_{NUM}",
     lastNumber: row.last_number || 0,
     isActive: Boolean(row.is_active),
     // Новые поля для визуального редактора
@@ -119,7 +123,9 @@ function mapRowToTemplate(row: TemplateRow): CertificateTemplate {
   };
 }
 
-function mapRowToIssuedCertificate(row: IssuedCertificateRow): IssuedCertificate {
+function mapRowToIssuedCertificate(
+  row: IssuedCertificateRow
+): IssuedCertificate {
   const cert: IssuedCertificate = {
     id: row.id,
     groupId: row.group_id,
@@ -134,7 +140,7 @@ function mapRowToIssuedCertificate(row: IssuedCertificateRow): IssuedCertificate
     groupCode: row.group_code,
     groupStartDate: row.group_start_date,
     groupEndDate: row.group_end_date,
-    sourceType: row.source_type || 'group_journal',
+    sourceType: row.source_type || "group_journal",
     // Файлы
     docxFileUrl: row.docx_file_url,
     pdfFileUrl: row.pdf_file_url,
@@ -166,8 +172,8 @@ function mapRowToIssuedCertificate(row: IssuedCertificateRow): IssuedCertificate
     cert.student = {
       id: row.student_id,
       fullName: row.student_full_name,
-      organization: row.student_organization || '',
-      position: row.student_position || '',
+      organization: row.student_organization || "",
+      position: row.student_position || "",
     };
   }
 
@@ -181,16 +187,18 @@ function mapRowToIssuedCertificate(row: IssuedCertificateRow): IssuedCertificate
 /**
  * Получить все шаблоны сертификатов
  */
-export async function getTemplates(filters?: { isActive?: boolean }): Promise<CertificateTemplate[]> {
-  let sql = 'SELECT * FROM certificate_templates WHERE 1=1';
+export async function getTemplates(filters?: {
+  isActive?: boolean;
+}): Promise<CertificateTemplate[]> {
+  let sql = "SELECT * FROM certificate_templates WHERE 1=1";
   const params: any[] = [];
 
   if (filters?.isActive !== undefined) {
-    sql += ' AND is_active = ?';
+    sql += " AND is_active = ?";
     params.push(filters.isActive);
   }
 
-  sql += ' ORDER BY name ASC';
+  sql += " ORDER BY name ASC";
 
   const rows = await executeQuery<TemplateRow[]>(sql, params);
   return rows.map(mapRowToTemplate);
@@ -199,9 +207,11 @@ export async function getTemplates(filters?: { isActive?: boolean }): Promise<Ce
 /**
  * Получить шаблон по ID
  */
-export async function getTemplateById(id: string): Promise<CertificateTemplate | null> {
+export async function getTemplateById(
+  id: string
+): Promise<CertificateTemplate | null> {
   const rows = await executeQuery<TemplateRow[]>(
-    'SELECT * FROM certificate_templates WHERE id = ? LIMIT 1',
+    "SELECT * FROM certificate_templates WHERE id = ? LIMIT 1",
     [id]
   );
   return rows.length > 0 ? mapRowToTemplate(rows[0]) : null;
@@ -210,7 +220,9 @@ export async function getTemplateById(id: string): Promise<CertificateTemplate |
 /**
  * Создать шаблон
  */
-export async function createTemplate(data: CreateCertificateTemplateInput): Promise<CertificateTemplate> {
+export async function createTemplate(
+  data: CreateCertificateTemplateInput
+): Promise<CertificateTemplate> {
   const id = uuidv4();
   const now = new Date();
 
@@ -222,7 +234,7 @@ export async function createTemplate(data: CreateCertificateTemplateInput): Prom
       id,
       data.name,
       data.description || null,
-      data.numberFormat || 'ATC{YY}_{CODE}_{NUM}',
+      data.numberFormat || "ATC{YY}_{CODE}_{NUM}",
       now,
       now,
     ]
@@ -242,48 +254,48 @@ export async function updateTemplate(
   const params: any[] = [];
 
   if (data.name !== undefined) {
-    updates.push('name = ?');
+    updates.push("name = ?");
     params.push(data.name);
   }
 
   if (data.description !== undefined) {
-    updates.push('description = ?');
+    updates.push("description = ?");
     params.push(data.description);
   }
 
   if (data.variables !== undefined) {
-    updates.push('variables = ?');
+    updates.push("variables = ?");
     params.push(JSON.stringify(data.variables));
   }
 
   if (data.qrSettings !== undefined) {
-    updates.push('qr_settings = ?');
+    updates.push("qr_settings = ?");
     params.push(JSON.stringify(data.qrSettings));
   }
 
   if (data.numberFormat !== undefined) {
-    updates.push('number_format = ?');
+    updates.push("number_format = ?");
     params.push(data.numberFormat);
   }
 
   if (data.isActive !== undefined) {
-    updates.push('is_active = ?');
+    updates.push("is_active = ?");
     params.push(data.isActive);
   }
 
   // Новые поля для визуального редактора
   if (data.templateData !== undefined) {
-    updates.push('template_data = ?');
+    updates.push("template_data = ?");
     params.push(JSON.stringify(data.templateData));
   }
 
   if (data.layout !== undefined) {
-    updates.push('layout = ?');
+    updates.push("layout = ?");
     params.push(data.layout);
   }
 
   if (data.backgroundUrl !== undefined) {
-    updates.push('background_url = ?');
+    updates.push("background_url = ?");
     params.push(data.backgroundUrl);
   }
 
@@ -291,12 +303,12 @@ export async function updateTemplate(
     return getTemplateById(id);
   }
 
-  updates.push('updated_at = ?');
+  updates.push("updated_at = ?");
   params.push(new Date());
   params.push(id);
 
   await executeQuery<ResultSetHeader>(
-    `UPDATE certificate_templates SET ${updates.join(', ')} WHERE id = ?`,
+    `UPDATE certificate_templates SET ${updates.join(", ")} WHERE id = ?`,
     params
   );
 
@@ -325,16 +337,18 @@ export async function updateTemplateFiles(
 export async function deleteTemplate(id: string): Promise<boolean> {
   // Проверяем, нет ли выданных сертификатов с этим шаблоном
   const [countRow] = await executeQuery<CountRow[]>(
-    'SELECT COUNT(*) as total FROM issued_certificates WHERE template_id = ?',
+    "SELECT COUNT(*) as total FROM issued_certificates WHERE template_id = ?",
     [id]
   );
 
   if (countRow && countRow.total > 0) {
-    throw new Error(`Невозможно удалить шаблон: существует ${countRow.total} выданных сертификатов`);
+    throw new Error(
+      `Невозможно удалить шаблон: существует ${countRow.total} выданных сертификатов`
+    );
   }
 
   const result = await executeQuery<ResultSetHeader>(
-    'DELETE FROM certificate_templates WHERE id = ?',
+    "DELETE FROM certificate_templates WHERE id = ?",
     [id]
   );
 
@@ -355,32 +369,32 @@ export async function generateCertificateNumber(
   return executeTransaction(async (connection) => {
     // Получаем шаблон и блокируем строку
     const [template] = await connection.query<TemplateRow[]>(
-      'SELECT * FROM certificate_templates WHERE id = ? FOR UPDATE',
+      "SELECT * FROM certificate_templates WHERE id = ? FOR UPDATE",
       [templateId]
     );
 
     if (!template || template.length === 0) {
-      throw new Error('Шаблон не найден');
+      throw new Error("Шаблон не найден");
     }
 
     const tpl = template[0];
     const nextNumber = (tpl.last_number || 0) + 1;
-    const format = tpl.number_format || 'ATC{YY}_{CODE}_{NUM}';
+    const format = tpl.number_format || "ATC{YY}_{CODE}_{NUM}";
 
     // Формируем номер
     const now = new Date();
     const year = now.getFullYear().toString().slice(-2); // "25"
-    const paddedNum = nextNumber.toString().padStart(4, '0'); // "0001"
+    const paddedNum = nextNumber.toString().padStart(4, "0"); // "0001"
 
     let certificateNumber = format
-      .replace('{YY}', year)
-      .replace('{YYYY}', now.getFullYear().toString())
-      .replace('{CODE}', courseCode)
-      .replace('{NUM}', paddedNum);
+      .replace("{YY}", year)
+      .replace("{YYYY}", now.getFullYear().toString())
+      .replace("{CODE}", courseCode)
+      .replace("{NUM}", paddedNum);
 
     // Обновляем счётчик
     await connection.query(
-      'UPDATE certificate_templates SET last_number = ?, updated_at = ? WHERE id = ?',
+      "UPDATE certificate_templates SET last_number = ?, updated_at = ? WHERE id = ?",
       [nextNumber, new Date(), templateId]
     );
 
@@ -395,7 +409,9 @@ export async function generateCertificateNumber(
 /**
  * Получить выданные сертификаты для группы
  */
-export async function getIssuedCertificatesByGroup(groupId: string): Promise<IssuedCertificate[]> {
+export async function getIssuedCertificatesByGroup(
+  groupId: string
+): Promise<IssuedCertificate[]> {
   const rows = await executeQuery<IssuedCertificateRow[]>(
     `SELECT ic.*, 
             s.full_name as student_full_name,
@@ -414,7 +430,9 @@ export async function getIssuedCertificatesByGroup(groupId: string): Promise<Iss
 /**
  * Получить сертификат по ID
  */
-export async function getIssuedCertificateById(id: string): Promise<IssuedCertificate | null> {
+export async function getIssuedCertificateById(
+  id: string
+): Promise<IssuedCertificate | null> {
   const rows = await executeQuery<IssuedCertificateRow[]>(
     `SELECT ic.*, 
             s.full_name as student_full_name,
@@ -450,21 +468,19 @@ export async function getStudentCertificateInGroup(
 /**
  * Создать запись о выданном сертификате (из журнала группы)
  */
-export async function createIssuedCertificate(
-  data: {
-    groupId: string;
-    studentId: string;
-    templateId: string;
-    certificateNumber: string;
-    issueDate: Date;
-    expiryDate?: Date | null;
-    variablesData?: Record<string, string>;
-    warnings?: IssueWarning[];
-    overrideWarnings?: boolean;
-    issuedBy?: string;
-    notes?: string;
-  }
-): Promise<IssuedCertificate> {
+export async function createIssuedCertificate(data: {
+  groupId: string;
+  studentId: string;
+  templateId: string;
+  certificateNumber: string;
+  issueDate: Date;
+  expiryDate?: Date | null;
+  variablesData?: Record<string, string>;
+  warnings?: IssueWarning[];
+  overrideWarnings?: boolean;
+  issuedBy?: string;
+  notes?: string;
+}): Promise<IssuedCertificate> {
   const id = uuidv4();
   const now = new Date();
 
@@ -498,29 +514,27 @@ export async function createIssuedCertificate(
 /**
  * Создать standalone сертификат (для импорта или ручного добавления)
  */
-export async function createStandaloneCertificate(
-  data: {
-    studentId: string;
-    certificateNumber: string;
-    issueDate: Date;
-    expiryDate?: Date | null;
-    // Данные курса
-    courseName: string;
-    courseCode?: string;
-    courseHours?: number;
-    // Данные группы (опционально)
-    groupCode?: string;
-    groupStartDate?: Date;
-    groupEndDate?: Date;
-    // Источник
-    sourceType: 'manual' | 'import';
-    // Файлы
-    pdfFileUrl?: string;
-    // Прочее
-    issuedBy?: string;
-    notes?: string;
-  }
-): Promise<IssuedCertificate> {
+export async function createStandaloneCertificate(data: {
+  studentId: string;
+  certificateNumber: string;
+  issueDate: Date;
+  expiryDate?: Date | null;
+  // Данные курса
+  courseName: string;
+  courseCode?: string;
+  courseHours?: number;
+  // Данные группы (опционально)
+  groupCode?: string;
+  groupStartDate?: Date;
+  groupEndDate?: Date;
+  // Источник
+  sourceType: "manual" | "import";
+  // Файлы
+  pdfFileUrl?: string;
+  // Прочее
+  issuedBy?: string;
+  notes?: string;
+}): Promise<IssuedCertificate> {
   const id = uuidv4();
   const now = new Date();
 
@@ -622,12 +636,12 @@ export async function deleteCertificate(id: string): Promise<boolean> {
     return false;
   }
 
-  if (cert.status === 'issued') {
-    throw new Error('Нельзя удалить выданный сертификат. Используйте отзыв.');
+  if (cert.status === "issued") {
+    throw new Error("Нельзя удалить выданный сертификат. Используйте отзыв.");
   }
 
   const result = await executeQuery<ResultSetHeader>(
-    'DELETE FROM issued_certificates WHERE id = ?',
+    "DELETE FROM issued_certificates WHERE id = ?",
     [id]
   );
 
@@ -699,8 +713,8 @@ export async function reissueCertificate(
  * Минимальные требования для получения сертификата
  */
 export const ELIGIBILITY_REQUIREMENTS = {
-  minAttendancePercent: 75,  // Минимальная посещаемость
-  minGrade: 60,              // Минимальный балл (если есть оценки)
+  minAttendancePercent: 75, // Минимальная посещаемость
+  minGrade: 60, // Минимальный балл (если есть оценки)
   requireAllDisciplines: true, // Требуется посещение всех дисциплин
 };
 
@@ -713,12 +727,12 @@ export async function checkStudentEligibility(
 ): Promise<StudentEligibility> {
   // Получаем данные студента
   const [studentRow] = await executeQuery<RowDataPacket[]>(
-    'SELECT id, full_name FROM students WHERE id = ?',
+    "SELECT id, full_name FROM students WHERE id = ?",
     [studentId]
   );
 
   if (!studentRow) {
-    throw new Error('Студент не найден');
+    throw new Error("Студент не найден");
   }
 
   // Получаем существующий сертификат
@@ -734,7 +748,7 @@ export async function checkStudentEligibility(
   );
 
   if (!groupInfo) {
-    throw new Error('Группа не найдена');
+    throw new Error("Группа не найдена");
   }
 
   // Получаем список дисциплин курса
@@ -747,26 +761,104 @@ export async function checkStudentEligibility(
   );
 
   // Получаем суммарную посещаемость студента по занятиям группы
+  // Исключаем перездачи, к которым студент не допущен
   const [attendanceStats] = await executeQuery<RowDataPacket[]>(
     `SELECT 
        COALESCE(SUM(a.hours_attended), 0) as total_attended_hours,
-       COALESCE(SUM(a.max_hours), 0) as total_max_hours,
        COUNT(DISTINCT a.schedule_event_id) as attended_events
      FROM attendance a
      JOIN schedule_events se ON a.schedule_event_id = se.id
-     WHERE a.student_id = ? AND se.group_id = ?`,
-    [studentId, groupId]
+     WHERE a.student_id = ? 
+       AND se.group_id = ?
+       AND (
+         se.allowed_student_ids IS NULL 
+         OR JSON_CONTAINS(se.allowed_student_ids, ?)
+       )`,
+    [studentId, groupId, JSON.stringify(studentId)]
   );
 
   // Получаем общее количество часов запланированных занятий для группы
+  // Исключаем перездачи, к которым студент не допущен
   const [scheduledStats] = await executeQuery<RowDataPacket[]>(
     `SELECT 
        COALESCE(SUM(TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / 45), 0) as scheduled_hours,
        COUNT(*) as total_events
      FROM schedule_events se
-     WHERE se.group_id = ?`,
-    [groupId]
+     WHERE se.group_id = ?
+       AND (
+         se.allowed_student_ids IS NULL 
+         OR JSON_CONTAINS(se.allowed_student_ids, ?)
+       )`,
+    [groupId, JSON.stringify(studentId)]
   );
+
+  // DEBUG: Логирование для отладки
+  const debugEvents = await executeQuery<RowDataPacket[]>(
+    `SELECT 
+       se.id,
+       se.title,
+       se.allowed_student_ids,
+       TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / 45 as hours,
+       CASE 
+         WHEN se.allowed_student_ids IS NULL THEN 'regular'
+         WHEN JSON_CONTAINS(se.allowed_student_ids, ?) THEN 'retake_for_student'
+         ELSE 'retake_for_others'
+       END as event_type
+     FROM schedule_events se
+     WHERE se.group_id = ?`,
+    [JSON.stringify(studentId), groupId]
+  );
+
+  console.log(`[Eligibility DEBUG] Student ${studentId}:`);
+  console.log(`  Total events in group: ${debugEvents.length}`);
+  console.log(
+    `  Regular events: ${
+      debugEvents.filter((e) => e.event_type === "regular").length
+    }`
+  );
+  console.log(
+    `  Retakes for this student: ${
+      debugEvents.filter((e) => e.event_type === "retake_for_student").length
+    }`
+  );
+  console.log(
+    `  Retakes for others: ${
+      debugEvents.filter((e) => e.event_type === "retake_for_others").length
+    }`
+  );
+  console.log(
+    `  Scheduled hours (filtered): ${scheduledStats?.scheduled_hours}`
+  );
+  console.log(`  Attended hours: ${attendanceStats?.total_attended_hours}`);
+
+  // DEBUG: Детальная информация о посещаемости
+  const attendanceDetails = await executeQuery<RowDataPacket[]>(
+    `SELECT 
+       a.id,
+       a.schedule_event_id,
+       a.hours_attended,
+       a.max_hours,
+       se.title as event_title,
+       se.allowed_student_ids
+     FROM attendance a
+     JOIN schedule_events se ON a.schedule_event_id = se.id
+     WHERE a.student_id = ? 
+       AND se.group_id = ?
+       AND (
+         se.allowed_student_ids IS NULL 
+         OR JSON_CONTAINS(se.allowed_student_ids, ?)
+       )`,
+    [studentId, groupId, JSON.stringify(studentId)]
+  );
+
+  console.log(`  Attendance records (${attendanceDetails.length}):`);
+  attendanceDetails.forEach((rec) => {
+    console.log(
+      `    - ${rec.event_title}: ${rec.hours_attended}/${
+        rec.max_hours
+      }h (allowed_ids: ${rec.allowed_student_ids || "NULL"})`
+    );
+  });
 
   // Получаем итоговые оценки студента в группе
   const gradesData = await executeQuery<RowDataPacket[]>(
@@ -798,7 +890,7 @@ export async function checkStudentEligibility(
       gradesSum += Number(grade.final_grade);
       gradesCount++;
       gradedDisciplineIds.add(grade.discipline_id);
-      if (grade.status === 'passed') {
+      if (grade.status === "passed") {
         completedDisciplines++;
       }
     }
@@ -807,20 +899,27 @@ export async function checkStudentEligibility(
   // Если нет итоговых оценок, считаем посещение как выполнение дисциплины
   if (gradesCount === 0 && attendanceStats?.attended_events > 0) {
     // Получаем уникальные дисциплины с посещением
+    // Исключаем перездачи, к которым студент не допущен
     const attendedDisciplines = await executeQuery<RowDataPacket[]>(
       `SELECT DISTINCT se.discipline_id 
        FROM attendance a
        JOIN schedule_events se ON a.schedule_event_id = se.id
-       WHERE a.student_id = ? AND se.group_id = ? AND a.hours_attended > 0`,
-      [studentId, groupId]
+       WHERE a.student_id = ? 
+         AND se.group_id = ? 
+         AND a.hours_attended > 0
+         AND (
+           se.allowed_student_ids IS NULL 
+           OR JSON_CONTAINS(se.allowed_student_ids, ?)
+         )`,
+      [studentId, groupId, JSON.stringify(studentId)]
     );
     completedDisciplines = attendedDisciplines.length;
   }
 
   // Расчёт процента посещаемости
-  const totalAttendancePercent = totalHours > 0
-    ? (totalAttendedHours / totalHours) * 100
-    : 0;
+  // Ограничиваем максимум 100% (защита от некорректных данных в attendance)
+  const totalAttendancePercent =
+    totalHours > 0 ? Math.min(100, (totalAttendedHours / totalHours) * 100) : 0;
 
   const averageGrade = gradesCount > 0 ? gradesSum / gradesCount : null;
 
@@ -829,37 +928,60 @@ export async function checkStudentEligibility(
 
   if (totalAttendancePercent < ELIGIBILITY_REQUIREMENTS.minAttendancePercent) {
     warnings.push({
-      type: 'low_attendance',
-      message: `Посещаемость ${totalAttendancePercent.toFixed(1)}% ниже минимальной (${ELIGIBILITY_REQUIREMENTS.minAttendancePercent}%)`,
-      details: { actual: totalAttendancePercent, required: ELIGIBILITY_REQUIREMENTS.minAttendancePercent }
+      type: "low_attendance",
+      message: `Посещаемость ${totalAttendancePercent.toFixed(
+        1
+      )}% ниже минимальной (${ELIGIBILITY_REQUIREMENTS.minAttendancePercent}%)`,
+      details: {
+        actual: totalAttendancePercent,
+        required: ELIGIBILITY_REQUIREMENTS.minAttendancePercent,
+      },
     });
   }
 
-  if (ELIGIBILITY_REQUIREMENTS.requireAllDisciplines && completedDisciplines < totalDisciplines && totalDisciplines > 0) {
+  if (
+    ELIGIBILITY_REQUIREMENTS.requireAllDisciplines &&
+    completedDisciplines < totalDisciplines &&
+    totalDisciplines > 0
+  ) {
     warnings.push({
-      type: 'incomplete_disciplines',
+      type: "incomplete_disciplines",
       message: `Пройдено ${completedDisciplines} из ${totalDisciplines} дисциплин`,
-      details: { completed: completedDisciplines, total: totalDisciplines }
+      details: { completed: completedDisciplines, total: totalDisciplines },
     });
   }
 
-  if (averageGrade !== null && averageGrade < ELIGIBILITY_REQUIREMENTS.minGrade) {
+  if (
+    averageGrade !== null &&
+    averageGrade < ELIGIBILITY_REQUIREMENTS.minGrade
+  ) {
     warnings.push({
-      type: 'low_grade',
-      message: `Средний балл ${averageGrade.toFixed(1)} ниже минимального (${ELIGIBILITY_REQUIREMENTS.minGrade})`,
-      details: { actual: averageGrade, required: ELIGIBILITY_REQUIREMENTS.minGrade }
+      type: "low_grade",
+      message: `Средний балл ${averageGrade.toFixed(1)} ниже минимального (${
+        ELIGIBILITY_REQUIREMENTS.minGrade
+      })`,
+      details: {
+        actual: averageGrade,
+        required: ELIGIBILITY_REQUIREMENTS.minGrade,
+      },
     });
   }
 
   if (gradesCount < totalDisciplines && totalDisciplines > 0) {
     warnings.push({
-      type: 'missing_grades',
+      type: "missing_grades",
       message: `Оценки выставлены только по ${gradesCount} из ${totalDisciplines} дисциплин`,
-      details: { graded: gradesCount, total: totalDisciplines }
+      details: { graded: gradesCount, total: totalDisciplines },
     });
   }
 
-  console.log(`[Eligibility] Student ${studentId}: attendance=${totalAttendancePercent.toFixed(1)}% (${totalAttendedHours}/${totalHours}h), grades=${gradesCount}/${totalDisciplines}, avgGrade=${averageGrade?.toFixed(1) || 'N/A'}`);
+  console.log(
+    `[Eligibility] Student ${studentId}: attendance=${totalAttendancePercent.toFixed(
+      1
+    )}% (${totalAttendedHours}/${totalHours}h), grades=${gradesCount}/${totalDisciplines}, avgGrade=${
+      averageGrade?.toFixed(1) || "N/A"
+    }`
+  );
 
   return {
     studentId,

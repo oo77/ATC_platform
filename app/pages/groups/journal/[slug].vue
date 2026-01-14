@@ -191,7 +191,9 @@
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              <span class="hidden sm:inline">{{ generatingPdf ? 'Генерация...' : 'Ведомость' }}</span>
+              <span class="hidden sm:inline">{{
+                generatingPdf ? "Генерация..." : "Ведомость"
+              }}</span>
             </button>
           </div>
         </div>
@@ -774,20 +776,36 @@
           <div class="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
             <p class="text-sm text-gray-500 dark:text-gray-400">
               Будет отмечено {{ getEligibleStudentsCount() }} слушателей
-              <span v-if="selectedEvent.scheduleEvent.isRetake" class="text-purple-600 dark:text-purple-400 font-medium">
+              <span
+                v-if="selectedEvent.scheduleEvent.isRetake"
+                class="text-purple-600 dark:text-purple-400 font-medium"
+              >
                 (только участники пересдачи)
               </span>
             </p>
-            
+
             <!-- Список участников пересдачи -->
-            <div v-if="selectedEvent.scheduleEvent.isRetake && selectedEvent.scheduleEvent.allowedStudentIds" class="mt-3">
-              <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Участники пересдачи:</p>
-              <div class="max-h-32 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
+            <div
+              v-if="
+                selectedEvent.scheduleEvent.isRetake &&
+                selectedEvent.scheduleEvent.allowedStudentIds
+              "
+              class="mt-3"
+            >
+              <p
+                class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Участники пересдачи:
+              </p>
+              <div
+                class="max-h-32 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800"
+              >
                 <div class="space-y-1">
-                  <div 
-                    v-for="student in getEligibleStudents()" 
+                  <div
+                    v-for="student in getEligibleStudents()"
                     :key="student.id"
-                    class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                    class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2"
+                  >
                     <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
                     {{ student.fullName }}
                   </div>
@@ -862,20 +880,36 @@
           <div class="pt-4 border-t border-gray-200 dark:border-gray-700 mt-4">
             <p class="text-sm text-gray-500 dark:text-gray-400">
               Будет выставлено {{ getEligibleStudentsCount() }} оценок
-              <span v-if="selectedEvent.scheduleEvent.isRetake" class="text-purple-600 dark:text-purple-400 font-medium">
+              <span
+                v-if="selectedEvent.scheduleEvent.isRetake"
+                class="text-purple-600 dark:text-purple-400 font-medium"
+              >
                 (только участники пересдачи)
               </span>
             </p>
-            
+
             <!-- Список участников пересдачи -->
-            <div v-if="selectedEvent.scheduleEvent.isRetake && selectedEvent.scheduleEvent.allowedStudentIds" class="mt-3">
-              <p class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Участники пересдачи:</p>
-              <div class="max-h-32 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800">
+            <div
+              v-if="
+                selectedEvent.scheduleEvent.isRetake &&
+                selectedEvent.scheduleEvent.allowedStudentIds
+              "
+              class="mt-3"
+            >
+              <p
+                class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
+                Участники пересдачи:
+              </p>
+              <div
+                class="max-h-32 overflow-y-auto bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2 border border-purple-200 dark:border-purple-800"
+              >
                 <div class="space-y-1">
-                  <div 
-                    v-for="student in getEligibleStudents()" 
+                  <div
+                    v-for="student in getEligibleStudents()"
                     :key="student.id"
-                    class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                    class="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2"
+                  >
                     <span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
                     {{ student.fullName }}
                   </div>
@@ -1086,7 +1120,7 @@ const loadMeta = async () => {
     // Загружаем информацию о группе
     const groupResponse = await authFetch<{
       success: boolean;
-      group?: { 
+      group?: {
         code: string;
         course?: { name: string };
       };
@@ -1262,7 +1296,7 @@ const downloadReport = async () => {
     generatingPdf.value = true;
 
     // Определяем даты начала и окончания
-    const dates = columns.value.map(col => col.scheduleEvent.date).sort();
+    const dates = columns.value.map((col) => col.scheduleEvent.date).sort();
     const startDate = dates[0];
     const endDate = dates[dates.length - 1];
 
@@ -1281,10 +1315,10 @@ const downloadReport = async () => {
     // Генерируем PDF
     await generateGroupReport(reportData);
 
-    toast.success('Ведомость успешно сформирована');
+    toast.success("Ведомость успешно сформирована");
   } catch (error: any) {
-    console.error('Error generating PDF:', error);
-    toast.error(error.message || 'Ошибка при формировании ведомости');
+    console.error("Error generating PDF:", error);
+    toast.error(error.message || "Ошибка при формировании ведомости");
   } finally {
     generatingPdf.value = false;
   }
@@ -1382,9 +1416,15 @@ const saveBulkAttendanceWithReason = async (lateReason?: string) => {
   bulkSaving.value = true;
   try {
     // Фильтруем студентов для пересдачи
-    const eligibleRows = selectedEvent.value.scheduleEvent.isRetake && selectedEvent.value.scheduleEvent.allowedStudentIds
-      ? rows.value.filter(row => selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(row.student.id))
-      : rows.value;
+    const eligibleRows =
+      selectedEvent.value.scheduleEvent.isRetake &&
+      selectedEvent.value.scheduleEvent.allowedStudentIds
+        ? rows.value.filter((row) =>
+            selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(
+              row.student.id
+            )
+          )
+        : rows.value;
 
     const attendances = eligibleRows.map((row) => ({
       studentId: row.student.id,
@@ -1444,6 +1484,12 @@ const saveBulkAttendanceWithReason = async (lateReason?: string) => {
 const saveBulkAttendance = async () => {
   // Check access first
   if (markingAccess.value) {
+    // Для админов/модераторов не требуется подтверждение, даже если срок истёк
+    if (markingAccess.value.bypassApprovalRequired) {
+      await saveBulkAttendanceWithReason();
+      return;
+    }
+
     if (markingAccess.value.status === "late") {
       // Show late marking modal
       showBulkAttendanceModal.value = false;
@@ -1473,9 +1519,15 @@ const saveBulkGrade = async () => {
   bulkSaving.value = true;
   try {
     // Фильтруем студентов для пересдачи
-    const eligibleRows = selectedEvent.value.scheduleEvent.isRetake && selectedEvent.value.scheduleEvent.allowedStudentIds
-      ? rows.value.filter(row => selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(row.student.id))
-      : rows.value;
+    const eligibleRows =
+      selectedEvent.value.scheduleEvent.isRetake &&
+      selectedEvent.value.scheduleEvent.allowedStudentIds
+        ? rows.value.filter((row) =>
+            selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(
+              row.student.id
+            )
+          )
+        : rows.value;
 
     const grades = eligibleRows.map((row) => ({
       studentId: row.student.id,
@@ -1512,27 +1564,39 @@ const saveBulkGrade = async () => {
 // Получить количество студентов для массовой операции (с учетом пересдачи)
 const getEligibleStudentsCount = () => {
   if (!selectedEvent.value) return 0;
-  
-  if (selectedEvent.value.scheduleEvent.isRetake && selectedEvent.value.scheduleEvent.allowedStudentIds) {
-    return rows.value.filter(row => 
-      selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(row.student.id)
+
+  if (
+    selectedEvent.value.scheduleEvent.isRetake &&
+    selectedEvent.value.scheduleEvent.allowedStudentIds
+  ) {
+    return rows.value.filter((row) =>
+      selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(
+        row.student.id
+      )
     ).length;
   }
-  
+
   return rows.value.length;
 };
 
 // Получить список студентов для массовой операции (с учетом пересдачи)
 const getEligibleStudents = () => {
   if (!selectedEvent.value) return [];
-  
-  if (selectedEvent.value.scheduleEvent.isRetake && selectedEvent.value.scheduleEvent.allowedStudentIds) {
+
+  if (
+    selectedEvent.value.scheduleEvent.isRetake &&
+    selectedEvent.value.scheduleEvent.allowedStudentIds
+  ) {
     return rows.value
-      .filter(row => selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(row.student.id))
-      .map(row => row.student);
+      .filter((row) =>
+        selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(
+          row.student.id
+        )
+      )
+      .map((row) => row.student);
   }
-  
-  return rows.value.map(row => row.student);
+
+  return rows.value.map((row) => row.student);
 };
 
 // Initialize

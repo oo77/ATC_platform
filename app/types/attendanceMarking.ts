@@ -113,6 +113,7 @@ export interface MarkingAccessCheckResult {
   requiresApproval?: boolean;
   existingRequestId?: string;
   isApprovedByAdmin?: boolean;
+  bypassApprovalRequired?: boolean; // true для админов/модераторов, которые могут отмечать без подтверждения
 }
 
 /** Статистика по отметкам */
