@@ -527,7 +527,7 @@ export async function syncMarkingStatuses(): Promise<void> {
       );
 
       // Получаем количество студентов
-      const [countResult] = await executeQuery<RowDataPacket[]>(
+      const countResult = await executeQuery<RowDataPacket[]>(
         "SELECT COUNT(*) as count FROM study_group_students WHERE group_id = ?",
         [event.group_id]
       );

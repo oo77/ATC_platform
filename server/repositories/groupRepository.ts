@@ -157,14 +157,14 @@ function mapGroupRow(row: any): StudyGroup {
     updatedAt: row.updated_at,
     course: row.course_name
       ? {
-        id: row.course_id,
-        name: row.course_name,
-        shortName: row.course_short_name,
-        code: row.course_code,
-        totalHours: row.course_total_hours,
-        certificateTemplateId: row.certificate_template_id,
-        certificateValidityMonths: row.certificate_validity_months,
-      }
+          id: row.course_id,
+          name: row.course_name,
+          shortName: row.course_short_name,
+          code: row.course_code,
+          totalHours: row.course_total_hours,
+          certificateTemplateId: row.certificate_template_id,
+          certificateValidityMonths: row.certificate_validity_months,
+        }
       : null,
   };
 }
@@ -229,7 +229,7 @@ export async function createGroup(
  * Получить группу по ID
  */
 export async function getGroupById(id: string): Promise<StudyGroup | null> {
-  const [rows] = await executeQuery<RowDataPacket[]>(
+  const rows = await executeQuery<RowDataPacket[]>(
     `SELECT 
       g.*,
       c.name as course_name,
@@ -244,14 +244,14 @@ export async function getGroupById(id: string): Promise<StudyGroup | null> {
     [id]
   );
 
-  if (rows.length === 0) {
+  if (!rows || rows.length === 0) {
     return null;
   }
 
   const group = mapGroupRow(rows[0]);
 
   // Загружаем студентов
-  const [studentRows] = await executeQuery<RowDataPacket[]>(
+  const studentRows = await executeQuery<RowDataPacket[]>(
     `SELECT 
        sgs.id as link_id,
        sgs.enrolled_at,
@@ -268,7 +268,7 @@ export async function getGroupById(id: string): Promise<StudyGroup | null> {
     [id]
   );
 
-  if (studentRows.length > 0) {
+  if (studentRows && studentRows.length > 0) {
     group.students = studentRows.map((row: RowDataPacket) => ({
       id: row.link_id,
       groupId: group.id,
@@ -433,7 +433,7 @@ export async function checkStudentConflicts(
 
   const rows = await executeQuery<ConflictRow[]>(query, params);
 
-  return rows.map((row) => ({
+  return (rows || []).map((row) => ({
     studentId: row.student_id,
     studentName: row.student_name,
     conflictGroupId: row.group_id,
@@ -587,17 +587,17 @@ export async function getGroupsStats(groupIds?: string[]): Promise<{
     return { total: 0, active: 0, completed: 0, totalStudents: 0 };
   }
 
-  const [totalResult] = await executeQuery<CountRow[]>(
+  const totalResult = await executeQuery<CountRow[]>(
     `SELECT COUNT(*) as total FROM study_groups WHERE 1=1 ${groupCondition}`,
     groupParams
   );
 
-  const [activeResult] = await executeQuery<CountRow[]>(
+  const activeResult = await executeQuery<CountRow[]>(
     `SELECT COUNT(*) as total FROM study_groups WHERE is_active = true AND end_date >= ? ${groupCondition}`,
     [today, ...groupParams]
   );
 
-  const [completedResult] = await executeQuery<CountRow[]>(
+  const completedResult = await executeQuery<CountRow[]>(
     `SELECT COUNT(*) as total FROM study_groups WHERE end_date < ? ${groupCondition}`,
     [today, ...groupParams]
   );
@@ -613,7 +613,7 @@ export async function getGroupsStats(groupIds?: string[]): Promise<{
     studentsParams = groupIds;
   }
 
-  const [studentsResult] = await executeQuery<CountRow[]>(
+  const studentsResult = await executeQuery<CountRow[]>(
     studentsQuery,
     studentsParams
   );
@@ -688,7 +688,7 @@ export async function getGroups(
   if (conditions.length > 0) {
     countQuery += ` WHERE ${conditions.join(" AND ")}`;
   }
-  const [countResult] = await executeQuery<CountRow[]>(countQuery, queryParams);
+  const countResult = await executeQuery<CountRow[]>(countQuery, queryParams);
   const total = countResult[0]?.total || 0;
 
   // Данные
@@ -713,7 +713,7 @@ export async function getGroups(
 
   const rows = await executeQuery<RowDataPacket[]>(query, queryParams);
 
-  const data = rows.map((row) => {
+  const data = (rows || []).map((row) => {
     const group = mapGroupRow(row);
     group.studentCount = row.student_count;
     return group;
@@ -745,17 +745,17 @@ export async function groupCodeExists(
 
   query += " LIMIT 1";
 
-  const [rows] = await executeQuery<RowDataPacket[]>(query, params);
-  return rows.length > 0;
+  const rows = await executeQuery<RowDataPacket[]>(query, params);
+  return rows?.length > 0;
 }
 
 /**
  * Проверить существование курса
  */
 export async function courseExists(id: string): Promise<boolean> {
-  const [rows] = await executeQuery<RowDataPacket[]>(
+  const rows = await executeQuery<RowDataPacket[]>(
     "SELECT 1 FROM courses WHERE id = ? LIMIT 1",
     [id]
   );
-  return rows.length > 0;
+  return rows?.length > 0;
 }
