@@ -2,8 +2,8 @@
  * Типы для учебных групп
  */
 
-import type { Course } from './course';
-import type { Student } from './student';
+import type { Course } from "./course";
+import type { Student } from "./student";
 
 // ============ Учебные группы ============
 
@@ -17,6 +17,9 @@ export interface StudyGroup {
   classroom?: string;
   description?: string;
   isActive: boolean;
+  isArchived: boolean;
+  archivedAt?: string | null;
+  archivedBy?: string | null;
   students?: GroupStudent[];
   studentCount?: number;
   createdAt: string;
@@ -52,6 +55,7 @@ export interface UpdateStudyGroupData {
   classroom?: string;
   description?: string;
   isActive?: boolean;
+  isArchived?: boolean;
 }
 
 // ============ Фильтры и пагинация ============

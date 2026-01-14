@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
     // 3. Валидация данных
     const validationResult = updateGroupSchema.safeParse(body);
     if (!validationResult.success) {
-      const errors = validationResult.error.errors.map((e) => ({
+      const errors = (validationResult.error as any).errors.map((e: any) => ({
         field: e.path.join("."),
         message: e.message,
       }));

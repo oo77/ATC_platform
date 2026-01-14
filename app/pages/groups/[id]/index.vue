@@ -225,7 +225,7 @@
             v-for="discipline in disciplines"
             :key="discipline.id"
             :to="`/groups/journal/${group?.id}_${discipline.id}`"
-            class="group p-4 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50 border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary hover:shadow-lg transition-all duration-200"
+            class="group p-4 rounded-xl bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50 border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary hover:shadow-lg transition-all duration-200"
           >
             <div class="flex items-start justify-between mb-3">
               <div

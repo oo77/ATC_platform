@@ -905,7 +905,7 @@ const executeBulkIssue = async () => {
     courseName: group.value.course?.name || "",
     templateId: template.value.id,
     templateName: template.value.name,
-    issueDate: issueDate.value,
+    issueDate: issueDate.value || new Date().toISOString().split("T")[0],
     studentIds: bulkIssueStudentIds.value,
     studentData: studentRows.map((r) => ({
       id: r.student.id,

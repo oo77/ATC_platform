@@ -51,7 +51,7 @@ export default defineEventHandler(async (event) => {
       return {
         success: false,
         message: "Неверные данные",
-        errors: validationResult.error.errors,
+        errors: (validationResult.error as any).errors,
       };
     }
 
