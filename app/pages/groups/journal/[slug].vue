@@ -234,7 +234,7 @@
 
       <!-- Панель массовых операций -->
       <div
-        v-if="columns.length > 0"
+        v-if="columns.length > 0 && !isArchived"
         class="rounded-xl bg-white dark:bg-boxdark shadow-md p-4 mb-4"
       >
         <div class="flex flex-wrap items-center gap-4">
@@ -593,6 +593,7 @@
                     :student-id="row.student.id"
                     :is-retake-target="getRetakeInfo(row.student.id, columns[cellIndex]!.scheduleEvent.id).isRetakeTarget"
                     :replacement-grade="getRetakeInfo(row.student.id, columns[cellIndex]!.scheduleEvent.id).replacementGrade"
+                    :read-only="isArchived"
                     @update="handleCellUpdate"
                     @require-approval="handleRequireApproval"
                   />
@@ -630,6 +631,7 @@
                     :group-id="groupId"
                     :discipline-id="disciplineId"
                     :attendance-percent="row.attendancePercent"
+                    :read-only="isArchived"
                     @update="handleFinalGradeUpdate"
                   />
                 </td>
@@ -1048,7 +1050,9 @@ const rows = ref<JournalRow[]>([]);
 const summary = ref<JournalSummary | null>(null);
 const groupCode = ref("");
 const disciplineName = ref("");
+const courseName = ref("");
 const instructorName = ref("");
+const isArchived = ref(false);
 
 // Bulk operations state
 const selectedEventId = ref("");
@@ -1063,7 +1067,6 @@ const markingAccess = ref<MarkingAccessCheckResult | null>(null);
 const showLateMarkingModal = ref(false);
 const lateMarkingReason = ref("");
 const accessLoading = ref(false);
-const courseName = ref(""); // Название курса
 
 // PDF generation state
 const generatingPdf = ref(false);
@@ -1122,12 +1125,14 @@ const loadMeta = async () => {
       success: boolean;
       group?: {
         code: string;
+        isArchived?: boolean;
         course?: { name: string };
       };
     }>(`/api/groups/${groupId.value}`);
 
     if (groupResponse.success && groupResponse.group) {
       groupCode.value = groupResponse.group.code;
+      isArchived.value = !!groupResponse.group.isArchived;
       if (groupResponse.group.course?.name) {
         courseName.value = groupResponse.group.course.name;
       }

@@ -225,6 +225,9 @@ export function usePermissions() {
   const canDeleteGroups = computed(() =>
     hasPermission(Permission.GROUPS_DELETE)
   );
+  const canArchiveGroups = computed(() =>
+    hasPermission(Permission.GROUPS_ARCHIVE)
+  );
   const canManageGroupStudents = computed(() =>
     hasPermission(Permission.GROUPS_MANAGE_STUDENTS)
   );
@@ -407,6 +410,7 @@ export function usePermissions() {
     canCreateGroups,
     canEditGroups,
     canDeleteGroups,
+    canArchiveGroups,
     canManageGroupStudents,
 
     // Шорткаты для Schedule

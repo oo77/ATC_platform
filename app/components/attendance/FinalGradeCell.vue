@@ -2,9 +2,10 @@
   <div class="inline-block">
     <button
       class="px-3 py-1 rounded text-sm font-medium transition-all"
-      :class="buttonClass"
+      :class="[buttonClass, { 'opacity-70 cursor-not-allowed': readOnly }]"
+      :disabled="readOnly"
       @click="showModal = true"
-      :title="tooltip"
+      :title="readOnly ? 'Редактирование недоступно (Архив или нет прав)' : tooltip"
     >
       {{ displayText }}
     </button>
@@ -100,6 +101,7 @@ const props = defineProps<{
   groupId: string;
   disciplineId: string;
   attendancePercent: number;
+  readOnly?: boolean;
 }>();
 
 const emit = defineEmits<{

@@ -72,6 +72,7 @@ export enum Permission {
   GROUPS_CREATE = "groups:create",
   GROUPS_UPDATE = "groups:update",
   GROUPS_DELETE = "groups:delete",
+  GROUPS_ARCHIVE = "groups:archive",
   GROUPS_MANAGE_STUDENTS = "groups:manage_students",
 
   // ========== SCHEDULE ==========
@@ -193,6 +194,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.GROUPS_VIEW_ALL,
     Permission.GROUPS_CREATE,
     Permission.GROUPS_UPDATE,
+    Permission.GROUPS_ARCHIVE, // Может архивировать группы
     Permission.GROUPS_MANAGE_STUDENTS,
     // НЕ может удалять группы
 

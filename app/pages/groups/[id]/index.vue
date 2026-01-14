@@ -97,7 +97,7 @@
           </div>
           <div class="flex items-center gap-3 flex-wrap">
             <NuxtLink
-              v-if="canIssueCertificates"
+              v-if="canIssueCertificates && !group.isArchived"
               :to="`/groups/${group.id}/certificates`"
             >
               <UiButton variant="primary">
@@ -140,7 +140,7 @@
             </UiButton>
 
             <!-- Кнопка архивации (только Админ) -->
-            <UiButton v-if="isAdmin" variant="outline" @click="confirmArchive">
+            <UiButton v-if="canArchiveGroups" variant="outline" @click="confirmArchive">
               <svg
                 class="w-4 h-4 mr-2"
                 fill="none"
@@ -924,6 +924,7 @@ const {
   canDeleteGroups,
   canManageGroupStudents,
   canIssueCertificates,
+  canArchiveGroups,
   isAdmin,
 } = usePermissions(); // Assuming isAdmin is available or check authStore.user.role
 
@@ -1197,7 +1198,7 @@ const archiveGroup = async () => {
   isArchiving.value = true;
   try {
     const newStatus = !group.value.isArchived;
-    await authFetch(`/api/groups/${group.value.id}`, {
+    await authFetch(`/api/groups/${group.value.id}/archive`, {
       method: "PUT",
       body: { isArchived: newStatus },
     });

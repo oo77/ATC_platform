@@ -14,9 +14,10 @@
       <!-- Посещаемость -->
       <button
         class="w-10 h-6 rounded text-xs font-medium transition-all"
-        :class="attendanceButtonClass"
+        :class="[attendanceButtonClass, { 'opacity-70 cursor-not-allowed': readOnly }]"
+        :disabled="readOnly"
         @click="openAttendanceModal"
-        :title="attendanceTooltip"
+        :title="readOnly ? 'Редактирование недоступно (Архив или нет прав)' : attendanceTooltip"
       >
         {{ attendanceDisplay }}
       </button>
@@ -27,12 +28,13 @@
         :class="[
           gradeButtonClass,
           {
-            'line-through opacity-70':
-              isRetakeTarget && replacementGrade !== null,
+            'line-through opacity-70': isRetakeTarget && replacementGrade !== null,
+             'opacity-70 cursor-not-allowed': readOnly
           },
         ]"
+        :disabled="readOnly"
         @click="openGradeModal"
-        :title="gradeTooltip"
+        :title="readOnly ? 'Редактирование недоступно (Архив или нет прав)' : gradeTooltip"
       >
         {{ gradeDisplay }}
 
@@ -64,9 +66,10 @@
     <button
       v-else
       class="w-10 h-8 rounded text-xs font-medium transition-all"
-      :class="attendanceButtonClass"
+      :class="[attendanceButtonClass, { 'opacity-70 cursor-not-allowed': readOnly }]"
+      :disabled="readOnly"
       @click="openAttendanceModal"
-      :title="attendanceTooltip"
+      :title="readOnly ? 'Редактирование недоступно (Архив или нет прав)' : attendanceTooltip"
     >
       {{ attendanceDisplay }}
     </button>
@@ -357,6 +360,7 @@ const props = defineProps<{
   studentId: string;
   isRetakeTarget?: boolean;
   replacementGrade?: number | null;
+  readOnly?: boolean;
 }>();
 
 const emit = defineEmits<{
