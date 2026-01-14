@@ -44,7 +44,8 @@ export type EntityType =
   | "REPRESENTATIVE"
   | "ATTENDANCE"
   | "GRADE"
-  | "SYSTEM";
+  | "SYSTEM"
+  | "GROUP_REPORT";
 
 /**
  * Запись журнала действий
