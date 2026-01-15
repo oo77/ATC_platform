@@ -697,11 +697,11 @@
                 class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
               >
                 <span
-                  class="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary"
+                  class="shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary"
                 >
                   {{ index + 1 }}
                 </span>
-                <div class="flex-grow min-w-0">
+                <div class="grow min-w-0">
                   <p class="text-sm text-gray-900 dark:text-white line-clamp-2">
                     {{ question.question_text }}
                   </p>

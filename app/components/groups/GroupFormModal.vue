@@ -238,7 +238,7 @@
           </label>
 
           <div
-            class="flex-grow rounded-lg border border-stroke bg-gray-50 dark:bg-meta-4/20 dark:border-strokedark p-4 flex flex-col"
+            class="grow rounded-lg border border-stroke bg-gray-50 dark:bg-meta-4/20 dark:border-strokedark p-4 flex flex-col"
           >
             <!-- Загрузка новых файлов (при создании) -->
             <div v-if="!isEdit" class="h-full">
@@ -257,7 +257,7 @@
             <div v-else class="h-full flex flex-col">
               <div
                 v-if="loadingReports"
-                class="text-sm text-gray-500 flex-grow flex items-center justify-center"
+                class="text-sm text-gray-500 grow flex items-center justify-center"
               >
                 <span class="inline-flex items-center gap-2">
                   <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24">
@@ -280,13 +280,13 @@
               </div>
               <div
                 v-else-if="existingReports.length === 0"
-                class="text-sm text-gray-500 flex-grow flex items-center justify-center italic"
+                class="text-sm text-gray-500 grow flex items-center justify-center italic"
               >
                 Нет документов
               </div>
               <div
                 v-else
-                class="flex-grow overflow-y-auto pr-1 custom-scrollbar space-y-2"
+                class="grow overflow-y-auto pr-1 custom-scrollbar space-y-2 max-h-[300px]"
               >
                 <div
                   v-for="report in existingReports"

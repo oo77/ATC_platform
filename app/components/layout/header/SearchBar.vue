@@ -26,7 +26,7 @@
           v-model="searchQuery"
           type="text"
           placeholder="Поиск пользователей по ФИО или ПИНФЛ..."
-          class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-gray-900 dark:bg-white/[0.03] dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
+          class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/3 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
           @input="handleSearch"
           @focus="handleFocus"
         />
@@ -106,7 +106,7 @@
               >
                 <!-- Аватар -->
                 <div
-                  class="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold"
+                  class="shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold"
                 >
                   {{ getUserInitials(user.name) }}
                 </div>
@@ -144,7 +144,7 @@
 
                 <!-- Иконка перехода -->
                 <svg
-                  class="w-5 h-5 text-gray-400 flex-shrink-0"
+                  class="w-5 h-5 text-gray-400 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -253,14 +253,15 @@ const performSearch = async () => {
       searchResults.value = response.users;
 
       // Детальный лог для отладки
-      if (response.users.length > 0) {
+      const firstUser = response.users[0];
+      if (firstUser) {
         console.log("[SearchBar] Sample user:", {
-          id: response.users[0].id,
-          name: response.users[0].name,
-          role: response.users[0].role,
-          studentId: response.users[0].studentId,
-          instructorId: response.users[0].instructorId,
-          link: getUserLink(response.users[0]),
+          id: firstUser.id,
+          name: firstUser.name,
+          role: firstUser.role,
+          studentId: firstUser.studentId,
+          instructorId: firstUser.instructorId,
+          link: getUserLink(firstUser),
         });
       }
     } else {
@@ -316,8 +317,8 @@ const getUserLink = (user: UserPublic): string => {
 };
 
 const getUserInitials = (name: string): string => {
-  const parts = name.trim().split(" ");
-  if (parts.length >= 2) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2 && parts[0] && parts[1]) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
   return name.substring(0, 2).toUpperCase();

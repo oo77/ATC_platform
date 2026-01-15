@@ -9,6 +9,24 @@ import type { UpdateQuestionDTO } from "../../../types/testing";
 
 export default defineEventHandler(async (event) => {
   try {
+    // Проверка авторизации
+    const user = event.context.user;
+    if (!user) {
+      throw createError({
+        statusCode: 401,
+        message: "Необходима авторизация",
+      });
+    }
+
+    // Проверка прав доступа (только ADMIN, MANAGER)
+    const allowedRoles = ["ADMIN", "MANAGER"];
+    if (!allowedRoles.includes(user.role)) {
+      throw createError({
+        statusCode: 403,
+        message: "Недостаточно прав для редактирования вопроса",
+      });
+    }
+
     const id = getRouterParam(event, "id");
     const body = await readBody<UpdateQuestionDTO>(event);
 
