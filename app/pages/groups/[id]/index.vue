@@ -140,7 +140,11 @@
             </UiButton>
 
             <!-- Кнопка архивации (только Админ) -->
-            <UiButton v-if="canArchiveGroups" variant="outline" @click="confirmArchive">
+            <UiButton
+              v-if="canArchiveGroups"
+              variant="outline"
+              @click="confirmArchive"
+            >
               <svg
                 class="w-4 h-4 mr-2"
                 fill="none"
@@ -489,9 +493,8 @@
                   </p>
                 </div>
               </div>
-              <a
-                :href="report.url"
-                target="_blank"
+              <button
+                @click="downloadReport(report)"
                 class="text-primary hover:text-primary-dark p-1.5 rounded-full hover:bg-primary/10 transition-colors"
                 title="Скачать"
               >
@@ -509,7 +512,7 @@
                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                   />
                 </svg>
-              </a>
+              </button>
             </div>
           </div>
         </div>
@@ -597,6 +600,12 @@
                   >
                     Дата зачисления
                   </th>
+                  <th
+                    v-if="canEditGroups || isAdmin"
+                    class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
+                  >
+                    Действия
+                  </th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -605,18 +614,16 @@
                   :key="gs.id"
                   class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <td class="px-6 py-4 whitespace-nowrap">
+                  <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
                       <div
                         class="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-success/10 text-success font-semibold"
                       >
                         {{ getInitials(gs.student?.fullName) }}
                       </div>
-                      <span
-                        class="font-medium text-gray-900 dark:text-white max-w-[200px] truncate"
-                        :title="gs.student?.fullName"
-                        >{{ gs.student?.fullName }}</span
-                      >
+                      <span class="font-medium text-gray-900 dark:text-white">{{
+                        gs.student?.fullName
+                      }}</span>
                     </div>
                   </td>
                   <td class="px-6 py-4 text-sm whitespace-nowrap">
@@ -645,8 +652,38 @@
                       {{ getStudentAttendance(gs.studentId).toFixed(0) }}%
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-sm text-gray-500">
+                  <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                     {{ formatDate(gs.enrolledAt) }}
+                  </td>
+                  <td
+                    v-if="canEditGroups || isAdmin"
+                    class="px-6 py-4 text-center"
+                  >
+                    <NuxtLink
+                      :to="`/students/${gs.studentId}`"
+                      class="inline-flex items-center justify-center p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                      title="Просмотр студента"
+                    >
+                      <svg
+                        class="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
+                      </svg>
+                    </NuxtLink>
                   </td>
                 </tr>
               </tbody>
@@ -1210,6 +1247,62 @@ const archiveGroup = async () => {
     console.error(e);
   } finally {
     isArchiving.value = false;
+  }
+};
+
+const downloadReport = async (report: any) => {
+  try {
+    console.log("[downloadReport] Скачивание файла:", report.name);
+    console.log("[downloadReport] URL:", report.url);
+
+    // Получаем токен из куки
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("auth_token="))
+      ?.split("=")[1];
+
+    if (!token) {
+      console.error("[downloadReport] Токен не найден");
+      toast.error("Ошибка авторизации");
+      return;
+    }
+
+    // Используем fetch для получения файла с токеном
+    const response = await fetch(report.url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error(
+        "[downloadReport] Ошибка ответа:",
+        response.status,
+        response.statusText
+      );
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Получаем blob
+    const blob = await response.blob();
+    console.log("[downloadReport] Получен blob, размер:", blob.size);
+
+    // Создаем временную ссылку для скачивания
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = report.name;
+    document.body.appendChild(a);
+    a.click();
+
+    // Очищаем
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    console.log("[downloadReport] Файл успешно скачан");
+  } catch (error) {
+    console.error("[downloadReport] Ошибка скачивания:", error);
+    toast.error("Ошибка при скачивании файла");
   }
 };
 

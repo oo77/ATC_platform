@@ -26,18 +26,20 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: "Нет доступа" });
   }
 
-  const groupId = getRouterParam(event, "id"); // Обратите внимание: router params могут быть [id] или [groupId] в зависимости от структуры папок
-  // Nuxt/Nitro вложенность: server/api/groups/[id]/reports/[fileId].get.ts
-  // Здесь первый парам [id] (группа), второй [fileId] (файл)
-
-  // В nitro 2.x параметры доступны по именам сегментов.
-  // Если структура server/api/groups/[id]/reports/[fileId].get.ts
-  // То event.context.params будет { id: '...', fileId: '...' }
-
-  const idParam = getRouterParam(event, "id");
+  const groupId = getRouterParam(event, "id");
   const fileUuid = getRouterParam(event, "fileId");
 
-  if (!idParam || !fileUuid) {
+  console.log(
+    "[GET /api/groups/[id]/reports/[fileId]] Запрос на скачивание файла"
+  );
+  console.log("  - groupId:", groupId);
+  console.log("  - fileUuid:", fileUuid);
+  console.log("  - URL:", event.node.req.url);
+
+  if (!groupId || !fileUuid) {
+    console.error(
+      "[GET /api/groups/[id]/reports/[fileId]] Отсутствуют параметры"
+    );
     throw createError({
       statusCode: 400,
       message: "Неверные параметры запроса",
@@ -45,32 +47,52 @@ export default defineEventHandler(async (event) => {
   }
 
   // Получаем информацию о файле
+  console.log("[GET /api/groups/[id]/reports/[fileId]] Поиск файла в БД...");
   const files = await executeQuery<any[]>(
     `SELECT * FROM files 
      WHERE uuid = ? AND group_id = ? AND category = 'group_report' 
      LIMIT 1`,
-    [fileUuid, idParam]
+    [fileUuid, groupId]
+  );
+
+  console.log(
+    "[GET /api/groups/[id]/reports/[fileId]] Найдено файлов:",
+    files.length
   );
 
   const file = files[0];
 
   if (!file) {
+    console.error(
+      "[GET /api/groups/[id]/reports/[fileId]] Файл не найден в БД"
+    );
     throw createError({ statusCode: 404, message: "Файл не найден" });
   }
 
-  // Полный путь
-  // file.full_path предположительно содержит относительный путь внутри storage, или абсолютный?
-  // В create мы писали relative path в оба поля (storage_path и full_path)
+  console.log("[GET /api/groups/[id]/reports/[fileId]] Файл найден:", {
+    id: file.id,
+    filename: file.filename,
+    storage_path: file.storage_path,
+  });
 
   // Строим абсолютный путь
   const absolutePath = path.join(process.cwd(), "storage", file.storage_path);
+  console.log(
+    "[GET /api/groups/[id]/reports/[fileId]] Абсолютный путь:",
+    absolutePath
+  );
 
   if (!fs.existsSync(absolutePath)) {
+    console.error(
+      "[GET /api/groups/[id]/reports/[fileId]] Файл физически отсутствует"
+    );
     throw createError({
       statusCode: 404,
       message: "Файл физически отсутствует на сервере",
     });
   }
+
+  console.log("[GET /api/groups/[id]/reports/[fileId]] Отправка файла...");
 
   // Отправляем файл
   const stream = fs.createReadStream(absolutePath);

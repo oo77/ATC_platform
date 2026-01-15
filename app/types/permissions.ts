@@ -494,7 +494,11 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
 
   // Tests (Student)
   { path: "/tests/my", requiredPermissions: [Permission.TESTS_TAKE] },
-  { path: "/tests/take/[id]", requiredPermissions: [Permission.TESTS_TAKE] },
+
+  {
+    path: "/tests/take/[id]",
+    anyPermissions: [Permission.TESTS_TAKE, Permission.TEST_TEMPLATES_VIEW],
+  },
 ];
 
 // ========================================
