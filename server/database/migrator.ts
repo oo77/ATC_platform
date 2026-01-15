@@ -39,6 +39,8 @@ import * as linkExistingUsers from "./migrations/20260113_045_link_existing_user
 import * as groupArchiveSystem from "./migrations/20260114_046_group_archive_system";
 import * as extendFilesForGroups from "./migrations/20260114_047_extend_files_for_groups";
 import * as courseArchiveSystem from "./migrations/20260114_048_course_archive_system";
+import * as addUserSearchIndexes from "./migrations/20260115_051_add_user_search_indexes";
+import * as linkUsersByEmail from "./migrations/20260115_052_link_users_by_email";
 
 /**
  * ============================================================================
@@ -344,6 +346,24 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: courseArchiveSystem.up,
     down: courseArchiveSystem.down,
     description: courseArchiveSystem.description,
+  },
+  // ============================================================
+  // Миграция 051: Индексы для поиска пользователей
+  // ============================================================
+  {
+    name: "20260115_051_add_user_search_indexes",
+    up: addUserSearchIndexes.up,
+    down: addUserSearchIndexes.down,
+    description: addUserSearchIndexes.description,
+  },
+  // ============================================================
+  // Миграция 052: Связывание пользователей по email
+  // ============================================================
+  {
+    name: "20260115_052_link_users_by_email",
+    up: linkUsersByEmail.up,
+    down: linkUsersByEmail.down,
+    description: linkUsersByEmail.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

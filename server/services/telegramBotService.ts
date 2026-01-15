@@ -18,25 +18,25 @@ import {
   type FormattedStudent,
   type FormattedScheduleEvent,
   type FormattedCertificate,
-} from '../utils/telegramBot';
+} from "../utils/telegramBot";
 import {
   getOrCreateSession,
   updateSession,
   deleteSession,
   type SessionState,
-} from '../repositories/telegramSessionRepository';
+} from "../repositories/telegramSessionRepository";
 import {
   createRepresentative,
   getRepresentativeByTelegramChatId,
   updateLastActivity,
   type Representative,
-} from '../repositories/representativeRepository';
+} from "../repositories/representativeRepository";
 import {
   getAllOrganizations,
   getOrganizationById,
   searchOrganizations,
   getOrCreateOrganizationByName,
-} from '../repositories/organizationRepository';
+} from "../repositories/organizationRepository";
 
 // ============================================================================
 // ТИПЫ
@@ -111,9 +111,9 @@ export async function handleUpdate(update: TelegramUpdate): Promise<void> {
       return;
     }
 
-    console.log('[TelegramBot] Неизвестный тип обновления:', update);
+    console.log("[TelegramBot] Неизвестный тип обновления:", update);
   } catch (error) {
-    console.error('[TelegramBot] Ошибка обработки обновления:', error);
+    console.error("[TelegramBot] Ошибка обработки обновления:", error);
   }
 }
 
@@ -122,13 +122,13 @@ export async function handleUpdate(update: TelegramUpdate): Promise<void> {
  */
 async function handleMessage(message: TelegramMessage): Promise<void> {
   const chatId = String(message.chat.id);
-  const text = message.text?.trim() || '';
+  const text = message.text?.trim() || "";
   const username = message.from?.username || null;
 
   console.log(`[TelegramBot] Сообщение от ${chatId}: ${text}`);
 
   // Обработка команд
-  if (text.startsWith('/')) {
+  if (text.startsWith("/")) {
     await handleCommand(chatId, text, username);
     return;
   }
@@ -146,28 +146,32 @@ async function handleMessage(message: TelegramMessage): Promise<void> {
 /**
  * Обработать команду
  */
-async function handleCommand(chatId: string, command: string, username: string | null): Promise<void> {
+async function handleCommand(
+  chatId: string,
+  command: string,
+  username: string | null
+): Promise<void> {
   // Убираем @ и имя бота если есть
-  const parts = command.split('@');
+  const parts = command.split("@");
   const cleanCommand = (parts[0] || command).toLowerCase();
 
   switch (cleanCommand) {
-    case '/start':
+    case "/start":
       await commandStart(chatId, username);
       break;
-    case '/status':
+    case "/status":
       await commandStatus(chatId);
       break;
-    case '/students':
+    case "/students":
       await commandStudents(chatId);
       break;
-    case '/schedule':
+    case "/schedule":
       await commandSchedule(chatId);
       break;
-    case '/certificates':
+    case "/certificates":
       await commandCertificates(chatId);
       break;
-    case '/help':
+    case "/help":
       await commandHelp(chatId);
       break;
     default:
@@ -182,7 +186,10 @@ async function handleCommand(chatId: string, command: string, username: string |
 /**
  * Команда /start - начало работы
  */
-async function commandStart(chatId: string, username: string | null): Promise<void> {
+async function commandStart(
+  chatId: string,
+  username: string | null
+): Promise<void> {
   // Проверяем, зарегистрирован ли уже пользователь
   const representative = await getRepresentativeByTelegramChatId(chatId);
 
@@ -201,7 +208,7 @@ async function commandStart(chatId: string, username: string | null): Promise<vo
 
   // Переводим в состояние ожидания ФИО
   await updateSession(chatId, {
-    state: 'awaiting_name',
+    state: "awaiting_name",
     data: { username },
   });
 
@@ -220,7 +227,7 @@ async function commandStatus(chatId: string): Promise<void> {
     // Проверяем, может быть в процессе регистрации
     const session = await getOrCreateSession(chatId);
 
-    if (session.state === 'pending_approval') {
+    if (session.state === "pending_approval") {
       await sendMessage(chatId, BOT_MESSAGES.STATUS_PENDING);
     } else {
       await sendMessage(chatId, BOT_MESSAGES.ERROR_NOT_REGISTERED);
@@ -229,15 +236,18 @@ async function commandStatus(chatId: string): Promise<void> {
   }
 
   switch (representative.status) {
-    case 'pending':
+    case "pending":
       await sendMessage(chatId, BOT_MESSAGES.STATUS_PENDING);
       break;
-    case 'approved':
+    case "approved":
       await sendMessage(chatId, BOT_MESSAGES.STATUS_APPROVED);
       await updateLastActivity(representative.id);
       break;
-    case 'blocked':
-      await sendMessage(chatId, BOT_MESSAGES.STATUS_BLOCKED(representative.blockedReason || ''));
+    case "blocked":
+      await sendMessage(
+        chatId,
+        BOT_MESSAGES.STATUS_BLOCKED(representative.blockedReason || "")
+      );
       break;
   }
 }
@@ -250,23 +260,26 @@ async function commandStudents(chatId: string): Promise<void> {
   const startTime = Date.now();
   const representative = await getRepresentativeByTelegramChatId(chatId);
 
-  if (!representative || representative.status !== 'approved') {
+  if (!representative || representative.status !== "approved") {
     await sendMessage(chatId, BOT_MESSAGES.ERROR_NO_PERMISSION);
     return;
   }
 
   // Проверяем разрешение
   if (!representative.permissions.can_view_students) {
-    await sendMessage(chatId, '🚫 *Нет доступа*\n\nУ вас нет разрешения на просмотр списка слушателей. Обратитесь к администратору учебного центра.');
+    await sendMessage(
+      chatId,
+      "🚫 *Нет доступа*\n\nУ вас нет разрешения на просмотр списка слушателей. Обратитесь к администратору учебного центра."
+    );
 
     // Логируем отказ
-    const { logBotRequest } = await import('../utils/botLogger');
+    const { logBotRequest } = await import("../utils/botLogger");
     await logBotRequest({
       representativeId: representative.id,
       chatId,
-      command: '/students',
-      status: 'denied',
-      errorMessage: 'Нет разрешения can_view_students',
+      command: "/students",
+      status: "denied",
+      errorMessage: "Нет разрешения can_view_students",
       responseTimeMs: Date.now() - startTime,
     });
 
@@ -294,17 +307,18 @@ async function commandStudents(chatId: string): Promise<void> {
     const sortedCourses = Array.from(courses).slice(0, 6);
 
     // Создаём клавиатуру с курсами
-    const { InlineKeyboard } = await import('grammy');
+    const { InlineKeyboard } = await import("grammy");
     const keyboard = new InlineKeyboard();
 
     // Кнопка "Все слушатели"
-    keyboard.text('📋 Все слушатели', 'stc_all');
+    keyboard.text("📋 Все слушатели", "stc_all");
     keyboard.row();
 
     // Добавляем кнопки курсов (используем индекс для короткого callback_data)
     for (let i = 0; i < sortedCourses.length; i++) {
       const course = sortedCourses[i]!;
-      const shortName = course.length > 25 ? course.substring(0, 22) + '...' : course;
+      const shortName =
+        course.length > 25 ? course.substring(0, 22) + "..." : course;
       // Используем индекс вместо полного названия курса
       keyboard.text(`📚 ${shortName}`, `stc_${i}`);
       keyboard.row();
@@ -312,41 +326,49 @@ async function commandStudents(chatId: string): Promise<void> {
 
     // Сохраняем маппинг курсов в сессию для последующего использования
     await updateSession(chatId, {
-      data: { coursesList: sortedCourses }
+      data: { coursesList: sortedCourses },
     });
 
-    await sendMessage(chatId, '👥 *Список слушателей*\n\nВыберите курс для просмотра:', { replyMarkup: keyboard });
+    await sendMessage(
+      chatId,
+      "👥 *Список слушателей*\n\nВыберите курс для просмотра:",
+      { replyMarkup: keyboard }
+    );
     await updateLastActivity(representative.id);
 
     // Логируем успешный запрос
-    const { logBotRequest } = await import('../utils/botLogger');
+    const { logBotRequest } = await import("../utils/botLogger");
     await logBotRequest({
       representativeId: representative.id,
       chatId,
-      command: '/students',
-      status: 'success',
-      requestData: { studentsCount: students.length, coursesCount: courses.size },
+      command: "/students",
+      status: "success",
+      requestData: {
+        studentsCount: students.length,
+        coursesCount: courses.size,
+      },
       responseTimeMs: Date.now() - startTime,
     });
 
-    console.log(`[TelegramBot] Слушатели: показаны курсы (${courses.size}) для chatId: ${chatId}`);
+    console.log(
+      `[TelegramBot] Слушатели: показаны курсы (${courses.size}) для chatId: ${chatId}`
+    );
   } catch (error) {
-    console.error('[TelegramBot] Ошибка получения студентов:', error);
+    console.error("[TelegramBot] Ошибка получения студентов:", error);
     await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
 
     // Логируем ошибку
-    const { logBotRequest } = await import('../utils/botLogger');
+    const { logBotRequest } = await import("../utils/botLogger");
     await logBotRequest({
       representativeId: representative.id,
       chatId,
-      command: '/students',
-      status: 'error',
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      command: "/students",
+      status: "error",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
       responseTimeMs: Date.now() - startTime,
     });
   }
 }
-
 
 /**
  * Команда /schedule - расписание
@@ -355,23 +377,26 @@ async function commandSchedule(chatId: string): Promise<void> {
   const startTime = Date.now();
   const representative = await getRepresentativeByTelegramChatId(chatId);
 
-  if (!representative || representative.status !== 'approved') {
+  if (!representative || representative.status !== "approved") {
     await sendMessage(chatId, BOT_MESSAGES.ERROR_NO_PERMISSION);
     return;
   }
 
   // Проверяем разрешение
   if (!representative.permissions.can_view_schedule) {
-    await sendMessage(chatId, '🚫 *Нет доступа*\n\nУ вас нет разрешения на просмотр расписания. Обратитесь к администратору учебного центра.');
+    await sendMessage(
+      chatId,
+      "🚫 *Нет доступа*\n\nУ вас нет разрешения на просмотр расписания. Обратитесь к администратору учебного центра."
+    );
 
     // Логируем отказ
-    const { logBotRequest } = await import('../utils/botLogger');
+    const { logBotRequest } = await import("../utils/botLogger");
     await logBotRequest({
       representativeId: representative.id,
       chatId,
-      command: '/schedule',
-      status: 'denied',
-      errorMessage: 'Нет разрешения can_view_schedule',
+      command: "/schedule",
+      status: "denied",
+      errorMessage: "Нет разрешения can_view_schedule",
       responseTimeMs: Date.now() - startTime,
     });
 
@@ -386,27 +411,27 @@ async function commandSchedule(chatId: string): Promise<void> {
     await updateLastActivity(representative.id);
 
     // Логируем успешный запрос
-    const { logBotRequest } = await import('../utils/botLogger');
+    const { logBotRequest } = await import("../utils/botLogger");
     await logBotRequest({
       representativeId: representative.id,
       chatId,
-      command: '/schedule',
-      status: 'success',
+      command: "/schedule",
+      status: "success",
       requestData: { eventsCount: schedule.length },
       responseTimeMs: Date.now() - startTime,
     });
   } catch (error) {
-    console.error('[TelegramBot] Ошибка получения расписания:', error);
+    console.error("[TelegramBot] Ошибка получения расписания:", error);
     await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
 
     // Логируем ошибку
-    const { logBotRequest } = await import('../utils/botLogger');
+    const { logBotRequest } = await import("../utils/botLogger");
     await logBotRequest({
       representativeId: representative.id,
       chatId,
-      command: '/schedule',
-      status: 'error',
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      command: "/schedule",
+      status: "error",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
       responseTimeMs: Date.now() - startTime,
     });
   }
@@ -420,23 +445,26 @@ async function commandCertificates(chatId: string): Promise<void> {
   const startTime = Date.now();
   const representative = await getRepresentativeByTelegramChatId(chatId);
 
-  if (!representative || representative.status !== 'approved') {
+  if (!representative || representative.status !== "approved") {
     await sendMessage(chatId, BOT_MESSAGES.ERROR_NO_PERMISSION);
     return;
   }
 
   // Проверяем разрешение
   if (!representative.permissions.can_view_certificates) {
-    await sendMessage(chatId, '🚫 *Нет доступа*\n\nУ вас нет разрешения на просмотр сертификатов. Обратитесь к администратору учебного центра.');
+    await sendMessage(
+      chatId,
+      "🚫 *Нет доступа*\n\nУ вас нет разрешения на просмотр сертификатов. Обратитесь к администратору учебного центра."
+    );
 
     // Логируем отказ
-    const { logBotRequest } = await import('../utils/botLogger');
+    const { logBotRequest } = await import("../utils/botLogger");
     await logBotRequest({
       representativeId: representative.id,
       chatId,
-      command: '/certificates',
-      status: 'denied',
-      errorMessage: 'Нет разрешения can_view_certificates',
+      command: "/certificates",
+      status: "denied",
+      errorMessage: "Нет разрешения can_view_certificates",
       responseTimeMs: Date.now() - startTime,
     });
 
@@ -457,7 +485,7 @@ async function commandCertificates(chatId: string): Promise<void> {
     for (const cert of certificates) {
       if (cert.issueDate) {
         // issueDate уже в формате dd.mm.yyyy
-        const parts = cert.issueDate.split('.');
+        const parts = cert.issueDate.split(".");
         if (parts.length === 3) {
           const month = parts[1];
           const year = parts[2];
@@ -468,18 +496,18 @@ async function commandCertificates(chatId: string): Promise<void> {
 
     // Сортируем периоды по убыванию (новые первые)
     const sortedPeriods = Array.from(periods).sort((a, b) => {
-      const [aMonth, aYear] = a.split('.').map(Number);
-      const [bMonth, bYear] = b.split('.').map(Number);
+      const [aMonth, aYear] = a.split(".").map(Number);
+      const [bMonth, bYear] = b.split(".").map(Number);
       if (aYear !== bYear) return bYear! - aYear!;
       return bMonth! - aMonth!;
     });
 
     // Создаём клавиатуру с периодами
-    const { InlineKeyboard } = await import('grammy');
+    const { InlineKeyboard } = await import("grammy");
     const keyboard = new InlineKeyboard();
 
     // Кнопка "Все сертификаты"
-    keyboard.text('📋 Все сертификаты', 'certs_period_all');
+    keyboard.text("📋 Все сертификаты", "certs_period_all");
     keyboard.row();
 
     // Добавляем кнопки периодов (максимум 6)
@@ -493,39 +521,47 @@ async function commandCertificates(chatId: string): Promise<void> {
       }
     }
 
-    await sendMessage(chatId, '📜 *Сертификаты слушателей*\n\nВыберите период для просмотра сертификатов:', { replyMarkup: keyboard });
+    await sendMessage(
+      chatId,
+      "📜 *Сертификаты слушателей*\n\nВыберите период для просмотра сертификатов:",
+      { replyMarkup: keyboard }
+    );
 
     await updateLastActivity(representative.id);
 
     // Логируем успешный запрос
-    const { logBotRequest } = await import('../utils/botLogger');
+    const { logBotRequest } = await import("../utils/botLogger");
     await logBotRequest({
       representativeId: representative.id,
       chatId,
-      command: '/certificates',
-      status: 'success',
-      requestData: { certificatesCount: certificates.length, periodsCount: sortedPeriods.length },
+      command: "/certificates",
+      status: "success",
+      requestData: {
+        certificatesCount: certificates.length,
+        periodsCount: sortedPeriods.length,
+      },
       responseTimeMs: Date.now() - startTime,
     });
 
-    console.log(`[TelegramBot] Сертификаты: показаны периоды (${sortedPeriods.length}) для chatId: ${chatId}`);
+    console.log(
+      `[TelegramBot] Сертификаты: показаны периоды (${sortedPeriods.length}) для chatId: ${chatId}`
+    );
   } catch (error) {
-    console.error('[TelegramBot] Ошибка получения сертификатов:', error);
+    console.error("[TelegramBot] Ошибка получения сертификатов:", error);
     await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
 
     // Логируем ошибку
-    const { logBotRequest } = await import('../utils/botLogger');
+    const { logBotRequest } = await import("../utils/botLogger");
     await logBotRequest({
       representativeId: representative.id,
       chatId,
-      command: '/certificates',
-      status: 'error',
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      command: "/certificates",
+      status: "error",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
       responseTimeMs: Date.now() - startTime,
     });
   }
 }
-
 
 /**
  * Команда /help - справка
@@ -541,24 +577,28 @@ async function commandHelp(chatId: string): Promise<void> {
 /**
  * Обработать текстовое сообщение в зависимости от состояния FSM
  */
-async function handleTextMessage(chatId: string, text: string, username: string | null): Promise<void> {
+async function handleTextMessage(
+  chatId: string,
+  text: string,
+  username: string | null
+): Promise<void> {
   const session = await getOrCreateSession(chatId);
 
   switch (session.state) {
-    case 'awaiting_name':
+    case "awaiting_name":
       await handleNameInput(chatId, text, session.data);
       break;
-    case 'awaiting_phone':
+    case "awaiting_phone":
       await handlePhoneInput(chatId, text, session.data);
       break;
-    case 'awaiting_organization':
+    case "awaiting_organization":
       await handleOrganizationInput(chatId, text, session.data);
       break;
-    case 'pending_approval':
+    case "pending_approval":
       await sendMessage(chatId, BOT_MESSAGES.STATUS_PENDING);
       break;
-    case 'completed':
-    case 'idle':
+    case "completed":
+    case "idle":
     default:
       // Для зарегистрированных пользователей показываем справку
       await sendMessage(chatId, BOT_MESSAGES.HELP);
@@ -568,7 +608,11 @@ async function handleTextMessage(chatId: string, text: string, username: string 
 /**
  * Обработка ввода ФИО
  */
-async function handleNameInput(chatId: string, name: string, sessionData: Record<string, any>): Promise<void> {
+async function handleNameInput(
+  chatId: string,
+  name: string,
+  sessionData: Record<string, any>
+): Promise<void> {
   if (!validateName(name)) {
     await sendMessage(chatId, BOT_MESSAGES.INVALID_NAME);
     return;
@@ -576,7 +620,7 @@ async function handleNameInput(chatId: string, name: string, sessionData: Record
 
   // Сохраняем ФИО и переходим к следующему шагу
   await updateSession(chatId, {
-    state: 'awaiting_phone',
+    state: "awaiting_phone",
     data: { ...sessionData, fullName: name.trim() },
   });
 
@@ -589,7 +633,11 @@ async function handleNameInput(chatId: string, name: string, sessionData: Record
 /**
  * Обработка ввода телефона
  */
-async function handlePhoneInput(chatId: string, phone: string, sessionData: Record<string, any>): Promise<void> {
+async function handlePhoneInput(
+  chatId: string,
+  phone: string,
+  sessionData: Record<string, any>
+): Promise<void> {
   const normalized = normalizePhone(phone);
 
   if (!validatePhone(normalized)) {
@@ -599,7 +647,7 @@ async function handlePhoneInput(chatId: string, phone: string, sessionData: Reco
 
   // Сохраняем телефон и переходим к выбору организации
   await updateSession(chatId, {
-    state: 'awaiting_organization',
+    state: "awaiting_organization",
     data: { ...sessionData, phone: normalized },
   });
 
@@ -608,27 +656,35 @@ async function handlePhoneInput(chatId: string, phone: string, sessionData: Reco
 
   if (organizations.length > 0) {
     // Показываем кнопки с организациями (максимум 10)
-    const topOrganizations = organizations.slice(0, 10).map(org => ({
+    const topOrganizations = organizations.slice(0, 10).map((org) => ({
       id: org.id,
-      name: org.name.length > 30 ? org.name.substring(0, 27) + '...' : org.name,
+      name: org.name.length > 30 ? org.name.substring(0, 27) + "..." : org.name,
     }));
 
     const keyboard = createOrganizationsKeyboard(topOrganizations);
-    await sendMessage(chatId, BOT_MESSAGES.ASK_ORGANIZATION, { replyMarkup: keyboard });
+    await sendMessage(chatId, BOT_MESSAGES.ASK_ORGANIZATION, {
+      replyMarkup: keyboard,
+    });
   } else {
     await sendMessage(chatId, BOT_MESSAGES.ASK_ORGANIZATION);
   }
 
-  console.log(`[TelegramBot] chatId ${chatId}: телефон сохранён - ${normalized}`);
+  console.log(
+    `[TelegramBot] chatId ${chatId}: телефон сохранён - ${normalized}`
+  );
 }
 
 /**
  * Обработка контакта (кнопка отправки номера)
  */
-async function handleContactMessage(chatId: string, phoneNumber: string, username: string | null): Promise<void> {
+async function handleContactMessage(
+  chatId: string,
+  phoneNumber: string,
+  username: string | null
+): Promise<void> {
   const session = await getOrCreateSession(chatId);
 
-  if (session.state !== 'awaiting_phone') {
+  if (session.state !== "awaiting_phone") {
     return;
   }
 
@@ -639,7 +695,11 @@ async function handleContactMessage(chatId: string, phoneNumber: string, usernam
 /**
  * Обработка ввода/выбора организации
  */
-async function handleOrganizationInput(chatId: string, organizationName: string, sessionData: Record<string, any>): Promise<void> {
+async function handleOrganizationInput(
+  chatId: string,
+  organizationName: string,
+  sessionData: Record<string, any>
+): Promise<void> {
   try {
     // Получаем или создаём организацию
     const organization = await getOrCreateOrganizationByName(organizationName);
@@ -647,9 +707,11 @@ async function handleOrganizationInput(chatId: string, organizationName: string,
     // Создаём заявку представителя
     await createRepresentativeFromSession(chatId, sessionData, organization.id);
 
-    console.log(`[TelegramBot] chatId ${chatId}: организация выбрана - ${organization.name}`);
+    console.log(
+      `[TelegramBot] chatId ${chatId}: организация выбрана - ${organization.name}`
+    );
   } catch (error) {
-    console.error('[TelegramBot] Ошибка создания представителя:', error);
+    console.error("[TelegramBot] Ошибка создания представителя:", error);
     await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
   }
 }
@@ -661,9 +723,11 @@ async function handleOrganizationInput(chatId: string, organizationName: string,
 /**
  * Обработать нажатие inline кнопки
  */
-async function handleCallbackQuery(query: TelegramCallbackQuery): Promise<void> {
+async function handleCallbackQuery(
+  query: TelegramCallbackQuery
+): Promise<void> {
   const chatId = String(query.from.id);
-  const data = query.data || '';
+  const data = query.data || "";
 
   console.log(`[TelegramBot] Callback от ${chatId}: ${data}`);
 
@@ -674,56 +738,63 @@ async function handleCallbackQuery(query: TelegramCallbackQuery): Promise<void> 
   }
 
   // Обработка выбора организации
-  if (data.startsWith('org_')) {
+  if (data.startsWith("org_")) {
     const organizationId = data.substring(4);
     await handleOrganizationSelection(chatId, organizationId);
     return;
   }
 
   // Обработка запроса всех сертификатов
-  if (data === 'get_all_certs') {
+  if (data === "get_all_certs") {
     await handleSendAllCertificates(chatId);
     return;
   }
 
   // Обработка запроса конкретного сертификата
-  if (data.startsWith('get_cert_')) {
+  if (data.startsWith("get_cert_")) {
     const certificateId = data.substring(9);
     await handleSendCertificate(chatId, certificateId);
     return;
   }
 
   // Обработка выбора периода сертификатов
-  if (data.startsWith('certs_period_')) {
+  if (data.startsWith("certs_period_")) {
     const period = data.substring(13);
     await handleCertificatesPeriodSelection(chatId, period);
     return;
   }
 
+  // Обработка запроса архива сертификатов
+  if (data.startsWith("get_zip_certs_")) {
+    const period = data.substring(14);
+    await handleSendCertificatesArchive(chatId, period);
+    return;
+  }
+
   // Обработка выбора курса для списка слушателей (короткий формат stc_)
-  if (data.startsWith('stc_')) {
+  if (data.startsWith("stc_")) {
     const courseIndex = data.substring(4);
     await handleStudentsCourseSelection(chatId, courseIndex);
     return;
   }
 
   // Обработка выбора периода для списка слушателей (короткий формат stp_)
-  if (data.startsWith('stp_')) {
-    const parts = data.substring(4).split('_');
+  if (data.startsWith("stp_")) {
+    const parts = data.substring(4).split("_");
     const courseIndex = parts[0];
-    const period = parts.slice(1).join('_');
+    const period = parts.slice(1).join("_");
     await handleStudentsPeriodSelection(chatId, courseIndex!, period);
     return;
   }
 
   // Обработка кнопки "назад" для сертификатов
-  if (data === 'certs_back') {
+  if (data === "certs_back") {
     await commandCertificates(chatId);
     return;
   }
 
   // Обработка кнопки "назад" для слушателей
-  if (data === 'stb') {
+  if (data === "stb") {
     await commandStudents(chatId);
     return;
   }
@@ -732,10 +803,13 @@ async function handleCallbackQuery(query: TelegramCallbackQuery): Promise<void> 
 /**
  * Обработка выбора организации из кнопок
  */
-async function handleOrganizationSelection(chatId: string, organizationId: string): Promise<void> {
+async function handleOrganizationSelection(
+  chatId: string,
+  organizationId: string
+): Promise<void> {
   const session = await getOrCreateSession(chatId);
 
-  if (session.state !== 'awaiting_organization') {
+  if (session.state !== "awaiting_organization") {
     return;
   }
 
@@ -748,11 +822,17 @@ async function handleOrganizationSelection(chatId: string, organizationId: strin
     }
 
     // Создаём заявку представителя
-    await createRepresentativeFromSession(chatId, session.data, organization.id);
+    await createRepresentativeFromSession(
+      chatId,
+      session.data,
+      organization.id
+    );
 
-    console.log(`[TelegramBot] chatId ${chatId}: организация выбрана по ID - ${organization.name}`);
+    console.log(
+      `[TelegramBot] chatId ${chatId}: организация выбрана по ID - ${organization.name}`
+    );
   } catch (error) {
-    console.error('[TelegramBot] Ошибка при выборе организации:', error);
+    console.error("[TelegramBot] Ошибка при выборе организации:", error);
     await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
   }
 }
@@ -763,14 +843,17 @@ async function handleOrganizationSelection(chatId: string, organizationId: strin
 async function handleSendAllCertificates(chatId: string): Promise<void> {
   const representative = await getRepresentativeByTelegramChatId(chatId);
 
-  if (!representative || representative.status !== 'approved') {
+  if (!representative || representative.status !== "approved") {
     await sendMessage(chatId, BOT_MESSAGES.ERROR_NO_PERMISSION);
     return;
   }
 
   // Проверяем разрешение
   if (!representative.permissions.can_request_certificates) {
-    await sendMessage(chatId, '🚫 *Нет доступа*\n\nУ вас нет разрешения на запрос файлов сертификатов. Обратитесь к администратору учебного центра.');
+    await sendMessage(
+      chatId,
+      "🚫 *Нет доступа*\n\nУ вас нет разрешения на запрос файлов сертификатов. Обратитесь к администратору учебного центра."
+    );
     return;
   }
 
@@ -778,7 +861,9 @@ async function handleSendAllCertificates(chatId: string): Promise<void> {
     await sendMessage(chatId, BOT_MESSAGES.CERTIFICATE_REQUEST_RECEIVED);
 
     const certificates = await getCertificatesForRepresentative(representative);
-    const issuedCerts = certificates.filter(c => c.status === 'issued' && c.pdfFileUrl);
+    const issuedCerts = certificates.filter(
+      (c) => c.status === "issued" && c.pdfFileUrl
+    );
 
     if (issuedCerts.length === 0) {
       await sendMessage(chatId, BOT_MESSAGES.NO_CERTIFICATES);
@@ -799,19 +884,19 @@ async function handleSendAllCertificates(chatId: string): Promise<void> {
       try {
         if (cert.pdfFileUrl) {
           // Отправляем файл
-          const fs = await import('fs');
-          const path = await import('path');
+          const fs = await import("fs");
+          const path = await import("path");
 
           // Формируем путь к файлу
           // URL хранится как /storage/certificates/generated/xxx.pdf
           // Нужно преобразовать в локальный путь
           let filePath: string;
-          if (cert.pdfFileUrl.startsWith('/storage/')) {
+          if (cert.pdfFileUrl.startsWith("/storage/")) {
             // URL начинается с /storage/ — используем корень проекта + путь без начального /
             filePath = path.join(process.cwd(), cert.pdfFileUrl.substring(1));
-          } else if (cert.pdfFileUrl.startsWith('/')) {
+          } else if (cert.pdfFileUrl.startsWith("/")) {
             // Другой абсолютный путь — пробуем в public
-            filePath = path.join(process.cwd(), 'public', cert.pdfFileUrl);
+            filePath = path.join(process.cwd(), "public", cert.pdfFileUrl);
           } else {
             // Относительный путь
             filePath = path.join(process.cwd(), cert.pdfFileUrl);
@@ -819,23 +904,38 @@ async function handleSendAllCertificates(chatId: string): Promise<void> {
 
           if (!fs.existsSync(filePath)) {
             console.error(`[TelegramBot] Файл не найден: ${filePath}`);
-            await sendMessage(chatId, BOT_MESSAGES.CERTIFICATE_SEND_ERROR(cert.studentName));
+            await sendMessage(
+              chatId,
+              BOT_MESSAGES.CERTIFICATE_SEND_ERROR(cert.studentName)
+            );
             continue;
           }
 
           // Отправляем документ
-          await bot.api.sendDocument(chatId, new (await import('grammy')).InputFile(filePath), {
-            caption: `📜 *Сертификат*\n${cert.studentName}\n№ ${cert.certificateNumber}\n${cert.courseName}`,
-            parse_mode: 'Markdown',
-          });
+          await bot.api.sendDocument(
+            chatId,
+            new (
+              await import("grammy")
+            ).InputFile(filePath),
+            {
+              caption: `📜 *Сертификат*\n${cert.studentName}\n№ ${cert.certificateNumber}\n${cert.courseName}`,
+              parse_mode: "Markdown",
+            }
+          );
 
           // Отмечаем отправку в БД
           await markCertificateAsSent(cert.id);
           sentCount++;
         }
       } catch (error) {
-        console.error(`[TelegramBot] Ошибка отправки сертификата ${cert.id}:`, error);
-        await sendMessage(chatId, BOT_MESSAGES.CERTIFICATE_SEND_ERROR(cert.studentName));
+        console.error(
+          `[TelegramBot] Ошибка отправки сертификата ${cert.id}:`,
+          error
+        );
+        await sendMessage(
+          chatId,
+          BOT_MESSAGES.CERTIFICATE_SEND_ERROR(cert.studentName)
+        );
       }
     }
 
@@ -848,9 +948,11 @@ async function handleSendAllCertificates(chatId: string): Promise<void> {
     }
 
     await updateLastActivity(representative.id);
-    console.log(`[TelegramBot] Отправлено ${sentCount} сертификатов для chatId: ${chatId}`);
+    console.log(
+      `[TelegramBot] Отправлено ${sentCount} сертификатов для chatId: ${chatId}`
+    );
   } catch (error) {
-    console.error('[TelegramBot] Ошибка отправки сертификатов:', error);
+    console.error("[TelegramBot] Ошибка отправки сертификатов:", error);
     await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
   }
 }
@@ -858,49 +960,68 @@ async function handleSendAllCertificates(chatId: string): Promise<void> {
 /**
  * Отправить конкретный сертификат
  */
-async function handleSendCertificate(chatId: string, certificateId: string): Promise<void> {
+async function handleSendCertificate(
+  chatId: string,
+  certificateId: string
+): Promise<void> {
   const representative = await getRepresentativeByTelegramChatId(chatId);
 
-  if (!representative || representative.status !== 'approved') {
+  if (!representative || representative.status !== "approved") {
     await sendMessage(chatId, BOT_MESSAGES.ERROR_NO_PERMISSION);
     return;
   }
 
   // Проверяем разрешение
   if (!representative.permissions.can_request_certificates) {
-    await sendMessage(chatId, '🚫 *Нет доступа*\n\nУ вас нет разрешения на запрос файлов сертификатов.');
+    await sendMessage(
+      chatId,
+      "🚫 *Нет доступа*\n\nУ вас нет разрешения на запрос файлов сертификатов."
+    );
     return;
   }
 
   try {
-    const { executeQuery } = await import('../utils/db');
-    const { getOrganizationById } = await import('../repositories/organizationRepository');
+    const { executeQuery } = await import("../utils/db");
+    const { getOrganizationById } = await import(
+      "../repositories/organizationRepository"
+    );
 
-    const organization = await getOrganizationById(representative.organizationId);
+    const organization = await getOrganizationById(
+      representative.organizationId
+    );
     if (!organization) {
       await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
       return;
     }
 
     // Получаем сертификат и проверяем что он принадлежит организации представителя
-    const certs = await executeQuery<any[]>(`
+    const certs = await executeQuery<any[]>(
+      `
       SELECT ic.*, s.full_name as student_name, s.organization, c.name as course_name
       FROM issued_certificates ic
       JOIN students s ON ic.student_id = s.id
       JOIN study_groups g ON ic.group_id = g.id
       JOIN courses c ON g.course_id = c.id
       WHERE ic.id = ? AND s.organization = ?
-    `, [certificateId, organization.name]);
+    `,
+      [certificateId, organization.name]
+    );
 
     if (certs.length === 0) {
-      await sendMessage(chatId, '❌ Сертификат не найден или не принадлежит вашей организации');
+      await sendMessage(
+        chatId,
+        "❌ Сертификат не найден или не принадлежит вашей организации"
+      );
       return;
     }
 
     const cert = certs[0];
 
     if (!cert.pdf_file_url) {
-      await sendMessage(chatId, BOT_MESSAGES.CERTIFICATE_SEND_ERROR(cert.student_name));
+      await sendMessage(
+        chatId,
+        BOT_MESSAGES.CERTIFICATE_SEND_ERROR(cert.student_name)
+      );
       return;
     }
 
@@ -910,41 +1031,55 @@ async function handleSendCertificate(chatId: string, certificateId: string): Pro
       return;
     }
 
-    const fs = await import('fs');
-    const path = await import('path');
+    const fs = await import("fs");
+    const path = await import("path");
 
     // Формируем путь к файлу
     // URL хранится как /storage/certificates/generated/xxx.pdf
     let filePath: string;
-    if (cert.pdf_file_url.startsWith('/storage/')) {
+    if (cert.pdf_file_url.startsWith("/storage/")) {
       filePath = path.join(process.cwd(), cert.pdf_file_url.substring(1));
-    } else if (cert.pdf_file_url.startsWith('/')) {
-      filePath = path.join(process.cwd(), 'public', cert.pdf_file_url);
+    } else if (cert.pdf_file_url.startsWith("/")) {
+      filePath = path.join(process.cwd(), "public", cert.pdf_file_url);
     } else {
       filePath = path.join(process.cwd(), cert.pdf_file_url);
     }
 
     if (!fs.existsSync(filePath)) {
       console.error(`[TelegramBot] Файл не найден: ${filePath}`);
-      await sendMessage(chatId, BOT_MESSAGES.CERTIFICATE_SEND_ERROR(cert.student_name));
+      await sendMessage(
+        chatId,
+        BOT_MESSAGES.CERTIFICATE_SEND_ERROR(cert.student_name)
+      );
       return;
     }
 
     // Отправляем документ
-    await bot.api.sendDocument(chatId, new (await import('grammy')).InputFile(filePath), {
-      caption: `📜 *Сертификат*\n${cert.student_name}\n№ ${cert.certificate_number}\n${cert.course_name}`,
-      parse_mode: 'Markdown',
-    });
+    await bot.api.sendDocument(
+      chatId,
+      new (
+        await import("grammy")
+      ).InputFile(filePath),
+      {
+        caption: `📜 *Сертификат*\n${cert.student_name}\n№ ${cert.certificate_number}\n${cert.course_name}`,
+        parse_mode: "Markdown",
+      }
+    );
 
     // Отмечаем отправку в БД
     await markCertificateAsSent(certificateId);
 
-    await sendMessage(chatId, BOT_MESSAGES.CERTIFICATE_SENT(cert.student_name, cert.certificate_number));
+    await sendMessage(
+      chatId,
+      BOT_MESSAGES.CERTIFICATE_SENT(cert.student_name, cert.certificate_number)
+    );
     await updateLastActivity(representative.id);
 
-    console.log(`[TelegramBot] Сертификат ${certificateId} отправлен для chatId: ${chatId}`);
+    console.log(
+      `[TelegramBot] Сертификат ${certificateId} отправлен для chatId: ${chatId}`
+    );
   } catch (error) {
-    console.error('[TelegramBot] Ошибка отправки сертификата:', error);
+    console.error("[TelegramBot] Ошибка отправки сертификата:", error);
     await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
   }
 }
@@ -954,23 +1089,26 @@ async function handleSendCertificate(chatId: string, certificateId: string): Pro
  */
 async function markCertificateAsSent(certificateId: string): Promise<void> {
   try {
-    const { executeQuery } = await import('../utils/db');
+    const { executeQuery } = await import("../utils/db");
     await executeQuery(
-      'UPDATE issued_certificates SET is_sent_via_telegram = 1, sent_at = ? WHERE id = ?',
+      "UPDATE issued_certificates SET is_sent_via_telegram = 1, sent_at = ? WHERE id = ?",
       [new Date(), certificateId]
     );
   } catch (error) {
-    console.error('[TelegramBot] Ошибка обновления статуса отправки:', error);
+    console.error("[TelegramBot] Ошибка обновления статуса отправки:", error);
   }
 }
 
 /**
  * Обработка выбора периода для сертификатов
  */
-async function handleCertificatesPeriodSelection(chatId: string, period: string): Promise<void> {
+async function handleCertificatesPeriodSelection(
+  chatId: string,
+  period: string
+): Promise<void> {
   const representative = await getRepresentativeByTelegramChatId(chatId);
 
-  if (!representative || representative.status !== 'approved') {
+  if (!representative || representative.status !== "approved") {
     await sendMessage(chatId, BOT_MESSAGES.ERROR_NO_PERMISSION);
     return;
   }
@@ -980,13 +1118,13 @@ async function handleCertificatesPeriodSelection(chatId: string, period: string)
     let certificates = await getCertificatesForRepresentative(representative);
 
     // Фильтруем по периоду если указан
-    if (period !== 'all') {
-      const [monthStr, yearStr] = period.split('.');
+    if (period !== "all") {
+      const [monthStr, yearStr] = period.split(".");
 
-      certificates = certificates.filter(cert => {
+      certificates = certificates.filter((cert) => {
         if (!cert.issueDate) return false;
         // issueDate уже в формате dd.mm.yyyy
-        const parts = cert.issueDate.split('.');
+        const parts = cert.issueDate.split(".");
         if (parts.length !== 3) return false;
         const certMonth = parts[1];
         const certYear = parts[2];
@@ -997,15 +1135,24 @@ async function handleCertificatesPeriodSelection(chatId: string, period: string)
     const message = formatCertificatesList(certificates);
 
     // Если есть сертификаты и есть разрешение на запрос файлов, добавляем кнопки
-    if (certificates.length > 0 && representative.permissions.can_request_certificates) {
-      const { InlineKeyboard } = await import('grammy');
+    if (
+      certificates.length > 0 &&
+      representative.permissions.can_request_certificates
+    ) {
+      const { InlineKeyboard } = await import("grammy");
       const keyboard = new InlineKeyboard();
 
       // Добавляем кнопку "Получить все сертификаты"
-      keyboard.text('📥 Получить все сертификаты', 'get_all_certs');
+      keyboard.text("📥 Получить все сертификаты (списком)", "get_all_certs");
+      keyboard.row();
+
+      // Добавляем кнопку ZIP
+      keyboard.text("📦 Скачать архивом (ZIP)", `get_zip_certs_${period}`);
 
       // Добавляем кнопки для отдельных сертификатов (максимум 5)
-      const issuedCerts = certificates.filter(c => c.status === 'issued' && c.pdfFileUrl);
+      const issuedCerts = certificates.filter(
+        (c) => c.status === "issued" && c.pdfFileUrl
+      );
       for (const cert of issuedCerts.slice(0, 5)) {
         keyboard.row();
         keyboard.text(`📜 ${cert.certificateNumber}`, `get_cert_${cert.id}`);
@@ -1013,7 +1160,7 @@ async function handleCertificatesPeriodSelection(chatId: string, period: string)
 
       // Кнопка назад
       keyboard.row();
-      keyboard.text('◀️ Назад к выбору периода', 'certs_back');
+      keyboard.text("◀️ Назад к выбору периода", "certs_back");
 
       await sendMessage(chatId, message, { replyMarkup: keyboard });
     } else {
@@ -1021,9 +1168,11 @@ async function handleCertificatesPeriodSelection(chatId: string, period: string)
     }
 
     await updateLastActivity(representative.id);
-    console.log(`[TelegramBot] Показаны сертификаты за период ${period} для chatId: ${chatId}, найдено: ${certificates.length}`);
+    console.log(
+      `[TelegramBot] Показаны сертификаты за период ${period} для chatId: ${chatId}, найдено: ${certificates.length}`
+    );
   } catch (error) {
-    console.error('[TelegramBot] Ошибка получения сертификатов:', error);
+    console.error("[TelegramBot] Ошибка получения сертификатов:", error);
     await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
   }
 }
@@ -1031,10 +1180,13 @@ async function handleCertificatesPeriodSelection(chatId: string, period: string)
 /**
  * Обработка выбора курса для списка слушателей
  */
-async function handleStudentsCourseSelection(chatId: string, courseIndex: string): Promise<void> {
+async function handleStudentsCourseSelection(
+  chatId: string,
+  courseIndex: string
+): Promise<void> {
   const representative = await getRepresentativeByTelegramChatId(chatId);
 
-  if (!representative || representative.status !== 'approved') {
+  if (!representative || representative.status !== "approved") {
     await sendMessage(chatId, BOT_MESSAGES.ERROR_NO_PERMISSION);
     return;
   }
@@ -1045,7 +1197,7 @@ async function handleStudentsCourseSelection(chatId: string, courseIndex: string
 
     // Получаем название курса из сессии по индексу
     let courseName: string | null = null;
-    if (courseIndex !== 'all') {
+    if (courseIndex !== "all") {
       const session = await getOrCreateSession(chatId);
       const coursesList = session.data?.coursesList as string[] | undefined;
       const idx = parseInt(courseIndex, 10);
@@ -1057,11 +1209,14 @@ async function handleStudentsCourseSelection(chatId: string, courseIndex: string
     // Фильтруем по курсу
     let filteredStudents = students;
     if (courseName) {
-      filteredStudents = students.filter(s => s.courseName === courseName);
+      filteredStudents = students.filter((s) => s.courseName === courseName);
     }
 
     if (filteredStudents.length === 0) {
-      await sendMessage(chatId, '📋 Слушатели не найдены для выбранного курса.');
+      await sendMessage(
+        chatId,
+        "📋 Слушатели не найдены для выбранного курса."
+      );
       return;
     }
 
@@ -1070,7 +1225,7 @@ async function handleStudentsCourseSelection(chatId: string, courseIndex: string
     for (const student of filteredStudents) {
       if (student.startDate) {
         // startDate уже в формате dd.mm.yyyy
-        const parts = student.startDate.split('.');
+        const parts = student.startDate.split(".");
         if (parts.length === 3) {
           const month = parts[1];
           const year = parts[2];
@@ -1081,18 +1236,18 @@ async function handleStudentsCourseSelection(chatId: string, courseIndex: string
 
     // Сортируем периоды
     const sortedPeriods = Array.from(periods).sort((a, b) => {
-      const [aMonth, aYear] = a.split('.').map(Number);
-      const [bMonth, bYear] = b.split('.').map(Number);
+      const [aMonth, aYear] = a.split(".").map(Number);
+      const [bMonth, bYear] = b.split(".").map(Number);
       if (aYear !== bYear) return bYear! - aYear!;
       return bMonth! - aMonth!;
     });
 
     // Создаём клавиатуру с периодами (используем короткие callback_data)
-    const { InlineKeyboard } = await import('grammy');
+    const { InlineKeyboard } = await import("grammy");
     const keyboard = new InlineKeyboard();
 
     // Кнопка "Все" (stp_ = students period)
-    keyboard.text('📋 Все', `stp_${courseIndex}_all`);
+    keyboard.text("📋 Все", `stp_${courseIndex}_all`);
     keyboard.row();
 
     // Добавляем кнопки периодов (максимум 6)
@@ -1108,12 +1263,12 @@ async function handleStudentsCourseSelection(chatId: string, courseIndex: string
 
     // Кнопка назад (stb = students back)
     keyboard.row();
-    keyboard.text('◀️ Назад к выбору курса', 'stb');
+    keyboard.text("◀️ Назад к выбору курса", "stb");
 
-    await sendMessage(chatId, '📅 Выберите период:', { replyMarkup: keyboard });
+    await sendMessage(chatId, "📅 Выберите период:", { replyMarkup: keyboard });
     await updateLastActivity(representative.id);
   } catch (error) {
-    console.error('[TelegramBot] Ошибка получения слушателей:', error);
+    console.error("[TelegramBot] Ошибка получения слушателей:", error);
     await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
   }
 }
@@ -1121,10 +1276,14 @@ async function handleStudentsCourseSelection(chatId: string, courseIndex: string
 /**
  * Обработка выбора периода для списка слушателей
  */
-async function handleStudentsPeriodSelection(chatId: string, courseIndex: string, period: string): Promise<void> {
+async function handleStudentsPeriodSelection(
+  chatId: string,
+  courseIndex: string,
+  period: string
+): Promise<void> {
   const representative = await getRepresentativeByTelegramChatId(chatId);
 
-  if (!representative || representative.status !== 'approved') {
+  if (!representative || representative.status !== "approved") {
     await sendMessage(chatId, BOT_MESSAGES.ERROR_NO_PERMISSION);
     return;
   }
@@ -1134,7 +1293,7 @@ async function handleStudentsPeriodSelection(chatId: string, courseIndex: string
 
     // Получаем название курса из сессии по индексу
     let courseName: string | null = null;
-    if (courseIndex !== 'all') {
+    if (courseIndex !== "all") {
       const session = await getOrCreateSession(chatId);
       const coursesList = session.data?.coursesList as string[] | undefined;
       const idx = parseInt(courseIndex, 10);
@@ -1145,17 +1304,17 @@ async function handleStudentsPeriodSelection(chatId: string, courseIndex: string
 
     // Фильтруем по курсу
     if (courseName) {
-      students = students.filter(s => s.courseName === courseName);
+      students = students.filter((s) => s.courseName === courseName);
     }
 
     // Фильтруем по периоду
-    if (period !== 'all') {
-      const [monthStr, yearStr] = period.split('.');
+    if (period !== "all") {
+      const [monthStr, yearStr] = period.split(".");
 
-      students = students.filter(student => {
+      students = students.filter((student) => {
         if (!student.startDate) return false;
         // startDate уже в формате dd.mm.yyyy
-        const parts = student.startDate.split('.');
+        const parts = student.startDate.split(".");
         if (parts.length !== 3) return false;
         const studentMonth = parts[1];
         const studentYear = parts[2];
@@ -1167,13 +1326,16 @@ async function handleStudentsPeriodSelection(chatId: string, courseIndex: string
     await sendMessage(chatId, message);
     await updateLastActivity(representative.id);
 
-    console.log(`[TelegramBot] Показаны слушатели: курс=${courseName || 'all'}, период=${period}, найдено: ${students.length}`);
+    console.log(
+      `[TelegramBot] Показаны слушатели: курс=${
+        courseName || "all"
+      }, период=${period}, найдено: ${students.length}`
+    );
   } catch (error) {
-    console.error('[TelegramBot] Ошибка получения слушателей:', error);
+    console.error("[TelegramBot] Ошибка получения слушателей:", error);
     await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
   }
 }
-
 
 /**
  * Создать представителя из данных сессии
@@ -1189,7 +1351,7 @@ async function createRepresentativeFromSession(
     if (existing) {
       // Уже зарегистрирован - показываем статус
       await sendMessage(chatId, BOT_MESSAGES.ALREADY_REGISTERED);
-      await updateSession(chatId, { state: 'completed', data: {} });
+      await updateSession(chatId, { state: "completed", data: {} });
       return;
     }
 
@@ -1204,7 +1366,7 @@ async function createRepresentativeFromSession(
 
     // Обновляем сессию
     await updateSession(chatId, {
-      state: 'pending_approval',
+      state: "pending_approval",
       data: { ...sessionData, representativeId: representative.id },
     });
 
@@ -1212,21 +1374,27 @@ async function createRepresentativeFromSession(
     await sendMessage(chatId, BOT_MESSAGES.REGISTRATION_COMPLETE);
 
     // Логируем действие (без userId, т.к. это действие через бота)
-    console.log(`[TelegramBot] Регистрация представителя: ${representative.id}, ФИО: ${representative.fullName}, Организация: ${organizationId}`);
+    console.log(
+      `[TelegramBot] Регистрация представителя: ${representative.id}, ФИО: ${representative.fullName}, Организация: ${organizationId}`
+    );
 
-    console.log(`[TelegramBot] Создана заявка представителя: ${representative.id}`);
+    console.log(
+      `[TelegramBot] Создана заявка представителя: ${representative.id}`
+    );
 
     // TODO: Отправить уведомление администраторам
-
   } catch (error: any) {
     // Обработка ошибки дубликата
-    if (error.code === 'ER_DUP_ENTRY' || error.message?.includes('Duplicate entry')) {
+    if (
+      error.code === "ER_DUP_ENTRY" ||
+      error.message?.includes("Duplicate entry")
+    ) {
       await sendMessage(chatId, BOT_MESSAGES.ALREADY_REGISTERED);
-      await updateSession(chatId, { state: 'completed', data: {} });
+      await updateSession(chatId, { state: "completed", data: {} });
       return;
     }
 
-    console.error('[TelegramBot] Ошибка создания представителя:', error);
+    console.error("[TelegramBot] Ошибка создания представителя:", error);
     throw error;
   }
 }
@@ -1238,12 +1406,16 @@ async function createRepresentativeFromSession(
 /**
  * Получить студентов организации для представителя
  */
-async function getStudentsForRepresentative(representative: Representative): Promise<FormattedStudent[]> {
+async function getStudentsForRepresentative(
+  representative: Representative
+): Promise<FormattedStudent[]> {
   // Импортируем executeQuery напрямую для сложного запроса
-  const { executeQuery } = await import('../utils/db');
+  const { executeQuery } = await import("../utils/db");
 
   // Сначала получаем название организации по organization_id
-  const { getOrganizationById } = await import('../repositories/organizationRepository');
+  const { getOrganizationById } = await import(
+    "../repositories/organizationRepository"
+  );
   const organization = await getOrganizationById(representative.organizationId);
 
   if (!organization) {
@@ -1271,7 +1443,7 @@ async function getStudentsForRepresentative(representative: Representative): Pro
 
   const rows = await executeQuery<any[]>(query, [organization.name]);
 
-  return rows.map(row => ({
+  return rows.map((row) => ({
     fullName: row.full_name,
     groupName: row.group_name,
     courseName: row.course_name,
@@ -1283,11 +1455,15 @@ async function getStudentsForRepresentative(representative: Representative): Pro
 /**
  * Получить расписание для организации
  */
-async function getScheduleForRepresentative(representative: Representative): Promise<FormattedScheduleEvent[]> {
-  const { executeQuery } = await import('../utils/db');
+async function getScheduleForRepresentative(
+  representative: Representative
+): Promise<FormattedScheduleEvent[]> {
+  const { executeQuery } = await import("../utils/db");
 
   // Получаем название организации
-  const { getOrganizationById } = await import('../repositories/organizationRepository');
+  const { getOrganizationById } = await import(
+    "../repositories/organizationRepository"
+  );
   const organization = await getOrganizationById(representative.organizationId);
 
   if (!organization) {
@@ -1327,22 +1503,22 @@ async function getScheduleForRepresentative(representative: Representative): Pro
 
   const rows = await executeQuery<any[]>(query, [
     organization.name,
-    today.toISOString().split('T')[0],
-    weekLater.toISOString().split('T')[0],
+    today.toISOString().split("T")[0],
+    weekLater.toISOString().split("T")[0],
   ]);
 
-  return rows.map(row => {
+  return rows.map((row) => {
     const startDate = new Date(row.start_time);
     const endDate = new Date(row.end_time);
-    const datePart = startDate.toISOString().split('T')[0];
+    const datePart = startDate.toISOString().split("T")[0];
 
     return {
-      date: datePart || '',
+      date: datePart || "",
       startTime: startDate.toTimeString().substring(0, 5),
       endTime: endDate.toTimeString().substring(0, 5),
-      eventType: row.event_type || 'lesson',
-      disciplineName: row.discipline_name || row.title || 'Занятие',
-      instructorName: row.instructor_name || 'Не назначен',
+      eventType: row.event_type || "lesson",
+      disciplineName: row.discipline_name || row.title || "Занятие",
+      instructorName: row.instructor_name || "Не назначен",
       location: row.classroom_name || undefined,
       groupName: row.group_name,
     };
@@ -1352,11 +1528,15 @@ async function getScheduleForRepresentative(representative: Representative): Pro
 /**
  * Получить сертификаты слушателей организации
  */
-async function getCertificatesForRepresentative(representative: Representative): Promise<FormattedCertificate[]> {
-  const { executeQuery } = await import('../utils/db');
+async function getCertificatesForRepresentative(
+  representative: Representative
+): Promise<FormattedCertificate[]> {
+  const { executeQuery } = await import("../utils/db");
 
   // Получаем название организации
-  const { getOrganizationById } = await import('../repositories/organizationRepository');
+  const { getOrganizationById } = await import(
+    "../repositories/organizationRepository"
+  );
   const organization = await getOrganizationById(representative.organizationId);
 
   if (!organization) {
@@ -1396,14 +1576,18 @@ async function getCertificatesForRepresentative(representative: Representative):
 
   const rows = await executeQuery<any[]>(query, [organization.name]);
 
-  return rows.map(row => {
+  return rows.map((row) => {
     // Определяем, прошёл ли слушатель обучение
     // Считаем "прошёл", если нет предупреждений или предупреждения были переопределены
     let warnings: any[] = [];
     try {
       warnings = row.warnings ? JSON.parse(row.warnings) : [];
     } catch (e) {
-      console.warn('[TelegramBot] Не удалось распарсить warnings для сертификата:', row.id, e);
+      console.warn(
+        "[TelegramBot] Не удалось распарсить warnings для сертификата:",
+        row.id,
+        e
+      );
       warnings = [];
     }
     const hasPassed = warnings.length === 0 || row.override_warnings;
@@ -1427,9 +1611,9 @@ async function getCertificatesForRepresentative(representative: Representative):
  * Форматирование даты в короткий формат
  */
 function formatDateShort(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const d = typeof date === "string" ? new Date(date) : date;
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
   const year = d.getFullYear();
   return `${day}.${month}.${year}`;
 }
@@ -1451,14 +1635,19 @@ function formatTimeShort(time: string | Date): string {
 /**
  * Отправить уведомление об одобрении
  */
-export async function notifyRepresentativeApproved(telegramChatId: string): Promise<boolean> {
+export async function notifyRepresentativeApproved(
+  telegramChatId: string
+): Promise<boolean> {
   return sendMessage(telegramChatId, BOT_MESSAGES.NOTIFICATION_APPROVED);
 }
 
 /**
  * Отправить уведомление о блокировке
  */
-export async function notifyRepresentativeBlocked(telegramChatId: string, reason: string): Promise<boolean> {
+export async function notifyRepresentativeBlocked(
+  telegramChatId: string,
+  reason: string
+): Promise<boolean> {
   return sendMessage(telegramChatId, BOT_MESSAGES.NOTIFICATION_BLOCKED(reason));
 }
 
@@ -1470,4 +1659,110 @@ export async function sendNotificationToRepresentative(
   message: string
 ): Promise<boolean> {
   return sendMessage(telegramChatId, message);
+}
+
+/**
+ * Отправить архив сертификатов
+ */
+async function handleSendCertificatesArchive(
+  chatId: string,
+  period: string
+): Promise<void> {
+  const representative = await getRepresentativeByTelegramChatId(chatId);
+
+  if (!representative || representative.status !== "approved") {
+    await sendMessage(chatId, BOT_MESSAGES.ERROR_NO_PERMISSION);
+    return;
+  }
+
+  // Проверяем разрешение
+  if (!representative.permissions.can_request_certificates) {
+    await sendMessage(
+      chatId,
+      "🚫 *Нет доступа*\n\nУ вас нет разрешения на запрос файлов сертификатов."
+    );
+    return;
+  }
+
+  try {
+    await sendMessage(
+      chatId,
+      "⏳ *Архивация файлов...*\nПожалуйста, подождите, это может занять некоторое время."
+    );
+
+    const startTime = Date.now();
+
+    // Получаем сертификаты для организации
+    let certificates = await getCertificatesForRepresentative(representative);
+
+    // Фильтруем по периоду
+    if (period !== "all") {
+      const [monthStr, yearStr] = period.split(".");
+      certificates = certificates.filter((cert) => {
+        if (!cert.issueDate) return false;
+        // issueDate уже в формате dd.mm.yyyy
+        const parts = cert.issueDate.split(".");
+        if (parts.length !== 3) return false;
+        const certMonth = parts[1];
+        const certYear = parts[2];
+        return certMonth === monthStr && certYear === yearStr;
+      });
+    }
+
+    const issuedCerts = certificates.filter(
+      (c) => c.status === "issued" && (c.pdfFileUrl || (c as any).docxFileUrl)
+    );
+
+    if (issuedCerts.length === 0) {
+      await sendMessage(chatId, BOT_MESSAGES.NO_CERTIFICATES);
+      return;
+    }
+
+    // Creating archive
+    const { createCertificatesArchive } = await import(
+      "./certificateArchiveService"
+    );
+    const archive = await createCertificatesArchive(issuedCerts);
+
+    const bot = getBot();
+    if (!bot) {
+      await sendMessage(chatId, BOT_MESSAGES.ERROR_GENERAL);
+      return;
+    }
+
+    // We need to name the file
+    const { getOrganizationById } = await import(
+      "../repositories/organizationRepository"
+    );
+    const org = await getOrganizationById(representative.organizationId);
+    const orgName = org ? org.code || "org" : "certificates";
+    const fileName = `certificates_${orgName}_${period}.zip`;
+
+    const { InputFile } = await import("grammy");
+    await bot.api.sendDocument(chatId, new InputFile(archive, fileName), {
+      caption: `📦 *Архив сертификатов*\nПериод: ${
+        period === "all" ? "Все время" : period
+      }\nКоличество: ${issuedCerts.length}`,
+      parse_mode: "Markdown",
+    });
+
+    await updateLastActivity(representative.id);
+
+    // Log
+    const { logBotRequest } = await import("../utils/botLogger");
+    await logBotRequest({
+      representativeId: representative.id,
+      chatId,
+      command: "/get_zip_certs",
+      status: "success",
+      requestData: { period, count: issuedCerts.length },
+      responseTimeMs: Date.now() - startTime,
+    });
+  } catch (error) {
+    console.error("[TelegramBot] Ошибка отправки архива:", error);
+    await sendMessage(
+      chatId,
+      "❌ Произошла ошибка при создании архива. Возможно, файлы не найдены."
+    );
+  }
 }
