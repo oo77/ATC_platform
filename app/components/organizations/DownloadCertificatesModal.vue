@@ -35,6 +35,36 @@
           >.
         </p>
 
+        <!-- Выбор диапазона дат -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              С даты выдачи
+            </label>
+            <flat-pickr
+              v-model="filters.startDate"
+              :config="dateConfig"
+              class="w-full rounded-lg border border-stroke bg-transparent py-2.5 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+              placeholder="ДД.ММ.ГГГГ"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              По дату выдачи
+            </label>
+            <flat-pickr
+              v-model="filters.endDate"
+              :config="dateConfig"
+              class="w-full rounded-lg border border-stroke bg-transparent py-2.5 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+              placeholder="ДД.ММ.ГГГГ"
+            />
+          </div>
+        </div>
+
         <!-- Выбор курса -->
         <div>
           <label
@@ -90,36 +120,6 @@
           >
             Выберите курс, чтобы увидеть список групп
           </p>
-        </div>
-
-        <!-- Выбор диапазона дат -->
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              С даты выдачи
-            </label>
-            <flat-pickr
-              v-model="filters.startDate"
-              :config="dateConfig"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2.5 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-              placeholder="ДД.ММ.ГГГГ"
-            />
-          </div>
-          <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              По дату выдачи
-            </label>
-            <flat-pickr
-              v-model="filters.endDate"
-              :config="dateConfig"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2.5 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-              placeholder="ДД.ММ.ГГГГ"
-            />
-          </div>
         </div>
       </div>
     </template>
