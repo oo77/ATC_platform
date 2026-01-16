@@ -56,7 +56,7 @@
         <UiButton
           variant="secondary"
           size="sm"
-          @click="exportToExcel"
+          @click="openExportModal"
           :disabled="loading || !data.length"
         >
           <svg
@@ -753,6 +753,16 @@
       </div>
     </UiModal>
 
+    <!-- Модальное окно экспорта -->
+    <DatabaseCertificateExportModal
+      :is-open="isExportModalOpen"
+      :filters="filters"
+      :total-count="stats.total"
+      :current-count="data.length"
+      :current-page-data="data"
+      @close="closeExportModal"
+    />
+
     <!-- Модальное окно ручного добавления сертификата -->
     <DatabaseCertificateManualFormModal
       :is-open="isManualFormModalOpen"
@@ -839,6 +849,7 @@ const revokeTarget = ref<any>(null);
 const revokeReason = ref("");
 const isManualFormModalOpen = ref(false);
 const isRevoking = ref(false);
+const isExportModalOpen = ref(false);
 
 // Computed
 const hasActiveFilters = computed(() => {
@@ -1004,12 +1015,12 @@ async function confirmRevoke() {
   }
 }
 
-async function exportToExcel() {
-  // TODO: Реализовать экспорт в Excel
-  notification.info(
-    "В разработке",
-    "Функция экспорта будет доступна в следующей версии"
-  );
+function openExportModal() {
+  isExportModalOpen.value = true;
+}
+
+function closeExportModal() {
+  isExportModalOpen.value = false;
 }
 
 // Методы для модального окна ручного добавления
