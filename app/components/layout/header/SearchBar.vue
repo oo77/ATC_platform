@@ -318,8 +318,11 @@ const getUserLink = (user: UserPublic): string => {
 
 const getUserInitials = (name: string): string => {
   const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2 && parts[0] && parts[1]) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
+  const firstPart = parts[0];
+  const secondPart = parts[1];
+  
+  if (parts.length >= 2 && firstPart && secondPart && firstPart[0] && secondPart[0]) {
+    return (firstPart[0] + secondPart[0]).toUpperCase();
   }
   return name.substring(0, 2).toUpperCase();
 };

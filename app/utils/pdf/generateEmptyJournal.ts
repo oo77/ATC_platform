@@ -22,9 +22,8 @@ async function loadResource(url: string): Promise<string> {
     const len = bytes.byteLength;
     for (let i = 0; i < len; i++) {
         const byte = bytes[i];
-        if (byte !== undefined) {
-            binary += String.fromCharCode(byte);
-        }
+        // TypeScript требует явную проверку, хотя индекс всегда валиден
+        binary += String.fromCharCode(byte ?? 0);
     }
     return window.btoa(binary);
 }

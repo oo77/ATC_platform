@@ -35,19 +35,19 @@ export const useCertificateIssueStore = () => {
   const isIssuing = useState<boolean>('cert_issue_is_issuing', () => false);
   const isPaused = useState<boolean>('cert_issue_is_paused', () => false);
   const currentJob = useState<CertificateIssueJob | null>('cert_issue_current_job', () => null);
-  
+
   // Progress
   const processedCount = useState<number>('cert_issue_processed', () => 0);
   const totalCount = useState<number>('cert_issue_total', () => 0);
   const currentStudentName = useState<string>('cert_issue_current_student', () => '');
-  
+
   // Results
   const successCount = useState<number>('cert_issue_success', () => 0);
   const warningCount = useState<number>('cert_issue_warning', () => 0);
   const errorCount = useState<number>('cert_issue_error', () => 0);
   const results = useState<CertificateIssueResult[]>('cert_issue_results', () => []);
   const errors = useState<Array<{ studentName: string; error: string }>>('cert_issue_errors', () => []);
-  
+
   // Completion flag
   const isCompleted = useState<boolean>('cert_issue_completed', () => false);
 
@@ -100,15 +100,21 @@ export const useCertificateIssueStore = () => {
       }
 
       const student = studentData[i];
-      
+
+      // Проверка существования студента (для TypeScript)
+      if (!student) {
+        console.warn(`[CertificateIssue] Студент с индексом ${i} не найден, пропускаем`);
+        continue;
+      }
+
       // Пропускаем если уже обработали
       if (processedStudentIds.has(student.id)) {
         console.warn(`[CertificateIssue] Студент ${student.fullName} уже обработан, пропускаем`);
         continue;
       }
-      
+
       processedStudentIds.add(student.id);
-      
+
       // Обновляем прогресс
       currentStudentName.value = student.fullName;
       processedCount.value = i + 1;
@@ -134,8 +140,15 @@ export const useCertificateIssueStore = () => {
 
         if (response.success && response.results.length > 0) {
           const result = response.results[0];
+
+          // Проверка существования результата (для TypeScript)
+          if (!result) {
+            console.warn(`[CertificateIssue] Результат для ${student.fullName} не получен`);
+            continue;
+          }
+
           results.value.push(result);
-          
+
           if (result.success) {
             if (result.warnings && result.warnings.length > 0) {
               warningCount.value++;
@@ -239,19 +252,19 @@ export const useCertificateIssueStore = () => {
     isPaused,
     isCompleted,
     currentJob,
-    
+
     // Progress
     processedCount,
     totalCount,
     currentStudentName,
-    
+
     // Results
     successCount,
     warningCount,
     errorCount,
     results,
     errors,
-    
+
     // Computed
     percentage,
     hasActiveIssue,

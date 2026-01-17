@@ -103,6 +103,20 @@ export default defineEventHandler(async (event) => {
     }
 
     const user = users[0];
+
+    // Дополнительная проверка для TypeScript (хотя логически user всегда существует после проверки выше)
+    if (!user) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Internal Server Error',
+        data: {
+          success: false,
+          message: 'Ошибка получения данных пользователя',
+          debug: debugInfo
+        },
+      });
+    }
+
     debugInfo.steps.push(`5. User found: ${user.email} (role: ${user.role})`);
     console.log('🔍 [DEBUG] Step 5: User found:', user.email, 'role:', user.role);
 
