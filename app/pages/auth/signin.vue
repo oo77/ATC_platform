@@ -230,7 +230,8 @@
         
         <div class="mt-8 text-center">
             <p class="text-sm text-slate-500/80">
-                &copy; {{ new Date().getFullYear() }} Учебно-тренировочный центр
+                &copy; {{ new Date().getFullYear() }} АТЦ Платформа <span class="text-xs ml-1 opacity-70">v1.0</span><br>
+                Все права защищены.
             </p>
         </div>
       </div>

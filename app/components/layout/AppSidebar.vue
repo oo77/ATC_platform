@@ -218,6 +218,31 @@
         </ul>
       </nav>
     </div>
+
+    <!-- Sidebar Footer -->
+    <div
+      v-if="isExpanded || isHovered || isMobileOpen"
+      :class="[
+        'px-4 py-4 border-t border-gray-100/50 dark:border-gray-800/50 transition-all duration-300',
+        'bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm',
+      ]"
+    >
+      <div class="flex flex-col items-center justify-center space-y-2 text-center">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold text-gray-900 dark:text-white">АТЦ Платформа</span>
+          <span 
+            class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100 dark:border-blue-800"
+          >
+            v1.0
+          </span>
+        </div>
+        
+        <p class="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+          &copy; {{ new Date().getFullYear() }} АТЦ Платформа.<br>
+          Все права защищены.
+        </p>
+      </div>
+    </div>
   </aside>
 </template>
 
