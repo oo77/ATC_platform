@@ -55,8 +55,6 @@ npm run db:rollback:all
 npm run db:status
 ```
 
-Подробная документация: [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md)
-
 ### Учетные данные по умолчанию
 
 После применения миграций будет создан администратор:
@@ -84,7 +82,6 @@ nuxt-tailadmin/
 │   │   └── init.ts         # Инициализация БД
 │   ├── middleware/         # Server middleware
 │   └── utils/              # Утилиты
-├── docs/                   # Документация
 └── public/                 # Статические файлы
 ```
 
@@ -98,12 +95,6 @@ nuxt-tailadmin/
 - **Charts**: ApexCharts
 - **Calendar**: FullCalendar
 - **Icons**: Lucide Vue Next
-
-## 📚 Документация
-
-- [Система миграций БД](docs/DATABASE_MIGRATIONS.md)
-- [Nuxt Documentation](https://nuxt.com/docs)
-- [Tailwind CSS](https://tailwindcss.com/docs)
 
 ## 🏗️ Production
 

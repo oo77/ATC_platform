@@ -23,7 +23,7 @@ logs
 *.resolved
 
 # Local scripts (not for production)
-scripts/
+# scripts/ - закомментировано, чтобы разрешить deployment скрипты
 
 # Storage uploads (local files)
 storage/uploads/
@@ -40,3 +40,24 @@ ngrok.yml
 # SSL certificates (only private keys are sensitive, CA certs are public)
 server/certs/*.key
 server/certs/*-private.pem
+
+# Debug files and scripts
+debug/
+check-enum.ts
+
+# Documentation (removed for production)
+docs/
+*.md
+!README.md
+!DEPLOYMENT_CHECKLIST.md
+!QUICK_DEPLOY.md
+!DEPLOYMENT_SUMMARY.md
+
+# Archives and backups
+*.zip
+*.tar.gz
+*.rar
+
+# Agent and AI assistant files
+.agent/
+.gemini/
