@@ -440,6 +440,11 @@ const allMenuGroups: MenuGroup[] = [
         permission: Permission.FILES_VIEW,
         hideForRoles: ["STUDENT"],
       },
+      {
+        icon: DocsIcon,
+        name: "Документация",
+        path: "/docs",
+      },
     ],
   },
   {
