@@ -386,14 +386,16 @@ const allMenuGroups: MenuGroup[] = [
       {
         icon: DatabaseIcon,
         name: "База данных",
-        permission: Permission.STUDENTS_VIEW_ALL,
+        anyPermissions: [
+          Permission.ORGANIZATIONS_VIEW,
+          Permission.CERTIFICATES_VIEW,
+        ],
         subItems: [
           {
             name: "База организаций",
             path: "/database?tab=organizations",
             permission: Permission.ORGANIZATIONS_VIEW,
           },
-          { name: "База студентов", path: "/database?tab=students" },
           {
             name: "База сертификатов",
             path: "/database?tab=certificates",

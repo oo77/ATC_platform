@@ -5,12 +5,13 @@
 
 import { removeStudentFromGroup, getGroupById } from '../../../../repositories/groupRepository';
 import { logActivity } from '../../../../utils/activityLogger';
+import { invalidateRelatedCache } from '../../../../utils/botCache';
 
 export default defineEventHandler(async (event) => {
   try {
     const groupId = getRouterParam(event, 'id');
     const studentId = getRouterParam(event, 'studentId');
-    
+
     if (!groupId) {
       return {
         success: false,
@@ -51,11 +52,14 @@ export default defineEventHandler(async (event) => {
       'GROUP',
       groupId,
       group.code,
-      { 
+      {
         action: 'remove_student',
-        studentId 
+        studentId
       }
     );
+
+    // Инвалидируем кэш Telegram-бота
+    invalidateRelatedCache('student');
 
     return {
       success: true,
@@ -63,7 +67,7 @@ export default defineEventHandler(async (event) => {
     };
   } catch (error) {
     console.error('Ошибка удаления слушателя:', error);
-    
+
     return {
       success: false,
       message: 'Ошибка при удалении слушателя из группы',

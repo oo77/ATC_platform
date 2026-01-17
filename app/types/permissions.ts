@@ -422,7 +422,10 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
   },
 
   // Database (Students/Instructors)
-  { path: "/database", requiredPermissions: [Permission.STUDENTS_VIEW_ALL] },
+  {
+    path: "/database",
+    anyPermissions: [Permission.ORGANIZATIONS_VIEW, Permission.CERTIFICATES_VIEW],
+  },
   {
     path: "/database/import",
     requiredPermissions: [Permission.STUDENTS_IMPORT],

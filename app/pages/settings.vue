@@ -260,6 +260,11 @@
         <div v-show="activeTab === 'schedule'" class="p-6">
           <SettingsScheduleSettings />
         </div>
+
+        <!-- Аудитории -->
+        <div v-show="activeTab === 'classrooms'" class="p-6">
+          <SettingsClassroomSettings />
+        </div>
       </div>
     </div>
   </div>
@@ -271,7 +276,8 @@ import {
   Settings, 
   Bell, 
   Palette,
-  Calendar 
+  Calendar,
+  DoorOpen
 } from 'lucide-vue-next';
 import { useUserSettings } from '@/composables/useUserSettings';
 
@@ -318,6 +324,12 @@ const tabs = computed(() => {
       id: 'schedule',
       label: 'Расписание',
       icon: Calendar,
+      permission: Permission.SETTINGS_MANAGE
+    },
+    {
+      id: 'classrooms',
+      label: 'Аудитории',
+      icon: DoorOpen,
       permission: Permission.SETTINGS_MANAGE
     },
     {

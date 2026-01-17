@@ -11,7 +11,7 @@
         </p>
       </div>
       <NuxtLink
-        to="/database"
+        to="/database?tab=certificates"
         class="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -483,6 +483,6 @@ const handleNewImport = () => {
 
 // Переход к сертификатам
 const goToCertificates = () => {
-  navigateTo('/database');
+  navigateTo('/database?tab=certificates');
 };
 </script>

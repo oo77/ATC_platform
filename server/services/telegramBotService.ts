@@ -19,6 +19,8 @@ import {
   type FormattedScheduleEvent,
   type FormattedCertificate,
 } from "../utils/telegramBot";
+import { rateLimiter, formatBlockDuration } from "../utils/rateLimiter";
+import { botCache, CacheKeys } from "../utils/botCache";
 import {
   getOrCreateSession,
   updateSession,
@@ -126,6 +128,26 @@ async function handleMessage(message: TelegramMessage): Promise<void> {
   const username = message.from?.username || null;
 
   console.log(`[TelegramBot] Сообщение от ${chatId}: ${text}`);
+
+  // Проверка rate limiting
+  const rateLimit = rateLimiter.check(chatId);
+
+  if (!rateLimit.allowed) {
+    const blockDuration = formatBlockDuration(rateLimit.resetAt);
+    await sendMessage(
+      chatId,
+      `⚠️ *Слишком много запросов!*\n\nВы превысили лимит запросов к боту.\n\n🔒 Доступ временно ограничен.\n⏱ Попробуйте снова через: *${blockDuration}*\n\n_Пожалуйста, не отправляйте команды слишком часто._`
+    );
+    return;
+  }
+
+  // Предупреждение при приближении к лимиту
+  if (rateLimit.isWarning) {
+    await sendMessage(
+      chatId,
+      `⚠️ *Внимание!*\n\nВы приближаетесь к лимиту запросов.\nОсталось запросов: *${rateLimit.remaining}*\n\n_Пожалуйста, используйте команды умеренно._`
+    );
+  }
 
   // Обработка команд
   if (text.startsWith("/")) {
@@ -287,8 +309,20 @@ async function commandStudents(chatId: string): Promise<void> {
   }
 
   try {
-    // Получаем студентов организации
-    const students = await getStudentsForRepresentative(representative);
+    // Пытаемся получить данные из кэша
+    const cacheKey = CacheKeys.students(representative.organizationId);
+    let students = botCache.get<FormattedStudent[]>(cacheKey);
+
+    if (!students) {
+      // Данных нет в кэше - загружаем из БД
+      console.log(`[TelegramBot] Cache MISS для students: ${representative.organizationId}`);
+      students = await getStudentsForRepresentative(representative);
+
+      // Сохраняем в кэш на 5 минут
+      botCache.set(cacheKey, students);
+    } else {
+      console.log(`[TelegramBot] Cache HIT для students: ${representative.organizationId}`);
+    }
 
     if (students.length === 0) {
       await sendMessage(chatId, BOT_MESSAGES.NO_STUDENTS);
@@ -346,6 +380,7 @@ async function commandStudents(chatId: string): Promise<void> {
       requestData: {
         studentsCount: students.length,
         coursesCount: courses.size,
+        cached: students === botCache.get(cacheKey), // Был ли запрос из кэша
       },
       responseTimeMs: Date.now() - startTime,
     });
@@ -404,8 +439,21 @@ async function commandSchedule(chatId: string): Promise<void> {
   }
 
   try {
-    // Получаем расписание для организации
-    const schedule = await getScheduleForRepresentative(representative);
+    // Пытаемся получить данные из кэша
+    const cacheKey = CacheKeys.schedule(representative.organizationId);
+    let schedule = botCache.get<FormattedScheduleEvent[]>(cacheKey);
+
+    if (!schedule) {
+      // Данных нет в кэше - загружаем из БД
+      console.log(`[TelegramBot] Cache MISS для schedule: ${representative.organizationId}`);
+      schedule = await getScheduleForRepresentative(representative);
+
+      // Сохраняем в кэш на 5 минут
+      botCache.set(cacheKey, schedule);
+    } else {
+      console.log(`[TelegramBot] Cache HIT для schedule: ${representative.organizationId}`);
+    }
+
     const message = formatSchedule(schedule);
     await sendMessage(chatId, message);
     await updateLastActivity(representative.id);
@@ -417,7 +465,10 @@ async function commandSchedule(chatId: string): Promise<void> {
       chatId,
       command: "/schedule",
       status: "success",
-      requestData: { eventsCount: schedule.length },
+      requestData: {
+        eventsCount: schedule.length,
+        cached: schedule === botCache.get(cacheKey),
+      },
       responseTimeMs: Date.now() - startTime,
     });
   } catch (error) {
@@ -472,8 +523,20 @@ async function commandCertificates(chatId: string): Promise<void> {
   }
 
   try {
-    // Получаем все сертификаты для определения доступных периодов
-    const certificates = await getCertificatesForRepresentative(representative);
+    // Пытаемся получить данные из кэша
+    const cacheKey = CacheKeys.certificates(representative.organizationId);
+    let certificates = botCache.get<FormattedCertificate[]>(cacheKey);
+
+    if (!certificates) {
+      // Данных нет в кэше - загружаем из БД
+      console.log(`[TelegramBot] Cache MISS для certificates: ${representative.organizationId}`);
+      certificates = await getCertificatesForRepresentative(representative);
+
+      // Сохраняем в кэш на 5 минут
+      botCache.set(cacheKey, certificates);
+    } else {
+      console.log(`[TelegramBot] Cache HIT для certificates: ${representative.organizationId}`);
+    }
 
     if (certificates.length === 0) {
       await sendMessage(chatId, BOT_MESSAGES.NO_CERTIFICATES);
@@ -539,6 +602,7 @@ async function commandCertificates(chatId: string): Promise<void> {
       requestData: {
         certificatesCount: certificates.length,
         periodsCount: sortedPeriods.length,
+        cached: certificates === botCache.get(cacheKey),
       },
       responseTimeMs: Date.now() - startTime,
     });
@@ -731,10 +795,35 @@ async function handleCallbackQuery(
 
   console.log(`[TelegramBot] Callback от ${chatId}: ${data}`);
 
-  // Отвечаем на callback (убираем loading)
-  const bot = getBot();
-  if (bot) {
-    await bot.api.answerCallbackQuery(query.id);
+  // Проверка rate limiting
+  const rateLimit = rateLimiter.check(chatId);
+
+  if (!rateLimit.allowed) {
+    const bot = getBot();
+    if (bot) {
+      await bot.api.answerCallbackQuery(query.id, {
+        text: `⚠️ Слишком много запросов! Попробуйте через ${formatBlockDuration(rateLimit.resetAt)}`,
+        show_alert: true,
+      });
+    }
+    return;
+  }
+
+  // Предупреждение при приближении к лимиту (показываем как уведомление)
+  if (rateLimit.isWarning) {
+    const bot = getBot();
+    if (bot) {
+      await bot.api.answerCallbackQuery(query.id, {
+        text: `⚠️ Осталось запросов: ${rateLimit.remaining}`,
+        show_alert: false,
+      });
+    }
+  } else {
+    // Отвечаем на callback (убираем loading)
+    const bot = getBot();
+    if (bot) {
+      await bot.api.answerCallbackQuery(query.id);
+    }
   }
 
   // Обработка выбора организации
@@ -1327,8 +1416,7 @@ async function handleStudentsPeriodSelection(
     await updateLastActivity(representative.id);
 
     console.log(
-      `[TelegramBot] Показаны слушатели: курс=${
-        courseName || "all"
+      `[TelegramBot] Показаны слушатели: курс=${courseName || "all"
       }, период=${period}, найдено: ${students.length}`
     );
   } catch (error) {
@@ -1740,9 +1828,8 @@ async function handleSendCertificatesArchive(
 
     const { InputFile } = await import("grammy");
     await bot.api.sendDocument(chatId, new InputFile(archive, fileName), {
-      caption: `📦 *Архив сертификатов*\nПериод: ${
-        period === "all" ? "Все время" : period
-      }\nКоличество: ${issuedCerts.length}`,
+      caption: `📦 *Архив сертификатов*\nПериод: ${period === "all" ? "Все время" : period
+        }\nКоличество: ${issuedCerts.length}`,
       parse_mode: "Markdown",
     });
 

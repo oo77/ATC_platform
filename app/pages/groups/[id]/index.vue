@@ -337,15 +337,6 @@
                 </p>
               </div>
 
-              <div>
-                <label class="text-sm text-gray-500 dark:text-gray-400"
-                  >Аудитория</label
-                >
-                <p class="text-gray-900 dark:text-white font-medium">
-                  {{ group.classroom || "—" }}
-                </p>
-              </div>
-
               <div v-if="group.description" class="col-span-2">
                 <label class="text-sm text-gray-500 dark:text-gray-400"
                   >Описание</label

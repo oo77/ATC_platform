@@ -10,6 +10,7 @@ import {
   checkStudentConflicts,
 } from "../../../../repositories/groupRepository";
 import { logActivity } from "../../../../utils/activityLogger";
+import { invalidateRelatedCache } from "../../../../utils/botCache";
 
 const addStudentsSchema = z.object({
   studentIds: z.array(z.string()).min(1, "Выберите хотя бы одного слушателя"),
@@ -84,6 +85,9 @@ export default defineEventHandler(async (event) => {
         addedCount: result.added.length,
         studentIds: result.added,
       });
+
+      // Инвалидируем кэш Telegram-бота
+      invalidateRelatedCache('student');
     }
 
     return {

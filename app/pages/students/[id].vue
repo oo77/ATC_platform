@@ -3,7 +3,7 @@
     <!-- Навигация назад -->
     <div class="mb-6">
       <NuxtLink
-        to="/database"
+        to="/users?tab=students"
         class="inline-flex items-center gap-2 text-primary hover:underline"
       >
         <ArrowLeft class="h-4 w-4" />
@@ -898,7 +898,7 @@ const confirmDelete = async () => {
     await authFetch(`/api/students/${studentId}`, {
       method: "DELETE",
     });
-    router.push("/database");
+    router.push("/users?tab=students");
     notification.success("Студент удален");
   } catch (e) {
     console.error("Error deleting student:", e);

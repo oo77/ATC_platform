@@ -40,11 +40,6 @@
 
       <!-- Tab Content -->
       <div class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
-        <!-- База студентов Tab -->
-        <div v-show="activeTab === 'students'" class="p-6">
-          <DatabaseStudentManagementPanel />
-        </div>
-
         <!-- База организаций Tab -->
         <div v-show="activeTab === 'organizations'" class="p-6">
           <OrganizationsOrganizationManagementPanel />
@@ -74,11 +69,6 @@ const router = useRouter();
 // Конфигурация вкладок
 const tabs = [
   {
-    id: 'students',
-    label: 'База студентов',
-    disabled: false,
-  },
-  {
     id: 'organizations',
     label: 'База организаций',
     disabled: false,
@@ -96,7 +86,7 @@ const tabs = [
 ];
 
 // Активная вкладка
-const activeTab = ref<string>('students');
+const activeTab = ref<string>('organizations');
 
 // Синхронизация с URL при загрузке и изменении
 const syncTabWithUrl = () => {
@@ -104,7 +94,7 @@ const syncTabWithUrl = () => {
     if (tab && tabs.some(t => t.id === tab && !t.disabled)) {
         activeTab.value = tab;
     } else {
-        activeTab.value = 'students';
+        activeTab.value = 'organizations';
     }
 }
 

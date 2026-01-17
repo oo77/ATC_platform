@@ -101,42 +101,27 @@
             </p>
           </div>
 
-          <!-- Ряд: Код и Аудитория -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                class="mb-1.5 block text-sm font-medium text-black dark:text-white"
-              >
-                Код
-              </label>
-              <input
-                v-model="form.code"
-                type="text"
-                placeholder="АПАК-20"
-                :class="[
-                  'w-full rounded-lg border-[1.5px] bg-white dark:bg-boxdark px-4 py-2 font-medium outline-none transition text-sm',
-                  errors.code
-                    ? 'border-danger focus:border-danger'
-                    : 'border-stroke focus:border-primary dark:border-form-strokedark dark:focus:border-primary',
-                ]"
-              />
-              <p v-if="errors.code" class="mt-1 text-xs text-danger">
-                {{ errors.code }}
-              </p>
-            </div>
-            <div>
-              <label
-                class="mb-1.5 block text-sm font-medium text-black dark:text-white"
-              >
-                Аудитория
-              </label>
-              <input
-                v-model="form.classroom"
-                type="text"
-                placeholder="Ауд. 305"
-                class="w-full rounded-lg border-[1.5px] border-stroke bg-white dark:bg-boxdark px-4 py-2 font-medium outline-none transition text-sm focus:border-primary dark:border-form-strokedark dark:focus:border-primary"
-              />
-            </div>
+          <!-- Код группы -->
+          <div>
+            <label
+              class="mb-1.5 block text-sm font-medium text-black dark:text-white"
+            >
+              Код группы <span class="text-danger">*</span>
+            </label>
+            <input
+              v-model="form.code"
+              type="text"
+              placeholder="АПАК-20"
+              :class="[
+                'w-full rounded-lg border-[1.5px] bg-white dark:bg-boxdark px-4 py-2 font-medium outline-none transition text-sm',
+                errors.code
+                  ? 'border-danger focus:border-danger'
+                  : 'border-stroke focus:border-primary dark:border-form-strokedark dark:focus:border-primary',
+              ]"
+            />
+            <p v-if="errors.code" class="mt-1 text-xs text-danger">
+              {{ errors.code }}
+            </p>
           </div>
 
           <!-- Ряд: Даты -->
@@ -400,7 +385,6 @@ const form = ref({
   courseId: "",
   startDate: "",
   endDate: "",
-  classroom: "",
   description: "",
   isActive: true,
 });
@@ -600,7 +584,6 @@ const resetForm = () => {
     courseId: "",
     startDate: "",
     endDate: "",
-    classroom: "",
     description: "",
     isActive: true,
   };
@@ -617,7 +600,6 @@ const fillFormFromGroup = (group: any) => {
     courseId: group.courseId,
     startDate: formatDateForInput(group.startDate),
     endDate: formatDateForInput(group.endDate),
-    classroom: group.classroom || "",
     description: group.description || "",
     isActive: Boolean(group.isActive),
   };

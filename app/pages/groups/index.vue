@@ -408,11 +408,6 @@
               <th
                 class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
               >
-                Аудитория
-              </th>
-              <th
-                class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
                 Статус
               </th>
             </tr>
@@ -465,9 +460,6 @@
                 >
                   {{ group.studentCount || 0 }}
                 </span>
-              </td>
-              <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                {{ group.classroom || "—" }}
               </td>
               <td class="px-6 py-4">
                 <span

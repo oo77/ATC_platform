@@ -24,7 +24,7 @@
     <div class="grid grid-cols-1 gap-4 md:grid-cols-4 mb-6">
       <div
         class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-        @click="navigateTo('/database')"
+        @click="navigateTo('/users?tab=students')"
       >
         <div class="flex items-center gap-4">
           <div

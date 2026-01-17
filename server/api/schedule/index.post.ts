@@ -12,6 +12,7 @@ import { checkInstructorHoursLimit } from "../../repositories/instructorReposito
 import { createTestAssignment } from "../../repositories/testAssignmentRepository"; // New import
 import { executeQuery } from "../../utils/db";
 import { logActivity } from "../../utils/activityLogger";
+import { invalidateRelatedCache } from "../../utils/botCache";
 import {
   dateToLocalIso,
   formatDateOnly,
@@ -297,6 +298,9 @@ export default defineEventHandler(async (event) => {
         eventType: body.eventType,
       }
     );
+
+    // Инвалидируем кэш Telegram-бота
+    invalidateRelatedCache('schedule');
 
     return {
       success: true,
