@@ -255,6 +255,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Dashboard
     Permission.DASHBOARD_VIEW,
 
+    // Settings
+    Permission.SETTINGS_VIEW,
+
     // Students (только просмотр своих групп)
     Permission.STUDENTS_VIEW,
     Permission.STUDENTS_VIEW_OWN, // Только слушатели из своих групп
@@ -299,6 +302,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.STUDENT]: [
     // Dashboard (минимальный)
     Permission.DASHBOARD_VIEW,
+
+    // Settings
+    Permission.SETTINGS_VIEW,
 
     // Свои данные
     Permission.STUDENTS_VIEW_OWN,
