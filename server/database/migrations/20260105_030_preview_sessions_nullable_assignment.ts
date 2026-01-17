@@ -11,20 +11,20 @@ export const id = '20260105_030_preview_sessions_nullable_assignment';
 export const name = 'Allow nullable assignment_id for preview sessions';
 
 export async function up(connection: PoolConnection): Promise<void> {
-    // Удаляем существующий FK constraint
-    await connection.execute(`
+  // Удаляем существующий FK constraint
+  await connection.execute(`
     ALTER TABLE test_sessions
     DROP FOREIGN KEY fk_test_sessions_assignment
   `);
 
-    // Делаем assignment_id nullable
-    await connection.execute(`
+  // Делаем assignment_id nullable
+  await connection.execute(`
     ALTER TABLE test_sessions
     MODIFY COLUMN assignment_id VARCHAR(36) NULL
   `);
 
-    // Пересоздаем FK constraint с ON DELETE SET NULL для preview-совместимости
-    await connection.execute(`
+  // Пересоздаем FK constraint с ON DELETE SET NULL для preview-совместимости
+  await connection.execute(`
     ALTER TABLE test_sessions
     ADD CONSTRAINT fk_test_sessions_assignment
     FOREIGN KEY (assignment_id) REFERENCES test_assignments(id)
@@ -33,25 +33,41 @@ export async function up(connection: PoolConnection): Promise<void> {
 }
 
 export async function down(connection: PoolConnection): Promise<void> {
-    // Удаляем всех preview-сессии перед откатом
-    await connection.execute(`
+  // Удаляем всех preview-сессии перед откатом
+  await connection.execute(`
     DELETE FROM test_sessions WHERE is_preview = TRUE
   `);
 
-    // Удаляем FK
-    await connection.execute(`
-    ALTER TABLE test_sessions
-    DROP FOREIGN KEY fk_test_sessions_assignment
+  // Удаляем записи с NULL assignment_id (если есть)
+  await connection.execute(`
+    DELETE FROM test_sessions WHERE assignment_id IS NULL
   `);
 
-    // Возвращаем NOT NULL
+  // Проверяем существование FK и удаляем его
+  const [constraints] = await connection.query<any[]>(`
+    SELECT CONSTRAINT_NAME 
+    FROM information_schema.TABLE_CONSTRAINTS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+      AND TABLE_NAME = 'test_sessions' 
+      AND CONSTRAINT_NAME = 'fk_test_sessions_assignment'
+      AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+  `);
+
+  if (constraints.length > 0) {
     await connection.execute(`
+      ALTER TABLE test_sessions
+      DROP FOREIGN KEY fk_test_sessions_assignment
+    `);
+  }
+
+  // Возвращаем NOT NULL
+  await connection.execute(`
     ALTER TABLE test_sessions
     MODIFY COLUMN assignment_id VARCHAR(36) NOT NULL
   `);
 
-    // Восстанавливаем original FK
-    await connection.execute(`
+  // Восстанавливаем original FK
+  await connection.execute(`
     ALTER TABLE test_sessions
     ADD CONSTRAINT fk_test_sessions_assignment
     FOREIGN KEY (assignment_id) REFERENCES test_assignments(id)

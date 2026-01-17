@@ -552,12 +552,58 @@
                 </p>
               </div>
             </div>
-            <UiButton
-              v-if="canManageGroupStudents && !group.isArchived"
-              @click="showManageStudentsModal = true"
-            >
-              Управление слушателями
-            </UiButton>
+            <div class="flex items-center gap-2">
+              <UiButton
+                v-if="canManageGroupStudents && !group.isArchived"
+                @click="showManageStudentsModal = true"
+              >
+                Управление слушателями
+              </UiButton>
+              
+              <!-- Кнопка скачивания пустого журнала -->
+              <UiButton
+                v-if="group.students && group.students.length > 0"
+                variant="outline"
+                @click="downloadEmptyJournal"
+                :disabled="generatingEmptyJournal"
+              >
+                <svg
+                  v-if="!generatingEmptyJournal"
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  class="w-4 h-4 mr-2 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                {{ generatingEmptyJournal ? "Генерация..." : "Пустой журнал" }}
+              </UiButton>
+            </div>
           </div>
         </div>
 
@@ -935,6 +981,7 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { StudyGroup } from "~/types/group";
+import { generateEmptyJournal } from "~/utils/pdf/generateEmptyJournal";
 
 // ... imports ...
 
@@ -984,6 +1031,7 @@ const studentAttendanceData = ref<
 >(new Map());
 const reports = ref<any[]>([]); // Добавлено для отчетов
 const loadingReports = ref(false);
+const generatingEmptyJournal = ref(false); // Состояние генерации пустого журнала
 
 const currentStudentsPage = ref(1);
 const studentsPerPage = ref(10);
@@ -1223,6 +1271,43 @@ const loadReports = async (groupId: string) => {
     console.error("[loadReports] Ошибка загрузки документов:", e);
   } finally {
     loadingReports.value = false;
+  }
+};
+
+// Функция для скачивания пустого журнала
+const downloadEmptyJournal = async () => {
+  if (generatingEmptyJournal.value || !group.value) return;
+
+  try {
+    generatingEmptyJournal.value = true;
+
+    // Собираем список студентов
+    const studentNames = group.value.students?.map((gs: any) => gs.student?.fullName || '').filter(Boolean) || [];
+
+    if (studentNames.length === 0) {
+      toast.error('В группе нет студентов');
+      return;
+    }
+
+    // Подготавливаем данные для пустого журнала
+    const emptyJournalData = {
+      groupCode: group.value.code,
+      courseName: group.value.course?.name,
+      startDate: group.value.startDate,
+      endDate: group.value.endDate,
+      studentNames,
+      columnCount: 20, // 20 пустых колонок
+    };
+
+    // Генерируем PDF
+    await generateEmptyJournal(emptyJournalData);
+
+    toast.success('Пустой журнал успешно сформирован');
+  } catch (error: any) {
+    console.error('Error generating empty journal:', error);
+    toast.error(error.message || 'Ошибка при формировании пустого журнала');
+  } finally {
+    generatingEmptyJournal.value = false;
   }
 };
 

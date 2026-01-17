@@ -839,6 +839,9 @@ export const up = async (connection: PoolConnection): Promise<void> => {
 export const down = async (connection: PoolConnection): Promise<void> => {
   console.log("🔄 Rolling back consolidated migration...");
 
+  // Отключаем проверку foreign keys для безопасного удаления таблиц
+  await connection.query(`SET FOREIGN_KEY_CHECKS = 0`);
+
   // Удаляем триггеры
   await connection.query(
     `DROP TRIGGER IF EXISTS disciplines_calculate_hours_insert`
@@ -875,6 +878,9 @@ export const down = async (connection: PoolConnection): Promise<void> => {
     await connection.query(`DROP TABLE IF EXISTS ${table}`);
     console.log(`✅ Table "${table}" dropped`);
   }
+
+  // Включаем обратно проверку foreign keys
+  await connection.query(`SET FOREIGN_KEY_CHECKS = 1`);
 
   console.log("🎉 Rollback completed");
 };
