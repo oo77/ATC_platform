@@ -5,8 +5,8 @@ export default defineNuxtConfig({
 
   // Настройка dev-сервера для доступа извне (включая ngrok)
   devServer: {
-    host: "localhost", // Слушает все сетевые интерфейсы (необходимо для ngrok)
-    port: 3000, // Порт можно изменить при необходимости
+    host: "0.0.0.0", // Слушает все сетевые интерфейсы (необходимо для ngrok и доступа по IP)
+    port: 3000,
   },
 
   css: ["~/assets/css/main.css"],
@@ -53,6 +53,20 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true,
+  },
+
+  vite: {
+    server: {
+      // Разрешаем доступ с любых хостов (необходимо для ngrok)
+      host: "0.0.0.0",
+      // Отключаем проверку хоста для dev-режима
+      allowedHosts: ["all"],
+      hmr: {
+        // Настройка HMR для работы через ngrok
+        clientPort: 443, // ngrok использует HTTPS (порт 443)
+        protocol: "wss", // WebSocket Secure для HTTPS
+      },
+    },
   },
 
   components: [
