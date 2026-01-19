@@ -5,9 +5,9 @@
 
 // Используем createRequire для импорта CommonJS модуля xlsx
 // Это решает проблему с ESM URL scheme на Windows
-import { createRequire } from 'module';
+import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const XLSX = require('xlsx') as typeof import('xlsx');
+const XLSX = require("xlsx") as typeof import("xlsx");
 
 import type {
   ExcelStudentRow,
@@ -16,11 +16,11 @@ import type {
   ImportAnalysis,
   ImportProgress,
   ImportStatus,
-} from '../types/import';
+} from "../types/import";
 import {
-  getAllStudents,
+  getExistingStudentsByPinfls,
   batchUpsertStudentsWithProgress,
-} from '../repositories/studentRepository';
+} from "../repositories/studentRepository";
 
 // Хранилище активных задач импорта
 const importJobs = new Map<string, ImportProgress>();
@@ -30,44 +30,44 @@ const importJobs = new Map<string, ImportProgress>();
  */
 const HEADER_MAPPINGS: Record<string, string> = {
   // ПИНФЛ
-  'пинфл': 'ПИНФЛ',
-  'pinfl': 'ПИНФЛ',
-  'пінфл': 'ПИНФЛ',
-  'инн': 'ПИНФЛ',
-  'идентификатор': 'ПИНФЛ',
+  пинфл: "ПИНФЛ",
+  pinfl: "ПИНФЛ",
+  пінфл: "ПИНФЛ",
+  инн: "ПИНФЛ",
+  идентификатор: "ПИНФЛ",
   // ФИО
-  'фио': 'ФИО',
-  'ф.и.о': 'ФИО',
-  'ф.и.о.': 'ФИО',
-  'полное имя': 'ФИО',
-  'имя': 'ФИО',
-  'name': 'ФИО',
-  'fullname': 'ФИО',
-  'full_name': 'ФИО',
-  // Организация  
-  'организация': 'Организация',
-  'organization': 'Организация',
-  'компания': 'Организация',
-  'предприятие': 'Организация',
-  'место работы': 'Организация',
+  фио: "ФИО",
+  "ф.и.о": "ФИО",
+  "ф.и.о.": "ФИО",
+  "полное имя": "ФИО",
+  имя: "ФИО",
+  name: "ФИО",
+  fullname: "ФИО",
+  full_name: "ФИО",
+  // Организация
+  организация: "Организация",
+  organization: "Организация",
+  компания: "Организация",
+  предприятие: "Организация",
+  "место работы": "Организация",
   // Служба/Отдел
-  'служба/отдел': 'Служба/Отдел',
-  'служба': 'Служба/Отдел',
-  'отдел': 'Служба/Отдел',
-  'подразделение': 'Служба/Отдел',
-  'department': 'Служба/Отдел',
+  "служба/отдел": "Служба/Отдел",
+  служба: "Служба/Отдел",
+  отдел: "Служба/Отдел",
+  подразделение: "Служба/Отдел",
+  department: "Служба/Отдел",
   // Должность
-  'должность': 'Должность',
-  'position': 'Должность',
-  'позиция': 'Должность',
-  'title': 'Должность',
+  должность: "Должность",
+  position: "Должность",
+  позиция: "Должность",
+  title: "Должность",
 };
 
 /**
  * Нормализация заголовка: приводит к стандартному виду
  */
 function normalizeHeader(header: string): string {
-  if (!header) return '';
+  if (!header) return "";
 
   const trimmed = String(header).trim();
   const lowercased = trimmed.toLowerCase();
@@ -85,42 +85,42 @@ function normalizeHeader(header: string): string {
  * Парсинг Excel файла
  */
 export function parseExcelFile(buffer: Buffer): ExcelStudentRow[] {
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheetName = workbook.SheetNames[0];
 
   if (!sheetName) {
-    throw new Error('Файл не содержит листов');
+    throw new Error("Файл не содержит листов");
   }
 
   const worksheet = workbook.Sheets[sheetName];
 
   if (!worksheet) {
-    throw new Error('Не удалось прочитать лист Excel');
+    throw new Error("Не удалось прочитать лист Excel");
   }
 
   // Преобразуем в JSON с заголовками
   const data = XLSX.utils.sheet_to_json(worksheet, {
     header: 1,
-    defval: '',
+    defval: "",
   }) as any[][];
 
   // Первая строка - заголовки
   if (data.length === 0) {
-    throw new Error('Файл пустой');
+    throw new Error("Файл пустой");
   }
 
   // Преобразуем массив массивов в объекты
   const rawHeaders = data[0] as unknown as string[];
   // Нормализуем заголовки
-  const headers = rawHeaders.map(h => normalizeHeader(String(h || '')));
+  const headers = rawHeaders.map((h) => normalizeHeader(String(h || "")));
 
-  console.log('[ImportUtils] Нормализованные заголовки:', headers);
+  console.log("[ImportUtils] Нормализованные заголовки:", headers);
 
   const rows: ExcelStudentRow[] = [];
 
   for (let i = 1; i < data.length; i++) {
     const row = data[i] as unknown as any[];
-    if (row.length === 0 || !row.some(cell => cell)) {
+    if (row.length === 0 || !row.some((cell) => cell)) {
       continue; // Пропускаем пустые строки
     }
 
@@ -128,9 +128,10 @@ export function parseExcelFile(buffer: Buffer): ExcelStudentRow[] {
     headers.forEach((header, index) => {
       // Используем нормализованный заголовок
       if (header) {
-        rowObj[header] = row[index] !== undefined && row[index] !== null
-          ? String(row[index]).trim()
-          : '';
+        rowObj[header] =
+          row[index] !== undefined && row[index] !== null
+            ? String(row[index]).trim()
+            : "";
       }
     });
     rows.push(rowObj as ExcelStudentRow);
@@ -150,31 +151,34 @@ function validatePinfl(pinfl: string): boolean {
 /**
  * Валидация строки данных
  */
-function validateRow(row: ExcelStudentRow, rowNumber: number): ValidationResult {
+function validateRow(
+  row: ExcelStudentRow,
+  rowNumber: number
+): ValidationResult {
   const errors: string[] = [];
 
   // Проверка ПИНФЛ
   if (!row.ПИНФЛ || !row.ПИНФЛ.trim()) {
-    errors.push('ПИНФЛ не указан');
+    errors.push("ПИНФЛ не указан");
   } else if (!validatePinfl(row.ПИНФЛ)) {
-    errors.push('ПИНФЛ должен содержать 14 цифр');
+    errors.push("ПИНФЛ должен содержать 14 цифр");
   }
 
   // Проверка ФИО
   if (!row.ФИО || !row.ФИО.trim()) {
-    errors.push('ФИО не указано');
+    errors.push("ФИО не указано");
   } else if (row.ФИО.trim().length < 3) {
-    errors.push('ФИО слишком короткое');
+    errors.push("ФИО слишком короткое");
   }
 
   // Проверка организации
   if (!row.Организация || !row.Организация.trim()) {
-    errors.push('Организация не указана');
+    errors.push("Организация не указана");
   }
 
   // Проверка должности
   if (!row.Должность || !row.Должность.trim()) {
-    errors.push('Должность не указана');
+    errors.push("Должность не указана");
   }
 
   if (errors.length > 0) {
@@ -190,7 +194,7 @@ function validateRow(row: ExcelStudentRow, rowNumber: number): ValidationResult 
     pinfl: row.ПИНФЛ.trim(),
     fullName: row.ФИО.trim(),
     organization: row.Организация.trim(),
-    department: row['Служба/Отдел']?.trim() || null,
+    department: row["Служба/Отдел"]?.trim() || null,
     position: row.Должность.trim(),
     rowNumber,
   };
@@ -206,7 +210,9 @@ function validateRow(row: ExcelStudentRow, rowNumber: number): ValidationResult 
 /**
  * Анализ данных перед импортом
  */
-export async function analyzeImportData(rows: ExcelStudentRow[]): Promise<ImportAnalysis> {
+export async function analyzeImportData(
+  rows: ExcelStudentRow[]
+): Promise<ImportAnalysis> {
   const validationResults: ValidationResult[] = [];
   const validData: ImportStudentData[] = [];
   const errors: Array<{ rowNumber: number; errors: string[] }> = [];
@@ -226,16 +232,17 @@ export async function analyzeImportData(rows: ExcelStudentRow[]): Promise<Import
     }
   });
 
-  // Получаем существующих студентов из БД
-  const existingStudents = await getAllStudents();
-  const existingPinfls = new Set(existingStudents.map(s => s.pinfl));
+  // Получаем существующих студентов из БД (Оптимизация: только нужные ПИНФЛ)
+  const pinflsToCheck = validData.map((d) => d.pinfl);
+  const existingRows = await getExistingStudentsByPinfls(pinflsToCheck);
+  const existingPinfls = new Set(existingRows.map((s) => s.pinfl));
 
   // Подсчитываем новых и существующих
   let newStudents = 0;
   let existingStudentsCount = 0;
   const existingPinflsInImport: string[] = []; // ПИНФЛ из импорта которые уже есть в БД
 
-  validData.forEach(data => {
+  validData.forEach((data) => {
     if (existingPinfls.has(data.pinfl)) {
       existingStudentsCount++;
       existingPinflsInImport.push(data.pinfl);
@@ -260,11 +267,13 @@ export async function analyzeImportData(rows: ExcelStudentRow[]): Promise<Import
  * Создание задачи импорта
  */
 export function createImportJob(totalRows: number): string {
-  const jobId = `import_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const jobId = `import_${Date.now()}_${Math.random()
+    .toString(36)
+    .substr(2, 9)}`;
 
   const job: ImportProgress = {
     jobId,
-    status: 'pending' as ImportStatus,
+    status: "pending" as ImportStatus,
     totalRows,
     processedRows: 0,
     successCount: 0,
@@ -309,15 +318,15 @@ export async function executeImport(
 ): Promise<void> {
   const job = importJobs.get(jobId);
   if (!job) {
-    throw new Error('Задача импорта не найдена');
+    throw new Error("Задача импорта не найдена");
   }
 
-  updateJobProgress(jobId, { status: 'processing' as ImportStatus });
+  updateJobProgress(jobId, { status: "processing" as ImportStatus });
 
   try {
     // Используем batch upsert из репозитория
     const result = await batchUpsertStudentsWithProgress(
-      data.map(item => ({
+      data.map((item) => ({
         pinfl: item.pinfl,
         fullName: item.fullName,
         organization: item.organization,
@@ -340,14 +349,14 @@ export async function executeImport(
 
     // Завершаем задачу
     updateJobProgress(jobId, {
-      status: 'completed' as ImportStatus,
+      status: "completed" as ImportStatus,
       completedAt: new Date(),
       processedRows: data.length,
       createdCount: result.created,
       updatedCount: result.updated,
       errorCount: result.errors.length,
       successCount: result.created + result.updated,
-      errors: result.errors.map(e => ({
+      errors: result.errors.map((e) => ({
         rowNumber: 0, // У нас нет rowNumber в errors из репозитория
         pinfl: e.pinfl,
         error: e.error,
@@ -355,13 +364,15 @@ export async function executeImport(
     });
   } catch (error) {
     updateJobProgress(jobId, {
-      status: 'failed' as ImportStatus,
+      status: "failed" as ImportStatus,
       completedAt: new Date(),
-      errors: [{
-        rowNumber: 0,
-        pinfl: '',
-        error: error instanceof Error ? error.message : 'Неизвестная ошибка',
-      }],
+      errors: [
+        {
+          rowNumber: 0,
+          pinfl: "",
+          error: error instanceof Error ? error.message : "Неизвестная ошибка",
+        },
+      ],
     });
     throw error;
   }
@@ -384,7 +395,9 @@ export function cleanupOldJobs(): void {
  * Получить все валидные данные из Excel строк
  * (для использования в execute.post.ts)
  */
-export function getValidImportData(rows: ExcelStudentRow[]): ImportStudentData[] {
+export function getValidImportData(
+  rows: ExcelStudentRow[]
+): ImportStudentData[] {
   const validData: ImportStudentData[] = [];
 
   rows.forEach((row, index) => {
