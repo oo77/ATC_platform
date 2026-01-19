@@ -176,7 +176,7 @@ curl https://your-site.netlify.app/api/health
 1. Проверьте логи сборки в Netlify
 2. Убедитесь, что все зависимости установлены
 3. Проверьте версию Node.js (должна быть 20)
-
+˜˜YUR
 ### База данных не подключается
 1. Проверьте credentials в Environment variables
 2. Убедитесь, что БД доступна извне

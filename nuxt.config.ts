@@ -49,8 +49,10 @@ export default defineNuxtConfig({
   ],
 
   nitro: {
-    // Пресет для Netlify (SSR через Netlify Functions)
-    preset: 'netlify',
+    // Пресет для деплоя
+    // По умолчанию: node-server (для Ahost, VPS, PM2)
+    // Для Netlify: установите NITRO_PRESET=netlify
+    preset: process.env.NITRO_PRESET || 'node-server',
 
     esbuild: {
       options: {
