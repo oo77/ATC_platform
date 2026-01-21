@@ -47,6 +47,7 @@ export interface ScheduleEvent {
   isRecurring: boolean;
   recurrenceRule?: string;
   notes?: string;
+  durationMinutes?: number | null; // Чистое время пар без перерывов
   createdAt: string;
   updatedAt: string;
   allowedStudentIds?: string[] | null;
@@ -70,6 +71,7 @@ export interface CreateScheduleEventData {
   isRecurring?: boolean;
   recurrenceRule?: string;
   notes?: string;
+  durationMinutes?: number; // Чистое время пар без перерывов
 }
 
 export interface UpdateScheduleEventData {
@@ -87,6 +89,7 @@ export interface UpdateScheduleEventData {
   isRecurring?: boolean;
   recurrenceRule?: string | null;
   notes?: string | null;
+  durationMinutes?: number | null; // Чистое время пар без перерывов
 }
 
 // ============ Фильтры ============

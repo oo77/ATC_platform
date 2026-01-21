@@ -930,11 +930,17 @@ const computedDuration = computed(() => {
     10,
   );
 
+  // Получаем длительность академического часа для расчета (в минутах)
+  const academicHourMinutes = parseInt(
+    scheduleSettings.value.academic_hour_minutes || "40",
+    10,
+  );
+
   if (timeMode.value === "pairs") {
     // Каждая пара = periodDurationMinutes минут
-    // Переводим в академические часы (по 45 минут)
+    // Переводим в академические часы
     const totalMinutes = selectedPairs.value.length * periodDurationMinutes;
-    return Math.ceil(totalMinutes / 45);
+    return Math.ceil(totalMinutes / academicHourMinutes);
   }
 
   if (!form.value.startTime || !form.value.endTime) return 0;
@@ -952,8 +958,8 @@ const computedDuration = computed(() => {
 
   if (endMinutes <= startMinutes) return 0;
 
-  // Переводим в академические часы (1 ак. час = 45 минут)
-  return Math.ceil((endMinutes - startMinutes) / 45);
+  // Переводим в академические часы
+  return Math.ceil((endMinutes - startMinutes) / academicHourMinutes);
 });
 
 // ===================
@@ -1392,6 +1398,13 @@ const getSubmitDataForGroup = (pairNumbers: number[]) => {
 
   const title = selectedDiscipline.value?.name || "Занятие";
 
+  // Вычисляем чистую длительность (количество пар × длительность одной пары)
+  const periodDurationMinutes = parseInt(
+    scheduleSettings.value.period_duration_minutes || "40",
+    10,
+  );
+  const durationMinutes = pairNumbers.length * periodDurationMinutes;
+
   return {
     title,
     description: form.value.description.trim() || undefined,
@@ -1401,6 +1414,7 @@ const getSubmitDataForGroup = (pairNumbers: number[]) => {
     classroomId: form.value.classroomId || undefined,
     startTime: startTimeStr,
     endTime: endTimeStr,
+    durationMinutes, // Чистая длительность без перерывов
     isAllDay: false,
     color: form.value.color,
     eventType: form.value.eventType,
@@ -1428,6 +1442,22 @@ const getSubmitData = () => {
 
   const title = selectedDiscipline.value?.name || "Занятие";
 
+  // Вычисляем чистую длительность для режима точного времени
+  // Парсим время начала и окончания
+  const startParts = form.value.startTime.split(":").map(Number);
+  const endParts = form.value.endTime.split(":").map(Number);
+  const startMinutes = (startParts[0] ?? 0) * 60 + (startParts[1] ?? 0);
+  const endMinutes = (endParts[0] ?? 0) * 60 + (endParts[1] ?? 0);
+  const totalMinutes = endMinutes - startMinutes;
+
+  // Вычисляем количество пар на основе общей длительности
+  const periodDurationMinutes = parseInt(
+    scheduleSettings.value.period_duration_minutes || "40",
+    10,
+  );
+  const numberOfPairs = Math.ceil(totalMinutes / periodDurationMinutes);
+  const durationMinutes = numberOfPairs * periodDurationMinutes;
+
   return {
     title,
     description: form.value.description.trim() || undefined,
@@ -1437,6 +1467,7 @@ const getSubmitData = () => {
     classroomId: form.value.classroomId || undefined,
     startTime: startTimeStr,
     endTime: endTimeStr,
+    durationMinutes, // Чистая длительность без перерывов
     isAllDay: false,
     color: form.value.color,
     eventType: form.value.eventType,

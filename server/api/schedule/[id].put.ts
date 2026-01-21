@@ -165,8 +165,12 @@ export default defineEventHandler(async (event) => {
         }
 
         // Получаем уже использованные часы (исключая текущее событие)
+        // Используем duration_minutes (чистое время без перерывов) если оно есть,
+        // иначе fallback на TIMESTAMPDIFF для обратной совместимости
         const usedHoursRows = await executeQuery<UsedHoursRow[]>(
-          `SELECT SUM(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as total_minutes
+          `SELECT SUM(
+             COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time))
+           ) as total_minutes
            FROM schedule_events
            WHERE group_id = ? AND discipline_id = ? AND event_type = ? AND id != ?`,
           [finalGroupId, finalDisciplineId, finalEventType, id],
@@ -175,8 +179,11 @@ export default defineEventHandler(async (event) => {
         const usedMinutes = usedHoursRows[0]?.total_minutes || 0;
 
         // Вычисляем длительность занятия в минутах
-        const eventMinutes =
-          (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+        // Если передано durationMinutes (чистое время без перерывов), используем его
+        // Иначе вычисляем разницу между startTime и endTime
+        const eventMinutes = (body as any).durationMinutes
+          ? (body as any).durationMinutes
+          : (endTime.getTime() - startTime.getTime()) / (1000 * 60);
 
         // Получаем длительность академического часа из настроек
         const academicHourMinutes = await getAcademicHourMinutes();

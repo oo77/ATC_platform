@@ -111,11 +111,13 @@ export default defineEventHandler(async (event) => {
     );
 
     // Получаем использованные часы по всем занятиям этой группы
+    // Используем duration_minutes (чистое время без перерывов) если оно есть,
+    // иначе fallback на TIMESTAMPDIFF для обратной совместимости
     const usedHoursRows = await executeQuery<UsedHoursRow[]>(
       `SELECT 
         discipline_id,
         event_type,
-        SUM(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as total_minutes
+        SUM(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time))) as total_minutes
       FROM schedule_events
       WHERE group_id = ? AND discipline_id IN (${placeholders})
       GROUP BY discipline_id, event_type`,

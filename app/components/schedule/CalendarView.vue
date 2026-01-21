@@ -553,7 +553,7 @@ const usedGroupsWithColors = computed(() => {
 
   // Сортируем по коду группы
   return Array.from(groupMap.values()).sort((a, b) =>
-    a.code.localeCompare(b.code)
+    a.code.localeCompare(b.code),
   );
 });
 
@@ -651,10 +651,10 @@ const onDateSelect = (arg: DateSelectArg) => {
   ) {
     const startTimeStr = `${String(arg.start.getHours()).padStart(
       2,
-      "0"
+      "0",
     )}:${String(arg.start.getMinutes()).padStart(2, "0")}`;
     const endTimeStr = `${String(arg.end.getHours()).padStart(2, "0")}:${String(
-      arg.end.getMinutes()
+      arg.end.getMinutes(),
     ).padStart(2, "0")}`;
 
     const nearestStartPeriod = getNearestPeriod(startTimeStr);
@@ -737,8 +737,34 @@ const onEventDrop = async (info: EventDropArg) => {
       const newEndTime = info.event.end
         ? dateToLocalIsoString(info.event.end)
         : dateToLocalIsoString(
-            new Date(info.event.start!.getTime() + 60 * 60 * 1000)
+            new Date(info.event.start!.getTime() + 60 * 60 * 1000),
           );
+
+      // Используем сохраненное значение durationMinutes из события, если оно есть
+      // Иначе вычисляем на основе общего времени (для обратной совместимости)
+      let durationMinutes: number;
+
+      if (event.durationMinutes && event.durationMinutes > 0) {
+        // Используем сохраненное чистое время без перерывов
+        durationMinutes = event.durationMinutes;
+      } else {
+        // Fallback: вычисляем на основе общего времени
+        const originalStartTime = new Date(event.startTime);
+        const originalEndTime = new Date(event.endTime);
+        const originalDurationMs =
+          originalEndTime.getTime() - originalStartTime.getTime();
+        const originalDurationMinutes = originalDurationMs / (1000 * 60);
+
+        const periodDurationMinutes = parseInt(
+          scheduleSettings.value.period_duration_minutes || "40",
+          10,
+        );
+
+        const numberOfPairs = Math.ceil(
+          originalDurationMinutes / periodDurationMinutes,
+        );
+        durationMinutes = numberOfPairs * periodDurationMinutes;
+      }
 
       await authFetch("/api/schedule", {
         method: "POST",
@@ -751,6 +777,7 @@ const onEventDrop = async (info: EventDropArg) => {
           classroomId: event.classroomId,
           startTime: newStartTime,
           endTime: newEndTime,
+          durationMinutes, // Передаем чистую длительность без перерывов
           isAllDay: event.isAllDay,
           color: event.color,
           eventType: event.eventType,
@@ -764,6 +791,33 @@ const onEventDrop = async (info: EventDropArg) => {
       });
     } else {
       // Режим перемещения - обновляем существующее событие
+
+      // Используем сохраненное значение durationMinutes из события, если оно есть
+      // Иначе вычисляем на основе общего времени (для обратной совместимости)
+      let durationMinutes: number;
+
+      if (event.durationMinutes && event.durationMinutes > 0) {
+        // Используем сохраненное чистое время без перерывов
+        durationMinutes = event.durationMinutes;
+      } else {
+        // Fallback: вычисляем на основе общего времени
+        const originalStartTime = new Date(event.startTime);
+        const originalEndTime = new Date(event.endTime);
+        const originalDurationMs =
+          originalEndTime.getTime() - originalStartTime.getTime();
+        const originalDurationMinutes = originalDurationMs / (1000 * 60);
+
+        const periodDurationMinutes = parseInt(
+          scheduleSettings.value.period_duration_minutes || "40",
+          10,
+        );
+
+        const numberOfPairs = Math.ceil(
+          originalDurationMinutes / periodDurationMinutes,
+        );
+        durationMinutes = numberOfPairs * periodDurationMinutes;
+      }
+
       await authFetch(`/api/schedule/${event.id}`, {
         method: "PUT",
         body: {
@@ -773,8 +827,9 @@ const onEventDrop = async (info: EventDropArg) => {
           endTime: info.event.end
             ? dateToLocalIsoString(info.event.end)
             : dateToLocalIsoString(
-                new Date(info.event.start!.getTime() + 60 * 60 * 1000)
+                new Date(info.event.start!.getTime() + 60 * 60 * 1000),
               ),
+          durationMinutes, // Передаем чистую длительность без перерывов
         },
       });
 
@@ -814,12 +869,28 @@ const onEventResize = async (info: EventResizeDoneArg) => {
   }
 
   try {
+    // Вычисляем новую длительность в минутах
+    const newStartTime = info.event.start || new Date(event.startTime);
+    const newEndTime = info.event.end || new Date(event.endTime);
+    const newDurationMs = newEndTime.getTime() - newStartTime.getTime();
+    const newDurationMinutes = newDurationMs / (1000 * 60);
+
+    // Вычисляем количество пар
+    const periodDurationMinutes = parseInt(
+      scheduleSettings.value.period_duration_minutes || "40",
+      10,
+    );
+
+    const numberOfPairs = Math.ceil(newDurationMinutes / periodDurationMinutes);
+    const durationMinutes = numberOfPairs * periodDurationMinutes;
+
     await authFetch(`/api/schedule/${event.id}`, {
       method: "PUT",
       body: {
         endTime: info.event.end
           ? dateToLocalIsoString(info.event.end)
           : undefined,
+        durationMinutes, // Передаем чистую длительность без перерывов
       },
     });
 
@@ -876,8 +947,8 @@ const onEventDidMount = (arg: EventMountArg) => {
     parts.push(`<div class="event-tooltip-row">
       <span class="event-tooltip-icon">🕐</span>
       <span class="event-tooltip-text">${startTime}${
-      endTime ? " – " + endTime : ""
-    }</span>
+        endTime ? " – " + endTime : ""
+      }</span>
     </div>`);
   }
 
@@ -910,7 +981,7 @@ const onEventDidMount = (arg: EventMountArg) => {
     parts.push(`<div class="event-tooltip-row">
       <span class="event-tooltip-icon">📋</span>
       <span class="event-tooltip-text">${getEventTypeLabel(
-        extendedProps.eventType
+        extendedProps.eventType,
       )}</span>
     </div>`);
   }
@@ -1017,7 +1088,7 @@ const slotMinTime = computed(() => {
   const hours = Math.floor(bufferMinutes / 60);
   const mins = bufferMinutes % 60;
   return `${String(Math.max(0, hours)).padStart(2, "0")}:${String(
-    mins
+    mins,
   ).padStart(2, "0")}:00`;
 });
 
@@ -1031,7 +1102,7 @@ const slotMaxTime = computed(() => {
   const hours = Math.floor(bufferMinutes / 60);
   const mins = bufferMinutes % 60;
   return `${String(Math.min(24, hours)).padStart(2, "0")}:${String(
-    mins
+    mins,
   ).padStart(2, "0")}:00`;
 });
 
@@ -1060,7 +1131,7 @@ const slotLabelContent = (arg: { date: Date; text: string }) => {
   const showNumbers = scheduleSettings.value.show_period_numbers === "true";
 
   const timeStr = `${String(arg.date.getHours()).padStart(2, "0")}:${String(
-    arg.date.getMinutes()
+    arg.date.getMinutes(),
   ).padStart(2, "0")}`;
   const period = periods.value.find((p) => p.startTime === timeStr);
 
@@ -1095,7 +1166,7 @@ const snapToGrid = (date: Date): Date => {
   if (!shouldSnap) return date;
 
   const timeStr = `${String(date.getHours()).padStart(2, "0")}:${String(
-    date.getMinutes()
+    date.getMinutes(),
   ).padStart(2, "0")}`;
   const nearestPeriod = getNearestPeriod(timeStr);
 
@@ -1116,7 +1187,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
   // Длительность пары для привязки при перетаскивании
   const periodDuration = parseInt(
     scheduleSettings.value.period_duration_minutes || "40",
-    10
+    10,
   );
   const snapDurationValue = `00:${String(periodDuration).padStart(2, "0")}:00`;
 
@@ -1323,14 +1394,14 @@ const updateCalendarEvents = () => {
           const isAllowed = event.allowedStudentIds.includes(currentStudentId);
           console.log(
             "[CalendarView] → Перездача, студент в списке:",
-            isAllowed
+            isAllowed,
           );
           return isAllowed;
         }
 
         // Если allowedStudentIds пустой или не определен, не показываем
         console.log(
-          "[CalendarView] → Скрываем (перездача без списка студентов)"
+          "[CalendarView] → Скрываем (перездача без списка студентов)",
         );
         return false;
       });
@@ -1353,7 +1424,7 @@ const openAddModal = (start?: Date) => {
   editingEvent.value = null;
   defaultEventStart.value = start || new Date();
   defaultEventEnd.value = new Date(
-    (start || new Date()).getTime() + 90 * 60 * 1000
+    (start || new Date()).getTime() + 90 * 60 * 1000,
   );
   showEventModal.value = true;
 };
@@ -1377,7 +1448,7 @@ const handleEditFromDetail = (event: ScheduleEvent) => {
     // Загружаем оригинальное событие, если есть originalEventId
     if (event.originalEventId) {
       const originalEvent = events.value.find(
-        (e) => e.id === event.originalEventId
+        (e) => e.id === event.originalEventId,
       );
       if (originalEvent) {
         retakeOriginalEvent.value = {
@@ -1536,16 +1607,16 @@ const loadSelectData = async () => {
       await Promise.all([
         shouldFetchGroups
           ? authFetch<{ success: boolean; groups: any[] }>(
-              "/api/groups?limit=1000&isActive=true"
+              "/api/groups?limit=1000&isActive=true",
             )
           : Promise.resolve({ success: true, groups: [] }),
         shouldFetchInstructors
           ? authFetch<{ success: boolean; instructors: Instructor[] }>(
-              "/api/instructors?limit=1000&isActive=true"
+              "/api/instructors?limit=1000&isActive=true",
             )
           : Promise.resolve({ success: true, instructors: [] }),
         authFetch<{ success: boolean; classrooms: Classroom[] }>(
-          "/api/classrooms"
+          "/api/classrooms",
         ),
       ]);
 
@@ -2130,12 +2201,16 @@ onUnmounted(() => {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 8px 32px rgba(0, 0, 0, 0.08),
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.12),
+    0 8px 32px rgba(0, 0, 0, 0.08),
     0 0 0 1px rgba(255, 255, 255, 0.5) inset;
   pointer-events: none;
   opacity: 0;
   transform: translateY(8px) scale(0.96);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .dark .event-tooltip {
@@ -2145,7 +2220,9 @@ onUnmounted(() => {
     rgba(28, 36, 52, 0.98) 100%
   );
   border-color: rgba(61, 77, 95, 0.8);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 8px 32px rgba(0, 0, 0, 0.2),
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 8px 32px rgba(0, 0, 0, 0.2),
     0 0 0 1px rgba(255, 255, 255, 0.05) inset;
 }
 
@@ -2227,7 +2304,8 @@ onUnmounted(() => {
 /* Основной стиль для перездач */
 .schedule-calendar .fc-event.event-retake {
   border: 2px solid #9333ea !important;
-  box-shadow: 0 0 0 1px rgba(147, 51, 234, 0.2),
+  box-shadow:
+    0 0 0 1px rgba(147, 51, 234, 0.2),
     0 2px 8px rgba(147, 51, 234, 0.15) !important;
   position: relative;
 }
@@ -2261,7 +2339,8 @@ onUnmounted(() => {
 
 /* Hover эффект для перездач */
 .schedule-calendar .fc-event.event-retake:hover {
-  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3),
+  box-shadow:
+    0 0 0 2px rgba(147, 51, 234, 0.3),
     0 4px 12px rgba(147, 51, 234, 0.25) !important;
 }
 

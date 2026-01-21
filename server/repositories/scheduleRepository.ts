@@ -30,6 +30,7 @@ export interface ScheduleEvent {
   isRecurring: boolean;
   recurrenceRule: string | null;
   notes: string | null;
+  durationMinutes?: number | null; // Чистое время пар без перерывов
   createdAt: Date;
   updatedAt: Date;
   // Retake fields
@@ -82,6 +83,7 @@ export interface CreateScheduleEventInput {
   isRecurring?: boolean;
   recurrenceRule?: string;
   notes?: string;
+  durationMinutes?: number; // Чистое время пар без перерывов
   testTemplateId?: string; // New: optional test template for assessment events
   allowedStudentIds?: string[]; // New: limit access to specific students
   originalEventId?: string; // New: link to original event for retakes
@@ -102,6 +104,7 @@ export interface UpdateScheduleEventInput {
   isRecurring?: boolean;
   recurrenceRule?: string | null;
   notes?: string | null;
+  durationMinutes?: number | null; // Чистое время пар без перерывов
   testTemplateId?: string; // New: optional test template for assessment events
   allowedStudentIds?: string[]; // New: limit access to specific students
 }
@@ -137,6 +140,7 @@ interface ScheduleEventRow extends RowDataPacket {
   is_recurring: boolean;
   recurrence_rule: string | null;
   notes: string | null;
+  duration_minutes?: number | null;
   created_at: Date;
   updated_at: Date;
   original_event_id?: string | null;
@@ -182,6 +186,7 @@ function mapRowToScheduleEvent(row: ScheduleEventRow): ScheduleEvent {
     isRecurring: row.is_recurring,
     recurrenceRule: row.recurrence_rule,
     notes: row.notes,
+    durationMinutes: row.duration_minutes,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     originalEventId: row.original_event_id,
@@ -246,7 +251,7 @@ function mapRowToClassroom(row: ClassroomRow): Classroom {
  * Получить события расписания с фильтрами
  */
 export async function getScheduleEvents(
-  filters: ScheduleFilters = {}
+  filters: ScheduleFilters = {},
 ): Promise<ScheduleEvent[]> {
   const conditions: string[] = [];
   const params: any[] = [];
@@ -262,7 +267,7 @@ export async function getScheduleEvents(
       : `${filters.endDate} 23:59:59`;
 
     conditions.push(
-      "((se.start_time >= ? AND se.start_time <= ?) OR (se.end_time >= ? AND se.end_time <= ?) OR (se.start_time <= ? AND se.end_time >= ?))"
+      "((se.start_time >= ? AND se.start_time <= ?) OR (se.end_time >= ? AND se.end_time <= ?) OR (se.start_time <= ? AND se.end_time >= ?))",
     );
     params.push(
       startDateStr,
@@ -270,7 +275,7 @@ export async function getScheduleEvents(
       startDateStr,
       endDateStr,
       startDateStr,
-      endDateStr
+      endDateStr,
     );
   } else if (filters.startDate) {
     const startDateStr = filters.startDate.includes("T")
@@ -317,7 +322,7 @@ export async function getScheduleEvents(
     if (filters.orInstructorId) {
       // Для TEACHER: показываем события по его группам ИЛИ где он назначен инструктором
       conditions.push(
-        `(se.group_id IN (${placeholders}) OR se.instructor_id = ?)`
+        `(se.group_id IN (${placeholders}) OR se.instructor_id = ?)`,
       );
       params.push(...filters.groupIds, filters.orInstructorId);
     } else {
@@ -343,6 +348,7 @@ export async function getScheduleEvents(
       se.*,
       se.allowed_student_ids,
       se.original_event_id,
+      se.duration_minutes,
       sg.code as group_code,
       sg.is_archived as group_is_archived,
       c.name as course_name,
@@ -368,13 +374,14 @@ export async function getScheduleEvents(
  * Получить событие по ID
  */
 export async function getScheduleEventById(
-  id: string
+  id: string,
 ): Promise<ScheduleEvent | null> {
   const rows = await executeQuery<ScheduleEventRow[]>(
     `SELECT 
       se.*,
       se.allowed_student_ids,
       se.original_event_id,
+      se.duration_minutes,
       sg.code as group_code,
       sg.is_archived as group_is_archived,
       c.name as course_name,
@@ -390,7 +397,7 @@ export async function getScheduleEventById(
     LEFT JOIN disciplines d ON se.discipline_id = d.id
     WHERE se.id = ?
     LIMIT 1`,
-    [id]
+    [id],
   );
 
   if (rows.length === 0) {
@@ -404,7 +411,7 @@ export async function getScheduleEventById(
  * Создать событие расписания
  */
 export async function createScheduleEvent(
-  data: CreateScheduleEventInput
+  data: CreateScheduleEventInput,
 ): Promise<ScheduleEvent> {
   const id = uuidv4();
 
@@ -416,8 +423,8 @@ export async function createScheduleEvent(
     `INSERT INTO schedule_events (
       id, title, description, group_id, discipline_id, instructor_id, classroom_id,
       start_time, end_time, is_all_day, color, event_type, is_recurring, recurrence_rule, notes,
-      allowed_student_ids, original_event_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      duration_minutes, allowed_student_ids, original_event_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.title,
@@ -434,9 +441,10 @@ export async function createScheduleEvent(
       data.isRecurring || false,
       data.recurrenceRule || null,
       data.notes || null,
+      data.durationMinutes || null,
       data.allowedStudentIds ? JSON.stringify(data.allowedStudentIds) : null,
       data.originalEventId || null,
-    ]
+    ],
   );
 
   const event = await getScheduleEventById(id);
@@ -452,7 +460,7 @@ export async function createScheduleEvent(
  */
 export async function updateScheduleEvent(
   id: string,
-  data: UpdateScheduleEventInput
+  data: UpdateScheduleEventInput,
 ): Promise<ScheduleEvent | null> {
   const existing = await getScheduleEventById(id);
   if (!existing) {
@@ -518,12 +526,16 @@ export async function updateScheduleEvent(
     updates.push("notes = ?");
     params.push(data.notes);
   }
+  if (data.durationMinutes !== undefined) {
+    updates.push("duration_minutes = ?");
+    params.push(data.durationMinutes);
+  }
   if (data.allowedStudentIds !== undefined) {
     updates.push("allowed_student_ids = ?");
     params.push(
       data.allowedStudentIds && data.allowedStudentIds.length > 0
         ? JSON.stringify(data.allowedStudentIds)
-        : null
+        : null,
     );
   }
 
@@ -534,7 +546,7 @@ export async function updateScheduleEvent(
   params.push(id);
   await executeQuery(
     `UPDATE schedule_events SET ${updates.join(", ")} WHERE id = ?`,
-    params
+    params,
   );
 
   return getScheduleEventById(id);
@@ -546,7 +558,7 @@ export async function updateScheduleEvent(
 export async function deleteScheduleEvent(id: string): Promise<boolean> {
   const result = await executeQuery<ResultSetHeader>(
     "DELETE FROM schedule_events WHERE id = ?",
-    [id]
+    [id],
   );
 
   return result.affectedRows > 0;
@@ -564,7 +576,7 @@ export async function checkScheduleConflicts(
     instructorId?: string;
     groupId?: string;
     excludeEventId?: string;
-  } = {}
+  } = {},
 ): Promise<ScheduleEvent[]> {
   // Конвертируем ISO время в MySQL формат
   const startTimeMysql = isoToMySqlDatetime(startTime);
@@ -660,7 +672,7 @@ export async function getClassrooms(activeOnly = true): Promise<Classroom[]> {
 export async function getClassroomById(id: string): Promise<Classroom | null> {
   const rows = await executeQuery<ClassroomRow[]>(
     "SELECT * FROM classrooms WHERE id = ? LIMIT 1",
-    [id]
+    [id],
   );
 
   if (rows.length === 0) {
@@ -682,7 +694,7 @@ export async function createClassroom(data: {
 
   await executeQuery(
     `INSERT INTO classrooms (id, name, capacity, description) VALUES (?, ?, ?, ?)`,
-    [id, data.name, data.capacity || 0, data.description || null]
+    [id, data.name, data.capacity || 0, data.description || null],
   );
 
   const classroom = await getClassroomById(id);
@@ -703,7 +715,7 @@ export async function updateClassroom(
     capacity?: number;
     description?: string | null;
     isActive?: boolean;
-  }
+  },
 ): Promise<Classroom | null> {
   const existing = await getClassroomById(id);
   if (!existing) {
@@ -737,7 +749,7 @@ export async function updateClassroom(
   params.push(id);
   await executeQuery(
     `UPDATE classrooms SET ${updates.join(", ")} WHERE id = ?`,
-    params
+    params,
   );
 
   return getClassroomById(id);
@@ -749,7 +761,7 @@ export async function updateClassroom(
 export async function deleteClassroom(id: string): Promise<boolean> {
   const result = await executeQuery<ResultSetHeader>(
     "DELETE FROM classrooms WHERE id = ?",
-    [id]
+    [id],
   );
 
   return result.affectedRows > 0;
@@ -827,7 +839,7 @@ function mapRowToScheduleSetting(row: ScheduleSettingRow): ScheduleSetting {
  * Получить все академические пары (отсортированные по номеру)
  */
 export async function getSchedulePeriods(
-  activeOnly = true
+  activeOnly = true,
 ): Promise<SchedulePeriod[]> {
   let query = "SELECT * FROM schedule_periods";
   const params: any[] = [];
@@ -846,11 +858,11 @@ export async function getSchedulePeriods(
  * Получить академическую пару по ID
  */
 export async function getSchedulePeriodById(
-  id: number
+  id: number,
 ): Promise<SchedulePeriod | null> {
   const rows = await executeQuery<SchedulePeriodRow[]>(
     "SELECT * FROM schedule_periods WHERE id = ? LIMIT 1",
-    [id]
+    [id],
   );
 
   if (rows.length === 0) {
@@ -864,11 +876,11 @@ export async function getSchedulePeriodById(
  * Получить академическую пару по номеру
  */
 export async function getSchedulePeriodByNumber(
-  periodNumber: number
+  periodNumber: number,
 ): Promise<SchedulePeriod | null> {
   const rows = await executeQuery<SchedulePeriodRow[]>(
     "SELECT * FROM schedule_periods WHERE period_number = ? LIMIT 1",
-    [periodNumber]
+    [periodNumber],
   );
 
   if (rows.length === 0) {
@@ -888,7 +900,7 @@ export async function updateSchedulePeriod(
     endTime?: string;
     isAfterBreak?: boolean;
     isActive?: boolean;
-  }
+  },
 ): Promise<SchedulePeriod | null> {
   const existing = await getSchedulePeriodById(id);
   if (!existing) {
@@ -922,7 +934,7 @@ export async function updateSchedulePeriod(
   params.push(id);
   await executeQuery(
     `UPDATE schedule_periods SET ${updates.join(", ")} WHERE id = ?`,
-    params
+    params,
   );
 
   return getSchedulePeriodById(id);
@@ -937,7 +949,7 @@ export async function updateAllSchedulePeriods(
     startTime: string;
     endTime: string;
     isAfterBreak?: boolean;
-  }>
+  }>,
 ): Promise<SchedulePeriod[]> {
   for (const period of periods) {
     await executeQuery(
@@ -949,7 +961,7 @@ export async function updateAllSchedulePeriods(
         period.endTime,
         period.isAfterBreak || false,
         period.periodNumber,
-      ]
+      ],
     );
   }
 
@@ -961,7 +973,7 @@ export async function updateAllSchedulePeriods(
  */
 export async function getScheduleSettings(): Promise<ScheduleSetting[]> {
   const rows = await executeQuery<ScheduleSettingRow[]>(
-    "SELECT * FROM schedule_settings ORDER BY setting_key ASC"
+    "SELECT * FROM schedule_settings ORDER BY setting_key ASC",
   );
   return rows.map(mapRowToScheduleSetting);
 }
@@ -970,11 +982,11 @@ export async function getScheduleSettings(): Promise<ScheduleSetting[]> {
  * Получить настройку по ключу
  */
 export async function getScheduleSettingByKey(
-  key: string
+  key: string,
 ): Promise<ScheduleSetting | null> {
   const rows = await executeQuery<ScheduleSettingRow[]>(
     "SELECT * FROM schedule_settings WHERE setting_key = ? LIMIT 1",
-    [key]
+    [key],
   );
 
   if (rows.length === 0) {
@@ -988,7 +1000,7 @@ export async function getScheduleSettingByKey(
  * Получить значение настройки по ключу
  */
 export async function getScheduleSettingValue(
-  key: string
+  key: string,
 ): Promise<string | null> {
   const setting = await getScheduleSettingByKey(key);
   return setting ? setting.settingValue : null;
@@ -999,11 +1011,11 @@ export async function getScheduleSettingValue(
  */
 export async function updateScheduleSetting(
   key: string,
-  value: string
+  value: string,
 ): Promise<ScheduleSetting | null> {
   await executeQuery(
     "UPDATE schedule_settings SET setting_value = ? WHERE setting_key = ?",
-    [value, key]
+    [value, key],
   );
 
   return getScheduleSettingByKey(key);
@@ -1013,12 +1025,12 @@ export async function updateScheduleSetting(
  * Массовое обновление настроек
  */
 export async function updateScheduleSettings(
-  settings: Array<{ key: string; value: string }>
+  settings: Array<{ key: string; value: string }>,
 ): Promise<ScheduleSetting[]> {
   for (const setting of settings) {
     await executeQuery(
       "UPDATE schedule_settings SET setting_value = ? WHERE setting_key = ?",
-      [setting.value, setting.key]
+      [setting.value, setting.key],
     );
   }
 
@@ -1045,7 +1057,7 @@ export async function getScheduleSettingsAsObject(): Promise<
  * Найти ближайшую академическую пару по времени (HH:MM)
  */
 export async function findNearestPeriod(
-  time: string
+  time: string,
 ): Promise<SchedulePeriod | null> {
   const periods = await getSchedulePeriods();
 
@@ -1079,7 +1091,7 @@ export async function findNearestPeriod(
  * Возвращает пару, в которую попадает указанное время
  */
 export async function getPeriodByTime(
-  time: string
+  time: string,
 ): Promise<SchedulePeriod | null> {
   const periods = await getSchedulePeriods();
 
