@@ -3,8 +3,8 @@
  * Получение дисциплин учебной программы группы с информацией о часах и инструкторах
  */
 
-import { executeQuery } from '../../../utils/db';
-import type { RowDataPacket } from 'mysql2/promise';
+import { executeQuery } from "../../../utils/db";
+import type { RowDataPacket } from "mysql2/promise";
 
 interface DisciplineRow extends RowDataPacket {
   id: string;
@@ -42,32 +42,32 @@ interface GroupRow extends RowDataPacket {
 // Вспомогательная функция для форматирования даты без сдвига временной зоны
 const formatDateLocal = (date: Date): string => {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
 export default defineEventHandler(async (event) => {
   try {
-    const groupId = getRouterParam(event, 'id');
+    const groupId = getRouterParam(event, "id");
 
     if (!groupId) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'ID группы не указан',
+        statusMessage: "ID группы не указан",
       });
     }
 
     // Получаем информацию о группе
     const groupRows = await executeQuery<GroupRow[]>(
       `SELECT id, course_id, start_date, end_date FROM study_groups WHERE id = ? LIMIT 1`,
-      [groupId]
+      [groupId],
     );
 
     if (groupRows.length === 0) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Группа не найдена',
+        statusMessage: "Группа не найдена",
       });
     }
 
@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
     // Получаем дисциплины курса
     const disciplineRows = await executeQuery<DisciplineRow[]>(
       `SELECT * FROM disciplines WHERE course_id = ? ORDER BY order_index, name`,
-      [group.course_id]
+      [group.course_id],
     );
 
     if (disciplineRows.length === 0) {
@@ -92,8 +92,8 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-    const disciplineIds = disciplineRows.map(d => d.id);
-    const placeholders = disciplineIds.map(() => '?').join(', ');
+    const disciplineIds = disciplineRows.map((d) => d.id);
+    const placeholders = disciplineIds.map(() => "?").join(", ");
 
     // Получаем инструкторов для дисциплин
     const instructorRows = await executeQuery<DisciplineInstructorRow[]>(
@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
       FROM discipline_instructors di
       JOIN instructors i ON di.instructor_id = i.id
       WHERE di.discipline_id IN (${placeholders}) AND i.is_active = true`,
-      disciplineIds
+      disciplineIds,
     );
 
     // Получаем использованные часы по всем занятиям этой группы
@@ -118,16 +118,19 @@ export default defineEventHandler(async (event) => {
       FROM schedule_events
       WHERE group_id = ? AND discipline_id IN (${placeholders})
       GROUP BY discipline_id, event_type`,
-      [groupId, ...disciplineIds]
+      [groupId, ...disciplineIds],
     );
 
     // Группируем инструкторов по дисциплинам
-    const instructorsByDiscipline = new Map<string, Array<{
-      id: string;
-      fullName: string;
-      email: string | null;
-      isPrimary: boolean;
-    }>>();
+    const instructorsByDiscipline = new Map<
+      string,
+      Array<{
+        id: string;
+        fullName: string;
+        email: string | null;
+        isPrimary: boolean;
+      }>
+    >();
 
     for (const row of instructorRows) {
       const list = instructorsByDiscipline.get(row.discipline_id) || [];
@@ -140,40 +143,48 @@ export default defineEventHandler(async (event) => {
       instructorsByDiscipline.set(row.discipline_id, list);
     }
 
-    // Группируем использованные часы по дисциплинам и типам
-    const usedHoursByDiscipline = new Map<string, {
-      theory: number;
-      practice: number;
-      assessment: number;
-    }>();
+    // Группируем использованные часы по дисциплинам и типам (в минутах)
+    const usedMinutesByDiscipline = new Map<
+      string,
+      {
+        theory: number;
+        practice: number;
+        assessment: number;
+      }
+    >();
 
     for (const row of usedHoursRows) {
-      const hours = usedHoursByDiscipline.get(row.discipline_id) || {
+      const minutes = usedMinutesByDiscipline.get(row.discipline_id) || {
         theory: 0,
         practice: 0,
         assessment: 0,
       };
 
-      // Переводим минуты в часы (академические часы = 45 минут)
-      const academicHours = Math.ceil(row.total_minutes / 45);
-
-      if (row.event_type === 'theory') {
-        hours.theory = academicHours;
-      } else if (row.event_type === 'practice') {
-        hours.practice = academicHours;
-      } else if (row.event_type === 'assessment') {
-        hours.assessment = academicHours;
+      // Сохраняем минуты как есть, без округления
+      if (row.event_type === "theory") {
+        minutes.theory = row.total_minutes;
+      } else if (row.event_type === "practice") {
+        minutes.practice = row.total_minutes;
+      } else if (row.event_type === "assessment") {
+        minutes.assessment = row.total_minutes;
       }
 
-      usedHoursByDiscipline.set(row.discipline_id, hours);
+      usedMinutesByDiscipline.set(row.discipline_id, minutes);
     }
 
     // Формируем результат
-    const disciplines = disciplineRows.map(row => {
-      const usedHours = usedHoursByDiscipline.get(row.id) || {
+    const disciplines = disciplineRows.map((row) => {
+      const usedMinutes = usedMinutesByDiscipline.get(row.id) || {
         theory: 0,
         practice: 0,
         assessment: 0,
+      };
+
+      // Переводим минуты в академические часы (45 минут = 1 ак.ч)
+      const usedHours = {
+        theory: Math.ceil(usedMinutes.theory / 45),
+        practice: Math.ceil(usedMinutes.practice / 45),
+        assessment: Math.ceil(usedMinutes.assessment / 45),
       };
 
       return {
@@ -215,10 +226,10 @@ export default defineEventHandler(async (event) => {
     if (error.statusCode) {
       throw error;
     }
-    console.error('Error fetching group disciplines:', error);
+    console.error("Error fetching group disciplines:", error);
     throw createError({
       statusCode: 500,
-      statusMessage: 'Ошибка при получении дисциплин группы',
+      statusMessage: "Ошибка при получении дисциплин группы",
     });
   }
 });

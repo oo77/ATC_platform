@@ -5,7 +5,7 @@ export default defineNuxtConfig({
 
   // Настройка dev-сервера для доступа извне (включая ngrok)
   devServer: {
-    host: "0.0.0.0", // Слушает все сетевые интерфейсы (необходимо для ngrok и доступа по IP)
+    host: "localhost", // Слушает все сетевые интерфейсы (необходимо для ngrok и доступа по IP)
     port: 3000,
   },
 
@@ -58,7 +58,7 @@ export default defineNuxtConfig({
   vite: {
     server: {
       // Разрешаем доступ с любых хостов (необходимо для ngrok)
-      host: "0.0.0.0",
+      host: "localhost",
       // Отключаем проверку хоста для dev-режима
       allowedHosts: ["all"],
       hmr: {

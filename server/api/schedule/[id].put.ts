@@ -101,7 +101,7 @@ export default defineEventHandler(async (event) => {
     if (finalGroupId) {
       const groupRows = await executeQuery<GroupRow[]>(
         "SELECT id, start_date, end_date, course_id FROM study_groups WHERE id = ? LIMIT 1",
-        [finalGroupId]
+        [finalGroupId],
       );
 
       if (groupRows.length === 0) {
@@ -122,7 +122,7 @@ export default defineEventHandler(async (event) => {
         throw createError({
           statusCode: 400,
           statusMessage: `Дата занятия должна быть в пределах периода обучения группы (${formatDateForDisplay(
-            groupStartDate
+            groupStartDate,
           )} — ${formatDateForDisplay(groupEndDate)})`,
         });
       }
@@ -135,7 +135,7 @@ export default defineEventHandler(async (event) => {
         // Получаем информацию о дисциплине
         const disciplineRows = await executeQuery<DisciplineRow[]>(
           "SELECT id, theory_hours, practice_hours, assessment_hours FROM disciplines WHERE id = ? AND course_id = ? LIMIT 1",
-          [finalDisciplineId, group.course_id]
+          [finalDisciplineId, group.course_id],
         );
 
         if (disciplineRows.length === 0) {
@@ -168,21 +168,29 @@ export default defineEventHandler(async (event) => {
           `SELECT SUM(TIMESTAMPDIFF(MINUTE, start_time, end_time)) as total_minutes
            FROM schedule_events
            WHERE group_id = ? AND discipline_id = ? AND event_type = ? AND id != ?`,
-          [finalGroupId, finalDisciplineId, finalEventType, id]
+          [finalGroupId, finalDisciplineId, finalEventType, id],
         );
 
         const usedMinutes = usedHoursRows[0]?.total_minutes || 0;
-        // Академический час = 45 минут
-        const usedAcademicHours = Math.ceil(usedMinutes / 45);
 
-        // Вычисляем длительность занятия в академических часах
+        // Вычисляем длительность занятия в минутах
         const eventMinutes =
           (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-        const eventHours = Math.ceil(eventMinutes / 45);
 
-        const remainingHours = allocatedHours - usedAcademicHours;
+        // Суммируем использованные и текущие минуты
+        const totalMinutes = usedMinutes + eventMinutes;
 
-        if (eventHours > remainingHours) {
+        // Академический час = 45 минут
+        // Округляем ТОЛЬКО итоговое значение, чтобы избежать накопления ошибок округления
+        const totalAcademicHours = Math.ceil(totalMinutes / 45);
+
+        // Проверяем превышение лимита
+        if (totalAcademicHours > allocatedHours) {
+          // Для сообщения об ошибке вычисляем, сколько часов запрашивается
+          const eventHours = Math.ceil(eventMinutes / 45);
+          const usedAcademicHours = Math.ceil(usedMinutes / 45);
+          const remainingHours = allocatedHours - usedAcademicHours;
+
           const typeNames = {
             theory: "теории",
             practice: "практики",
@@ -229,7 +237,7 @@ export default defineEventHandler(async (event) => {
         if (additionalMinutes > 0) {
           const hoursCheck = await checkInstructorHoursLimit(
             checkInstructor,
-            additionalMinutes
+            additionalMinutes,
           );
 
           if (!hoursCheck.canTake) {
@@ -257,7 +265,7 @@ export default defineEventHandler(async (event) => {
           instructorId: checkInstructor || undefined,
           groupId: finalGroupId || undefined,
           excludeEventId: id,
-        }
+        },
       );
 
       if (conflicts.length > 0) {
@@ -266,7 +274,7 @@ export default defineEventHandler(async (event) => {
         for (const conflict of conflicts) {
           if (conflict.classroomId === checkClassroom && conflict.classroom) {
             conflictMessages.push(
-              `Аудитория "${conflict.classroom.name}" занята`
+              `Аудитория "${conflict.classroom.name}" занята`,
             );
           }
           if (
@@ -274,7 +282,7 @@ export default defineEventHandler(async (event) => {
             conflict.instructor
           ) {
             conflictMessages.push(
-              `Инструктор "${conflict.instructor.fullName}" занят`
+              `Инструктор "${conflict.instructor.fullName}" занят`,
             );
           }
           if (conflict.groupId === finalGroupId && conflict.group) {
@@ -335,7 +343,7 @@ export default defineEventHandler(async (event) => {
                     group_id: finalGroupId,
                     allowed_student_ids: body.allowedStudentIds,
                   },
-                  event.context.user?.id
+                  event.context.user?.id,
                 );
               }
             } else {
@@ -366,7 +374,7 @@ export default defineEventHandler(async (event) => {
                   group_id: finalGroupId,
                   allowed_student_ids: body.allowedStudentIds,
                 },
-                event.context.user?.id
+                event.context.user?.id,
               );
             }
           }
@@ -392,7 +400,7 @@ export default defineEventHandler(async (event) => {
         groupId: finalGroupId,
         disciplineId: finalDisciplineId,
         eventType: finalEventType,
-      }
+      },
     );
 
     return {

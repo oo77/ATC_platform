@@ -484,26 +484,80 @@
                   </p>
                 </div>
               </div>
-              <button
-                @click="downloadReport(report)"
-                class="text-primary hover:text-primary-dark p-1.5 rounded-full hover:bg-primary/10 transition-colors"
-                title="Скачать"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+              <div class="flex items-center gap-1">
+                <!-- Кнопка просмотра -->
+                <button
+                  @click="previewReport(report)"
+                  class="text-info hover:text-info-dark p-1.5 rounded-full hover:bg-info/10 transition-colors"
+                  title="Просмотр"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
-              </button>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
+                  </svg>
+                </button>
+
+                <!-- Кнопка скачивания -->
+                <button
+                  @click="downloadReport(report)"
+                  class="text-primary hover:text-primary-dark p-1.5 rounded-full hover:bg-primary/10 transition-colors"
+                  title="Скачать"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                </button>
+
+                <!-- Кнопка удаления (только для модераторов и админов) -->
+                <button
+                  v-if="canEditGroups || isAdmin"
+                  @click="confirmDeleteReport(report)"
+                  class="text-danger hover:text-danger-dark p-1.5 rounded-full hover:bg-danger/10 transition-colors"
+                  title="Удалить"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -550,7 +604,7 @@
               >
                 Управление слушателями
               </UiButton>
-              
+
               <!-- Кнопка скачивания пустого журнала -->
               <UiButton
                 v-if="group.students && group.students.length > 0"
@@ -682,7 +736,7 @@
                       class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium"
                       :class="
                         getAttendanceColorClass(
-                          getStudentAttendance(gs.studentId)
+                          getStudentAttendance(gs.studentId),
                         )
                       "
                     >
@@ -965,6 +1019,79 @@
       @close="showUploadReportModal = false"
       @uploaded="handleReportUploaded"
     />
+
+    <!-- Модальное окно просмотра PDF -->
+    <UiModal :is-open="showPreviewModal" @close="closePreview" size="xl">
+      <template #header>
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+            {{ previewingReport?.name }}
+          </h3>
+          <button
+            @click="closePreview"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+      </template>
+
+      <div v-if="loadingPreview" class="flex items-center justify-center py-12">
+        <div class="text-center">
+          <div
+            class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+          ></div>
+          <p class="mt-4 text-sm text-gray-500">Загрузка документа...</p>
+        </div>
+      </div>
+      <div v-else-if="previewError" class="text-center py-12">
+        <svg
+          class="mx-auto h-12 w-12 text-danger mb-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <p class="text-danger">{{ previewError }}</p>
+      </div>
+      <div v-else-if="previewUrl" class="w-full" style="height: 70vh">
+        <iframe
+          :src="previewUrl"
+          class="w-full h-full border-0 rounded"
+          title="PDF Preview"
+        ></iframe>
+      </div>
+    </UiModal>
+
+    <!-- Модальное окно подтверждения удаления документа -->
+    <UiConfirmModal
+      :is-open="showDeleteReportModal"
+      title="Удаление документа"
+      message="Вы уверены, что хотите удалить этот документ?"
+      :item-name="reportToDelete?.name"
+      warning="Это действие нельзя отменить."
+      :loading="isDeletingReport"
+      @confirm="deleteReport"
+      @cancel="showDeleteReportModal = false"
+    />
   </div>
 </template>
 
@@ -1023,6 +1150,16 @@ const studentAttendanceData = ref<
 const reports = ref<any[]>([]); // Добавлено для отчетов
 const loadingReports = ref(false);
 const generatingEmptyJournal = ref(false); // Состояние генерации пустого журнала
+
+// Состояния для просмотра и удаления документов
+const showPreviewModal = ref(false);
+const previewingReport = ref<any>(null);
+const previewUrl = ref<string>("");
+const loadingPreview = ref(false);
+const previewError = ref<string>("");
+const showDeleteReportModal = ref(false);
+const reportToDelete = ref<any>(null);
+const isDeletingReport = ref(false);
 
 const currentStudentsPage = ref(1);
 const studentsPerPage = ref(10);
@@ -1091,7 +1228,7 @@ const loadStudentAttendance = async () => {
           totalMaxHours: number;
         }>;
       }>(
-        `/api/attendance/journal?groupId=${groupId}&disciplineId=${discipline.id}`
+        `/api/attendance/journal?groupId=${groupId}&disciplineId=${discipline.id}`,
       );
 
       if (response.success && response.rows) {
@@ -1109,7 +1246,7 @@ const loadStudentAttendance = async () => {
       console.error(
         "Error loading attendance for discipline:",
         discipline.id,
-        err
+        err,
       );
     }
   }
@@ -1152,12 +1289,12 @@ const daysInfo = computed(() => {
   const startDate = new Date(group.value.startDate);
   const endDate = new Date(group.value.endDate);
   const totalDays = Math.ceil(
-    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   if (startDate > today) {
     const daysUntilStart = Math.ceil(
-      (startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+      (startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
     );
     return `Начнётся через ${daysUntilStart} дн.`;
   }
@@ -1165,7 +1302,7 @@ const daysInfo = computed(() => {
     return `Завершено (${totalDays} дн.)`;
   }
   const daysPassed = Math.ceil(
-    (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    (today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
   );
   return `${daysPassed} из ${totalDays} дн.`;
 });
@@ -1186,7 +1323,7 @@ const paginationInfo = computed(() => {
   const start = (currentStudentsPage.value - 1) * studentsPerPage.value + 1;
   const end = Math.min(
     currentStudentsPage.value * studentsPerPage.value,
-    total
+    total,
   );
   return `${start}–${end} из ${total}`;
 });
@@ -1196,7 +1333,7 @@ const loadSchedule = async (groupId: string) => {
   loadingSchedule.value = true;
   try {
     const response = await authFetch<{ success: boolean; events: any[] }>(
-      `/api/schedule?groupId=${groupId}&limit=100`
+      `/api/schedule?groupId=${groupId}&limit=100`,
     );
     if (response.success && response.events) {
       scheduleEvents.value = response.events;
@@ -1213,7 +1350,7 @@ const loadGroup = async () => {
   try {
     const id = route.params.id as string;
     const response = await authFetch<{ success: boolean; group?: StudyGroup }>(
-      `/api/groups/${id}`
+      `/api/groups/${id}`,
     );
     if (response.success && response.group) {
       group.value = response.group;
@@ -1249,12 +1386,17 @@ const loadReports = async (groupId: string) => {
   console.log("[loadReports] Загрузка документов для группы:", groupId);
   try {
     const res = await authFetch<{ success: boolean; files: any[] }>(
-      `/api/groups/${groupId}/reports`
+      `/api/groups/${groupId}/reports`,
     );
     console.log("[loadReports] Ответ от API:", res);
     if (res.success) {
       reports.value = res.files;
       console.log("[loadReports] Загружено документов:", res.files.length);
+      // Логируем структуру первого файла для отладки
+      if (res.files.length > 0) {
+        console.log("[loadReports] Структура первого файла:", res.files[0]);
+        console.log("[loadReports] UUID первого файла:", res.files[0].uuid);
+      }
     } else {
       console.warn("[loadReports] API вернул success: false");
     }
@@ -1273,10 +1415,13 @@ const downloadEmptyJournal = async () => {
     generatingEmptyJournal.value = true;
 
     // Собираем список студентов
-    const studentNames = group.value.students?.map((gs: any) => gs.student?.fullName || '').filter(Boolean) || [];
+    const studentNames =
+      group.value.students
+        ?.map((gs: any) => gs.student?.fullName || "")
+        .filter(Boolean) || [];
 
     if (studentNames.length === 0) {
-      toast.error('В группе нет студентов');
+      toast.error("В группе нет студентов");
       return;
     }
 
@@ -1293,10 +1438,10 @@ const downloadEmptyJournal = async () => {
     // Генерируем PDF
     await generateEmptyJournal(emptyJournalData);
 
-    toast.success('Пустой журнал успешно сформирован');
+    toast.success("Пустой журнал успешно сформирован");
   } catch (error: any) {
-    console.error('Error generating empty journal:', error);
-    toast.error(error.message || 'Ошибка при формировании пустого журнала');
+    console.error("Error generating empty journal:", error);
+    toast.error(error.message || "Ошибка при формировании пустого журнала");
   } finally {
     generatingEmptyJournal.value = false;
   }
@@ -1354,7 +1499,7 @@ const downloadReport = async (report: any) => {
       console.error(
         "[downloadReport] Ошибка ответа:",
         response.status,
-        response.statusText
+        response.statusText,
       );
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -1379,6 +1524,117 @@ const downloadReport = async (report: any) => {
   } catch (error) {
     console.error("[downloadReport] Ошибка скачивания:", error);
     toast.error("Ошибка при скачивании файла");
+  }
+};
+
+// Функция для просмотра документа
+const previewReport = async (report: any) => {
+  try {
+    console.log("[previewReport] Открытие просмотра:", report.name);
+    previewingReport.value = report;
+    showPreviewModal.value = true;
+    loadingPreview.value = true;
+    previewError.value = "";
+    previewUrl.value = "";
+
+    // Получаем токен из куки
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("auth_token="))
+      ?.split("=")[1];
+
+    if (!token) {
+      console.error("[previewReport] Токен не найден");
+      previewError.value = "Ошибка авторизации";
+      loadingPreview.value = false;
+      return;
+    }
+
+    // Загружаем файл с токеном
+    const response = await fetch(report.url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      console.error(
+        "[previewReport] Ошибка ответа:",
+        response.status,
+        response.statusText,
+      );
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Получаем blob
+    const blob = await response.blob();
+    console.log("[previewReport] Получен blob, размер:", blob.size);
+
+    // Создаем URL для просмотра
+    const url = window.URL.createObjectURL(blob);
+    previewUrl.value = url;
+
+    console.log("[previewReport] Документ готов к просмотру");
+  } catch (error) {
+    console.error("[previewReport] Ошибка загрузки:", error);
+    previewError.value = "Ошибка при загрузке документа";
+  } finally {
+    loadingPreview.value = false;
+  }
+};
+
+// Функция для закрытия просмотра
+const closePreview = () => {
+  showPreviewModal.value = false;
+  if (previewUrl.value) {
+    window.URL.revokeObjectURL(previewUrl.value);
+  }
+  previewUrl.value = "";
+  previewingReport.value = null;
+  previewError.value = "";
+};
+
+// Функция для подтверждения удаления документа
+const confirmDeleteReport = (report: any) => {
+  reportToDelete.value = report;
+  showDeleteReportModal.value = true;
+};
+
+// Функция для удаления документа
+const deleteReport = async () => {
+  if (!reportToDelete.value || !group.value) return;
+
+  isDeletingReport.value = true;
+  try {
+    console.log(
+      "[deleteReport] Полный объект документа:",
+      reportToDelete.value,
+    );
+    console.log("[deleteReport] UUID документа:", reportToDelete.value.uuid);
+    console.log("[deleteReport] ID группы:", group.value.id);
+    console.log(
+      "[deleteReport] URL запроса:",
+      `/api/groups/${group.value.id}/reports/${reportToDelete.value.uuid}`,
+    );
+
+    await authFetch(
+      `/api/groups/${group.value.id}/reports/${reportToDelete.value.uuid}`,
+      {
+        method: "DELETE",
+      },
+    );
+
+    toast.success("Документ успешно удален");
+    showDeleteReportModal.value = false;
+    reportToDelete.value = null;
+
+    // Перезагружаем список документов
+    loadReports(group.value.id);
+  } catch (error) {
+    console.error("[deleteReport] Ошибка удаления:", error);
+    toast.error("Ошибка при удалении документа");
+  } finally {
+    isDeletingReport.value = false;
   }
 };
 

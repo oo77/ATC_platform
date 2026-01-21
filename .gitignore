@@ -14,8 +14,6 @@ node_modules
 logs
 *.log
 
-
-
 # Misc
 .DS_Store
 .fleet
@@ -26,11 +24,10 @@ logs
 # scripts/ - закомментировано, чтобы разрешить deployment скрипты
 
 # Storage uploads (local files)
-storage/uploads/
+storage/
 
 # Ngrok configuration (contains authtoken)
 ngrok.yml
-
 
 
 # SSL certificates (only private keys are sensitive, CA certs are public)

@@ -774,7 +774,7 @@ const loadAllActiveTemplates = async () => {
 const loadCurrentAssignment = async (eventId: string) => {
   try {
     const response = await authFetch<{ success: boolean; assignment: any }>(
-      `/api/tests/assignments/by-event/${eventId}`
+      `/api/tests/assignments/by-event/${eventId}`,
     );
     if (response.success && response.assignment) {
       form.value.testTemplateId = response.assignment.test_template_id;
@@ -840,7 +840,7 @@ const loadGroupStudents = async (groupId: string) => {
   loadingStudents.value = true;
   try {
     const response = await authFetch<{ success: boolean; group: any }>(
-      `/api/groups/${groupId}`
+      `/api/groups/${groupId}`,
     );
     if (response.success && response.group && response.group.students) {
       groupStudents.value = response.group.students.map((s: any) => ({
@@ -891,6 +891,7 @@ const deleting = ref(false);
 const hoursWarning = ref<string | null>(null);
 const instructorHoursWarning = ref<string | null>(null);
 const instructorHoursCheckLoading = ref(false);
+const isFormInitializing = ref(false); // Флаг инициализации формы
 
 // ===================
 // COMPUTED
@@ -915,7 +916,7 @@ const computedTimeRange = computed(() => {
   const sorted = [...selectedPairs.value].sort((a, b) => a - b);
   const first = lessonPairs.value.find((p) => p.number === sorted[0]);
   const last = lessonPairs.value.find(
-    (p) => p.number === sorted[sorted.length - 1]
+    (p) => p.number === sorted[sorted.length - 1],
   );
 
   if (!first || !last) return "";
@@ -926,7 +927,7 @@ const computedDuration = computed(() => {
   // Получаем длительность пары из настроек (в минутах)
   const periodDurationMinutes = parseInt(
     scheduleSettings.value.period_duration_minutes || "40",
-    10
+    10,
   );
 
   if (timeMode.value === "pairs") {
@@ -1052,7 +1053,7 @@ const getHoursClass = (type: "theory" | "practice" | "assessment"): string => {
 const loadGroups = async () => {
   try {
     const response = await authFetch<{ success: boolean; groups: any[] }>(
-      "/api/groups?limit=1000&isActive=true"
+      "/api/groups?limit=1000&isActive=true",
     );
     console.log("[EventModal] Ответ API groups:", response);
 
@@ -1061,7 +1062,7 @@ const loadGroups = async () => {
       if (response.groups.length > 0) {
         console.log(
           "[EventModal] Первая группа:",
-          JSON.stringify(response.groups[0], null, 2)
+          JSON.stringify(response.groups[0], null, 2),
         );
       }
 
@@ -1098,7 +1099,7 @@ const loadClassrooms = async () => {
 // preserveSelection - если true, сохраняем текущие значения disciplineId и instructorId после загрузки
 const loadGroupDisciplines = async (
   groupId: string,
-  preserveSelection: boolean = false
+  preserveSelection: boolean = false,
 ) => {
   if (!groupId) {
     disciplines.value = [];
@@ -1125,7 +1126,7 @@ const loadGroupDisciplines = async (
       // Восстанавливаем выбранные значения, если они всё ещё валидны
       if (preserveSelection && savedDisciplineId) {
         const disciplineExists = disciplines.value.some(
-          (d) => d.id === savedDisciplineId
+          (d) => d.id === savedDisciplineId,
         );
         if (disciplineExists) {
           form.value.disciplineId = savedDisciplineId;
@@ -1133,10 +1134,10 @@ const loadGroupDisciplines = async (
           // Восстанавливаем инструктора
           if (savedInstructorId) {
             const discipline = disciplines.value.find(
-              (d) => d.id === savedDisciplineId
+              (d) => d.id === savedDisciplineId,
             );
             const instructorExists = discipline?.instructors.some(
-              (i) => i.id === savedInstructorId
+              (i) => i.id === savedInstructorId,
             );
             if (instructorExists) {
               form.value.instructorId = savedInstructorId;
@@ -1148,8 +1149,10 @@ const loadGroupDisciplines = async (
             loadAllActiveTemplates();
           }
 
-          // Запускаем валидацию часов после восстановления
-          validateHours();
+          // НЕ запускаем валидацию при восстановлении (режим редактирования),
+          // так как selectedPairs еще может быть не заполнен.
+          // Валидация запустится автоматически через watcher при изменении времени
+          // или через handlePairChange при взаимодействии пользователя.
         }
       }
     }
@@ -1191,7 +1194,7 @@ const handleDisciplineChange = () => {
   // Автовыбор основного инструктора
   if (selectedDiscipline.value?.instructors.length) {
     const primary = selectedDiscipline.value.instructors.find(
-      (i) => i.isPrimary
+      (i) => i.isPrimary,
     );
     if (primary) {
       form.value.instructorId = primary.id;
@@ -1231,6 +1234,9 @@ const handlePairChange = () => {
 
 // Валидация часов
 const validateHours = () => {
+  // Пропускаем валидацию во время инициализации формы
+  if (isFormInitializing.value) return;
+
   hoursWarning.value = null;
 
   if (!selectedDiscipline.value || !form.value.eventType) return;
@@ -1292,7 +1298,7 @@ const validateInstructorHours = async () => {
       `/api/instructors/${form.value.instructorId}/hours/check?minutes=${durationMinutes}`,
       {
         method: "GET",
-      }
+      },
     );
 
     if (response.success && !response.canTake) {
@@ -1378,7 +1384,7 @@ const getSubmitDataForGroup = (pairNumbers: number[]) => {
   const sorted = [...pairNumbers].sort((a, b) => a - b);
   const first = lessonPairs.value.find((p) => p.number === sorted[0])!;
   const last = lessonPairs.value.find(
-    (p) => p.number === sorted[sorted.length - 1]
+    (p) => p.number === sorted[sorted.length - 1],
   )!;
 
   const startTimeStr = toLocalISOString(form.value.date, first.startTime);
@@ -1466,7 +1472,7 @@ const handleSubmit = async () => {
       const data = getSubmitData();
       console.log(
         "[Schedule] Обновление занятия:",
-        JSON.stringify(data, null, 2)
+        JSON.stringify(data, null, 2),
       );
 
       const response = await authFetch<{
@@ -1488,7 +1494,7 @@ const handleSubmit = async () => {
       // Создаём отдельные занятия для каждой группы последовательных а-ч
       console.log(
         "[Schedule] Создание нескольких занятий:",
-        consecutiveGroups.value
+        consecutiveGroups.value,
       );
 
       const createdEvents: ScheduleEvent[] = [];
@@ -1525,7 +1531,7 @@ const handleSubmit = async () => {
       const data = getSubmitData();
       console.log(
         "[Schedule] Создание занятия:",
-        JSON.stringify(data, null, 2)
+        JSON.stringify(data, null, 2),
       );
 
       const response = await authFetch<{
@@ -1575,7 +1581,7 @@ const confirmDelete = async () => {
   try {
     const response = await authFetch<{ success: boolean }>(
       `/api/schedule/${props.event.id}`,
-      { method: "DELETE" }
+      { method: "DELETE" },
     );
 
     if (response.success) {
@@ -1640,6 +1646,9 @@ const findMatchingPairs = (startTime: string, endTime: string): number[] => {
 
 // Инициализация формы
 const initForm = () => {
+  // Устанавливаем флаг инициализации, чтобы предотвратить валидацию
+  isFormInitializing.value = true;
+
   timeMode.value = "pairs";
   selectedPairs.value = [];
   hoursWarning.value = null;
@@ -1687,6 +1696,18 @@ const initForm = () => {
       isRetake.value = true;
     }
 
+    // Пытаемся определить, какие пары соответствуют времени занятия
+    const matchingPairs = findMatchingPairs(startTimePart, endTimePart);
+
+    if (matchingPairs.length > 0) {
+      // Если нашли совпадающие пары — используем режим пар и отмечаем их
+      timeMode.value = "pairs";
+      selectedPairs.value = matchingPairs;
+    } else {
+      // Если пары не совпали — используем точное время
+      timeMode.value = "exact";
+    }
+
     // Загружаем дисциплины если есть группа (с сохранением выбранных значений)
     if (form.value.groupId) {
       loadGroupDisciplines(form.value.groupId, true);
@@ -1709,9 +1730,6 @@ const initForm = () => {
         });
       });
     }
-
-    // Переключаем на точное время для редактирования
-    timeMode.value = "exact";
   } else {
     // Создание нового
     const now = props.defaultStart ?? new Date();
@@ -1780,6 +1798,9 @@ const initForm = () => {
       timeMode.value = "pairs";
       selectedPairs.value = [];
     }
+
+    // Для нового занятия инициализация завершена сразу
+    isFormInitializing.value = false;
   }
 };
 
@@ -1800,7 +1821,7 @@ watch(
       // Инициализируем форму после загрузки данных
       initForm();
     }
-  }
+  },
 );
 
 // Пересчёт часов при изменении времени или типа
@@ -1812,6 +1833,34 @@ watch(
   ],
   () => {
     validateHours();
-  }
+  },
+);
+
+// Запускаем валидацию после загрузки дисциплин в режиме редактирования
+watch(
+  [() => disciplines.value.length, () => form.value.disciplineId],
+  ([disciplinesCount, disciplineId]) => {
+    // Завершаем инициализацию и запускаем валидацию только если:
+    // 1. Это режим редактирования (есть props.event)
+    // 2. Дисциплины загружены (disciplinesCount > 0)
+    // 3. Выбрана дисциплина (disciplineId не пустой)
+    // 4. Загрузка дисциплин завершена (!loadingDisciplines)
+    // 5. Форма еще в процессе инициализации (isFormInitializing)
+    if (
+      props.event &&
+      disciplinesCount > 0 &&
+      disciplineId &&
+      !loadingDisciplines.value &&
+      isFormInitializing.value
+    ) {
+      // Небольшая задержка, чтобы дать время selectedPairs обновиться
+      nextTick(() => {
+        // Сбрасываем флаг инициализации
+        isFormInitializing.value = false;
+        // Теперь можно запустить валидацию
+        validateHours();
+      });
+    }
+  },
 );
 </script>
