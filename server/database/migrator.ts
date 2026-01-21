@@ -41,6 +41,7 @@ import * as extendFilesForGroups from "./migrations/20260114_047_extend_files_fo
 import * as courseArchiveSystem from "./migrations/20260114_048_course_archive_system";
 import * as addUserSearchIndexes from "./migrations/20260115_051_add_user_search_indexes";
 import * as linkUsersByEmail from "./migrations/20260115_052_link_users_by_email";
+import * as addAcademicHourSetting from "./migrations/20260121_001_add_academic_hour_setting";
 
 /**
  * ============================================================================
@@ -366,6 +367,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     description: linkUsersByEmail.description,
   },
   // ============================================================
+  // Миграция 001: Настройка длительности академического часа
+  // ============================================================
+  {
+    name: "20260121_001_add_academic_hour_setting",
+    up: addAcademicHourSetting.up,
+    down: addAcademicHourSetting.down,
+    description: "Добавление настройки длительности академического часа",
+  },
+  // ============================================================
   // Новые миграции добавлять ниже
   // ============================================================
 ];
@@ -404,7 +414,7 @@ const LEGACY_MIGRATIONS_INCLUDED_IN_CONSOLIDATED = [
  * Создание таблицы для отслеживания миграций
  */
 async function createMigrationsTable(
-  connection: PoolConnection
+  connection: PoolConnection,
 ): Promise<void> {
   await connection.query(`
     CREATE TABLE IF NOT EXISTS migrations (
@@ -423,10 +433,10 @@ async function createMigrationsTable(
  * Получение списка выполненных миграций
  */
 async function getExecutedMigrations(
-  connection: PoolConnection
+  connection: PoolConnection,
 ): Promise<string[]> {
   const [rows] = await connection.query<any[]>(
-    "SELECT name FROM migrations ORDER BY executed_at ASC"
+    "SELECT name FROM migrations ORDER BY executed_at ASC",
   );
   return rows.map((row) => row.name);
 }
@@ -437,11 +447,11 @@ async function getExecutedMigrations(
 async function recordMigration(
   connection: PoolConnection,
   name: string,
-  description?: string
+  description?: string,
 ): Promise<void> {
   await connection.query(
     "INSERT INTO migrations (name, description) VALUES (?, ?)",
-    [name, description || null]
+    [name, description || null],
   );
 }
 
@@ -450,7 +460,7 @@ async function recordMigration(
  */
 async function removeMigrationRecord(
   connection: PoolConnection,
-  name: string
+  name: string,
 ): Promise<void> {
   await connection.query("DELETE FROM migrations WHERE name = ?", [name]);
 }
@@ -460,7 +470,7 @@ async function removeMigrationRecord(
  */
 function loadMigrations(): Migration[] {
   console.log(
-    `📋 Loaded ${MIGRATIONS_REGISTRY.length} migrations from static registry`
+    `📋 Loaded ${MIGRATIONS_REGISTRY.length} migrations from static registry`,
   );
   return MIGRATIONS_REGISTRY;
 }
@@ -471,7 +481,7 @@ function loadMigrations(): Migration[] {
  */
 function hasLegacyMigrationsApplied(executedMigrations: string[]): boolean {
   return executedMigrations.some((m) =>
-    LEGACY_MIGRATIONS_INCLUDED_IN_CONSOLIDATED.includes(m)
+    LEGACY_MIGRATIONS_INCLUDED_IN_CONSOLIDATED.includes(m),
   );
 }
 
@@ -479,7 +489,7 @@ function hasLegacyMigrationsApplied(executedMigrations: string[]): boolean {
  * Очистка записей о старых миграциях и добавление записи о консолидированной
  */
 async function consolidateMigrationRecords(
-  connection: PoolConnection
+  connection: PoolConnection,
 ): Promise<void> {
   console.log("🔄 Consolidating old migration records...");
 
@@ -493,7 +503,7 @@ async function consolidateMigrationRecords(
   // Добавляем запись о консолидированной миграции
   await connection.query(
     `INSERT IGNORE INTO migrations (name, description) VALUES (?, ?)`,
-    ["20251224_001_consolidated_schema", consolidatedSchema.description]
+    ["20251224_001_consolidated_schema", consolidatedSchema.description],
   );
 
   console.log("✅ Migration records consolidated");
@@ -541,7 +551,7 @@ export async function runMigrations(): Promise<void> {
 
       // Фильтрация непримененных миграций
       const pendingMigrations = allMigrations.filter(
-        (migration) => !executedMigrations.includes(migration.name)
+        (migration) => !executedMigrations.includes(migration.name),
       );
 
       if (pendingMigrations.length === 0) {
@@ -550,7 +560,7 @@ export async function runMigrations(): Promise<void> {
       }
 
       console.log(
-        `🔄 Running ${pendingMigrations.length} pending migrations...`
+        `🔄 Running ${pendingMigrations.length} pending migrations...`,
       );
 
       // Применение миграций
@@ -567,7 +577,7 @@ export async function runMigrations(): Promise<void> {
           await recordMigration(
             connection,
             migration.name,
-            migration.description
+            migration.description,
           );
           await connection.commit();
           console.log(`✅ Migration ${migration.name} completed`);
@@ -601,7 +611,7 @@ export async function rollbackMigration(): Promise<void> {
     try {
       // Получение последней выполненной миграции
       const [rows] = await connection.query<any[]>(
-        "SELECT name FROM migrations ORDER BY executed_at DESC LIMIT 1"
+        "SELECT name FROM migrations ORDER BY executed_at DESC LIMIT 1",
       );
 
       if (!rows || rows.length === 0) {
@@ -627,7 +637,7 @@ export async function rollbackMigration(): Promise<void> {
         await removeMigrationRecord(connection, lastMigrationName);
         await connection.commit();
         console.log(
-          `✅ Migration ${lastMigrationName} rolled back successfully`
+          `✅ Migration ${lastMigrationName} rolled back successfully`,
         );
       } catch (error) {
         await connection.rollback();
@@ -670,7 +680,7 @@ export async function rollbackAllMigrations(): Promise<void> {
 
         if (!migration) {
           console.warn(
-            `⚠️  Migration file not found: ${migrationName}, removing record...`
+            `⚠️  Migration file not found: ${migrationName}, removing record...`,
           );
           await removeMigrationRecord(connection, migrationName);
           continue;
@@ -724,12 +734,12 @@ export async function getMigrationStatus(): Promise<void> {
       console.log(`Total migrations: ${allMigrations.length}`);
       console.log(`Executed: ${executedMigrations.length}`);
       console.log(
-        `Pending: ${allMigrations.length - executedMigrations.length}`
+        `Pending: ${allMigrations.length - executedMigrations.length}`,
       );
 
       if (hasLegacy) {
         console.log(
-          `\n⚠️  Legacy migrations detected. Run migrations to consolidate.`
+          `\n⚠️  Legacy migrations detected. Run migrations to consolidate.`,
         );
       }
 

@@ -4,6 +4,7 @@
  */
 
 import { executeQuery } from "../../../utils/db";
+import { getAcademicHourMinutes } from "../../../utils/academicHours";
 import type { RowDataPacket } from "mysql2/promise";
 
 interface DisciplineRow extends RowDataPacket {
@@ -173,6 +174,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Формируем результат
+    const academicHourMinutes = await getAcademicHourMinutes();
     const disciplines = disciplineRows.map((row) => {
       const usedMinutes = usedMinutesByDiscipline.get(row.id) || {
         theory: 0,
@@ -180,11 +182,11 @@ export default defineEventHandler(async (event) => {
         assessment: 0,
       };
 
-      // Переводим минуты в академические часы (45 минут = 1 ак.ч)
+      // Переводим минуты в академические часы
       const usedHours = {
-        theory: Math.ceil(usedMinutes.theory / 45),
-        practice: Math.ceil(usedMinutes.practice / 45),
-        assessment: Math.ceil(usedMinutes.assessment / 45),
+        theory: Math.ceil(usedMinutes.theory / academicHourMinutes),
+        practice: Math.ceil(usedMinutes.practice / academicHourMinutes),
+        assessment: Math.ceil(usedMinutes.assessment / academicHourMinutes),
       };
 
       return {

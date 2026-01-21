@@ -18,6 +18,7 @@ import {
 } from "../../repositories/testAssignmentRepository"; // New import
 import { executeQuery } from "../../utils/db";
 import { logActivity } from "../../utils/activityLogger";
+import { getAcademicHourMinutes } from "../../utils/academicHours";
 import {
   dateToLocalIso,
   dateToLocalIsoString,
@@ -177,20 +178,20 @@ export default defineEventHandler(async (event) => {
         const eventMinutes =
           (endTime.getTime() - startTime.getTime()) / (1000 * 60);
 
-        // Суммируем использованные и текущие минуты
-        const totalMinutes = usedMinutes + eventMinutes;
+        // Получаем длительность академического часа из настроек
+        const academicHourMinutes = await getAcademicHourMinutes();
 
-        // Академический час = 45 минут
-        // Округляем ТОЛЬКО итоговое значение, чтобы избежать накопления ошибок округления
-        const totalAcademicHours = Math.ceil(totalMinutes / 45);
+        // Вычисляем уже использованные академические часы
+        const usedAcademicHours = Math.ceil(usedMinutes / academicHourMinutes);
 
-        // Проверяем превышение лимита
-        if (totalAcademicHours > allocatedHours) {
-          // Для сообщения об ошибке вычисляем, сколько часов запрашивается
-          const eventHours = Math.ceil(eventMinutes / 45);
-          const usedAcademicHours = Math.ceil(usedMinutes / 45);
-          const remainingHours = allocatedHours - usedAcademicHours;
+        // Вычисляем длительность занятия в академических часах
+        const eventHours = Math.ceil(eventMinutes / academicHourMinutes);
 
+        // Вычисляем оставшиеся часы
+        const remainingHours = allocatedHours - usedAcademicHours;
+
+        // Проверяем, что занятие не превышает оставшиеся часы
+        if (eventHours > remainingHours) {
           const typeNames = {
             theory: "теории",
             practice: "практики",

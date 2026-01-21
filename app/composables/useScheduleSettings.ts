@@ -18,37 +18,127 @@ export interface ScheduleSettingsData {
 
 // Дефолтные настройки на случай если БД недоступна
 const DEFAULT_PERIODS: SchedulePeriod[] = [
-  { id: 1, periodNumber: 1, startTime: '09:00', endTime: '09:40', isAfterBreak: false, isActive: true },
-  { id: 2, periodNumber: 2, startTime: '09:40', endTime: '10:20', isAfterBreak: false, isActive: true },
-  { id: 3, periodNumber: 3, startTime: '10:30', endTime: '11:10', isAfterBreak: false, isActive: true },
-  { id: 4, periodNumber: 4, startTime: '11:10', endTime: '11:50', isAfterBreak: false, isActive: true },
-  { id: 5, periodNumber: 5, startTime: '12:00', endTime: '12:40', isAfterBreak: false, isActive: true },
-  { id: 6, periodNumber: 6, startTime: '12:40', endTime: '13:20', isAfterBreak: false, isActive: true },
-  { id: 7, periodNumber: 7, startTime: '14:00', endTime: '14:40', isAfterBreak: true, isActive: true },
-  { id: 8, periodNumber: 8, startTime: '14:40', endTime: '15:20', isAfterBreak: false, isActive: true },
-  { id: 9, periodNumber: 9, startTime: '15:30', endTime: '16:10', isAfterBreak: false, isActive: true },
-  { id: 10, periodNumber: 10, startTime: '16:10', endTime: '16:50', isAfterBreak: false, isActive: true },
-  { id: 11, periodNumber: 11, startTime: '17:00', endTime: '17:40', isAfterBreak: false, isActive: true },
-  { id: 12, periodNumber: 12, startTime: '17:40', endTime: '18:20', isAfterBreak: false, isActive: true },
+  {
+    id: 1,
+    periodNumber: 1,
+    startTime: "09:00",
+    endTime: "09:40",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 2,
+    periodNumber: 2,
+    startTime: "09:40",
+    endTime: "10:20",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 3,
+    periodNumber: 3,
+    startTime: "10:30",
+    endTime: "11:10",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 4,
+    periodNumber: 4,
+    startTime: "11:10",
+    endTime: "11:50",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 5,
+    periodNumber: 5,
+    startTime: "12:00",
+    endTime: "12:40",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 6,
+    periodNumber: 6,
+    startTime: "12:40",
+    endTime: "13:20",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 7,
+    periodNumber: 7,
+    startTime: "14:00",
+    endTime: "14:40",
+    isAfterBreak: true,
+    isActive: true,
+  },
+  {
+    id: 8,
+    periodNumber: 8,
+    startTime: "14:40",
+    endTime: "15:20",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 9,
+    periodNumber: 9,
+    startTime: "15:30",
+    endTime: "16:10",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 10,
+    periodNumber: 10,
+    startTime: "16:10",
+    endTime: "16:50",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 11,
+    periodNumber: 11,
+    startTime: "17:00",
+    endTime: "17:40",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 12,
+    periodNumber: 12,
+    startTime: "17:40",
+    endTime: "18:20",
+    isAfterBreak: false,
+    isActive: true,
+  },
 ];
 
 const DEFAULT_SETTINGS: Record<string, string> = {
-  lunch_break_start: '13:20',
-  lunch_break_end: '14:00',
-  period_duration_minutes: '40',
-  short_break_minutes: '10',
-  snap_to_periods: 'true',
-  show_period_numbers: 'true',
+  lunch_break_start: "13:20",
+  lunch_break_end: "14:00",
+  period_duration_minutes: "40",
+  academic_hour_minutes: "40", // Длительность академического часа для расчета учебных часов
+  short_break_minutes: "10",
+  snap_to_periods: "true",
+  show_period_numbers: "true",
 };
 
 export const useScheduleSettings = () => {
   const { authFetch } = useAuthFetch();
 
   // Состояние
-  const periods = useState<SchedulePeriod[]>('schedule-periods', () => [...DEFAULT_PERIODS]);
-  const settings = useState<Record<string, string>>('schedule-settings', () => ({ ...DEFAULT_SETTINGS }));
-  const loading = useState<boolean>('schedule-settings-loading', () => false);
-  const loaded = useState<boolean>('schedule-settings-loaded', () => false);
+  const periods = useState<SchedulePeriod[]>("schedule-periods", () => [
+    ...DEFAULT_PERIODS,
+  ]);
+  const settings = useState<Record<string, string>>(
+    "schedule-settings",
+    () => ({ ...DEFAULT_SETTINGS }),
+  );
+  const loading = useState<boolean>("schedule-settings-loading", () => false);
+  const loaded = useState<boolean>("schedule-settings-loaded", () => false);
 
   /**
    * Загрузить настройки с сервера
@@ -65,7 +155,7 @@ export const useScheduleSettings = () => {
         success: boolean;
         periods: SchedulePeriod[];
         settings: Record<string, string>;
-      }>('/api/schedule/settings');
+      }>("/api/schedule/settings");
 
       if (response.success) {
         periods.value = response.periods;
@@ -75,7 +165,7 @@ export const useScheduleSettings = () => {
 
       return { periods: periods.value, settings: settings.value };
     } catch (error) {
-      console.error('[useScheduleSettings] Ошибка загрузки настроек:', error);
+      console.error("[useScheduleSettings] Ошибка загрузки настроек:", error);
       // Используем дефолтные значения
       return { periods: DEFAULT_PERIODS, settings: DEFAULT_SETTINGS };
     } finally {
@@ -87,7 +177,12 @@ export const useScheduleSettings = () => {
    * Обновить академические пары
    */
   const updatePeriods = async (
-    updatedPeriods: Array<{ periodNumber: number; startTime: string; endTime: string; isAfterBreak?: boolean }>
+    updatedPeriods: Array<{
+      periodNumber: number;
+      startTime: string;
+      endTime: string;
+      isAfterBreak?: boolean;
+    }>,
   ): Promise<boolean> => {
     loading.value = true;
 
@@ -95,8 +190,8 @@ export const useScheduleSettings = () => {
       const response = await authFetch<{
         success: boolean;
         periods: SchedulePeriod[];
-      }>('/api/schedule/periods', {
-        method: 'PUT',
+      }>("/api/schedule/periods", {
+        method: "PUT",
         body: { periods: updatedPeriods },
       });
 
@@ -107,7 +202,7 @@ export const useScheduleSettings = () => {
 
       return false;
     } catch (error) {
-      console.error('[useScheduleSettings] Ошибка обновления периодов:', error);
+      console.error("[useScheduleSettings] Ошибка обновления периодов:", error);
       return false;
     } finally {
       loading.value = false;
@@ -118,13 +213,13 @@ export const useScheduleSettings = () => {
    * Обновить настройки расписания
    */
   const updateSettings = async (
-    updatedSettings: Array<{ key: string; value: string }>
+    updatedSettings: Array<{ key: string; value: string }>,
   ): Promise<boolean> => {
     loading.value = true;
 
     try {
-      await authFetch('/api/schedule/settings', {
-        method: 'PUT',
+      await authFetch("/api/schedule/settings", {
+        method: "PUT",
         body: { settings: updatedSettings },
       });
 
@@ -135,7 +230,7 @@ export const useScheduleSettings = () => {
 
       return true;
     } catch (error) {
-      console.error('[useScheduleSettings] Ошибка обновления настроек:', error);
+      console.error("[useScheduleSettings] Ошибка обновления настроек:", error);
       return false;
     } finally {
       loading.value = false;
@@ -146,31 +241,31 @@ export const useScheduleSettings = () => {
    * Получить время начала первой пары
    */
   const getFirstPeriodStart = computed(() => {
-    if (periods.value.length === 0) return '09:00';
-    return periods.value[0]?.startTime ?? '09:00';
+    if (periods.value.length === 0) return "09:00";
+    return periods.value[0]?.startTime ?? "09:00";
   });
 
   /**
    * Получить время окончания последней пары
    */
   const getLastPeriodEnd = computed(() => {
-    if (periods.value.length === 0) return '18:20';
+    if (periods.value.length === 0) return "18:20";
     const lastPeriod = periods.value[periods.value.length - 1];
-    return lastPeriod?.endTime ?? '18:20';
+    return lastPeriod?.endTime ?? "18:20";
   });
 
   /**
    * Получить пару по времени
    */
   const getPeriodByTime = (time: string): SchedulePeriod | null => {
-    const timeParts = time.split(':').map(Number);
+    const timeParts = time.split(":").map(Number);
     const hours = timeParts[0] ?? 0;
     const minutes = timeParts[1] ?? 0;
     const timeInMinutes = hours * 60 + minutes;
 
     for (const period of periods.value) {
-      const startParts = period.startTime.split(':').map(Number);
-      const endParts = period.endTime.split(':').map(Number);
+      const startParts = period.startTime.split(":").map(Number);
+      const endParts = period.endTime.split(":").map(Number);
       const startHours = startParts[0] ?? 0;
       const startMinutes = startParts[1] ?? 0;
       const endHours = endParts[0] ?? 0;
@@ -192,7 +287,7 @@ export const useScheduleSettings = () => {
   const getNearestPeriod = (time: string): SchedulePeriod | null => {
     if (periods.value.length === 0) return null;
 
-    const timeParts = time.split(':').map(Number);
+    const timeParts = time.split(":").map(Number);
     const hours = timeParts[0] ?? 0;
     const minutes = timeParts[1] ?? 0;
     const timeInMinutes = hours * 60 + minutes;
@@ -201,7 +296,7 @@ export const useScheduleSettings = () => {
     let minDiff = Infinity;
 
     for (const period of periods.value) {
-      const startParts = period.startTime.split(':').map(Number);
+      const startParts = period.startTime.split(":").map(Number);
       const startHours = startParts[0] ?? 0;
       const startMinutes = startParts[1] ?? 0;
       const startInMinutes = startHours * 60 + startMinutes;
@@ -220,7 +315,7 @@ export const useScheduleSettings = () => {
    * Получить время начала для номера пары
    */
   const getPeriodStartTime = (periodNumber: number): string | null => {
-    const period = periods.value.find(p => p.periodNumber === periodNumber);
+    const period = periods.value.find((p) => p.periodNumber === periodNumber);
     return period ? period.startTime : null;
   };
 
@@ -228,7 +323,7 @@ export const useScheduleSettings = () => {
    * Получить время окончания для номера пары
    */
   const getPeriodEndTime = (periodNumber: number): string | null => {
-    const period = periods.value.find(p => p.periodNumber === periodNumber);
+    const period = periods.value.find((p) => p.periodNumber === periodNumber);
     return period ? period.endTime : null;
   };
 
@@ -236,7 +331,7 @@ export const useScheduleSettings = () => {
    * Привязать время к началу ближайшей пары
    */
   const snapToNearestPeriodStart = (time: string): string => {
-    const shouldSnap = settings.value.snap_to_periods === 'true';
+    const shouldSnap = settings.value.snap_to_periods === "true";
     if (!shouldSnap) return time;
 
     const nearestPeriod = getNearestPeriod(time);
@@ -247,7 +342,7 @@ export const useScheduleSettings = () => {
    * Привязать время к концу ближайшей пары
    */
   const snapToNearestPeriodEnd = (time: string): string => {
-    const shouldSnap = settings.value.snap_to_periods === 'true';
+    const shouldSnap = settings.value.snap_to_periods === "true";
     if (!shouldSnap) return time;
 
     const period = getPeriodByTime(time);
@@ -259,7 +354,7 @@ export const useScheduleSettings = () => {
    * Возвращает массив времён, где начинаются пары
    */
   const getSlotLabels = computed(() => {
-    return periods.value.map(p => ({
+    return periods.value.map((p) => ({
       time: p.startTime,
       label: `${p.periodNumber} пара`,
       isAfterBreak: p.isAfterBreak,
@@ -277,7 +372,7 @@ export const useScheduleSettings = () => {
    * Проверить, является ли время после большого перерыва
    */
   const isAfterLunchBreak = (time: string): boolean => {
-    const period = periods.value.find(p => p.startTime === time);
+    const period = periods.value.find((p) => p.startTime === time);
     return period?.isAfterBreak || false;
   };
 

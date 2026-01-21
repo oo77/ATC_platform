@@ -13,6 +13,7 @@ import { createTestAssignment } from "../../repositories/testAssignmentRepositor
 import { executeQuery } from "../../utils/db";
 import { logActivity } from "../../utils/activityLogger";
 import { invalidateRelatedCache } from "../../utils/botCache";
+import { getAcademicHourMinutes } from "../../utils/academicHours";
 import {
   dateToLocalIso,
   formatDateOnly,
@@ -158,20 +159,20 @@ export default defineEventHandler(async (event) => {
         const newEventMinutes =
           (endTime.getTime() - startTime.getTime()) / (1000 * 60);
 
-        // Суммируем использованные и новые минуты
-        const totalMinutes = usedMinutes + newEventMinutes;
+        // Получаем длительность академического часа из настроек
+        const academicHourMinutes = await getAcademicHourMinutes();
 
-        // Академический час = 45 минут
-        // Округляем ТОЛЬКО итоговое значение, чтобы избежать накопления ошибок округления
-        const totalAcademicHours = Math.ceil(totalMinutes / 45);
+        // Вычисляем уже использованные академические часы
+        const usedAcademicHours = Math.ceil(usedMinutes / academicHourMinutes);
 
-        // Проверяем превышение лимита
-        if (totalAcademicHours > allocatedHours) {
-          // Для сообщения об ошибке вычисляем, сколько часов запрашивается
-          const newEventHours = Math.ceil(newEventMinutes / 45);
-          const usedAcademicHours = Math.ceil(usedMinutes / 45);
-          const remainingHours = allocatedHours - usedAcademicHours;
+        // Вычисляем длительность нового занятия в академических часах
+        const newEventHours = Math.ceil(newEventMinutes / academicHourMinutes);
 
+        // Вычисляем оставшиеся часы
+        const remainingHours = allocatedHours - usedAcademicHours;
+
+        // Проверяем, что новое занятие не превышает оставшиеся часы
+        if (newEventHours > remainingHours) {
           const typeNames = {
             theory: "теории",
             practice: "практики",
