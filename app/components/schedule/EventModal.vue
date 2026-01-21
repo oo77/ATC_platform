@@ -1258,8 +1258,32 @@ const validateHours = () => {
     return;
   }
 
-  const remainingHours = selectedDiscipline.value.remainingHours[eventType];
+  let remainingHours = selectedDiscipline.value.remainingHours[eventType];
   const plannedHours = computedDuration.value;
+
+  // При редактировании нужно добавить обратно часы текущего урока
+  // так как они уже учтены в использованных часах
+  if (props.event?.id && props.event.eventType === eventType) {
+    // Получаем длительность текущего урока в академических часах
+    const academicHourMinutes = parseInt(
+      scheduleSettings.value.academic_hour_minutes || "40",
+      10,
+    );
+
+    // Используем сохраненное значение durationMinutes если есть
+    const currentEventMinutes =
+      props.event.durationMinutes ||
+      (new Date(props.event.endTime).getTime() -
+        new Date(props.event.startTime).getTime()) /
+        (1000 * 60);
+
+    const currentEventHours = Math.ceil(
+      currentEventMinutes / academicHourMinutes,
+    );
+
+    // Добавляем часы текущего урока обратно к оставшимся
+    remainingHours += currentEventHours;
+  }
 
   if (plannedHours > remainingHours) {
     const typeNames: Record<"theory" | "practice" | "assessment", string> = {

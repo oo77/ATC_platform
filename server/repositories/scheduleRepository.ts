@@ -77,13 +77,13 @@ export interface CreateScheduleEventInput {
   classroomId?: string;
   startTime: string;
   endTime: string;
+  durationMinutes?: number; // Чистое время пар без перерывов
   isAllDay?: boolean;
   color?: ScheduleEventColor;
   eventType?: ScheduleEventType;
   isRecurring?: boolean;
   recurrenceRule?: string;
   notes?: string;
-  durationMinutes?: number; // Чистое время пар без перерывов
   testTemplateId?: string; // New: optional test template for assessment events
   allowedStudentIds?: string[]; // New: limit access to specific students
   originalEventId?: string; // New: link to original event for retakes
@@ -98,13 +98,13 @@ export interface UpdateScheduleEventInput {
   classroomId?: string | null;
   startTime?: string;
   endTime?: string;
+  durationMinutes?: number | null; // Чистое время пар без перерывов
   isAllDay?: boolean;
   color?: ScheduleEventColor;
   eventType?: ScheduleEventType;
   isRecurring?: boolean;
   recurrenceRule?: string | null;
   notes?: string | null;
-  durationMinutes?: number | null; // Чистое время пар без перерывов
   testTemplateId?: string; // New: optional test template for assessment events
   allowedStudentIds?: string[]; // New: limit access to specific students
 }
@@ -422,8 +422,8 @@ export async function createScheduleEvent(
   await executeQuery(
     `INSERT INTO schedule_events (
       id, title, description, group_id, discipline_id, instructor_id, classroom_id,
-      start_time, end_time, is_all_day, color, event_type, is_recurring, recurrence_rule, notes,
-      duration_minutes, allowed_student_ids, original_event_id
+      start_time, end_time, duration_minutes, is_all_day, color, event_type, is_recurring, recurrence_rule, notes,
+      allowed_student_ids, original_event_id
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
@@ -435,13 +435,13 @@ export async function createScheduleEvent(
       data.classroomId || null,
       startTimeMysql,
       endTimeMysql,
+      data.durationMinutes || null,
       data.isAllDay || false,
       data.color || "primary",
       data.eventType || "theory",
       data.isRecurring || false,
       data.recurrenceRule || null,
       data.notes || null,
-      data.durationMinutes || null,
       data.allowedStudentIds ? JSON.stringify(data.allowedStudentIds) : null,
       data.originalEventId || null,
     ],
