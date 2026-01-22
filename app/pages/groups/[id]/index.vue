@@ -879,7 +879,7 @@
           class="w-full p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           @click="scheduleExpanded = !scheduleExpanded"
         >
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 flex-1">
             <div
               class="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
             >
@@ -897,13 +897,46 @@
                 />
               </svg>
             </div>
-            <div class="text-left">
-              <h3 class="text-lg font-semibold text-black dark:text-white">
-                Расписание занятий
-              </h3>
-              <p class="text-sm text-gray-500">
-                {{ scheduleEvents.length }} запланировано
-              </p>
+            <div class="text-left flex-1">
+              <div class="flex items-center gap-3 mb-1">
+                <h3 class="text-lg font-semibold text-black dark:text-white">
+                  Расписание занятий
+                </h3>
+                <span class="text-sm text-gray-500">
+                  {{ scheduleEvents.length }} {{ scheduleEvents.length === 1 ? 'занятие' : scheduleEvents.length < 5 ? 'занятия' : 'занятий' }}
+                </span>
+              </div>
+              
+              <!-- Счетчик часов и прогресс-бар -->
+              <div v-if="totalProgramHours > 0" class="space-y-2">
+                <div class="flex items-center gap-3">
+                  <div class="flex items-center gap-2 text-sm">
+                    <span class="font-medium text-gray-900 dark:text-white">
+                      {{ totalScheduledHours }} / {{ totalProgramHours }} а-ч
+                    </span>
+                    <span
+                      class="px-2 py-0.5 rounded-full text-xs font-medium"
+                      :class="{
+                        'bg-success/10 text-success': hoursProgress >= 100,
+                        'bg-info/10 text-info': hoursProgress >= 75 && hoursProgress < 100,
+                        'bg-warning/10 text-warning': hoursProgress >= 50 && hoursProgress < 75,
+                        'bg-danger/10 text-danger': hoursProgress < 50
+                      }"
+                    >
+                      {{ hoursProgress }}%
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Прогресс-бар -->
+                <div class="w-full max-w-md bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div
+                    class="h-full transition-all duration-500 rounded-full"
+                    :class="hoursProgressColor"
+                    :style="{ width: `${hoursProgress}%` }"
+                  ></div>
+                </div>
+              </div>
             </div>
           </div>
           <!-- Chevron icon -->
@@ -966,7 +999,7 @@
             >
               <div class="flex items-start justify-between">
                 <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-1">
+                  <div class="flex items-center gap-2 mb-2">
                     <span
                       class="inline-block w-2 h-2 rounded-full"
                       :class="{
@@ -983,11 +1016,11 @@
                     </h4>
                   </div>
                   <div
-                    class="flex flex-wrap items-center gap-3 text-xs text-gray-500"
+                    class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400"
                   >
-                    <span class="flex items-center gap-1">
+                    <div class="flex items-center gap-1.5">
                       <svg
-                        class="w-4 h-4"
+                        class="w-4 h-4 text-gray-400"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -999,11 +1032,11 @@
                           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
-                      {{ formatDate(event.date) }}
-                    </span>
-                    <span class="flex items-center gap-1">
+                      <span>{{ formatDate(event.date) }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
                       <svg
-                        class="w-4 h-4"
+                        class="w-4 h-4 text-gray-400"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -1015,15 +1048,61 @@
                           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      {{ formatTime(event.startTime) }} -
-                      {{ formatTime(event.endTime) }}
-                    </span>
-                    <span
+                      <span>{{ formatTime(event.startTime) }} - {{ formatTime(event.endTime) }}</span>
+                    </div>
+                    <div v-if="event.instructor" class="flex items-center gap-1.5">
+                      <svg
+                        class="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                      <span>{{ event.instructor.fullName || event.instructor.name || 'Не указан' }}</span>
+                    </div>
+                    <div v-if="event.classroom" class="flex items-center gap-1.5">
+                      <svg
+                        class="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                        />
+                      </svg>
+                      <span>{{ event.classroom.name || event.classroom }}</span>
+                    </div>
+                    <div
                       v-if="event.academicHours"
-                      class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      class="flex items-center gap-1.5"
                     >
-                      {{ event.academicHours }} а-ч
-                    </span>
+                      <svg
+                        class="w-4 h-4 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                        {{ event.academicHours }} а-ч
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1391,6 +1470,33 @@ const paginationInfo = computed(() => {
     total,
   );
   return `${start}–${end} из ${total}`;
+});
+
+// Computed для подсчета часов и прогресса
+const totalProgramHours = computed(() => {
+  return group.value?.course?.totalHours || 0;
+});
+
+const totalScheduledHours = computed(() => {
+  return scheduleEvents.value.reduce((sum, event) => {
+    return sum + (event.academicHours || 0);
+  }, 0);
+});
+
+const hoursProgress = computed(() => {
+  if (totalProgramHours.value === 0) return 0;
+  return Math.min(
+    Math.round((totalScheduledHours.value / totalProgramHours.value) * 100),
+    100
+  );
+});
+
+const hoursProgressColor = computed(() => {
+  const progress = hoursProgress.value;
+  if (progress >= 100) return 'bg-success';
+  if (progress >= 75) return 'bg-info';
+  if (progress >= 50) return 'bg-warning';
+  return 'bg-danger';
 });
 
 // Load actions
