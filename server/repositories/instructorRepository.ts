@@ -5,6 +5,7 @@
 import { executeQuery } from "../utils/db";
 import { v4 as uuidv4 } from "uuid";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import { getAcademicHourMinutes } from "../utils/academicHours";
 
 // ============================================================================
 // ИНТЕРФЕЙСЫ
@@ -408,6 +409,14 @@ export async function getInstructorHoursStats(
     instructorId,
   );
 
+  // Получаем длительность академического часа из настроек
+  const academicHourMinutes = await getAcademicHourMinutes();
+  console.log(
+    "[InstructorHours] Длительность академического часа:",
+    academicHourMinutes,
+    "минут",
+  );
+
   const dateFormat = "%Y-%m";
 
   // ============================================================
@@ -417,24 +426,24 @@ export async function getInstructorHoursStats(
   // По месяцам (отработанные)
   const usedByMonthRows = await executeQuery<InstructorHoursRow[]>(
     `SELECT DATE_FORMAT(se.start_time, ?) AS ym, 
-            SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / 40))) AS total_hours, 
+            SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / ?))) AS total_hours, 
             COUNT(DISTINCT se.id) AS event_count 
      FROM schedule_events se 
      WHERE se.instructor_id = ? 
        AND EXISTS (SELECT 1 FROM attendance a WHERE a.schedule_event_id = se.id) 
      GROUP BY ym 
      ORDER BY ym DESC`,
-    [dateFormat, instructorId],
+    [dateFormat, academicHourMinutes, instructorId],
   );
 
   // Общие отработанные часы
   const totalUsedRows = await executeQuery<InstructorHoursTotalRow[]>(
-    `SELECT COALESCE(SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / 40))), 0) AS total_hours, 
+    `SELECT COALESCE(SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / ?))), 0) AS total_hours, 
             COUNT(DISTINCT se.id) AS event_count 
      FROM schedule_events se 
      WHERE se.instructor_id = ? 
        AND EXISTS (SELECT 1 FROM attendance a WHERE a.schedule_event_id = se.id)`,
-    [instructorId],
+    [academicHourMinutes, instructorId],
   );
 
   console.log(
@@ -453,24 +462,24 @@ export async function getInstructorHoursStats(
   // По месяцам (запланированные)
   const scheduledByMonthRows = await executeQuery<InstructorHoursRow[]>(
     `SELECT DATE_FORMAT(se.start_time, ?) AS ym, 
-            SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / 40))) AS total_hours, 
+            SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / ?))) AS total_hours, 
             COUNT(DISTINCT se.id) AS event_count 
      FROM schedule_events se 
      WHERE se.instructor_id = ? 
        AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.schedule_event_id = se.id) 
      GROUP BY ym 
      ORDER BY ym ASC`,
-    [dateFormat, instructorId],
+    [dateFormat, academicHourMinutes, instructorId],
   );
 
   // Общие запланированные часы
   const totalScheduledRows = await executeQuery<InstructorHoursTotalRow[]>(
-    `SELECT COALESCE(SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / 40))), 0) AS total_hours, 
+    `SELECT COALESCE(SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / ?))), 0) AS total_hours, 
             COUNT(DISTINCT se.id) AS event_count 
      FROM schedule_events se 
      WHERE se.instructor_id = ? 
        AND NOT EXISTS (SELECT 1 FROM attendance a WHERE a.schedule_event_id = se.id)`,
-    [instructorId],
+    [academicHourMinutes, instructorId],
   );
 
   console.log(

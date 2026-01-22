@@ -1,50 +1,57 @@
-import { executeQuery } from '../../utils/db';
-import type { RowDataPacket } from 'mysql2/promise';
+import { executeQuery } from "../../utils/db";
+import type { RowDataPacket } from "mysql2/promise";
+import { getAcademicHourMinutes } from "../../utils/academicHours";
 
 export default defineEventHandler(async (event) => {
-    const user = event.context.user;
+  const user = event.context.user;
 
-    if (!user) {
-        throw createError({
-            statusCode: 401,
-            statusMessage: 'Unauthorized',
-        });
+  if (!user) {
+    throw createError({
+      statusCode: 401,
+      statusMessage: "Unauthorized",
+    });
+  }
+
+  try {
+    // Получаем instructor_id по user_id
+    const instructorRows = await executeQuery<RowDataPacket[]>(
+      "SELECT id FROM instructors WHERE user_id = ? LIMIT 1",
+      [user.id],
+    );
+
+    if (instructorRows.length === 0) {
+      return {
+        isTeacher: false,
+        myGroups: 0,
+        myStudents: 0,
+        todayLessons: 0,
+        monthlyHours: 0,
+        todaySchedule: [],
+        groups: [],
+        weekSchedule: [],
+        pendingAttendance: [],
+      };
     }
 
-    try {
-        // Получаем instructor_id по user_id
-        const instructorRows = await executeQuery<RowDataPacket[]>(
-            'SELECT id FROM instructors WHERE user_id = ? LIMIT 1',
-            [user.id]
-        );
+    const instructorId = instructorRows[0].id;
+    const now = new Date();
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
 
-        if (instructorRows.length === 0) {
-            return {
-                isTeacher: false,
-                myGroups: 0,
-                myStudents: 0,
-                todayLessons: 0,
-                monthlyHours: 0,
-                todaySchedule: [],
-                groups: [],
-                weekSchedule: [],
-                pendingAttendance: []
-            };
-        }
+    const weekEnd = new Date(todayStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
 
-        const instructorId = instructorRows[0].id;
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const todayEnd = new Date(todayStart);
-        todayEnd.setDate(todayEnd.getDate() + 1);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        const weekEnd = new Date(todayStart);
-        weekEnd.setDate(weekEnd.getDate() + 7);
+    const academicHourMinutes = await getAcademicHourMinutes();
 
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-        // 1. Основная статистика
-        const statsQuery = `
+    // 1. Основная статистика
+    const statsQuery = `
       SELECT 
         COUNT(DISTINCT se.group_id) as my_groups,
         COUNT(DISTINCT sgs.student_id) as my_students,
@@ -54,7 +61,7 @@ export default defineEventHandler(async (event) => {
         END) as today_lessons,
         COALESCE(SUM(CASE 
           WHEN se.start_time >= ? AND se.end_time <= ?
-          THEN TIMESTAMPDIFF(HOUR, se.start_time, se.end_time)
+          THEN COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / ?))
           ELSE 0
         END), 0) as monthly_hours
       FROM schedule_events se
@@ -62,21 +69,24 @@ export default defineEventHandler(async (event) => {
       WHERE se.instructor_id = ?
     `;
 
-        const statsRows = await executeQuery<any[]>(statsQuery, [
-            todayStart, todayEnd,
-            monthStart, now,
-            instructorId
-        ]);
+    const statsRows = await executeQuery<any[]>(statsQuery, [
+      todayStart,
+      todayEnd,
+      monthStart,
+      now,
+      academicHourMinutes,
+      instructorId,
+    ]);
 
-        const stats = statsRows[0] || {
-            my_groups: 0,
-            my_students: 0,
-            today_lessons: 0,
-            monthly_hours: 0
-        };
+    const stats = statsRows[0] || {
+      my_groups: 0,
+      my_students: 0,
+      today_lessons: 0,
+      monthly_hours: 0,
+    };
 
-        // 2. Занятия на сегодня
-        const todayScheduleQuery = `
+    // 2. Занятия на сегодня
+    const todayScheduleQuery = `
       SELECT 
         se.id,
         se.title,
@@ -100,14 +110,14 @@ export default defineEventHandler(async (event) => {
       ORDER BY se.start_time ASC
     `;
 
-        const todaySchedule = await executeQuery<any[]>(todayScheduleQuery, [
-            instructorId,
-            todayStart,
-            todayEnd
-        ]);
+    const todaySchedule = await executeQuery<any[]>(todayScheduleQuery, [
+      instructorId,
+      todayStart,
+      todayEnd,
+    ]);
 
-        // 3. Мои группы с посещаемостью
-        const groupsQuery = `
+    // 3. Мои группы с посещаемостью
+    const groupsQuery = `
       SELECT 
         sg.id,
         sg.code,
@@ -140,10 +150,10 @@ export default defineEventHandler(async (event) => {
       LIMIT 5
     `;
 
-        const groups = await executeQuery<any[]>(groupsQuery, [instructorId, now]);
+    const groups = await executeQuery<any[]>(groupsQuery, [instructorId, now]);
 
-        // 4. Расписание на неделю
-        const weekScheduleQuery = `
+    // 4. Расписание на неделю
+    const weekScheduleQuery = `
       SELECT 
         se.id,
         se.title,
@@ -162,14 +172,14 @@ export default defineEventHandler(async (event) => {
       LIMIT 20
     `;
 
-        const weekSchedule = await executeQuery<any[]>(weekScheduleQuery, [
-            instructorId,
-            todayStart,
-            weekEnd
-        ]);
+    const weekSchedule = await executeQuery<any[]>(weekScheduleQuery, [
+      instructorId,
+      todayStart,
+      weekEnd,
+    ]);
 
-        // 5. Незаполненная посещаемость (занятия прошли, но посещаемость не отмечена)
-        const pendingAttendanceQuery = `
+    // 5. Незаполненная посещаемость (занятия прошли, но посещаемость не отмечена)
+    const pendingAttendanceQuery = `
       SELECT 
         se.id,
         se.title,
@@ -190,29 +200,27 @@ export default defineEventHandler(async (event) => {
       LIMIT 5
     `;
 
-        const pendingAttendance = await executeQuery<any[]>(pendingAttendanceQuery, [
-            instructorId,
-            now,
-            now
-        ]);
+    const pendingAttendance = await executeQuery<any[]>(
+      pendingAttendanceQuery,
+      [instructorId, now, now],
+    );
 
-        return {
-            isTeacher: true,
-            myGroups: stats.my_groups,
-            myStudents: stats.my_students,
-            todayLessons: stats.today_lessons,
-            monthlyHours: stats.monthly_hours,
-            todaySchedule,
-            groups,
-            weekSchedule,
-            pendingAttendance
-        };
-
-    } catch (error: any) {
-        console.error('Failed to get teacher dashboard stats:', error);
-        throw createError({
-            statusCode: 500,
-            statusMessage: 'Failed to retrieve dashboard data',
-        });
-    }
+    return {
+      isTeacher: true,
+      myGroups: stats.my_groups,
+      myStudents: stats.my_students,
+      todayLessons: stats.today_lessons,
+      monthlyHours: stats.monthly_hours,
+      todaySchedule,
+      groups,
+      weekSchedule,
+      pendingAttendance,
+    };
+  } catch (error: any) {
+    console.error("Failed to get teacher dashboard stats:", error);
+    throw createError({
+      statusCode: 500,
+      statusMessage: "Failed to retrieve dashboard data",
+    });
+  }
 });

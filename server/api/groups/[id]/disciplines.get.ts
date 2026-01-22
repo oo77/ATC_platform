@@ -5,6 +5,7 @@
 
 import { executeQuery } from "../../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
+import { getAcademicHourMinutes } from "../../../utils/academicHours";
 
 interface DisciplineRow extends RowDataPacket {
   id: string;
@@ -109,6 +110,9 @@ export default defineEventHandler(async (event) => {
       disciplineIds,
     );
 
+    // Получаем длительность академического часа из настроек
+    const academicHourMinutes = await getAcademicHourMinutes();
+
     // Получаем использованные часы по всем занятиям этой группы
     // Используем academic_hours напрямую, если есть,
     // иначе fallback на расчёт из времени для обратной совместимости
@@ -116,11 +120,11 @@ export default defineEventHandler(async (event) => {
       `SELECT 
         discipline_id,
         event_type,
-        SUM(COALESCE(academic_hours, CEIL(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / 40))) as total_hours
+        SUM(COALESCE(academic_hours, CEIL(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / ?))) as total_hours
       FROM schedule_events
       WHERE group_id = ? AND discipline_id IN (${placeholders})
       GROUP BY discipline_id, event_type`,
-      [groupId, ...disciplineIds],
+      [academicHourMinutes, groupId, ...disciplineIds],
     );
 
     // Группируем инструкторов по дисциплинам

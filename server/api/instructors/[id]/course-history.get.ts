@@ -5,6 +5,7 @@
 
 import { executeQuery } from "../../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
+import { getAcademicHourMinutes } from "../../../utils/academicHours";
 
 interface CourseHistoryRow extends RowDataPacket {
   event_id: string;
@@ -75,6 +76,9 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    // Получаем длительность академического часа из настроек
+    const academicHourMinutes = await getAcademicHourMinutes();
+
     // Получаем историю занятий инструктора с агрегированной статистикой
     const sql = `
       SELECT 
@@ -84,7 +88,7 @@ export default defineEventHandler(async (event) => {
         se.start_time as event_start_time,
         se.end_time as event_end_time,
         se.event_type,
-        COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / 40)) as academic_hours,
+        COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / ?)) as academic_hours,
         sg.id as group_id,
         sg.code as group_code,
         c.name as course_name,
@@ -110,7 +114,10 @@ export default defineEventHandler(async (event) => {
       LIMIT 100
     `;
 
-    const rows = await executeQuery<CourseHistoryRow[]>(sql, [instructorId]);
+    const rows = await executeQuery<CourseHistoryRow[]>(sql, [
+      academicHourMinutes,
+      instructorId,
+    ]);
 
     // Форматируем результаты
     const history: CourseHistoryEvent[] = rows.map((row) => {

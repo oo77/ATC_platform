@@ -4,6 +4,7 @@
 
 import { executeQuery, executeTransaction } from "../utils/db";
 import { v4 as uuidv4 } from "uuid";
+import { getAcademicHourMinutes } from "../utils/academicHours";
 import type {
   PoolConnection,
   ResultSetHeader,
@@ -124,7 +125,7 @@ function mapRowToTemplate(row: TemplateRow): CertificateTemplate {
 }
 
 function mapRowToIssuedCertificate(
-  row: IssuedCertificateRow
+  row: IssuedCertificateRow,
 ): IssuedCertificate {
   const cert: IssuedCertificate = {
     id: row.id,
@@ -208,11 +209,11 @@ export async function getTemplates(filters?: {
  * Получить шаблон по ID
  */
 export async function getTemplateById(
-  id: string
+  id: string,
 ): Promise<CertificateTemplate | null> {
   const rows = await executeQuery<TemplateRow[]>(
     "SELECT * FROM certificate_templates WHERE id = ? LIMIT 1",
-    [id]
+    [id],
   );
   return rows.length > 0 ? mapRowToTemplate(rows[0]) : null;
 }
@@ -221,7 +222,7 @@ export async function getTemplateById(
  * Создать шаблон
  */
 export async function createTemplate(
-  data: CreateCertificateTemplateInput
+  data: CreateCertificateTemplateInput,
 ): Promise<CertificateTemplate> {
   const id = uuidv4();
   const now = new Date();
@@ -237,7 +238,7 @@ export async function createTemplate(
       data.numberFormat || "ATC{YY}_{CODE}_{NUM}",
       now,
       now,
-    ]
+    ],
   );
 
   return (await getTemplateById(id))!;
@@ -248,7 +249,7 @@ export async function createTemplate(
  */
 export async function updateTemplate(
   id: string,
-  data: UpdateCertificateTemplateInput
+  data: UpdateCertificateTemplateInput,
 ): Promise<CertificateTemplate | null> {
   const updates: string[] = [];
   const params: any[] = [];
@@ -309,7 +310,7 @@ export async function updateTemplate(
 
   await executeQuery<ResultSetHeader>(
     `UPDATE certificate_templates SET ${updates.join(", ")} WHERE id = ?`,
-    params
+    params,
   );
 
   return getTemplateById(id);
@@ -321,13 +322,13 @@ export async function updateTemplate(
 export async function updateTemplateFiles(
   id: string,
   originalFileUrl: string,
-  previewFileUrl?: string
+  previewFileUrl?: string,
 ): Promise<void> {
   await executeQuery<ResultSetHeader>(
     `UPDATE certificate_templates 
      SET original_file_url = ?, template_file_url = ?, updated_at = ?
      WHERE id = ?`,
-    [originalFileUrl, previewFileUrl || null, new Date(), id]
+    [originalFileUrl, previewFileUrl || null, new Date(), id],
   );
 }
 
@@ -338,18 +339,18 @@ export async function deleteTemplate(id: string): Promise<boolean> {
   // Проверяем, нет ли выданных сертификатов с этим шаблоном
   const [countRow] = await executeQuery<CountRow[]>(
     "SELECT COUNT(*) as total FROM issued_certificates WHERE template_id = ?",
-    [id]
+    [id],
   );
 
   if (countRow && countRow.total > 0) {
     throw new Error(
-      `Невозможно удалить шаблон: существует ${countRow.total} выданных сертификатов`
+      `Невозможно удалить шаблон: существует ${countRow.total} выданных сертификатов`,
     );
   }
 
   const result = await executeQuery<ResultSetHeader>(
     "DELETE FROM certificate_templates WHERE id = ?",
-    [id]
+    [id],
   );
 
   return result.affectedRows > 0;
@@ -364,13 +365,13 @@ export async function deleteTemplate(id: string): Promise<boolean> {
  */
 export async function generateCertificateNumber(
   templateId: string,
-  courseCode: string
+  courseCode: string,
 ): Promise<string> {
   return executeTransaction(async (connection) => {
     // Получаем шаблон и блокируем строку
     const [template] = await connection.query<TemplateRow[]>(
       "SELECT * FROM certificate_templates WHERE id = ? FOR UPDATE",
-      [templateId]
+      [templateId],
     );
 
     if (!template || template.length === 0) {
@@ -395,7 +396,7 @@ export async function generateCertificateNumber(
     // Обновляем счётчик
     await connection.query(
       "UPDATE certificate_templates SET last_number = ?, updated_at = ? WHERE id = ?",
-      [nextNumber, new Date(), templateId]
+      [nextNumber, new Date(), templateId],
     );
 
     return certificateNumber;
@@ -410,7 +411,7 @@ export async function generateCertificateNumber(
  * Получить выданные сертификаты для группы
  */
 export async function getIssuedCertificatesByGroup(
-  groupId: string
+  groupId: string,
 ): Promise<IssuedCertificate[]> {
   const rows = await executeQuery<IssuedCertificateRow[]>(
     `SELECT ic.*, 
@@ -421,7 +422,7 @@ export async function getIssuedCertificatesByGroup(
      LEFT JOIN students s ON ic.student_id = s.id
      WHERE ic.group_id = ?
      ORDER BY s.full_name ASC`,
-    [groupId]
+    [groupId],
   );
 
   return rows.map(mapRowToIssuedCertificate);
@@ -431,7 +432,7 @@ export async function getIssuedCertificatesByGroup(
  * Получить сертификат по ID
  */
 export async function getIssuedCertificateById(
-  id: string
+  id: string,
 ): Promise<IssuedCertificate | null> {
   const rows = await executeQuery<IssuedCertificateRow[]>(
     `SELECT ic.*, 
@@ -442,7 +443,7 @@ export async function getIssuedCertificateById(
      LEFT JOIN students s ON ic.student_id = s.id
      WHERE ic.id = ?
      LIMIT 1`,
-    [id]
+    [id],
   );
 
   return rows.length > 0 ? mapRowToIssuedCertificate(rows[0]) : null;
@@ -453,13 +454,13 @@ export async function getIssuedCertificateById(
  */
 export async function getStudentCertificateInGroup(
   studentId: string,
-  groupId: string
+  groupId: string,
 ): Promise<IssuedCertificate | null> {
   const rows = await executeQuery<IssuedCertificateRow[]>(
     `SELECT * FROM issued_certificates 
      WHERE student_id = ? AND group_id = ?
      LIMIT 1`,
-    [studentId, groupId]
+    [studentId, groupId],
   );
 
   return rows.length > 0 ? mapRowToIssuedCertificate(rows[0]) : null;
@@ -505,7 +506,7 @@ export async function createIssuedCertificate(data: {
       data.notes || null,
       now,
       now,
-    ]
+    ],
   );
 
   return (await getIssuedCertificateById(id))!;
@@ -563,7 +564,7 @@ export async function createStandaloneCertificate(data: {
       data.notes || null,
       now,
       now,
-    ]
+    ],
   );
 
   return (await getIssuedCertificateById(id))!;
@@ -573,7 +574,7 @@ export async function createStandaloneCertificate(data: {
  * Проверить существование сертификата по номеру
  */
 export async function getCertificateByNumber(
-  certificateNumber: string
+  certificateNumber: string,
 ): Promise<IssuedCertificate | null> {
   const rows = await executeQuery<IssuedCertificateRow[]>(
     `SELECT ic.*, 
@@ -584,7 +585,7 @@ export async function getCertificateByNumber(
      LEFT JOIN students s ON ic.student_id = s.id
      WHERE ic.certificate_number = ?
      LIMIT 1`,
-    [certificateNumber]
+    [certificateNumber],
   );
 
   return rows.length > 0 ? mapRowToIssuedCertificate(rows[0]) : null;
@@ -596,13 +597,13 @@ export async function getCertificateByNumber(
 export async function updateCertificateFiles(
   id: string,
   docxFileUrl: string,
-  pdfFileUrl: string
+  pdfFileUrl: string,
 ): Promise<void> {
   await executeQuery<ResultSetHeader>(
     `UPDATE issued_certificates 
      SET docx_file_url = ?, pdf_file_url = ?, updated_at = ?
      WHERE id = ?`,
-    [docxFileUrl, pdfFileUrl, new Date(), id]
+    [docxFileUrl, pdfFileUrl, new Date(), id],
   );
 }
 
@@ -612,7 +613,7 @@ export async function updateCertificateFiles(
 export async function revokeCertificate(
   id: string,
   revokedBy: string,
-  reason: string
+  reason: string,
 ): Promise<IssuedCertificate | null> {
   const now = new Date();
 
@@ -620,7 +621,7 @@ export async function revokeCertificate(
     `UPDATE issued_certificates 
      SET status = 'revoked', revoked_by = ?, revoked_at = ?, revoke_reason = ?, updated_at = ?
      WHERE id = ?`,
-    [revokedBy, now, reason, now, id]
+    [revokedBy, now, reason, now, id],
   );
 
   return getIssuedCertificateById(id);
@@ -642,7 +643,7 @@ export async function deleteCertificate(id: string): Promise<boolean> {
 
   const result = await executeQuery<ResultSetHeader>(
     "DELETE FROM issued_certificates WHERE id = ?",
-    [id]
+    [id],
   );
 
   return result.affectedRows > 0;
@@ -664,7 +665,7 @@ export async function reissueCertificate(
     overrideWarnings?: boolean;
     issuedBy?: string;
     notes?: string;
-  }
+  },
 ): Promise<IssuedCertificate> {
   const now = new Date();
 
@@ -699,7 +700,7 @@ export async function reissueCertificate(
       data.notes || null,
       now,
       existingCertId,
-    ]
+    ],
   );
 
   return (await getIssuedCertificateById(existingCertId))!;
@@ -723,12 +724,12 @@ export const ELIGIBILITY_REQUIREMENTS = {
  */
 export async function checkStudentEligibility(
   studentId: string,
-  groupId: string
+  groupId: string,
 ): Promise<StudentEligibility> {
   // Получаем данные студента
   const [studentRow] = await executeQuery<RowDataPacket[]>(
     "SELECT id, full_name FROM students WHERE id = ?",
-    [studentId]
+    [studentId],
   );
 
   if (!studentRow) {
@@ -744,7 +745,7 @@ export async function checkStudentEligibility(
      FROM study_groups sg
      JOIN courses c ON sg.course_id = c.id
      WHERE sg.id = ?`,
-    [groupId]
+    [groupId],
   );
 
   if (!groupInfo) {
@@ -757,7 +758,7 @@ export async function checkStudentEligibility(
      FROM disciplines d
      WHERE d.course_id = ?
      ORDER BY d.order_index`,
-    [groupInfo.course_id]
+    [groupInfo.course_id],
   );
 
   // Получаем суммарную посещаемость студента по занятиям группы
@@ -774,14 +775,17 @@ export async function checkStudentEligibility(
          se.allowed_student_ids IS NULL 
          OR JSON_CONTAINS(se.allowed_student_ids, ?)
        )`,
-    [studentId, groupId, JSON.stringify(studentId)]
+    [studentId, groupId, JSON.stringify(studentId)],
   );
+
+  // Получаем длительность академического часа из настроек
+  const academicHourMinutes = await getAcademicHourMinutes();
 
   // Получаем общее количество часов запланированных занятий для группы
   // Исключаем перездачи, к которым студент не допущен
   const [scheduledStats] = await executeQuery<RowDataPacket[]>(
     `SELECT 
-       COALESCE(SUM(TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / 45), 0) as scheduled_hours,
+       COALESCE(SUM(TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / ?), 0) as scheduled_hours,
        COUNT(*) as total_events
      FROM schedule_events se
      WHERE se.group_id = ?
@@ -789,7 +793,7 @@ export async function checkStudentEligibility(
          se.allowed_student_ids IS NULL 
          OR JSON_CONTAINS(se.allowed_student_ids, ?)
        )`,
-    [groupId, JSON.stringify(studentId)]
+    [academicHourMinutes, groupId, JSON.stringify(studentId)],
   );
 
   // DEBUG: Логирование для отладки
@@ -798,7 +802,7 @@ export async function checkStudentEligibility(
        se.id,
        se.title,
        se.allowed_student_ids,
-       TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / 45 as hours,
+       TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / ? as hours,
        CASE 
          WHEN se.allowed_student_ids IS NULL THEN 'regular'
          WHEN JSON_CONTAINS(se.allowed_student_ids, ?) THEN 'retake_for_student'
@@ -806,7 +810,7 @@ export async function checkStudentEligibility(
        END as event_type
      FROM schedule_events se
      WHERE se.group_id = ?`,
-    [JSON.stringify(studentId), groupId]
+    [academicHourMinutes, JSON.stringify(studentId), groupId],
   );
 
   console.log(`[Eligibility DEBUG] Student ${studentId}:`);
@@ -814,20 +818,20 @@ export async function checkStudentEligibility(
   console.log(
     `  Regular events: ${
       debugEvents.filter((e) => e.event_type === "regular").length
-    }`
+    }`,
   );
   console.log(
     `  Retakes for this student: ${
       debugEvents.filter((e) => e.event_type === "retake_for_student").length
-    }`
+    }`,
   );
   console.log(
     `  Retakes for others: ${
       debugEvents.filter((e) => e.event_type === "retake_for_others").length
-    }`
+    }`,
   );
   console.log(
-    `  Scheduled hours (filtered): ${scheduledStats?.scheduled_hours}`
+    `  Scheduled hours (filtered): ${scheduledStats?.scheduled_hours}`,
   );
   console.log(`  Attended hours: ${attendanceStats?.total_attended_hours}`);
 
@@ -848,7 +852,7 @@ export async function checkStudentEligibility(
          se.allowed_student_ids IS NULL 
          OR JSON_CONTAINS(se.allowed_student_ids, ?)
        )`,
-    [studentId, groupId, JSON.stringify(studentId)]
+    [studentId, groupId, JSON.stringify(studentId)],
   );
 
   console.log(`  Attendance records (${attendanceDetails.length}):`);
@@ -856,7 +860,7 @@ export async function checkStudentEligibility(
     console.log(
       `    - ${rec.event_title}: ${rec.hours_attended}/${
         rec.max_hours
-      }h (allowed_ids: ${rec.allowed_student_ids || "NULL"})`
+      }h (allowed_ids: ${rec.allowed_student_ids || "NULL"})`,
     );
   });
 
@@ -865,7 +869,7 @@ export async function checkStudentEligibility(
     `SELECT fg.discipline_id, fg.final_grade, fg.status
      FROM final_grades fg
      WHERE fg.student_id = ? AND fg.group_id = ?`,
-    [studentId, groupId]
+    [studentId, groupId],
   );
 
   // Подсчёт статистики
@@ -911,7 +915,7 @@ export async function checkStudentEligibility(
            se.allowed_student_ids IS NULL 
            OR JSON_CONTAINS(se.allowed_student_ids, ?)
          )`,
-      [studentId, groupId, JSON.stringify(studentId)]
+      [studentId, groupId, JSON.stringify(studentId)],
     );
     completedDisciplines = attendedDisciplines.length;
   }
@@ -930,7 +934,7 @@ export async function checkStudentEligibility(
     warnings.push({
       type: "low_attendance",
       message: `Посещаемость ${totalAttendancePercent.toFixed(
-        1
+        1,
       )}% ниже минимальной (${ELIGIBILITY_REQUIREMENTS.minAttendancePercent}%)`,
       details: {
         actual: totalAttendancePercent,
@@ -977,10 +981,10 @@ export async function checkStudentEligibility(
 
   console.log(
     `[Eligibility] Student ${studentId}: attendance=${totalAttendancePercent.toFixed(
-      1
+      1,
     )}% (${totalAttendedHours}/${totalHours}h), grades=${gradesCount}/${totalDisciplines}, avgGrade=${
       averageGrade?.toFixed(1) || "N/A"
-    }`
+    }`,
   );
 
   return {
