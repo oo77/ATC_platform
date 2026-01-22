@@ -278,7 +278,7 @@ CREATE TABLE IF NOT EXISTS files (
   folder_id INT UNSIGNED NULL,
   user_id VARCHAR(36) NULL,
   course_id INT UNSIGNED NULL,
-  group_id INT UNSIGNED NULL,
+  group_id VARCHAR(191) NULL COMMENT 'Ссылка на study_groups',
   assignment_id INT UNSIGNED NULL,
   metadata JSON NULL,
   is_public BOOLEAN DEFAULT FALSE,

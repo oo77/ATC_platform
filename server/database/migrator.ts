@@ -44,6 +44,7 @@ import * as linkUsersByEmail from "./migrations/20260115_052_link_users_by_email
 import * as addAcademicHourSetting from "./migrations/20260121_001_add_academic_hour_setting";
 import * as addDurationMinutes from "./migrations/20260121_002_add_duration_minutes";
 import * as addAcademicHours from "./migrations/20260122_001_add_academic_hours";
+import * as fixFilesGroupIdType from "./migrations/20260122_002_fix_files_group_id_type";
 
 /**
  * ============================================================================
@@ -394,6 +395,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: addAcademicHours.up,
     down: addAcademicHours.down,
     description: "Добавление поля academic_hours в schedule_events",
+  },
+  // ============================================================
+  // Миграция 004: Исправление типа group_id в таблице files
+  // ============================================================
+  {
+    name: "20260122_002_fix_files_group_id_type",
+    up: fixFilesGroupIdType.up,
+    down: fixFilesGroupIdType.down,
+    description: fixFilesGroupIdType.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже
