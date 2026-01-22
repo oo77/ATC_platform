@@ -27,7 +27,7 @@ export async function logActivity(
   entityType: EntityType,
   entityId?: string,
   entityName?: string,
-  details?: Record<string, any>
+  details?: Record<string, any>,
 ): Promise<void> {
   try {
     // Получаем пользователя из контекста (устанавливается middleware авторизации)
@@ -58,7 +58,7 @@ export async function logActivity(
     await createActivityLog(logData);
 
     console.log(
-      `[Activity Log] ${actionType} ${entityType} by user ${user.id}`
+      `[Activity Log] ${actionType} ${entityType} by user ${user.id}`,
     );
   } catch (error) {
     // Логируем ошибку, но не прерываем основной запрос
@@ -75,7 +75,7 @@ export async function logActivityDirect(
   entityType: EntityType,
   entityId?: string,
   entityName?: string,
-  details?: Record<string, any>
+  details?: Record<string, any>,
 ): Promise<void> {
   try {
     await createActivityLog({
@@ -99,7 +99,7 @@ export async function logActivityDirect(
 export function formatActivityDescription(
   actionType: ActionType,
   entityType: EntityType,
-  entityName?: string
+  entityName?: string,
 ): string {
   const actionLabels: Record<ActionType, string> = {
     CREATE: "Создал",
@@ -122,6 +122,7 @@ export function formatActivityDescription(
     ARCHIVE: "Архивировал",
     RESTORE: "Восстановил",
     UPLOAD: "Загрузил",
+    DOWNLOAD: "Скачал",
   };
 
   const entityLabels: Record<EntityType, string> = {

@@ -245,48 +245,108 @@
             Выдать выбранным ({{ selectedStudentIds.length }})
           </UiButton>
 
-          <!-- Скачать ведомость -->
-          <UiButton
-            @click="downloadReport"
-            :disabled="generatingPdf || journal.length === 0"
-            variant="secondary"
-          >
-            <svg
-              v-if="!generatingPdf"
-              class="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <!-- Скачать ведомость с выбором формата -->
+          <div class="relative inline-block">
+            <UiButton
+              @click="toggleReportDropdown"
+              :disabled="generatingPdf || journal.length === 0"
+              variant="secondary"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <svg
-              v-else
-              class="w-4 h-4 mr-2 animate-spin"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
+              <svg
+                v-if="!generatingPdf"
+                class="w-4 h-4 mr-2"
+                fill="none"
                 stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            {{ generatingPdf ? "Генерация..." : "Ведомость" }}
-          </UiButton>
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              <svg
+                v-else
+                class="w-4 h-4 mr-2 animate-spin"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              <span>{{ generatingPdf ? "Генерация..." : "Ведомость" }}</span>
+              <svg
+                class="w-4 h-4 ml-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </UiButton>
+
+            <!-- Выпадающее меню -->
+            <div
+              v-if="showReportDropdown"
+              class="absolute right-0 mt-2 w-48 bg-white dark:bg-boxdark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+            >
+              <button
+                @click="downloadReport('pdf')"
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-t-lg text-gray-900 dark:text-white"
+              >
+                <svg
+                  class="w-4 h-4 text-danger"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <span>Скачать PDF</span>
+              </button>
+              <button
+                @click="downloadReport('docx')"
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-b-lg text-gray-900 dark:text-white"
+              >
+                <svg
+                  class="w-4 h-4 text-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <span>Скачать Word</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Индикатор активной фоновой выдачи -->
@@ -452,8 +512,8 @@
                       row.totalAttendancePercent >= 75
                         ? 'bg-success/10 text-success'
                         : row.totalAttendancePercent >= 50
-                        ? 'bg-warning/10 text-warning'
-                        : 'bg-danger/10 text-danger',
+                          ? 'bg-warning/10 text-warning'
+                          : 'bg-danger/10 text-danger',
                     ]"
                   >
                     {{ row.totalAttendancePercent.toFixed(0) }}%
@@ -534,8 +594,8 @@
                       row.certificate.status === 'issued'
                         ? 'bg-success/10 text-success'
                         : row.certificate.status === 'revoked'
-                        ? 'bg-danger/10 text-danger'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+                          ? 'bg-danger/10 text-danger'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
                     ]"
                   >
                     {{ certificateStatusLabels[row.certificate.status] }}
@@ -705,6 +765,7 @@ const issuingStudentId = ref<string | null>(null);
 const issueResults = ref<IssueCertificatesResponse["results"]>([]);
 const resultsModalOpen = ref(false);
 const generatingPdf = ref(false); // Состояние генерации ведомости
+const showReportDropdown = ref(false); // Состояние выпадающего меню формата
 
 // Bulk issue modal
 const bulkIssueModalOpen = ref(false);
@@ -728,7 +789,7 @@ const certificateStatusLabels: Record<string, string> = {
 // Computed
 const isAllSelected = computed(() => {
   const available = journal.value.filter(
-    (r) => r.certificate?.status !== "issued"
+    (r) => r.certificate?.status !== "issued",
   );
   return (
     available.length > 0 &&
@@ -744,7 +805,7 @@ const isPartialSelected = computed(() => {
 // Количество допущенных без сертификата
 const eligibleWithoutCertificate = computed(() => {
   return journal.value.filter(
-    (r) => r.eligibility.isEligible && r.certificate?.status !== "issued"
+    (r) => r.eligibility.isEligible && r.certificate?.status !== "issued",
   ).length;
 });
 
@@ -760,7 +821,7 @@ const loadData = async () => {
   loading.value = true;
   try {
     const journalRes = await authFetch<CertificateJournalResponse>(
-      `/api/certificates/issue/${groupId.value}`
+      `/api/certificates/issue/${groupId.value}`,
     );
 
     if (journalRes.success) {
@@ -790,7 +851,7 @@ const getInitials = (name: string): string => {
 // Selection handlers
 const toggleSelectAll = () => {
   const available = journal.value.filter(
-    (r) => r.certificate?.status !== "issued"
+    (r) => r.certificate?.status !== "issued",
   );
   if (isAllSelected.value) {
     selectedStudentIds.value = [];
@@ -867,7 +928,7 @@ const openBulkIssueModal = (mode: "eligible" | "selected") => {
     // Все допущенные без сертификата
     bulkIssueStudentIds.value = journal.value
       .filter(
-        (r) => r.eligibility.isEligible && r.certificate?.status !== "issued"
+        (r) => r.eligibility.isEligible && r.certificate?.status !== "issued",
       )
       .map((r) => r.student.id);
   } else {
@@ -895,7 +956,7 @@ const executeBulkIssue = async () => {
 
   // Получаем данные студентов для отображения имён
   const studentRows = journal.value.filter((r) =>
-    bulkIssueStudentIds.value.includes(r.student.id)
+    bulkIssueStudentIds.value.includes(r.student.id),
   );
 
   // Формируем job для глобального store
@@ -923,14 +984,14 @@ const executeBulkIssue = async () => {
 
   // Запускаем выдачу через глобальный store (продолжится даже при переходе на другую страницу)
   console.log(
-    `[Certificates] Запускаем фоновую выдачу через store: ${job.studentIds.length} студентов`
+    `[Certificates] Запускаем фоновую выдачу через store: ${job.studentIds.length} студентов`,
   );
   certIssueStore.startBulkIssue(job);
 };
 
 // Обработка завершения массовой выдачи (для обратной совместимости с модалкой)
 const handleBulkIssueComplete = async (
-  _results: IssueCertificatesResponse["results"]
+  _results: IssueCertificatesResponse["results"],
 ) => {
   // Clear selection
   selectedStudentIds.value = [];
@@ -951,13 +1012,13 @@ watch(
       console.log("[Certificates] Выдача завершена, обновляем данные");
       await loadData();
     }
-  }
+  },
 );
 
 // Issue to students (для одиночной выдачи)
 const issueToStudents = async (
   studentIds: string[],
-  overrideWarnings: boolean
+  overrideWarnings: boolean,
 ) => {
   isIssuing.value = true;
   try {
@@ -974,7 +1035,7 @@ const issueToStudents = async (
             : "none",
           overrideWarnings,
         },
-      }
+      },
     );
 
     if (response.success) {
@@ -995,9 +1056,17 @@ const issueToStudents = async (
   }
 };
 
+// Функция переключения выпадающего меню формата ведомости
+const toggleReportDropdown = () => {
+  showReportDropdown.value = !showReportDropdown.value;
+};
+
 // Download certificate report
-const downloadReport = async () => {
+const downloadReport = async (format: "pdf" | "docx" = "pdf") => {
   if (generatingPdf.value) return;
+
+  // Закрываем выпадающее меню
+  showReportDropdown.value = false;
 
   generatingPdf.value = true;
   try {
@@ -1017,23 +1086,49 @@ const downloadReport = async () => {
       throw new Error("Не удалось получить данные для ведомости");
     }
 
-    // Импортируем функцию генерации PDF
-    const { generateCertificateReport } = await import(
-      "~/utils/pdf/generateCertificateReport"
-    );
+    // Генерируем документ в выбранном формате
+    if (format === "pdf") {
+      const { generateCertificateReport } =
+        await import("~/utils/pdf/generateCertificateReport");
+      await generateCertificateReport({
+        groupCode: reportData.groupCode,
+        courseName: reportData.courseName,
+        instructors: reportData.instructors,
+        students: reportData.students,
+        startDate: reportData.startDate,
+        endDate: reportData.endDate,
+        generatedBy: reportData.generatedBy,
+      });
+    } else {
+      const { generateCertificateReportDocx } =
+        await import("~/utils/docx/generateCertificateReport");
+      await generateCertificateReportDocx({
+        groupCode: reportData.groupCode,
+        courseName: reportData.courseName,
+        instructors: reportData.instructors,
+        students: reportData.students,
+        startDate: reportData.startDate,
+        endDate: reportData.endDate,
+        generatedBy: reportData.generatedBy,
+      });
+    }
 
-    // Генерируем PDF
-    await generateCertificateReport({
-      groupCode: reportData.groupCode,
-      courseName: reportData.courseName,
-      instructors: reportData.instructors,
-      students: reportData.students,
-      startDate: reportData.startDate,
-      endDate: reportData.endDate,
-      generatedBy: reportData.generatedBy,
-    });
+    // Логируем скачивание
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "certificate_report",
+          format,
+          groupCode: reportData.groupCode,
+          groupId: groupId.value,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+    }
 
-    showSuccess("Ведомость успешно сформирована");
+    showSuccess(`Ведомость успешно сформирована (${format.toUpperCase()})`);
   } catch (error: any) {
     console.error("Error generating certificate report:", error);
     showError(error.message || "Ошибка при формировании ведомости");

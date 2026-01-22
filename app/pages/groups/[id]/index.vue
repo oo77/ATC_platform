@@ -605,49 +605,113 @@
                 Управление слушателями
               </UiButton>
 
-              <!-- Кнопка скачивания пустого журнала -->
-              <UiButton
+              <!-- Кнопка скачивания пустого журнала с выбором формата -->
+              <div
                 v-if="group.students && group.students.length > 0"
-                variant="outline"
-                @click="downloadEmptyJournal"
-                :disabled="generatingEmptyJournal"
+                class="relative inline-block"
               >
-                <svg
-                  v-if="!generatingEmptyJournal"
-                  class="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                <UiButton
+                  variant="outline"
+                  @click="toggleEmptyJournalDropdown"
+                  :disabled="generatingEmptyJournal"
+                  class="flex items-center gap-2"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <svg
-                  v-else
-                  class="w-4 h-4 mr-2 animate-spin"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
+                  <svg
+                    v-if="!generatingEmptyJournal"
+                    class="w-4 h-4"
+                    fill="none"
                     stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                {{ generatingEmptyJournal ? "Генерация..." : "Пустой журнал" }}
-              </UiButton>
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <svg
+                    v-else
+                    class="w-4 h-4 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <span>{{
+                    generatingEmptyJournal ? "Генерация..." : "Пустой журнал"
+                  }}</span>
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </UiButton>
+
+                <!-- Выпадающее меню -->
+                <div
+                  v-if="showEmptyJournalDropdown"
+                  class="absolute right-0 mt-2 w-48 bg-white dark:bg-boxdark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                >
+                  <button
+                    @click="downloadEmptyJournal('pdf')"
+                    class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-t-lg"
+                  >
+                    <svg
+                      class="w-4 h-4 text-danger"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+                      />
+                      <path d="M14 2v6h6" />
+                      <path d="M10 13h4" />
+                      <path d="M10 17h4" />
+                      <path d="M10 9h1" />
+                    </svg>
+                    <span>Скачать PDF</span>
+                  </button>
+                  <button
+                    @click="downloadEmptyJournal('docx')"
+                    class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-b-lg"
+                  >
+                    <svg
+                      class="w-4 h-4 text-primary"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+                      />
+                      <path d="M14 2v6h6" />
+                      <path d="M10 12h4" />
+                      <path d="M10 16h4" />
+                    </svg>
+                    <span>Скачать Word</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1150,6 +1214,7 @@ const studentAttendanceData = ref<
 const reports = ref<any[]>([]); // Добавлено для отчетов
 const loadingReports = ref(false);
 const generatingEmptyJournal = ref(false); // Состояние генерации пустого журнала
+const showEmptyJournalDropdown = ref(false); // Состояние выпадающего меню формата
 
 // Состояния для просмотра и удаления документов
 const showPreviewModal = ref(false);
@@ -1407,9 +1472,17 @@ const loadReports = async (groupId: string) => {
   }
 };
 
+// Функция переключения выпадающего меню формата журнала
+const toggleEmptyJournalDropdown = () => {
+  showEmptyJournalDropdown.value = !showEmptyJournalDropdown.value;
+};
+
 // Функция для скачивания пустого журнала
-const downloadEmptyJournal = async () => {
+const downloadEmptyJournal = async (format: "pdf" | "docx" = "pdf") => {
   if (generatingEmptyJournal.value || !group.value) return;
+
+  // Закрываем выпадающее меню
+  showEmptyJournalDropdown.value = false;
 
   try {
     generatingEmptyJournal.value = true;
@@ -1435,10 +1508,34 @@ const downloadEmptyJournal = async () => {
       columnCount: 20, // 20 пустых колонок
     };
 
-    // Генерируем PDF
-    await generateEmptyJournal(emptyJournalData);
+    // Генерируем документ в выбранном формате
+    if (format === "pdf") {
+      await generateEmptyJournal(emptyJournalData);
+    } else {
+      const { generateEmptyJournalDocx } =
+        await import("~/utils/docx/generateEmptyJournal");
+      await generateEmptyJournalDocx(emptyJournalData);
+    }
 
-    toast.success("Пустой журнал успешно сформирован");
+    // Логируем скачивание
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "empty_journal",
+          format,
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+      // Не показываем ошибку пользователю, это не критично
+    }
+
+    toast.success(
+      `Пустой журнал успешно сформирован (${format.toUpperCase()})`,
+    );
   } catch (error: any) {
     console.error("Error generating empty journal:", error);
     toast.error(error.message || "Ошибка при формировании пустого журнала");

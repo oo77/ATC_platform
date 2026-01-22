@@ -149,52 +149,111 @@
               </div>
             </div>
 
-            <!-- Кнопка скачивания ведомости -->
-            <button
-              v-if="columns.length > 0"
-              @click="downloadReport"
-              :disabled="generatingPdf"
-              class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Скачать ведомость в PDF"
-            >
-              <svg
-                v-if="!generatingPdf"
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <!-- Кнопка скачивания ведомости с выбором формата -->
+            <div v-if="columns.length > 0" class="relative inline-block">
+              <button
+                @click="toggleReportDropdown"
+                :disabled="generatingPdf"
+                class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Скачать ведомость"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <svg
-                v-else
-                class="w-5 h-5 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
+                <svg
+                  v-if="!generatingPdf"
+                  class="w-5 h-5"
+                  fill="none"
                   stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <span class="hidden sm:inline">{{
-                generatingPdf ? "Генерация..." : "Ведомость"
-              }}</span>
-            </button>
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <svg
+                  v-else
+                  class="w-5 h-5 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span class="hidden sm:inline">{{
+                  generatingPdf ? "Генерация..." : "Ведомость"
+                }}</span>
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+
+              <!-- Выпадающее меню -->
+              <div
+                v-if="showReportDropdown"
+                class="absolute right-0 mt-2 w-48 bg-white dark:bg-boxdark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+              >
+                <button
+                  @click="downloadReport('pdf')"
+                  class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-t-lg text-gray-900 dark:text-white"
+                >
+                  <svg
+                    class="w-4 h-4 text-danger"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <span>Скачать PDF</span>
+                </button>
+                <button
+                  @click="downloadReport('docx')"
+                  class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-b-lg text-gray-900 dark:text-white"
+                >
+                  <svg
+                    class="w-4 h-4 text-primary"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <span>Скачать Word</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -262,7 +321,7 @@
               {{
                 formatTimeRange(
                   col.scheduleEvent.startTime,
-                  col.scheduleEvent.endTime
+                  col.scheduleEvent.endTime,
                 )
               }}
               {{ col.hasGrade ? "(с оценкой)" : "" }}
@@ -533,7 +592,7 @@
                     <span class="text-[10px] text-gray-400">{{
                       formatTimeRange(
                         column.scheduleEvent.startTime,
-                        column.scheduleEvent.endTime
+                        column.scheduleEvent.endTime,
                       )
                     }}</span>
                   </div>
@@ -591,8 +650,18 @@
                     :cell="cell"
                     :column="columns[cellIndex]!"
                     :student-id="row.student.id"
-                    :is-retake-target="getRetakeInfo(row.student.id, columns[cellIndex]!.scheduleEvent.id).isRetakeTarget"
-                    :replacement-grade="getRetakeInfo(row.student.id, columns[cellIndex]!.scheduleEvent.id).replacementGrade"
+                    :is-retake-target="
+                      getRetakeInfo(
+                        row.student.id,
+                        columns[cellIndex]!.scheduleEvent.id,
+                      ).isRetakeTarget
+                    "
+                    :replacement-grade="
+                      getRetakeInfo(
+                        row.student.id,
+                        columns[cellIndex]!.scheduleEvent.id,
+                      ).replacementGrade
+                    "
                     :read-only="isArchived"
                     @update="handleCellUpdate"
                     @require-approval="handleRequireApproval"
@@ -719,7 +788,7 @@
             {{
               formatTimeRange(
                 selectedEvent.scheduleEvent.startTime,
-                selectedEvent.scheduleEvent.endTime
+                selectedEvent.scheduleEvent.endTime,
               )
             }}
             ({{ selectedEvent.scheduleEvent.academicHours }} а-ч)
@@ -842,7 +911,7 @@
             {{
               formatTimeRange(
                 selectedEvent.scheduleEvent.startTime,
-                selectedEvent.scheduleEvent.endTime
+                selectedEvent.scheduleEvent.endTime,
               )
             }}
           </p>
@@ -1070,11 +1139,12 @@ const accessLoading = ref(false);
 
 // PDF generation state
 const generatingPdf = ref(false);
+const showReportDropdown = ref(false); // Состояние выпадающего меню формата
 
 // Computed - выбранное занятие
 const selectedEvent = computed(() => {
   return columns.value.find(
-    (col) => col.scheduleEvent.id === selectedEventId.value
+    (col) => col.scheduleEvent.id === selectedEventId.value,
   );
 });
 
@@ -1097,7 +1167,7 @@ const loadJournal = async () => {
       summary: JournalSummary;
       message?: string;
     }>(
-      `/api/attendance/journal?groupId=${groupId.value}&disciplineId=${disciplineId.value}`
+      `/api/attendance/journal?groupId=${groupId.value}&disciplineId=${disciplineId.value}`,
     );
 
     if (response.success) {
@@ -1155,7 +1225,7 @@ const loadMeta = async () => {
     if (disciplinesResponse.success && disciplinesResponse.disciplines) {
       // Ищем нужную дисциплину
       const discipline = disciplinesResponse.disciplines.find(
-        (d) => d.id === disciplineId.value
+        (d) => d.id === disciplineId.value,
       );
 
       if (discipline) {
@@ -1165,7 +1235,7 @@ const loadMeta = async () => {
         if (discipline.instructors && discipline.instructors.length > 0) {
           // Сначала основные, потом остальные
           const sorted = [...discipline.instructors].sort(
-            (a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0)
+            (a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0),
           );
 
           // Показываем имена (до 2-х инструкторов)
@@ -1228,7 +1298,7 @@ const getAttendanceColor = (percent: number) => {
 const getRetakeInfo = (studentId: string, currentEventId: string) => {
   // Находим все колонки, которые являются пересдачами для текущего события
   const retakeColumns = columns.value.filter(
-    (col) => col.scheduleEvent.originalEventId === currentEventId
+    (col) => col.scheduleEvent.originalEventId === currentEventId,
   );
 
   if (retakeColumns.length === 0)
@@ -1243,7 +1313,7 @@ const getRetakeInfo = (studentId: string, currentEventId: string) => {
 
   retakeColumns.forEach((retakeCol) => {
     const retakeColIndex = columns.value.findIndex(
-      (c) => c.scheduleEvent.id === retakeCol.scheduleEvent.id
+      (c) => c.scheduleEvent.id === retakeCol.scheduleEvent.id,
     );
     if (retakeColIndex === -1) return;
 
@@ -1293,9 +1363,17 @@ const handleFinalGradeUpdate = async () => {
   await loadJournal();
 };
 
-// PDF Report Generation
-const downloadReport = async () => {
+// Функция переключения выпадающего меню формата ведомости
+const toggleReportDropdown = () => {
+  showReportDropdown.value = !showReportDropdown.value;
+};
+
+// PDF/DOCX Report Generation
+const downloadReport = async (format: "pdf" | "docx" = "pdf") => {
   if (generatingPdf.value) return;
+
+  // Закрываем выпадающее меню
+  showReportDropdown.value = false;
 
   try {
     generatingPdf.value = true;
@@ -1305,7 +1383,7 @@ const downloadReport = async () => {
     const startDate = dates[0];
     const endDate = dates[dates.length - 1];
 
-    // Подготавливаем данные для PDF
+    // Подготавливаем данные для отчёта
     const reportData = {
       groupCode: groupCode.value,
       disciplineName: disciplineName.value,
@@ -1317,12 +1395,34 @@ const downloadReport = async () => {
       endDate,
     };
 
-    // Генерируем PDF
-    await generateGroupReport(reportData);
+    // Генерируем документ в выбранном формате
+    if (format === "pdf") {
+      await generateGroupReport(reportData);
+    } else {
+      const { generateGroupReportDocx } =
+        await import("~/utils/docx/generateGroupReport");
+      await generateGroupReportDocx(reportData);
+    }
 
-    toast.success("Ведомость успешно сформирована");
+    // Логируем скачивание
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "group_report",
+          format,
+          groupCode: groupCode.value,
+          groupId: groupId.value,
+          disciplineName: disciplineName.value,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+    }
+
+    toast.success(`Ведомость успешно сформирована (${format.toUpperCase()})`);
   } catch (error: any) {
-    console.error("Error generating PDF:", error);
+    console.error("Error generating report:", error);
     toast.error(error.message || "Ошибка при формировании ведомости");
   } finally {
     generatingPdf.value = false;
@@ -1396,7 +1496,7 @@ const handleRequestApproval = async (reason: string) => {
           scheduleEventId: selectedEventId.value,
           reason,
         },
-      }
+      },
     );
 
     if (response.success) {
@@ -1426,8 +1526,8 @@ const saveBulkAttendanceWithReason = async (lateReason?: string) => {
       selectedEvent.value.scheduleEvent.allowedStudentIds
         ? rows.value.filter((row) =>
             selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(
-              row.student.id
-            )
+              row.student.id,
+            ),
           )
         : rows.value;
 
@@ -1529,8 +1629,8 @@ const saveBulkGrade = async () => {
       selectedEvent.value.scheduleEvent.allowedStudentIds
         ? rows.value.filter((row) =>
             selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(
-              row.student.id
-            )
+              row.student.id,
+            ),
           )
         : rows.value;
 
@@ -1576,8 +1676,8 @@ const getEligibleStudentsCount = () => {
   ) {
     return rows.value.filter((row) =>
       selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(
-        row.student.id
-      )
+        row.student.id,
+      ),
     ).length;
   }
 
@@ -1595,8 +1695,8 @@ const getEligibleStudents = () => {
     return rows.value
       .filter((row) =>
         selectedEvent.value!.scheduleEvent.allowedStudentIds!.includes(
-          row.student.id
-        )
+          row.student.id,
+        ),
       )
       .map((row) => row.student);
   }

@@ -23,7 +23,8 @@ export type ActionType =
   | "UNASSIGN" // Снятие назначения
   | "ARCHIVE" // Архивация
   | "RESTORE" // Восстановление из архива
-  | "UPLOAD"; // Загрузка файла
+  | "UPLOAD" // Загрузка файла
+  | "DOWNLOAD"; // Скачивание файла/отчёта
 
 // Типы сущностей
 export type EntityType =
