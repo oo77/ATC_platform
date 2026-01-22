@@ -77,6 +77,22 @@ export default defineEventHandler(async (event) => {
     }
 
     // ===============================
+    // РАСЧЕТ АКАДЕМИЧЕСКИХ ЧАСОВ
+    // ===============================
+
+    let calculatedHours: number;
+    if ((body as any).academicHours) {
+      calculatedHours = (body as any).academicHours;
+    } else {
+      // Fallback для старых клиентов/запросов
+      const eventMinutes = (body as any).durationMinutes
+        ? (body as any).durationMinutes
+        : (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+      const academicHourMinutes = await getAcademicHourMinutes();
+      calculatedHours = Math.ceil(eventMinutes / academicHourMinutes);
+    }
+
+    // ===============================
     // ВАЛИДАЦИЯ ГРУППЫ И ДАТ
     // ===============================
 
@@ -159,20 +175,8 @@ export default defineEventHandler(async (event) => {
 
         const usedAcademicHours = Number(usedHoursRows[0]?.total_hours) || 0;
 
-        // Вычисляем длительность нового занятия в академических часах
-        // Если передано academicHours напрямую, используем его
-        // Иначе fallback на расчёт из минут
-        let newEventHours: number;
-        if ((body as any).academicHours) {
-          newEventHours = (body as any).academicHours;
-        } else {
-          // Fallback для старых клиентов
-          const newEventMinutes = (body as any).durationMinutes
-            ? (body as any).durationMinutes
-            : (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-          const academicHourMinutes = await getAcademicHourMinutes();
-          newEventHours = Math.ceil(newEventMinutes / academicHourMinutes);
-        }
+        // Используем предварительно рассчитанные часы
+        const newEventHours = calculatedHours;
 
         // Вычисляем оставшиеся часы
         const remainingHours = allocatedHours - usedAcademicHours;
@@ -198,13 +202,9 @@ export default defineEventHandler(async (event) => {
     // ===============================
 
     if (body.instructorId) {
-      // Вычисляем длительность нового занятия в минутах
-      const eventDurationMinutes =
-        (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-
       const hoursCheck = await checkInstructorHoursLimit(
         body.instructorId,
-        eventDurationMinutes,
+        calculatedHours,
       );
 
       if (!hoursCheck.canTake) {

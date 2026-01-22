@@ -79,6 +79,25 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    // ===============================
+    // РАСЧЕТ АКАДЕМИЧЕСКИХ ЧАСОВ
+    // ===============================
+
+    // Вычисляем длительность занятия в академических часах
+    // Если передано academicHours напрямую, используем его
+    // Иначе fallback на расчёт из минут (на основе startTime/endTime или durationMinutes)
+    let eventHours: number;
+    if ((body as any).academicHours) {
+      eventHours = (body as any).academicHours;
+    } else {
+      // Fallback
+      const eventMinutes = (body as any).durationMinutes
+        ? (body as any).durationMinutes
+        : (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+      const academicHourMinutes = await getAcademicHourMinutes();
+      eventHours = Math.ceil(eventMinutes / academicHourMinutes);
+    }
+
     // Определяем финальные значения для валидации
     const finalGroupId =
       body.groupId !== undefined ? body.groupId : existing.groupId;
@@ -178,20 +197,8 @@ export default defineEventHandler(async (event) => {
 
         const usedAcademicHours = Number(usedHoursRows[0]?.total_hours) || 0;
 
-        // Вычисляем длительность занятия в академических часах
-        // Если передано academicHours напрямую, используем его
-        // Иначе fallback на расчёт из минут
-        let eventHours: number;
-        if ((body as any).academicHours) {
-          eventHours = (body as any).academicHours;
-        } else {
-          // Fallback для старых клиентов
-          const eventMinutes = (body as any).durationMinutes
-            ? (body as any).durationMinutes
-            : (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-          const academicHourMinutes = await getAcademicHourMinutes();
-          eventHours = Math.ceil(eventMinutes / academicHourMinutes);
-        }
+        // Используем предварительно рассчианные часы
+        // eventHours уже вычислено выше
 
         // Вычисляем оставшиеся часы
         const remainingHours = allocatedHours - usedAcademicHours;
@@ -229,22 +236,36 @@ export default defineEventHandler(async (event) => {
       const timeChanged =
         body.startTime !== undefined || body.endTime !== undefined;
 
-      if (instructorChanged || timeChanged) {
-        // Вычисляем старую длительность для учёта в лимите
-        const oldDurationMinutes = instructorChanged
-          ? 0 // Новый инструктор не имел этих часов, проверяем полную длительность
-          : (existing.endTime.getTime() - existing.startTime.getTime()) /
-            (1000 * 60);
+      if (
+        instructorChanged ||
+        timeChanged ||
+        (body as any).academicHours !== undefined
+      ) {
+        // Вычисляем старые часы для учёта в лимите
+        let oldEventHours = 0;
 
-        // При смене инструктора проверяем полную длительность, иначе только разницу (если увеличиваем)
-        const additionalMinutes = instructorChanged
-          ? eventDurationMinutes
-          : Math.max(0, eventDurationMinutes - oldDurationMinutes);
+        if (!instructorChanged) {
+          if (existing.academicHours) {
+            oldEventHours = existing.academicHours;
+          } else {
+            const academicHourMinutes = await getAcademicHourMinutes();
+            const oldMinutes =
+              existing.durationMinutes ||
+              (existing.endTime.getTime() - existing.startTime.getTime()) /
+                (1000 * 60);
+            oldEventHours = Math.ceil(oldMinutes / academicHourMinutes);
+          }
+        }
 
-        if (additionalMinutes > 0) {
+        // При смене инструктора проверяем полные часы, иначе только разницу (если увеличиваем)
+        const additionalHours = instructorChanged
+          ? eventHours
+          : Math.max(0, eventHours - oldEventHours);
+
+        if (additionalHours > 0) {
           const hoursCheck = await checkInstructorHoursLimit(
             checkInstructor,
-            additionalMinutes,
+            additionalHours,
           );
 
           if (!hoursCheck.canTake) {
