@@ -903,10 +903,17 @@
                   Расписание занятий
                 </h3>
                 <span class="text-sm text-gray-500">
-                  {{ scheduleEvents.length }} {{ scheduleEvents.length === 1 ? 'занятие' : scheduleEvents.length < 5 ? 'занятия' : 'занятий' }}
+                  {{ scheduleEvents.length }}
+                  {{
+                    scheduleEvents.length === 1
+                      ? "занятие"
+                      : scheduleEvents.length < 5
+                        ? "занятия"
+                        : "занятий"
+                  }}
                 </span>
               </div>
-              
+
               <!-- Счетчик часов и прогресс-бар -->
               <div v-if="totalProgramHours > 0" class="space-y-2">
                 <div class="flex items-center gap-3">
@@ -918,18 +925,22 @@
                       class="px-2 py-0.5 rounded-full text-xs font-medium"
                       :class="{
                         'bg-success/10 text-success': hoursProgress >= 100,
-                        'bg-info/10 text-info': hoursProgress >= 75 && hoursProgress < 100,
-                        'bg-warning/10 text-warning': hoursProgress >= 50 && hoursProgress < 75,
-                        'bg-danger/10 text-danger': hoursProgress < 50
+                        'bg-info/10 text-info':
+                          hoursProgress >= 75 && hoursProgress < 100,
+                        'bg-warning/10 text-warning':
+                          hoursProgress >= 50 && hoursProgress < 75,
+                        'bg-danger/10 text-danger': hoursProgress < 50,
                       }"
                     >
                       {{ hoursProgress }}%
                     </span>
                   </div>
                 </div>
-                
+
                 <!-- Прогресс-бар -->
-                <div class="w-full max-w-md bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                <div
+                  class="w-full max-w-md bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden"
+                >
                   <div
                     class="h-full transition-all duration-500 rounded-full"
                     :class="hoursProgressColor"
@@ -1048,9 +1059,15 @@
                           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      <span>{{ formatTime(event.startTime) }} - {{ formatTime(event.endTime) }}</span>
+                      <span
+                        >{{ formatTime(event.startTime) }} -
+                        {{ formatTime(event.endTime) }}</span
+                      >
                     </div>
-                    <div v-if="event.instructor" class="flex items-center gap-1.5">
+                    <div
+                      v-if="event.instructor"
+                      class="flex items-center gap-1.5"
+                    >
                       <svg
                         class="w-4 h-4 text-gray-400"
                         fill="none"
@@ -1064,9 +1081,16 @@
                           d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                         />
                       </svg>
-                      <span>{{ event.instructor.fullName || event.instructor.name || 'Не указан' }}</span>
+                      <span>{{
+                        event.instructor.fullName ||
+                        event.instructor.name ||
+                        "Не указан"
+                      }}</span>
                     </div>
-                    <div v-if="event.classroom" class="flex items-center gap-1.5">
+                    <div
+                      v-if="event.classroom"
+                      class="flex items-center gap-1.5"
+                    >
                       <svg
                         class="w-4 h-4 text-gray-400"
                         fill="none"
@@ -1099,7 +1123,9 @@
                           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                      <span
+                        class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
+                      >
                         {{ getAcademicHours(event) }} а-ч
                       </span>
                     </div>
@@ -1340,6 +1366,7 @@ const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+};
 
 const getAcademicHours = (event: any): number => {
   // Используем durationMinutes для подсчета академических часов
@@ -1492,7 +1519,6 @@ const totalProgramHours = computed(() => {
   return group.value?.course?.totalHours || 0;
 });
 
-
 const totalScheduledHours = computed(() => {
   const total = scheduleEvents.value.reduce((sum, event) => {
     // Используем durationMinutes для подсчета академических часов
@@ -1509,7 +1535,7 @@ const totalScheduledHours = computed(() => {
     }
     return sum;
   }, 0);
-  console.log('[totalScheduledHours] Всего запланировано часов:', total);
+  console.log("[totalScheduledHours] Всего запланировано часов:", total);
   return total;
 });
 
@@ -1517,16 +1543,16 @@ const hoursProgress = computed(() => {
   if (totalProgramHours.value === 0) return 0;
   return Math.min(
     Math.round((totalScheduledHours.value / totalProgramHours.value) * 100),
-    100
+    100,
   );
 });
 
 const hoursProgressColor = computed(() => {
   const progress = hoursProgress.value;
-  if (progress >= 100) return 'bg-success';
-  if (progress >= 75) return 'bg-info';
-  if (progress >= 50) return 'bg-warning';
-  return 'bg-danger';
+  if (progress >= 100) return "bg-success";
+  if (progress >= 75) return "bg-info";
+  if (progress >= 50) return "bg-warning";
+  return "bg-danger";
 });
 
 // Load actions
@@ -1900,11 +1926,5 @@ const handleReportUploaded = () => {
 
 onMounted(() => {
   loadGroup();
-  // Call other loaders if needed (disciplines, etc)
-  // В оригинальном файле была логика загрузки дисциплин в loadGroup или отдельном методе.
-  // Важно сохранить её. Я лишь показал ключевые изменения.
-  // Так как я перезаписываю файл, мне нужно убедиться, что я включил ВЕСЬ исходный код + изменения.
-  // Я использую упрощенный вид выше, но должен быть осторожен.
-  // Лучше я просто добавлю новые методы и секции в существующий код через replace.
 });
 </script>
