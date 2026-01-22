@@ -43,6 +43,7 @@ import * as addUserSearchIndexes from "./migrations/20260115_051_add_user_search
 import * as linkUsersByEmail from "./migrations/20260115_052_link_users_by_email";
 import * as addAcademicHourSetting from "./migrations/20260121_001_add_academic_hour_setting";
 import * as addDurationMinutes from "./migrations/20260121_002_add_duration_minutes";
+import * as addAcademicHours from "./migrations/20260122_001_add_academic_hours";
 
 /**
  * ============================================================================
@@ -384,6 +385,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: addDurationMinutes.up,
     down: addDurationMinutes.down,
     description: "Добавление поля duration_minutes в schedule_events",
+  },
+  // ============================================================
+  // Миграция 003: Добавление поля academic_hours в schedule_events
+  // ============================================================
+  {
+    name: "20260122_001_add_academic_hours",
+    up: addAcademicHours.up,
+    down: addAcademicHours.down,
+    description: "Добавление поля academic_hours в schedule_events",
   },
   // ============================================================
   // Новые миграции добавлять ниже

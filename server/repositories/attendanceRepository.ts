@@ -305,7 +305,7 @@ function mapRowToFinalGrade(row: FinalGradeRow): FinalGrade {
  * Получить посещаемость по занятию
  */
 export async function getAttendanceByEvent(
-  scheduleEventId: string
+  scheduleEventId: string,
 ): Promise<Attendance[]> {
   const sql = `
     SELECT 
@@ -331,7 +331,7 @@ export async function getAttendanceByEvent(
 export async function getStudentAttendance(
   studentId: string,
   groupId: string,
-  disciplineId: string
+  disciplineId: string,
 ): Promise<Attendance[]> {
   const sql = `
     SELECT 
@@ -361,7 +361,7 @@ export async function getStudentAttendance(
  * Получить или создать запись посещаемости
  */
 export async function upsertAttendance(
-  data: CreateAttendanceInput
+  data: CreateAttendanceInput,
 ): Promise<Attendance> {
   const id = uuidv4();
   const now = new Date();
@@ -409,7 +409,7 @@ export async function upsertAttendance(
  * Массовая отметка посещаемости
  */
 export async function bulkUpsertAttendance(
-  data: BulkAttendanceInput
+  data: BulkAttendanceInput,
 ): Promise<number> {
   const now = new Date();
 
@@ -456,7 +456,7 @@ export async function bulkUpsertAttendance(
 export async function getAttendanceStats(
   studentId: string,
   groupId: string,
-  disciplineId: string
+  disciplineId: string,
 ): Promise<AttendanceStats> {
   const sql = `
     SELECT 
@@ -515,7 +515,7 @@ export async function getAttendanceStats(
  * Получить оценки по занятию
  */
 export async function getGradesByEvent(
-  scheduleEventId: string
+  scheduleEventId: string,
 ): Promise<Grade[]> {
   const sql = `
     SELECT 
@@ -540,7 +540,7 @@ export async function getGradesByEvent(
 export async function getStudentGrades(
   studentId: string,
   groupId: string,
-  disciplineId: string
+  disciplineId: string,
 ): Promise<Grade[]> {
   const sql = `
     SELECT 
@@ -571,7 +571,7 @@ export async function getStudentGrades(
  */
 export async function getExistingGrade(
   studentId: string,
-  scheduleEventId: string
+  scheduleEventId: string,
 ): Promise<Grade | null> {
   const sql = `
     SELECT g.*, s.full_name as student_name
@@ -594,7 +594,7 @@ export async function getExistingGrade(
  * сохраняется оригинальная оценка и помечается как изменённая
  */
 export async function upsertGrade(
-  data: CreateGradeInput & { forceModify?: boolean }
+  data: CreateGradeInput & { forceModify?: boolean },
 ): Promise<Grade> {
   const id = uuidv4();
   const now = new Date();
@@ -602,7 +602,7 @@ export async function upsertGrade(
   // Проверяем, существует ли уже оценка
   const existingGrade = await getExistingGrade(
     data.studentId,
-    data.scheduleEventId
+    data.scheduleEventId,
   );
 
   if (existingGrade && existingGrade.isFromTest && !existingGrade.isModified) {
@@ -751,7 +751,7 @@ export async function bulkUpsertGrades(data: BulkGradeInput): Promise<number> {
 export async function getAverageGrade(
   studentId: string,
   groupId: string,
-  disciplineId: string
+  disciplineId: string,
 ): Promise<number | null> {
   const sql = `
     SELECT AVG(g.grade) as avg_grade
@@ -785,7 +785,7 @@ export async function getAverageGrade(
  */
 export async function getFinalGrades(
   groupId: string,
-  disciplineId: string
+  disciplineId: string,
 ): Promise<FinalGrade[]> {
   const sql = `
     SELECT 
@@ -812,7 +812,7 @@ export async function getFinalGrades(
 export async function getStudentFinalGrade(
   studentId: string,
   groupId: string,
-  disciplineId: string
+  disciplineId: string,
 ): Promise<FinalGrade | null> {
   const sql = `
     SELECT 
@@ -842,7 +842,7 @@ export async function getStudentFinalGrade(
  * Создать или обновить итоговую оценку
  */
 export async function upsertFinalGrade(
-  data: CreateFinalGradeInput
+  data: CreateFinalGradeInput,
 ): Promise<FinalGrade> {
   const id = uuidv4();
   const now = new Date();
@@ -851,7 +851,7 @@ export async function upsertFinalGrade(
   const stats = await getAttendanceStats(
     data.studentId,
     data.groupId,
-    data.disciplineId
+    data.disciplineId,
   );
 
   const sql = `
@@ -885,7 +885,7 @@ export async function upsertFinalGrade(
   const result = await getStudentFinalGrade(
     data.studentId,
     data.groupId,
-    data.disciplineId
+    data.disciplineId,
   );
   return result!;
 }
@@ -895,7 +895,7 @@ export async function upsertFinalGrade(
  */
 export async function updateFinalGrade(
   id: string,
-  data: UpdateFinalGradeInput
+  data: UpdateFinalGradeInput,
 ): Promise<FinalGrade | null> {
   const updates: string[] = [];
   const values: any[] = [];
@@ -965,7 +965,7 @@ export async function updateFinalGrade(
  */
 export async function recalculateAttendancePercent(
   groupId: string,
-  disciplineId: string
+  disciplineId: string,
 ): Promise<void> {
   // Получаем всех студентов группы
   const studentsSql = `
@@ -977,7 +977,7 @@ export async function recalculateAttendancePercent(
     const stats = await getAttendanceStats(
       student.student_id,
       groupId,
-      disciplineId
+      disciplineId,
     );
 
     // Обновляем или создаём запись итоговой оценки
@@ -999,6 +999,7 @@ interface JournalEventRow extends RowDataPacket {
   start_time: Date;
   end_time: Date;
   event_type: string;
+  academic_hours: number | null;
   allowed_student_ids: string | null;
   original_event_id: string | null; // ID оригинального события для пересдач
 }
@@ -1014,7 +1015,7 @@ interface JournalStudentRow extends RowDataPacket {
  */
 export async function getJournalData(
   groupId: string,
-  disciplineId: string
+  disciplineId: string,
 ): Promise<{
   events: JournalEventRow[];
   students: JournalStudentRow[];
@@ -1030,6 +1031,7 @@ export async function getJournalData(
       se.start_time, 
       se.end_time, 
       se.event_type,
+      se.academic_hours,
       se.original_event_id,
       se.allowed_student_ids
     FROM schedule_events se
@@ -1041,7 +1043,7 @@ export async function getJournalData(
     "[getJournalData] Query params - groupId:",
     groupId,
     "disciplineId:",
-    disciplineId
+    disciplineId,
   );
 
   const events = await executeQuery<JournalEventRow[]>(eventsSql, [
@@ -1063,7 +1065,7 @@ export async function getJournalData(
       "[getJournalData] All events for group:",
       allEvents.length,
       "data:",
-      JSON.stringify(allEvents.slice(0, 3))
+      JSON.stringify(allEvents.slice(0, 3)),
     );
   }
 
@@ -1093,7 +1095,7 @@ export async function getJournalData(
   `;
   const attendanceRows = await executeQuery<AttendanceRow[]>(
     attendanceSql,
-    eventIds
+    eventIds,
   );
   const attendances = attendanceRows.map(mapRowToAttendance);
 

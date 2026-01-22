@@ -30,7 +30,8 @@ export interface ScheduleEvent {
   isRecurring: boolean;
   recurrenceRule: string | null;
   notes: string | null;
-  durationMinutes?: number | null; // Чистое время пар без перерывов
+  durationMinutes?: number | null; // Полное время занятия с перерывами
+  academicHours?: number | null; // Количество академических часов (целое число)
   createdAt: Date;
   updatedAt: Date;
   // Retake fields
@@ -77,7 +78,8 @@ export interface CreateScheduleEventInput {
   classroomId?: string;
   startTime: string;
   endTime: string;
-  durationMinutes?: number; // Чистое время пар без перерывов
+  durationMinutes?: number; // Полное время занятия с перерывами
+  academicHours?: number; // Количество академических часов (целое число)
   isAllDay?: boolean;
   color?: ScheduleEventColor;
   eventType?: ScheduleEventType;
@@ -98,7 +100,8 @@ export interface UpdateScheduleEventInput {
   classroomId?: string | null;
   startTime?: string;
   endTime?: string;
-  durationMinutes?: number | null; // Чистое время пар без перерывов
+  durationMinutes?: number | null; // Полное время занятия с перерывами
+  academicHours?: number | null; // Количество академических часов (целое число)
   isAllDay?: boolean;
   color?: ScheduleEventColor;
   eventType?: ScheduleEventType;
@@ -141,6 +144,7 @@ interface ScheduleEventRow extends RowDataPacket {
   recurrence_rule: string | null;
   notes: string | null;
   duration_minutes?: number | null;
+  academic_hours?: number | null;
   created_at: Date;
   updated_at: Date;
   original_event_id?: string | null;
@@ -187,6 +191,7 @@ function mapRowToScheduleEvent(row: ScheduleEventRow): ScheduleEvent {
     recurrenceRule: row.recurrence_rule,
     notes: row.notes,
     durationMinutes: row.duration_minutes,
+    academicHours: row.academic_hours,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     originalEventId: row.original_event_id,
@@ -349,6 +354,7 @@ export async function getScheduleEvents(
       se.allowed_student_ids,
       se.original_event_id,
       se.duration_minutes,
+      se.academic_hours,
       sg.code as group_code,
       sg.is_archived as group_is_archived,
       c.name as course_name,
@@ -382,6 +388,7 @@ export async function getScheduleEventById(
       se.allowed_student_ids,
       se.original_event_id,
       se.duration_minutes,
+      se.academic_hours,
       sg.code as group_code,
       sg.is_archived as group_is_archived,
       c.name as course_name,
@@ -422,9 +429,9 @@ export async function createScheduleEvent(
   await executeQuery(
     `INSERT INTO schedule_events (
       id, title, description, group_id, discipline_id, instructor_id, classroom_id,
-      start_time, end_time, duration_minutes, is_all_day, color, event_type, is_recurring, recurrence_rule, notes,
+      start_time, end_time, duration_minutes, academic_hours, is_all_day, color, event_type, is_recurring, recurrence_rule, notes,
       allowed_student_ids, original_event_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.title,
@@ -436,6 +443,7 @@ export async function createScheduleEvent(
       startTimeMysql,
       endTimeMysql,
       data.durationMinutes || null,
+      data.academicHours || null,
       data.isAllDay || false,
       data.color || "primary",
       data.eventType || "theory",
@@ -529,6 +537,10 @@ export async function updateScheduleEvent(
   if (data.durationMinutes !== undefined) {
     updates.push("duration_minutes = ?");
     params.push(data.durationMinutes);
+  }
+  if (data.academicHours !== undefined) {
+    updates.push("academic_hours = ?");
+    params.push(data.academicHours);
   }
   if (data.allowedStudentIds !== undefined) {
     updates.push("allowed_student_ids = ?");

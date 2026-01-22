@@ -359,44 +359,16 @@
         </div>
       </div>
 
-      <!-- Время занятия -->
+      <!-- Время занятия (выбор а-ч) -->
       <div>
         <div class="flex items-center justify-between mb-2">
           <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
             Время <span class="text-danger">*</span>
           </label>
-          <div
-            class="flex rounded-lg border border-stroke dark:border-strokedark overflow-hidden"
-          >
-            <button
-              type="button"
-              @click="timeMode = 'pairs'"
-              class="px-3 py-1 text-xs font-medium transition-colors"
-              :class="[
-                timeMode === 'pairs'
-                  ? 'bg-primary text-white'
-                  : 'bg-white dark:bg-boxdark text-gray-700 dark:text-gray-300',
-              ]"
-            >
-              По а-ч
-            </button>
-            <button
-              type="button"
-              @click="timeMode = 'exact'"
-              class="px-3 py-1 text-xs font-medium transition-colors"
-              :class="[
-                timeMode === 'exact'
-                  ? 'bg-primary text-white'
-                  : 'bg-white dark:bg-boxdark text-gray-700 dark:text-gray-300',
-              ]"
-            >
-              Точное
-            </button>
-          </div>
         </div>
 
-        <!-- Режим: Пары (компактный) -->
-        <div v-if="timeMode === 'pairs'">
+        <!-- Выбор академических часов -->
+        <div>
           <div class="grid grid-cols-4 gap-1.5">
             <label
               v-for="pair in lessonPairs"
@@ -455,33 +427,8 @@
           </div>
         </div>
 
-        <!-- Режим: Точное время -->
-        <div v-else class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">Начало</label>
-            <input
-              v-model="form.startTime"
-              type="time"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2.5 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 text-sm"
-              :class="{ 'border-danger': errors.startTime }"
-            />
-          </div>
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">Окончание</label>
-            <input
-              v-model="form.endTime"
-              type="time"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2.5 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 text-sm"
-              :class="{ 'border-danger': errors.endTime }"
-            />
-          </div>
-        </div>
-
-        <p
-          v-if="errors.time || errors.startTime || errors.endTime"
-          class="mt-1 text-xs text-danger"
-        >
-          {{ errors.time || errors.startTime || errors.endTime }}
+        <p v-if="errors.time" class="mt-1 text-xs text-danger">
+          {{ errors.time }}
         </p>
 
         <!-- Предупреждение о превышении часов -->
@@ -1308,8 +1255,12 @@ const validateInstructorHours = async () => {
   }
 
   // Вычисляем продолжительность в минутах (из академических часов)
-  // computedDuration возвращает академические часы (1 ак.ч = 45 мин)
-  const durationMinutes = computedDuration.value * 45;
+  // Получаем длительность академического часа из настроек
+  const academicHourMinutes = parseInt(
+    scheduleSettings.value.academic_hour_minutes || "40",
+    10,
+  );
+  const durationMinutes = computedDuration.value * academicHourMinutes;
 
   if (durationMinutes <= 0) return;
 
@@ -1376,24 +1327,9 @@ const validate = (): boolean => {
     }
   }
 
-  if (timeMode.value === "pairs") {
-    if (selectedPairs.value.length === 0) {
-      errors.value.time = "Выберите хотя бы одну пару";
-    }
-  } else {
-    if (!form.value.startTime) {
-      errors.value.startTime = "Укажите время начала";
-    }
-    if (!form.value.endTime) {
-      errors.value.endTime = "Укажите время окончания";
-    }
-    if (
-      form.value.startTime &&
-      form.value.endTime &&
-      form.value.endTime <= form.value.startTime
-    ) {
-      errors.value.endTime = "Время окончания должно быть позже начала";
-    }
+  // Проверка выбора а-ч
+  if (selectedPairs.value.length === 0) {
+    errors.value.time = "Выберите хотя бы один а-ч";
   }
 
   if (hoursWarning.value) {
@@ -1422,12 +1358,52 @@ const getSubmitDataForGroup = (pairNumbers: number[]) => {
 
   const title = selectedDiscipline.value?.name || "Занятие";
 
-  // Вычисляем чистую длительность (количество пар × длительность одной пары)
+  // Количество академических часов = количество выбранных а-ч (напрямую!)
+  const academicHours = pairNumbers.length;
+
+  // Вычисляем полную длительность с учётом перерывов
   const periodDurationMinutes = parseInt(
     scheduleSettings.value.period_duration_minutes || "40",
     10,
   );
-  const durationMinutes = pairNumbers.length * periodDurationMinutes;
+  const shortBreakMinutes = parseInt(
+    scheduleSettings.value.short_break_minutes || "10",
+    10,
+  );
+
+  // Начальная длительность = количество а-ч × длительность одного а-ч
+  let durationMinutes = pairNumbers.length * periodDurationMinutes;
+
+  // Добавляем перерывы между последовательными а-ч
+  for (let i = 1; i < sorted.length; i++) {
+    const current = sorted[i]!;
+    const previous = sorted[i - 1]!;
+
+    // Если а-ч последовательные
+    if (current === previous + 1) {
+      const currentPeriod = lessonPairs.value.find((p) => p.number === current);
+
+      // Если текущий а-ч после большого перерыва
+      if (currentPeriod?.isAfterBreak) {
+        // Большой перерыв (обычно обед)
+        const lunchStart = scheduleSettings.value.lunch_break_start || "13:20";
+        const lunchEnd = scheduleSettings.value.lunch_break_end || "14:00";
+
+        // Вычисляем длительность большого перерыва
+        const lunchStartParts = lunchStart.split(":").map(Number);
+        const lunchEndParts = lunchEnd.split(":").map(Number);
+        const lunchDuration =
+          (lunchEndParts[0] ?? 0) * 60 +
+          (lunchEndParts[1] ?? 0) -
+          ((lunchStartParts[0] ?? 0) * 60 + (lunchStartParts[1] ?? 0));
+
+        durationMinutes += lunchDuration;
+      } else {
+        // Маленький перерыв
+        durationMinutes += shortBreakMinutes;
+      }
+    }
+  }
 
   return {
     title,
@@ -1438,7 +1414,8 @@ const getSubmitDataForGroup = (pairNumbers: number[]) => {
     classroomId: form.value.classroomId || undefined,
     startTime: startTimeStr,
     endTime: endTimeStr,
-    durationMinutes, // Чистая длительность без перерывов
+    durationMinutes, // Полная длительность с перерывами
+    academicHours, // Количество а-ч напрямую
     isAllDay: false,
     color: form.value.color,
     eventType: form.value.eventType,
@@ -1450,57 +1427,10 @@ const getSubmitDataForGroup = (pairNumbers: number[]) => {
   };
 };
 
-// Формирование данных для режима точного времени или редактирования
+// Формирование данных для отправки
 const getSubmitData = () => {
-  let startTimeStr: string;
-  let endTimeStr: string;
-
-  if (timeMode.value === "pairs" && selectedPairs.value.length > 0) {
-    // Используем все выбранные а-ч (для последовательных)
-    return getSubmitDataForGroup(selectedPairs.value);
-  } else {
-    // Режим точного времени
-    startTimeStr = toLocalISOString(form.value.date, form.value.startTime);
-    endTimeStr = toLocalISOString(form.value.date, form.value.endTime);
-  }
-
-  const title = selectedDiscipline.value?.name || "Занятие";
-
-  // Вычисляем чистую длительность для режима точного времени
-  // Парсим время начала и окончания
-  const startParts = form.value.startTime.split(":").map(Number);
-  const endParts = form.value.endTime.split(":").map(Number);
-  const startMinutes = (startParts[0] ?? 0) * 60 + (startParts[1] ?? 0);
-  const endMinutes = (endParts[0] ?? 0) * 60 + (endParts[1] ?? 0);
-  const totalMinutes = endMinutes - startMinutes;
-
-  // Вычисляем количество пар на основе общей длительности
-  const periodDurationMinutes = parseInt(
-    scheduleSettings.value.period_duration_minutes || "40",
-    10,
-  );
-  const numberOfPairs = Math.ceil(totalMinutes / periodDurationMinutes);
-  const durationMinutes = numberOfPairs * periodDurationMinutes;
-
-  return {
-    title,
-    description: form.value.description.trim() || undefined,
-    groupId: form.value.groupId,
-    disciplineId: form.value.disciplineId,
-    instructorId: form.value.instructorId,
-    classroomId: form.value.classroomId || undefined,
-    startTime: startTimeStr,
-    endTime: endTimeStr,
-    durationMinutes, // Чистая длительность без перерывов
-    isAllDay: false,
-    color: form.value.color,
-    eventType: form.value.eventType,
-    testTemplateId: form.value.testTemplateId || undefined,
-    allowedStudentIds:
-      isRetake.value && form.value.testTemplateId
-        ? form.value.allowedStudentIds
-        : undefined,
-  };
+  // Всегда используем выбранные а-ч
+  return getSubmitDataForGroup(selectedPairs.value);
 };
 
 // Отправка формы
@@ -1545,7 +1475,7 @@ const handleSubmit = async () => {
       }
     }
     // Режим создания - проверяем непоследовательные а-ч
-    else if (timeMode.value === "pairs" && hasNonConsecutivePairs.value) {
+    else if (hasNonConsecutivePairs.value) {
       // Создаём отдельные занятия для каждой группы последовательных а-ч
       console.log(
         "[Schedule] Создание нескольких занятий:",

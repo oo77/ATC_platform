@@ -36,7 +36,7 @@ interface DisciplineRow extends RowDataPacket {
 }
 
 interface UsedHoursRow extends RowDataPacket {
-  total_minutes: number;
+  total_hours: number;
 }
 
 export default defineEventHandler(async (event) => {
@@ -146,34 +146,33 @@ export default defineEventHandler(async (event) => {
         }
 
         // Получаем уже использованные часы
-        // Используем duration_minutes (чистое время без перерывов) если оно есть,
-        // иначе fallback на TIMESTAMPDIFF для обратной совместимости
+        // Используем academic_hours напрямую, если есть,
+        // иначе fallback на расчёт из минут для обратной совместимости
         const usedHoursRows = await executeQuery<UsedHoursRow[]>(
           `SELECT SUM(
-             COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time))
-           ) as total_minutes
+             COALESCE(academic_hours, CEIL(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / 40))
+           ) as total_hours
            FROM schedule_events
            WHERE group_id = ? AND discipline_id = ? AND event_type = ?`,
           [body.groupId, body.disciplineId, body.eventType],
         );
 
-        const usedMinutes = usedHoursRows[0]?.total_minutes || 0;
-
-        // Вычисляем длительность нового занятия в минутах
-        // Если передано durationMinutes (чистое время без перерывов), используем его
-        // Иначе вычисляем разницу между startTime и endTime
-        const newEventMinutes = (body as any).durationMinutes
-          ? (body as any).durationMinutes
-          : (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-
-        // Получаем длительность академического часа из настроек
-        const academicHourMinutes = await getAcademicHourMinutes();
-
-        // Вычисляем уже использованные академические часы
-        const usedAcademicHours = Math.ceil(usedMinutes / academicHourMinutes);
+        const usedAcademicHours = Number(usedHoursRows[0]?.total_hours) || 0;
 
         // Вычисляем длительность нового занятия в академических часах
-        const newEventHours = Math.ceil(newEventMinutes / academicHourMinutes);
+        // Если передано academicHours напрямую, используем его
+        // Иначе fallback на расчёт из минут
+        let newEventHours: number;
+        if ((body as any).academicHours) {
+          newEventHours = (body as any).academicHours;
+        } else {
+          // Fallback для старых клиентов
+          const newEventMinutes = (body as any).durationMinutes
+            ? (body as any).durationMinutes
+            : (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+          const academicHourMinutes = await getAcademicHourMinutes();
+          newEventHours = Math.ceil(newEventMinutes / academicHourMinutes);
+        }
 
         // Вычисляем оставшиеся часы
         const remainingHours = allocatedHours - usedAcademicHours;

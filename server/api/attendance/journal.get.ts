@@ -78,7 +78,7 @@ export default defineEventHandler(async (event) => {
       "[Journal API] Loading journal for groupId:",
       groupId,
       "disciplineId:",
-      disciplineId
+      disciplineId,
     );
 
     const data = await getJournalData(groupId, disciplineId);
@@ -87,7 +87,7 @@ export default defineEventHandler(async (event) => {
       "[Journal API] Found events:",
       data.events.length,
       "students:",
-      data.students.length
+      data.students.length,
     );
 
     // Формируем столбцы (занятия)
@@ -108,7 +108,9 @@ export default defineEventHandler(async (event) => {
             | "practice"
             | "assessment"
             | "other",
-          academicHours: calculateAcademicHours(evt.start_time, evt.end_time),
+          academicHours:
+            evt.academic_hours ||
+            calculateAcademicHours(evt.start_time, evt.end_time),
           isRetake: allowedStudentIds !== null && allowedStudentIds.length > 0,
           allowedStudentIds: allowedStudentIds,
           originalEventId: evt.original_event_id || null, // Связь с оригинальным занятием
@@ -143,11 +145,11 @@ export default defineEventHandler(async (event) => {
 
         const attendance = data.attendances.find(
           (a) =>
-            a.studentId === student.student_id && a.scheduleEventId === evt.id
+            a.studentId === student.student_id && a.scheduleEventId === evt.id,
         );
         const grade = data.grades.find(
           (g) =>
-            g.studentId === student.student_id && g.scheduleEventId === evt.id
+            g.studentId === student.student_id && g.scheduleEventId === evt.id,
         );
 
         return {
@@ -190,7 +192,7 @@ export default defineEventHandler(async (event) => {
           return sum + cell.attendance.maxHours;
         }
         const col = columns.find(
-          (c) => c.scheduleEvent.id === cell.scheduleEventId
+          (c) => c.scheduleEvent.id === cell.scheduleEventId,
         );
         return sum + (col?.scheduleEvent.academicHours || 0);
       }, 0);
@@ -225,20 +227,20 @@ export default defineEventHandler(async (event) => {
       });
 
       const gradeValues = Array.from(gradesByBaseEvent.values()).map(
-        (g) => g.grade
+        (g) => g.grade,
       );
       const averageGrade =
         gradeValues.length > 0
           ? Math.round(
               (gradeValues.reduce((a: number, b: number) => a + b, 0) /
                 gradeValues.length) *
-                100
+                100,
             ) / 100
           : undefined;
 
       // Итоговая оценка
       const finalGrade = data.finalGrades.find(
-        (fg) => fg.studentId === student.student_id
+        (fg) => fg.studentId === student.student_id,
       );
 
       return {
@@ -269,7 +271,7 @@ export default defineEventHandler(async (event) => {
           ? Math.round(
               (rows.reduce((sum: number, r) => sum + r.attendancePercent, 0) /
                 rows.length) *
-                100
+                100,
             ) / 100
           : 0,
       passedCount: data.finalGrades.filter((fg) => fg.status === "passed")
@@ -277,7 +279,7 @@ export default defineEventHandler(async (event) => {
       failedCount: data.finalGrades.filter((fg) => fg.status === "failed")
         .length,
       inProgressCount: data.finalGrades.filter(
-        (fg) => fg.status === "in_progress"
+        (fg) => fg.status === "in_progress",
       ).length,
     };
 
@@ -288,7 +290,7 @@ export default defineEventHandler(async (event) => {
       "ATTENDANCE",
       `${groupId}:${disciplineId}`,
       "Журнал посещаемости",
-      { groupId, disciplineId }
+      { groupId, disciplineId },
     );
 
     return {

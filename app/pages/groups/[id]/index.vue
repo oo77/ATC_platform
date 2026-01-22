@@ -1299,6 +1299,10 @@ const {
   isAdmin,
 } = usePermissions(); // Assuming isAdmin is available or check authStore.user.role
 
+// Получаем настройки расписания для правильного вычисления академических часов
+const { settings: scheduleSettings, loadSettings: loadScheduleSettings } =
+  useScheduleSettings();
+
 // State
 const loading = ref(true);
 const group = ref<StudyGroup | null>(null);
@@ -1369,18 +1373,29 @@ const formatFileSize = (bytes: number): string => {
 };
 
 const getAcademicHours = (event: any): number => {
-  // Используем durationMinutes для подсчета академических часов
-  // 1 академический час = 45 минут
-  if (event.durationMinutes) {
-    return Math.round(event.durationMinutes / 45);
+  // Используем academicHours напрямую, если есть
+  if (event.academicHours) {
+    return event.academicHours;
   }
-  // Если durationMinutes нет, вычисляем из разницы времени
+
+  // Fallback для старых записей: расчёт из durationMinutes
+  const academicHourMinutes = parseInt(
+    scheduleSettings.value.academic_hour_minutes || "40",
+    10,
+  );
+
+  if (event.durationMinutes) {
+    return Math.ceil(event.durationMinutes / academicHourMinutes);
+  }
+
+  // Последний fallback: расчёт из разницы времени
   if (event.startTime && event.endTime) {
     const start = new Date(event.startTime);
     const end = new Date(event.endTime);
     const diffMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-    return Math.round(diffMinutes / 45);
+    return Math.ceil(diffMinutes / academicHourMinutes);
   }
+
   return 0;
 };
 
@@ -1521,20 +1536,31 @@ const totalProgramHours = computed(() => {
 
 const totalScheduledHours = computed(() => {
   const total = scheduleEvents.value.reduce((sum, event) => {
-    // Используем durationMinutes для подсчета академических часов
-    // 1 академический час = 45 минут
-    if (event.durationMinutes) {
-      return sum + Math.round(event.durationMinutes / 45);
+    // Используем academicHours напрямую, если есть
+    if (event.academicHours) {
+      return sum + event.academicHours;
     }
-    // Если durationMinutes нет, вычисляем из разницы времени
+
+    // Fallback для старых записей: расчёт из durationMinutes
+    const academicHourMinutes = parseInt(
+      scheduleSettings.value.academic_hour_minutes || "40",
+      10,
+    );
+
+    if (event.durationMinutes) {
+      return sum + Math.ceil(event.durationMinutes / academicHourMinutes);
+    }
+
+    // Последний fallback: расчёт из разницы времени
     if (event.startTime && event.endTime) {
       const start = new Date(event.startTime);
       const end = new Date(event.endTime);
       const diffMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-      return sum + Math.round(diffMinutes / 45);
+      return sum + Math.ceil(diffMinutes / academicHourMinutes);
     }
     return sum;
   }, 0);
+
   console.log("[totalScheduledHours] Всего запланировано часов:", total);
   return total;
 });
@@ -1925,6 +1951,7 @@ const handleReportUploaded = () => {
 };
 
 onMounted(() => {
+  loadScheduleSettings(); // Загружаем настройки расписания
   loadGroup();
 });
 </script>

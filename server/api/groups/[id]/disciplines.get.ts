@@ -4,7 +4,6 @@
  */
 
 import { executeQuery } from "../../../utils/db";
-import { getAcademicHourMinutes } from "../../../utils/academicHours";
 import type { RowDataPacket } from "mysql2/promise";
 
 interface DisciplineRow extends RowDataPacket {
@@ -30,7 +29,7 @@ interface DisciplineInstructorRow extends RowDataPacket {
 interface UsedHoursRow extends RowDataPacket {
   discipline_id: string;
   event_type: string;
-  total_minutes: number;
+  total_hours: number;
 }
 
 interface GroupRow extends RowDataPacket {
@@ -111,13 +110,13 @@ export default defineEventHandler(async (event) => {
     );
 
     // Получаем использованные часы по всем занятиям этой группы
-    // Используем duration_minutes (чистое время без перерывов) если оно есть,
-    // иначе fallback на TIMESTAMPDIFF для обратной совместимости
+    // Используем academic_hours напрямую, если есть,
+    // иначе fallback на расчёт из времени для обратной совместимости
     const usedHoursRows = await executeQuery<UsedHoursRow[]>(
       `SELECT 
         discipline_id,
         event_type,
-        SUM(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time))) as total_minutes
+        SUM(COALESCE(academic_hours, CEIL(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / 40))) as total_hours
       FROM schedule_events
       WHERE group_id = ? AND discipline_id IN (${placeholders})
       GROUP BY discipline_id, event_type`,
@@ -146,8 +145,8 @@ export default defineEventHandler(async (event) => {
       instructorsByDiscipline.set(row.discipline_id, list);
     }
 
-    // Группируем использованные часы по дисциплинам и типам (в минутах)
-    const usedMinutesByDiscipline = new Map<
+    // Группируем использованные часы по дисциплинам и типам
+    const usedHoursByDiscipline = new Map<
       string,
       {
         theory: number;
@@ -157,38 +156,30 @@ export default defineEventHandler(async (event) => {
     >();
 
     for (const row of usedHoursRows) {
-      const minutes = usedMinutesByDiscipline.get(row.discipline_id) || {
+      const hours = usedHoursByDiscipline.get(row.discipline_id) || {
         theory: 0,
         practice: 0,
         assessment: 0,
       };
 
-      // Сохраняем минуты как есть, без округления
+      // Сохраняем часы напрямую
       if (row.event_type === "theory") {
-        minutes.theory = row.total_minutes;
+        hours.theory = Number(row.total_hours) || 0;
       } else if (row.event_type === "practice") {
-        minutes.practice = row.total_minutes;
+        hours.practice = Number(row.total_hours) || 0;
       } else if (row.event_type === "assessment") {
-        minutes.assessment = row.total_minutes;
+        hours.assessment = Number(row.total_hours) || 0;
       }
 
-      usedMinutesByDiscipline.set(row.discipline_id, minutes);
+      usedHoursByDiscipline.set(row.discipline_id, hours);
     }
 
     // Формируем результат
-    const academicHourMinutes = await getAcademicHourMinutes();
     const disciplines = disciplineRows.map((row) => {
-      const usedMinutes = usedMinutesByDiscipline.get(row.id) || {
+      const usedHours = usedHoursByDiscipline.get(row.id) || {
         theory: 0,
         practice: 0,
         assessment: 0,
-      };
-
-      // Переводим минуты в академические часы
-      const usedHours = {
-        theory: Math.ceil(usedMinutes.theory / academicHourMinutes),
-        practice: Math.ceil(usedMinutes.practice / academicHourMinutes),
-        assessment: Math.ceil(usedMinutes.assessment / academicHourMinutes),
       };
 
       return {

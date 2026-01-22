@@ -625,6 +625,8 @@ const transformEventForCalendar = (event: ScheduleEvent): EventInput => {
       isRetake: isRetake,
       allowedStudentIds: event.allowedStudentIds,
       originalEventId: event.originalEventId,
+      academicHours: event.academicHours,
+      durationMinutes: event.durationMinutes,
     },
   };
 };
@@ -777,7 +779,8 @@ const onEventDrop = async (info: EventDropArg) => {
           classroomId: event.classroomId,
           startTime: newStartTime,
           endTime: newEndTime,
-          durationMinutes, // Передаем чистую длительность без перерывов
+          durationMinutes, // Передаем чистую длительность без перерывов (fallback)
+          academicHours: event.academicHours, // Передаем количество а-ч напрямую
           isAllDay: event.isAllDay,
           color: event.color,
           eventType: event.eventType,
@@ -829,7 +832,8 @@ const onEventDrop = async (info: EventDropArg) => {
             : dateToLocalIsoString(
                 new Date(info.event.start!.getTime() + 60 * 60 * 1000),
               ),
-          durationMinutes, // Передаем чистую длительность без перерывов
+          durationMinutes, // Передаем чистую длительность без перерывов (fallback)
+          academicHours: event.academicHours, // Передаем количество а-ч напрямую
         },
       });
 
@@ -890,7 +894,8 @@ const onEventResize = async (info: EventResizeDoneArg) => {
         endTime: info.event.end
           ? dateToLocalIsoString(info.event.end)
           : undefined,
-        durationMinutes, // Передаем чистую длительность без перерывов
+        durationMinutes, // Передаем чистую длительность без перерывов (fallback)
+        academicHours: numberOfPairs, // Передаем рассчитанное количество а-ч
       },
     });
 
