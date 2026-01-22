@@ -1032,7 +1032,7 @@
                           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                         />
                       </svg>
-                      <span>{{ formatDate(event.date) }}</span>
+                      <span>{{ formatDate(event.startTime) }}</span>
                     </div>
                     <div class="flex items-center gap-1.5">
                       <svg
@@ -1083,7 +1083,7 @@
                       <span>{{ event.classroom.name || event.classroom }}</span>
                     </div>
                     <div
-                      v-if="event.academicHours"
+                      v-if="getAcademicHours(event) > 0"
                       class="flex items-center gap-1.5"
                     >
                       <svg
@@ -1100,7 +1100,7 @@
                         />
                       </svg>
                       <span class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
-                        {{ event.academicHours }} а-ч
+                        {{ getAcademicHours(event) }} а-ч
                       </span>
                     </div>
                   </div>
@@ -1340,6 +1340,21 @@ const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+
+const getAcademicHours = (event: any): number => {
+  // Используем durationMinutes для подсчета академических часов
+  // 1 академический час = 45 минут
+  if (event.durationMinutes) {
+    return Math.round(event.durationMinutes / 45);
+  }
+  // Если durationMinutes нет, вычисляем из разницы времени
+  if (event.startTime && event.endTime) {
+    const start = new Date(event.startTime);
+    const end = new Date(event.endTime);
+    const diffMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+    return Math.round(diffMinutes / 45);
+  }
+  return 0;
 };
 
 const getStudentAttendance = (studentId: string): number => {
@@ -1477,10 +1492,25 @@ const totalProgramHours = computed(() => {
   return group.value?.course?.totalHours || 0;
 });
 
+
 const totalScheduledHours = computed(() => {
-  return scheduleEvents.value.reduce((sum, event) => {
-    return sum + (event.academicHours || 0);
+  const total = scheduleEvents.value.reduce((sum, event) => {
+    // Используем durationMinutes для подсчета академических часов
+    // 1 академический час = 45 минут
+    if (event.durationMinutes) {
+      return sum + Math.round(event.durationMinutes / 45);
+    }
+    // Если durationMinutes нет, вычисляем из разницы времени
+    if (event.startTime && event.endTime) {
+      const start = new Date(event.startTime);
+      const end = new Date(event.endTime);
+      const diffMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+      return sum + Math.round(diffMinutes / 45);
+    }
+    return sum;
   }, 0);
+  console.log('[totalScheduledHours] Всего запланировано часов:', total);
+  return total;
 });
 
 const hoursProgress = computed(() => {
