@@ -620,7 +620,7 @@ const loadCourses = async () => {
       "/api/courses",
       {
         params: { limit: 1000, isActive: true },
-      }
+      },
     );
 
     if (response.success && response.courses) {
@@ -659,19 +659,6 @@ const handleGroupCreated = () => {
 };
 
 const formatDate = (date: string | Date): string => {
-  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}/.test(date)) {
-    const datePart = date.split("T")[0];
-    const parts = datePart?.split("-").map(Number);
-    if (parts && parts.length >= 3) {
-      const [year, month, day] = parts as [number, number, number];
-      const d = new Date(year, month - 1, day);
-      return d.toLocaleDateString("ru-RU", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-    }
-  }
   const d = new Date(date);
   return d.toLocaleDateString("ru-RU", {
     day: "2-digit",
