@@ -785,7 +785,13 @@ export async function checkStudentEligibility(
   // Исключаем перездачи, к которым студент не допущен
   const [scheduledStats] = await executeQuery<RowDataPacket[]>(
     `SELECT 
-       COALESCE(SUM(TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / ?), 0) as scheduled_hours,
+       COALESCE(SUM(
+         CASE 
+           WHEN se.academic_hours IS NOT NULL THEN se.academic_hours
+           WHEN se.duration_minutes IS NOT NULL THEN se.duration_minutes / ?
+           ELSE TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / ?
+         END
+       ), 0) as scheduled_hours,
        COUNT(*) as total_events
      FROM schedule_events se
      WHERE se.group_id = ?
@@ -793,7 +799,12 @@ export async function checkStudentEligibility(
          se.allowed_student_ids IS NULL 
          OR JSON_CONTAINS(se.allowed_student_ids, ?)
        )`,
-    [academicHourMinutes, groupId, JSON.stringify(studentId)],
+    [
+      academicHourMinutes,
+      academicHourMinutes,
+      groupId,
+      JSON.stringify(studentId),
+    ],
   );
 
   // DEBUG: Логирование для отладки
@@ -802,7 +813,11 @@ export async function checkStudentEligibility(
        se.id,
        se.title,
        se.allowed_student_ids,
-       TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / ? as hours,
+       CASE 
+         WHEN se.academic_hours IS NOT NULL THEN se.academic_hours
+         WHEN se.duration_minutes IS NOT NULL THEN se.duration_minutes / ?
+         ELSE TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / ?
+       END as hours,
        CASE 
          WHEN se.allowed_student_ids IS NULL THEN 'regular'
          WHEN JSON_CONTAINS(se.allowed_student_ids, ?) THEN 'retake_for_student'
@@ -810,7 +825,12 @@ export async function checkStudentEligibility(
        END as event_type
      FROM schedule_events se
      WHERE se.group_id = ?`,
-    [academicHourMinutes, JSON.stringify(studentId), groupId],
+    [
+      academicHourMinutes,
+      academicHourMinutes,
+      JSON.stringify(studentId),
+      groupId,
+    ],
   );
 
   console.log(`[Eligibility DEBUG] Student ${studentId}:`);

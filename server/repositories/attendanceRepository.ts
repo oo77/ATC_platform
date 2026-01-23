@@ -1115,12 +1115,18 @@ export async function getJournalData(
 
 /**
  * Рассчитать количество академических часов между двумя временами
- * 1 академический час = 45 минут
+ * @param startTime - время начала
+ * @param endTime - время окончания
+ * @param academicHourMinutes - длительность академического часа в минутах (по умолчанию 40)
  */
-export function calculateAcademicHours(startTime: Date, endTime: Date): number {
+export function calculateAcademicHours(
+  startTime: Date,
+  endTime: Date,
+  academicHourMinutes: number = 40,
+): number {
   const diffMs = endTime.getTime() - startTime.getTime();
   const diffMinutes = diffMs / (1000 * 60);
-  const academicHours = diffMinutes / 45;
+  const academicHours = diffMinutes / academicHourMinutes;
 
   // Округляем до 0.5
   return Math.round(academicHours * 2) / 2;

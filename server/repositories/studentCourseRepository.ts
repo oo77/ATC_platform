@@ -2,15 +2,15 @@
  * Репозиторий для работы с курсами студента
  */
 
-import { executeQuery } from '../utils/db';
-import type { RowDataPacket } from 'mysql2/promise';
+import { executeQuery } from "../utils/db";
+import type { RowDataPacket } from "mysql2/promise";
 
 export interface StudentCourse {
   group_id: string;
   course_id: string;
   course_name: string;
   group_name: string;
-  status: 'active' | 'completed' | 'dropped';
+  status: "active" | "completed" | "dropped";
   start_date: Date;
   end_date: Date;
   teacher_name: string | null;
@@ -25,8 +25,8 @@ export interface CourseScheduleItem {
   description: string | null;
   start_time: Date;
   end_time: Date;
-  event_type: 'theory' | 'practice' | 'assessment' | 'other';
-  attendance_status: 'present' | 'absent' | 'late' | 'excused' | null;
+  event_type: "theory" | "practice" | "assessment" | "other";
+  attendance_status: "present" | "absent" | "late" | "excused" | null;
   grade: number | null;
   max_grade: number | null;
 }
@@ -53,23 +53,70 @@ interface StudentCourseRow extends RowDataPacket {
 /**
  * Получение ID студента по User ID
  */
-export async function getStudentIdByUserId(userId: string): Promise<string | null> {
+export async function getStudentIdByUserId(
+  userId: string,
+): Promise<string | null> {
+  console.log("[StudentCourseRepo] Looking for student_id for user:", userId);
+
+  // 1. Попытка найти по students.user_id
   const rows = await executeQuery<RowDataPacket[]>(
-    'SELECT id FROM students WHERE user_id = ? LIMIT 1',
-    [userId]
+    "SELECT id FROM students WHERE user_id = ? LIMIT 1",
+    [userId],
   );
-  return rows.length > 0 ? rows[0].id : null;
+  console.log(
+    "[StudentCourseRepo] Query students.user_id result:",
+    rows.length > 0 ? rows[0].id : "NOT FOUND",
+  );
+  if (rows.length > 0) {
+    console.log(
+      "[StudentCourseRepo] ✓ Found student_id via students.user_id:",
+      rows[0].id,
+    );
+    return rows[0].id;
+  }
+
+  // 2. Fallback: Попытка найти по users.student_id (если связь установлена со стороны пользователя)
+  try {
+    const userRows = await executeQuery<RowDataPacket[]>(
+      "SELECT student_id FROM users WHERE id = ? LIMIT 1",
+      [userId],
+    );
+    console.log(
+      "[StudentCourseRepo] Query users.student_id result:",
+      userRows.length > 0 ? userRows[0].student_id : "NOT FOUND",
+    );
+    if (userRows.length > 0 && userRows[0].student_id) {
+      console.log(
+        "[StudentCourseRepo] ✓ Found student_id via users.student_id:",
+        userRows[0].student_id,
+      );
+      return userRows[0].student_id;
+    }
+  } catch (e) {
+    // Игнорируем ошибку, если поля student_id нет в таблице users (для старых миграций)
+    console.warn("Failed to check users.student_id:", e);
+  }
+
+  console.error("[StudentCourseRepo] ✗ No student_id found for user:", userId);
+  return null;
 }
 
 /**
  * Получение списка курсов студента с деталями
  */
-export async function getStudentCourses(userId: string): Promise<StudentCourse[]> {
+export async function getStudentCourses(
+  userId: string,
+): Promise<StudentCourse[]> {
   const studentId = await getStudentIdByUserId(userId);
 
   if (!studentId) {
+    console.log(
+      "[StudentCourseRepo] No studentId found, returning empty array",
+    );
     return [];
   }
+
+  console.log("[StudentCourseRepo] Fetching courses for studentId:", studentId);
 
   // Оптимизированный запрос: включаем подсчёт посещаемости в основной запрос
   // ВАЖНО: sg.code вместо sg.name, instructor берём из schedule_events или первого занятия
@@ -99,13 +146,14 @@ export async function getStudentCourses(userId: string): Promise<StudentCourse[]
     JOIN study_group_students sgs ON s.id = sgs.student_id
     JOIN study_groups sg ON sgs.group_id = sg.id
     JOIN courses c ON sg.course_id = c.id
-    WHERE s.user_id = ?
+    WHERE s.id = ?
     ORDER BY sg.start_date DESC
   `;
 
-  const rows = await executeQuery<any[]>(query, [studentId, userId]);
+  const rows = await executeQuery<any[]>(query, [studentId, studentId]);
+  console.log("[StudentCourseRepo] Query returned", rows.length, "courses");
 
-  return rows.map(row => {
+  return rows.map((row) => {
     let progress = 0;
     if (row.total_lessons > 0) {
       progress = Math.round((row.attended_lessons / row.total_lessons) * 100);
@@ -122,7 +170,7 @@ export async function getStudentCourses(userId: string): Promise<StudentCourse[]
       teacher_name: row.teacher_name || null,
       progress,
       total_lessons: row.total_lessons,
-      attended_lessons: row.attended_lessons
+      attended_lessons: row.attended_lessons,
     };
   });
 }
@@ -130,7 +178,10 @@ export async function getStudentCourses(userId: string): Promise<StudentCourse[]
 /**
  * Получение детальной информации о курсе
  */
-export async function getStudentCourseDetails(userId: string, groupId: string): Promise<StudentCourseDetails | null> {
+export async function getStudentCourseDetails(
+  userId: string,
+  groupId: string,
+): Promise<StudentCourseDetails | null> {
   const studentId = await getStudentIdByUserId(userId);
   if (!studentId) return null;
 
@@ -155,11 +206,14 @@ export async function getStudentCourseDetails(userId: string, groupId: string): 
     JOIN study_group_students sgs ON s.id = sgs.student_id
     JOIN study_groups sg ON sgs.group_id = sg.id
     JOIN courses c ON sg.course_id = c.id
-    WHERE s.user_id = ? AND sg.id = ?
+    WHERE s.id = ? AND sg.id = ?
     LIMIT 1
   `;
 
-  const courseRows = await executeQuery<StudentCourseRow[]>(courseQuery, [userId, groupId]);
+  const courseRows = await executeQuery<StudentCourseRow[]>(courseQuery, [
+    studentId,
+    groupId,
+  ]);
 
   if (courseRows.length === 0) return null;
 
@@ -172,7 +226,10 @@ export async function getStudentCourseDetails(userId: string, groupId: string): 
     JOIN schedule_events se ON a.schedule_event_id = se.id
     WHERE a.student_id = ? AND se.group_id = ? AND a.hours_attended > 0
   `;
-  const attRows = await executeQuery<RowDataPacket[]>(attendanceCountQuery, [studentId, groupId]);
+  const attRows = await executeQuery<RowDataPacket[]>(attendanceCountQuery, [
+    studentId,
+    groupId,
+  ]);
   const attendedCount = attRows[0]?.count || 0;
 
   let progress = 0;
@@ -191,7 +248,7 @@ export async function getStudentCourseDetails(userId: string, groupId: string): 
     teacher_name: courseRow.teacher_name || null,
     progress,
     total_lessons: courseRow.total_lessons,
-    attended_lessons: attendedCount
+    attended_lessons: attendedCount,
   };
 
   // 2. Получаем расписание с оценками и посещаемостью
@@ -224,9 +281,13 @@ export async function getStudentCourseDetails(userId: string, groupId: string): 
   `;
 
   try {
-    const scheduleRows = await executeQuery<any[]>(scheduleQuery, [studentId, studentId, groupId]);
+    const scheduleRows = await executeQuery<any[]>(scheduleQuery, [
+      studentId,
+      studentId,
+      groupId,
+    ]);
 
-    const schedule: CourseScheduleItem[] = scheduleRows.map(row => ({
+    const schedule: CourseScheduleItem[] = scheduleRows.map((row) => ({
       id: row.id,
       title: row.title,
       description: row.description,
@@ -235,15 +296,18 @@ export async function getStudentCourseDetails(userId: string, groupId: string): 
       event_type: row.event_type,
       attendance_status: row.attendance_status,
       grade: row.grade,
-      max_grade: row.max_grade
+      max_grade: row.max_grade,
     }));
 
     return {
       info: courseInfo,
-      schedule
+      schedule,
     };
   } catch (e: any) {
-    console.warn('Failed to fetch grades/attendance with simple join, trying without grades:', e.message);
+    console.warn(
+      "Failed to fetch grades/attendance with simple join, trying without grades:",
+      e.message,
+    );
     // Fallback query without grades table if it doesn't match assumptions
     const scheduleQuerySimple = `
         SELECT 
@@ -264,9 +328,12 @@ export async function getStudentCourseDetails(userId: string, groupId: string): 
         WHERE se.group_id = ?
         ORDER BY se.start_time ASC
       `;
-    const scheduleRows = await executeQuery<any[]>(scheduleQuerySimple, [studentId, groupId]);
+    const scheduleRows = await executeQuery<any[]>(scheduleQuerySimple, [
+      studentId,
+      groupId,
+    ]);
 
-    const schedule: CourseScheduleItem[] = scheduleRows.map(row => ({
+    const schedule: CourseScheduleItem[] = scheduleRows.map((row) => ({
       id: row.id,
       title: row.title,
       description: row.description,
@@ -275,12 +342,12 @@ export async function getStudentCourseDetails(userId: string, groupId: string): 
       event_type: row.event_type,
       attendance_status: row.attendance_status,
       grade: null,
-      max_grade: null
+      max_grade: null,
     }));
 
     return {
       info: courseInfo,
-      schedule
+      schedule,
     };
   }
 }
@@ -314,7 +381,10 @@ export async function getStudentDashboardStats(userId: string) {
     ORDER BY se.start_time ASC
     LIMIT 3
   `;
-  const upcomingEvents = await executeQuery<any[]>(upcomingEventsQuery, [studentId, now]);
+  const upcomingEvents = await executeQuery<any[]>(upcomingEventsQuery, [
+    studentId,
+    now,
+  ]);
 
   // 2. Активные курсы с прогрессом (оптимизированный запрос без N+1)
   const activeCoursesQuery = `
@@ -330,13 +400,18 @@ export async function getStudentDashboardStats(userId: string) {
     JOIN courses c ON sg.course_id = c.id
     WHERE sgs.student_id = ? AND sg.end_date >= NOW()
   `;
-  const activeCourses = await executeQuery<any[]>(activeCoursesQuery, [now, studentId]);
+  const activeCourses = await executeQuery<any[]>(activeCoursesQuery, [
+    now,
+    studentId,
+  ]);
 
   // Вычисляем прогресс для каждого курса
-  const coursesWithProgress = activeCourses.map(course => {
+  const coursesWithProgress = activeCourses.map((course) => {
     let progress = 0;
     if (course.total_lessons > 0) {
-      progress = Math.round((course.passed_lessons / course.total_lessons) * 100);
+      progress = Math.round(
+        (course.passed_lessons / course.total_lessons) * 100,
+      );
     }
     return { ...course, progress };
   });
@@ -364,7 +439,12 @@ export async function getStudentDashboardStats(userId: string) {
       ORDER BY ta.end_date ASC
       LIMIT 3
     `;
-    upcomingDeadlines = await executeQuery<any[]>(deadlinesQuery, [studentId, studentId, now, now]);
+    upcomingDeadlines = await executeQuery<any[]>(deadlinesQuery, [
+      studentId,
+      studentId,
+      now,
+      now,
+    ]);
   } catch (e) {
     // Таблица не существует или ошибка - игнорируем
   }
@@ -398,7 +478,6 @@ export async function getStudentDashboardStats(userId: string) {
     upcomingEvents,
     activeCourses: coursesWithProgress,
     upcomingDeadlines,
-    recentGrades
+    recentGrades,
   };
 }
-

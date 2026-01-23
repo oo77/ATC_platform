@@ -166,11 +166,16 @@ export default defineEventHandler(async (event) => {
         // иначе fallback на расчёт из минут для обратной совместимости
         const usedHoursRows = await executeQuery<UsedHoursRow[]>(
           `SELECT SUM(
-             COALESCE(academic_hours, CEIL(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / 40))
+             COALESCE(academic_hours, CEIL(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / ?))
            ) as total_hours
            FROM schedule_events
            WHERE group_id = ? AND discipline_id = ? AND event_type = ?`,
-          [body.groupId, body.disciplineId, body.eventType],
+          [
+            academicHourMinutes,
+            body.groupId,
+            body.disciplineId,
+            body.eventType,
+          ],
         );
 
         const usedAcademicHours = Number(usedHoursRows[0]?.total_hours) || 0;

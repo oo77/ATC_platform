@@ -186,13 +186,20 @@ export default defineEventHandler(async (event) => {
         // Получаем уже использованные часы (исключая текущее событие)
         // Используем academic_hours напрямую, если есть,
         // иначе fallback на расчёт из минут для обратной совместимости
+        const academicHourMinutesForQuery = await getAcademicHourMinutes();
         const usedHoursRows = await executeQuery<UsedHoursRow[]>(
           `SELECT SUM(
-             COALESCE(academic_hours, CEIL(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / 40))
+             COALESCE(academic_hours, CEIL(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / ?))
            ) as total_hours
            FROM schedule_events
            WHERE group_id = ? AND discipline_id = ? AND event_type = ? AND id != ?`,
-          [finalGroupId, finalDisciplineId, finalEventType, id],
+          [
+            academicHourMinutesForQuery,
+            finalGroupId,
+            finalDisciplineId,
+            finalEventType,
+            id,
+          ],
         );
 
         const usedAcademicHours = Number(usedHoursRows[0]?.total_hours) || 0;

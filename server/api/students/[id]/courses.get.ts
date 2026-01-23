@@ -1,5 +1,4 @@
 import { executeQuery } from "../../../utils/db";
-import { getStudentCourses } from "../../../repositories/studentCourseRepository";
 
 /**
  * GET /api/students/[id]/courses
@@ -12,7 +11,7 @@ export default defineEventHandler(async (event) => {
   // Логирование запроса
   console.log(
     `[API] GET /api/students/${studentId}/courses - Requested by user:`,
-    user?.id
+    user?.id,
   );
 
   if (!user) {
@@ -26,7 +25,7 @@ export default defineEventHandler(async (event) => {
   // Проверка прав доступа (только администраторы и модераторы)
   if (!["ADMIN", "MANAGER"].includes(user.role)) {
     console.error(
-      `[API] Access denied for user ${user.id} with role ${user.role}`
+      `[API] Access denied for user ${user.id} with role ${user.role}`,
     );
     throw createError({
       statusCode: 403,
@@ -43,10 +42,10 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // Получаем user_id студента по student_id
+    // Проверяем существование студента
     const studentData = await executeQuery<any[]>(
-      "SELECT user_id FROM students WHERE id = ? LIMIT 1",
-      [studentId]
+      "SELECT id, full_name FROM students WHERE id = ? LIMIT 1",
+      [studentId],
     );
 
     if (studentData.length === 0) {
@@ -57,16 +56,73 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const userId = studentData[0].user_id;
-
-    // Получаем курсы студента
-    const courses = await getStudentCourses(userId);
-
     console.log(
-      `[API] Successfully retrieved ${courses.length} courses for student ${studentId} (user ${userId})`
+      `[API] Fetching courses for student: ${studentData[0].full_name} (${studentId})`,
     );
 
-    return courses;
+    // Получаем курсы студента напрямую по student_id
+    const query = `
+      SELECT 
+        sg.id as group_id, 
+        c.id as course_id, 
+        c.name as course_name, 
+        sg.code as group_name,
+        CASE 
+          WHEN sg.end_date < NOW() THEN 'completed' 
+          ELSE 'active' 
+        END as status,
+        sg.start_date,
+        sg.end_date,
+        (SELECT i.full_name FROM schedule_events se 
+          JOIN instructors i ON se.instructor_id = i.id 
+          WHERE se.group_id = sg.id LIMIT 1) as teacher_name,
+        (SELECT COUNT(*) FROM schedule_events se WHERE se.group_id = sg.id) as total_lessons,
+        COALESCE((
+          SELECT COUNT(*) 
+          FROM attendance a
+          JOIN schedule_events se ON a.schedule_event_id = se.id
+          WHERE a.student_id = ? AND se.group_id = sg.id AND a.hours_attended > 0
+        ), 0) as attended_lessons
+      FROM students s
+      JOIN study_group_students sgs ON s.id = sgs.student_id
+      JOIN study_groups sg ON sgs.group_id = sg.id
+      JOIN courses c ON sg.course_id = c.id
+      WHERE s.id = ?
+      ORDER BY sg.start_date DESC
+    `;
+
+    const rows = await executeQuery<any[]>(query, [studentId, studentId]);
+
+    // Вычисляем прогресс для каждого курса
+    const courses = rows.map((row) => {
+      let progress = 0;
+      if (row.total_lessons > 0) {
+        progress = Math.round((row.attended_lessons / row.total_lessons) * 100);
+      }
+
+      return {
+        group_id: row.group_id,
+        course_id: row.course_id,
+        course_name: row.course_name,
+        group_name: row.group_name,
+        status: row.status,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        teacher_name: row.teacher_name || null,
+        progress,
+        total_lessons: row.total_lessons,
+        attended_lessons: row.attended_lessons,
+      };
+    });
+
+    console.log(
+      `[API] Successfully retrieved ${courses.length} courses for student ${studentId}`,
+    );
+
+    return {
+      success: true,
+      courses,
+    };
   } catch (error: any) {
     console.error("[API] Failed to get student courses:", error);
     throw createError({

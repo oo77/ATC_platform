@@ -7,6 +7,7 @@ import {
   getJournalData,
   calculateAcademicHours,
 } from "../../repositories/attendanceRepository";
+import { getAcademicHourMinutes } from "../../utils/academicHours";
 import { logActivity } from "../../utils/activityLogger";
 import type { RowDataPacket } from "mysql2/promise";
 
@@ -83,6 +84,9 @@ export default defineEventHandler(async (event) => {
 
     const data = await getJournalData(groupId, disciplineId);
 
+    // Получаем длительность академического часа из настроек
+    const academicHourMinutes = await getAcademicHourMinutes();
+
     console.log(
       "[Journal API] Found events:",
       data.events.length,
@@ -110,7 +114,11 @@ export default defineEventHandler(async (event) => {
             | "other",
           academicHours:
             evt.academic_hours ||
-            calculateAcademicHours(evt.start_time, evt.end_time),
+            calculateAcademicHours(
+              evt.start_time,
+              evt.end_time,
+              academicHourMinutes,
+            ),
           isRetake: allowedStudentIds !== null && allowedStudentIds.length > 0,
           allowedStudentIds: allowedStudentIds,
           originalEventId: evt.original_event_id || null, // Связь с оригинальным занятием

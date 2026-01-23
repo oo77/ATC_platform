@@ -1,5 +1,5 @@
 <template>
-  <UiModal :is-open="isOpen" @close="$emit('close')" size="large">
+  <UiModal :is-open="isOpen" @close="$emit('close')" size="lg">
     <template #header>
       <div class="flex items-center gap-3">
         <div
@@ -258,7 +258,7 @@ const formatDate = (date: Date | string): string => {
 
 const calculateDuration = (
   startDate: Date | string,
-  endDate: Date | string
+  endDate: Date | string,
 ): string => {
   const start = new Date(startDate);
   const end = new Date(endDate);

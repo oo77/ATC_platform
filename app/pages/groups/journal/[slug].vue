@@ -474,6 +474,29 @@
               </svg>
               Оценка всем
             </UiButton>
+
+            <!-- Кнопка массовых итоговых оценок -->
+            <UiButton
+              variant="secondary"
+              size="sm"
+              :disabled="rows.length === 0"
+              @click="openBulkFinalGradeModal"
+            >
+              <svg
+                class="w-4 h-4 mr-1"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                />
+              </svg>
+              Итоговые оценки
+            </UiButton>
           </div>
         </div>
 
@@ -1001,6 +1024,193 @@
       </div>
     </UiModal>
 
+    <!-- Модальное окно массового выставления итоговых оценок -->
+    <UiModal
+      :is-open="showBulkFinalGradeModal"
+      title="Массовое выставление итоговых оценок"
+      size="lg"
+      @close="showBulkFinalGradeModal = false"
+    >
+      <div class="space-y-4">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Выставить итоговые оценки всем слушателям по дисциплине
+          <span class="font-medium text-gray-900 dark:text-white">{{
+            disciplineName
+          }}</span>
+        </p>
+
+        <!-- Режим выставления -->
+        <div class="space-y-3">
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Режим выставления
+          </label>
+
+          <div class="space-y-2">
+            <label
+              class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+              :class="
+                bulkFinalGradeMode === 'average'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+              "
+            >
+              <input
+                v-model="bulkFinalGradeMode"
+                type="radio"
+                value="average"
+                class="mt-0.5"
+              />
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white">
+                  По средней оценке
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Итоговая оценка = средняя оценка за занятия. Статус
+                  определяется автоматически.
+                </p>
+              </div>
+            </label>
+
+            <label
+              class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
+              :class="
+                bulkFinalGradeMode === 'custom'
+                  ? 'border-primary bg-primary/5'
+                  : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+              "
+            >
+              <input
+                v-model="bulkFinalGradeMode"
+                type="radio"
+                value="custom"
+                class="mt-0.5"
+              />
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white">
+                  Единая оценка всем
+                </p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Выставить одинаковую оценку всем слушателям.
+                </p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Единая оценка (если выбран режим custom) -->
+        <div v-if="bulkFinalGradeMode === 'custom'" class="space-y-2">
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Оценка для всех (0-100)
+          </label>
+          <input
+            v-model.number="bulkFinalGradeValue"
+            type="number"
+            min="0"
+            max="100"
+            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-boxdark px-4 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+          />
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="grade in [100, 90, 80, 70, 60]"
+              :key="grade"
+              class="px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors"
+              :class="
+                bulkFinalGradeValue === grade
+                  ? 'bg-primary text-white border-primary'
+                  : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+              "
+              @click="bulkFinalGradeValue = grade"
+            >
+              {{ grade }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Порог прохождения -->
+        <div class="space-y-2">
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Порог для статуса "Сдано" (%)
+          </label>
+          <div class="flex items-center gap-3">
+            <input
+              v-model.number="bulkFinalGradeThreshold"
+              type="number"
+              min="0"
+              max="100"
+              class="w-24 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-boxdark px-3 py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+            />
+            <span class="text-sm text-gray-500 dark:text-gray-400">
+              Оценка ≥ {{ bulkFinalGradeThreshold }} → "Сдано", иначе → "Не
+              сдано"
+            </span>
+          </div>
+        </div>
+
+        <!-- Предпросмотр -->
+        <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+          <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Предпросмотр ({{ rows.length }} слушателей)
+          </h4>
+          <div
+            class="max-h-48 overflow-y-auto bg-gray-50 dark:bg-gray-800 rounded-lg p-3"
+          >
+            <div class="space-y-2">
+              <div
+                v-for="row in rows"
+                :key="row.student.id"
+                class="flex items-center justify-between text-sm"
+              >
+                <span class="text-gray-900 dark:text-white">{{
+                  row.student.fullName
+                }}</span>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="px-2 py-0.5 rounded text-xs font-medium"
+                    :class="
+                      getPreviewGrade(row) >= bulkFinalGradeThreshold
+                        ? 'bg-success/10 text-success'
+                        : 'bg-danger/10 text-danger'
+                    "
+                  >
+                    {{ getPreviewGrade(row) }}
+                  </span>
+                  <span
+                    class="text-xs"
+                    :class="
+                      getPreviewGrade(row) >= bulkFinalGradeThreshold
+                        ? 'text-success'
+                        : 'text-danger'
+                    "
+                  >
+                    {{
+                      getPreviewGrade(row) >= bulkFinalGradeThreshold
+                        ? "Сдано"
+                        : "Не сдано"
+                    }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4">
+          <UiButton variant="outline" @click="showBulkFinalGradeModal = false">
+            Отмена
+          </UiButton>
+          <UiButton :loading="bulkSaving" @click="saveBulkFinalGrade">
+            Выставить итоговые оценки
+          </UiButton>
+        </div>
+      </div>
+    </UiModal>
+
     <!-- Модальное окно предупреждения об опоздании -->
     <LateMarkingModal
       v-model="showLateMarkingModal"
@@ -1127,9 +1337,13 @@ const isArchived = ref(false);
 const selectedEventId = ref("");
 const showBulkAttendanceModal = ref(false);
 const showBulkGradeModal = ref(false);
+const showBulkFinalGradeModal = ref(false);
 const bulkSaving = ref(false);
 const bulkAttendanceHours = ref(0);
 const bulkGradeValue = ref(0);
+const bulkFinalGradeMode = ref<"average" | "custom">("average");
+const bulkFinalGradeValue = ref(100);
+const bulkFinalGradeThreshold = ref(60);
 
 // Marking access state
 const markingAccess = ref<MarkingAccessCheckResult | null>(null);
@@ -1702,6 +1916,68 @@ const getEligibleStudents = () => {
   }
 
   return rows.value.map((row) => row.student);
+};
+
+const openBulkFinalGradeModal = () => {
+  bulkFinalGradeMode.value = "average";
+  bulkFinalGradeValue.value = 100;
+  bulkFinalGradeThreshold.value = 60;
+  showBulkFinalGradeModal.value = true;
+};
+
+// Получить предварительную оценку для студента
+const getPreviewGrade = (row: JournalRow) => {
+  if (bulkFinalGradeMode.value === "custom") {
+    return bulkFinalGradeValue.value;
+  }
+  return row.averageGrade || 0;
+};
+
+const saveBulkFinalGrade = async () => {
+  if (bulkSaving.value) return;
+
+  if (
+    bulkFinalGradeMode.value === "custom" &&
+    (bulkFinalGradeValue.value < 0 || bulkFinalGradeValue.value > 100)
+  ) {
+    toast.error("Оценка должна быть от 0 до 100");
+    return;
+  }
+
+  bulkSaving.value = true;
+  try {
+    const grades = rows.value.map((row) => ({
+      studentId: row.student.id,
+      finalGrade: getPreviewGrade(row),
+    }));
+
+    const response = await authFetch<{
+      success: boolean;
+      message?: string;
+      results?: any[];
+    }>("/api/final-grades/bulk", {
+      method: "POST",
+      body: {
+        groupId: groupId.value,
+        disciplineId: disciplineId.value,
+        grades,
+        mode: bulkFinalGradeMode.value,
+        passThreshold: bulkFinalGradeThreshold.value,
+      },
+    });
+
+    if (response.success) {
+      toast.success(response.message || "Итоговые оценки выставлены");
+      showBulkFinalGradeModal.value = false;
+      await loadJournal();
+    } else {
+      toast.error(response.message || "Ошибка сохранения");
+    }
+  } catch (error: any) {
+    toast.error(error.message || "Ошибка сохранения");
+  } finally {
+    bulkSaving.value = false;
+  }
 };
 
 // Initialize

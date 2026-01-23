@@ -202,6 +202,7 @@ export default defineEventHandler(async (event) => {
     // 7. Распределение студентов по организациям (для круговой диаграммы)
     let studentsByOrganization: { name: string; count: number }[] = [];
     try {
+      // Убрали LIMIT в SQL, чтобы получить полные данные
       const orgQuery = `
                 SELECT 
                     COALESCE(o.short_name, o.name, s.organization, 'Не указано') as name,
@@ -210,9 +211,25 @@ export default defineEventHandler(async (event) => {
                 LEFT JOIN organizations o ON s.organization_id = o.id
                 GROUP BY COALESCE(o.id, s.organization)
                 ORDER BY count DESC
-                LIMIT 10
             `;
-      studentsByOrganization = await executeQuery<any[]>(orgQuery);
+      const allOrgs = await executeQuery<any[]>(orgQuery);
+
+      // Группировка "Остальные", если организаций больше 9
+      if (allOrgs.length > 9) {
+        const top9 = allOrgs.slice(0, 9);
+        const others = allOrgs.slice(9);
+        const otherCount = others.reduce(
+          (sum, item) => sum + Number(item.count),
+          0,
+        );
+
+        studentsByOrganization = [
+          ...top9,
+          { name: "Остальные", count: otherCount },
+        ];
+      } else {
+        studentsByOrganization = allOrgs;
+      }
     } catch (e) {
       console.error("Failed to get students by organization:", e);
     }
@@ -266,6 +283,8 @@ export default defineEventHandler(async (event) => {
       lessonsCount: number;
     }[] = [];
     try {
+      // Изменили логику: теперь считаем только занятия с записью в attendance (подтверждённые)
+      // Это соответствует логике "Used Hours" в instructorRepository
       const instructorsQuery = `
                 SELECT 
                     i.id,
@@ -273,9 +292,10 @@ export default defineEventHandler(async (event) => {
                     COALESCE(SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / ?))), 0) as hours,
                     COUNT(se.id) as lessons_count
                 FROM instructors i
-                LEFT JOIN schedule_events se ON se.instructor_id = i.id 
-                    AND se.start_time < NOW()
+                JOIN schedule_events se ON se.instructor_id = i.id 
                 WHERE i.is_active = 1
+                  AND se.start_time < NOW()
+                  AND EXISTS (SELECT 1 FROM attendance a WHERE a.schedule_event_id = se.id)
                 GROUP BY i.id, i.full_name
                 ORDER BY hours DESC
                 LIMIT 10
