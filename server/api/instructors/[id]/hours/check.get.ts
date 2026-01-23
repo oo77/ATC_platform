@@ -1,10 +1,10 @@
 /**
  * GET /api/instructors/:id/hours/check
  * Проверка возможности добавления часов инструктору
- * 
+ *
  * Query параметры:
  * - minutes: количество минут для проверки
- * 
+ *
  * Возвращает:
  * - canTake: boolean
  * - remainingHours: number
@@ -12,16 +12,20 @@
  * - message?: string
  */
 
-import { checkInstructorHoursLimit, getInstructorById } from '../../../../repositories/instructorRepository';
+import {
+  checkInstructorHoursLimit,
+  getInstructorById,
+} from "../../../../repositories/instructorRepository";
+import { getAcademicHourMinutes } from "../../../../utils/academicHours";
 
 export default defineEventHandler(async (event) => {
   try {
-    const id = getRouterParam(event, 'id');
-    
+    const id = getRouterParam(event, "id");
+
     if (!id) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'ID инструктора обязателен',
+        statusMessage: "ID инструктора обязателен",
       });
     }
 
@@ -31,7 +35,7 @@ export default defineEventHandler(async (event) => {
     if (minutes <= 0) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Параметр minutes должен быть положительным числом',
+        statusMessage: "Параметр minutes должен быть положительным числом",
       });
     }
 
@@ -40,11 +44,15 @@ export default defineEventHandler(async (event) => {
     if (!instructor) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Инструктор не найден',
+        statusMessage: "Инструктор не найден",
       });
     }
 
-    const result = await checkInstructorHoursLimit(id, minutes);
+    // Конвертируем минуты в академические часы
+    const academicHourMinutes = await getAcademicHourMinutes();
+    const academicHours = Math.ceil(minutes / academicHourMinutes);
+
+    const result = await checkInstructorHoursLimit(id, academicHours);
 
     return {
       success: true,
@@ -56,10 +64,10 @@ export default defineEventHandler(async (event) => {
     if (error.statusCode) {
       throw error;
     }
-    console.error('Error checking instructor hours limit:', error);
+    console.error("Error checking instructor hours limit:", error);
     throw createError({
       statusCode: 500,
-      statusMessage: 'Ошибка при проверке лимита часов',
+      statusMessage: "Ошибка при проверке лимита часов",
     });
   }
 });
