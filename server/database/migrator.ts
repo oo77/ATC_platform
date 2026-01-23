@@ -45,6 +45,7 @@ import * as addAcademicHourSetting from "./migrations/20260121_001_add_academic_
 import * as addDurationMinutes from "./migrations/20260121_002_add_duration_minutes";
 import * as addAcademicHours from "./migrations/20260122_001_add_academic_hours";
 import * as fixFilesGroupIdType from "./migrations/20260122_002_fix_files_group_id_type";
+import * as scheduleTemplates from "./migrations/20260123_001_schedule_templates";
 
 /**
  * ============================================================================
@@ -404,6 +405,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: fixFilesGroupIdType.up,
     down: fixFilesGroupIdType.down,
     description: fixFilesGroupIdType.description,
+  },
+  // ============================================================
+  // Миграция 005: Таблица шаблонов расписания
+  // ============================================================
+  {
+    name: "20260123_001_schedule_templates",
+    up: scheduleTemplates.up,
+    down: scheduleTemplates.down,
+    description: scheduleTemplates.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

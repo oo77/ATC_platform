@@ -960,13 +960,13 @@ const executeBulkIssue = async () => {
   );
 
   // Формируем job для глобального store
-  const job = {
+  const job: Parameters<typeof certIssueStore.startBulkIssue>[0] = {
     groupId: groupId.value,
     groupCode: group.value.code,
     courseName: group.value.course?.name || "",
     templateId: template.value.id,
     templateName: template.value.name,
-    issueDate: issueDate.value || new Date().toISOString().split("T")[0],
+    issueDate: issueDate.value ?? new Date().toISOString().split("T")[0]!,
     studentIds: bulkIssueStudentIds.value,
     studentData: studentRows.map((r) => ({
       id: r.student.id,

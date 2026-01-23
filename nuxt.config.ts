@@ -58,7 +58,7 @@ export default defineNuxtConfig({
   vite: {
     server: {
       // Разрешаем доступ с любых хостов (необходимо для ngrok)
-      host: "localhost",
+      // host настраивается через devServer выше
       // Отключаем проверку хоста для dev-режима
       allowedHosts: ["all"],
       hmr: {

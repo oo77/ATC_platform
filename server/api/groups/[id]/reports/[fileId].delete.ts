@@ -117,17 +117,17 @@ export default defineEventHandler(async (event) => {
   );
 
   // Логируем действие
-  await logActivity({
-    userId: user.id,
-    action: "delete_group_document",
-    entityType: "group_document",
-    entityId: file.id.toString(),
-    details: {
+  await logActivity(
+    event,
+    "DELETE",
+    "GROUP_REPORT",
+    file.id.toString(),
+    file.filename,
+    {
       groupId,
-      filename: file.filename,
       fileUuid,
     },
-  });
+  );
 
   console.log(
     "[DELETE /api/groups/[id]/reports/[fileId]] Документ успешно удален",

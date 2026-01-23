@@ -265,18 +265,88 @@
         </div>
       </div>
 
-      <!-- Подсказка о горячих клавишах -->
+      <!-- Подсказка о горячих клавишах и кнопка массовых действий -->
       <div
-        class="mb-2 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-4"
+        class="mb-2 text-xs text-gray-400 dark:text-gray-500 flex items-center justify-between"
       >
-        <span
-          >💡
-          <kbd
-            class="px-1 py-0.5 bg-gray-100 dark:bg-meta-4 rounded text-[10px]"
-            >CTRL</kbd
+        <div class="flex items-center gap-4">
+          <span
+            >💡
+            <kbd
+              class="px-1 py-0.5 bg-gray-100 dark:bg-meta-4 rounded text-[10px]"
+              >CTRL</kbd
+            >
+            + перетаскивание = копирование занятия</span
           >
-          + перетаскивание = копирование занятия</span
+        </div>
+
+        <!-- Кнопка массовых действий (только в списочном режиме) -->
+        <div
+          v-if="currentView === 'listWeek' && canEditSchedule"
+          class="flex items-center gap-2"
         >
+          <button
+            v-if="!bulkSelectionMode"
+            @click="enableBulkSelection"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors"
+          >
+            <svg
+              class="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+              />
+            </svg>
+            Действия
+          </button>
+          <template v-else>
+            <span class="text-gray-500">
+              Выбрано:
+              <strong class="text-primary">{{ selectedEventIds.size }}</strong>
+            </span>
+            <button
+              v-if="filteredEvents.length > 0"
+              @click="selectAllVisible"
+              class="px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+            >
+              Выбрать все
+            </button>
+            <button
+              @click="disableBulkSelection"
+              class="px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-danger transition-colors"
+            >
+              Отмена
+            </button>
+          </template>
+
+          <!-- Кнопка применения шаблона -->
+          <button
+            @click="showApplyTemplateModal = true"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-success bg-success/10 hover:bg-success/20 rounded-lg transition-colors"
+            title="Применить сохранённый шаблон"
+          >
+            <svg
+              class="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+              />
+            </svg>
+            Шаблоны
+          </button>
+        </div>
       </div>
 
       <FullCalendar
@@ -373,6 +443,50 @@
       @close="closeRetakeModal"
       @created="handleRetakeCreated"
       @updated="handleRetakeUpdated"
+    />
+
+    <!-- Плавающая панель массовых действий -->
+    <ScheduleBulkActionsPanel
+      :selected-count="selectedEventIds.size"
+      :can-create-template="canCreateTemplateFromSelection"
+      @copy="showCopyEventsModal = true"
+      @create-template="showCreateTemplateModal = true"
+      @delete="showBulkDeleteModal = true"
+      @cancel="disableBulkSelection"
+    />
+
+    <!-- Модальное окно копирования занятий -->
+    <ScheduleCopyEventsModal
+      :is-open="showCopyEventsModal"
+      :selected-events="selectedEventsArray"
+      @close="showCopyEventsModal = false"
+      @copied="handleBulkCopied"
+    />
+
+    <!-- Модальное окно создания шаблона -->
+    <ScheduleCreateTemplateModal
+      :is-open="showCreateTemplateModal"
+      :selected-events="selectedEventsArray"
+      :group-info="selectedEventsGroupInfo"
+      @close="showCreateTemplateModal = false"
+      @created="handleTemplateCreated"
+    />
+
+    <!-- Модальное окно применения шаблона -->
+    <ScheduleApplyTemplateModal
+      :is-open="showApplyTemplateModal"
+      :groups="groups"
+      :instructors="instructors"
+      @close="showApplyTemplateModal = false"
+      @applied="handleTemplateApplied"
+    />
+
+    <!-- Модальное окно массового удаления -->
+    <ScheduleBulkDeleteModal
+      :is-open="showBulkDeleteModal"
+      :selected-events="selectedEventsArray"
+      @close="showBulkDeleteModal = false"
+      @deleted="handleBulkDeleted"
     />
   </div>
 </template>
@@ -474,6 +588,14 @@ const filters = ref({
   classroomId: "",
 });
 
+// ============ РЕЖИМ МАССОВОГО ВЫБОРА ============
+const bulkSelectionMode = ref(false);
+const selectedEventIds = ref<Set<string>>(new Set());
+const showCopyEventsModal = ref(false);
+const showCreateTemplateModal = ref(false);
+const showApplyTemplateModal = ref(false);
+const showBulkDeleteModal = ref(false);
+
 // Computed
 const hasActiveFilters = computed(() => {
   return (
@@ -489,6 +611,59 @@ const viewOptions = [
   { value: "timeGridDay", label: "День" },
   { value: "listWeek", label: "Список" },
 ];
+
+// ============ COMPUTED ДЛЯ МАССОВЫХ ОПЕРАЦИЙ ============
+
+// Отфильтрованные события (для выбора всех видимых)
+const filteredEvents = computed(() => {
+  return events.value.filter((event) => {
+    if (filters.value.groupId && event.groupId !== filters.value.groupId) {
+      return false;
+    }
+    if (
+      filters.value.instructorId &&
+      event.instructorId !== filters.value.instructorId
+    ) {
+      return false;
+    }
+    if (
+      filters.value.classroomId &&
+      event.classroomId !== filters.value.classroomId
+    ) {
+      return false;
+    }
+    return true;
+  });
+});
+
+// Массив выбранных событий
+const selectedEventsArray = computed(() => {
+  return events.value.filter((e) => selectedEventIds.value.has(e.id));
+});
+
+// Можно ли создать шаблон (все выбранные занятия из одной группы)
+const canCreateTemplateFromSelection = computed(() => {
+  const selected = selectedEventsArray.value;
+  if (selected.length === 0) return false;
+
+  const groupIds = new Set(selected.map((e) => e.groupId).filter(Boolean));
+  return groupIds.size === 1;
+});
+
+// Информация о группе выбранных занятий (для создания шаблона)
+const selectedEventsGroupInfo = computed(() => {
+  const selected = selectedEventsArray.value;
+  if (selected.length === 0) return null;
+
+  const firstWithGroup = selected.find((e) => e.groupId && e.group);
+  if (!firstWithGroup || !firstWithGroup.groupId || !firstWithGroup.group)
+    return null;
+
+  return {
+    id: firstWithGroup.groupId,
+    code: firstWithGroup.group.code,
+  };
+});
 
 // Цвета событий (по типу)
 const eventColors: Record<
@@ -938,6 +1113,64 @@ const getEventTypeLabel = (eventType: string | undefined): string => {
 const onEventDidMount = (arg: EventMountArg) => {
   const { event, el } = arg;
   const extendedProps = event.extendedProps;
+
+  // ============ ЧЕКБОКСЫ В РЕЖИМЕ МАССОВОГО ВЫБОРА ============
+  // Добавляем чекбокс только в режиме списка и при включенном режиме выбора
+  if (bulkSelectionMode.value && currentView.value === "listWeek") {
+    const eventId = event.id;
+    const isSelected = selectedEventIds.value.has(eventId);
+
+    // Создаём контейнер для чекбокса
+    const checkboxContainer = document.createElement("div");
+    checkboxContainer.className = "bulk-select-checkbox";
+    checkboxContainer.style.cssText = `
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      margin-right: 8px;
+      cursor: pointer;
+      flex-shrink: 0;
+    `;
+
+    // Создаём чекбокс
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = isSelected;
+    checkbox.className = "bulk-event-checkbox";
+    checkbox.style.cssText = `
+      width: 18px;
+      height: 18px;
+      accent-color: #3C50E0;
+      cursor: pointer;
+    `;
+
+    // Обработчик клика на чекбокс
+    checkbox.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleEventSelection(eventId);
+      checkbox.checked = selectedEventIds.value.has(eventId);
+    });
+
+    checkboxContainer.appendChild(checkbox);
+
+    // Вставляем чекбокс в начало события
+    // В режиме списка структура: fc-list-event > td.fc-list-event-time, td.fc-list-event-graphic, td.fc-list-event-title
+    const titleCell = el.querySelector(".fc-list-event-title");
+    if (titleCell) {
+      titleCell.insertBefore(checkboxContainer, titleCell.firstChild);
+
+      // Добавляем стиль выделения
+      if (isSelected) {
+        el.classList.add("bulk-selected");
+        (el as HTMLElement).style.backgroundColor = "rgba(60, 80, 224, 0.1)";
+      }
+    }
+
+    // Сохраняем ссылку на чекбокс для обновления
+    (el as any)._bulkCheckbox = checkbox;
+  }
 
   // Формируем содержимое tooltip
   const parts: string[] = [];
@@ -1603,6 +1836,78 @@ const toggleGroupFilter = (groupId: string) => {
   handleFilterChange();
 };
 
+// ============ ФУНКЦИИ МАССОВЫХ ОПЕРАЦИЙ ============
+
+// Включить режим массового выбора
+const enableBulkSelection = () => {
+  bulkSelectionMode.value = true;
+  selectedEventIds.value = new Set();
+};
+
+// Выключить режим массового выбора
+const disableBulkSelection = () => {
+  bulkSelectionMode.value = false;
+  selectedEventIds.value = new Set();
+};
+
+// Выбрать все видимые события
+const selectAllVisible = () => {
+  const newSet = new Set(selectedEventIds.value);
+  for (const event of filteredEvents.value) {
+    newSet.add(event.id);
+  }
+  selectedEventIds.value = newSet;
+};
+
+// Переключить выбор события
+const toggleEventSelection = (eventId: string) => {
+  const newSet = new Set(selectedEventIds.value);
+  if (newSet.has(eventId)) {
+    newSet.delete(eventId);
+  } else {
+    newSet.add(eventId);
+  }
+  selectedEventIds.value = newSet;
+};
+
+// Обработчик успешного копирования
+const handleBulkCopied = (result: {
+  copiedCount: number;
+  createdEventIds: string[];
+}) => {
+  showCopyEventsModal.value = false;
+  disableBulkSelection();
+  // Перезагружаем события
+  if (currentDateRange.value) {
+    loadEvents(currentDateRange.value.start, currentDateRange.value.end);
+  }
+};
+
+// Обработчик создания шаблона
+const handleTemplateCreated = (template: { id: string; name: string }) => {
+  showCreateTemplateModal.value = false;
+  disableBulkSelection();
+};
+
+// Обработчик применения шаблона
+const handleTemplateApplied = (result: { createdCount: number }) => {
+  showApplyTemplateModal.value = false;
+  // Перезагружаем события
+  if (currentDateRange.value) {
+    loadEvents(currentDateRange.value.start, currentDateRange.value.end);
+  }
+};
+
+// Обработчик массового удаления
+const handleBulkDeleted = (result: { deletedCount: number }) => {
+  showBulkDeleteModal.value = false;
+  disableBulkSelection();
+  // Перезагружаем события
+  if (currentDateRange.value) {
+    loadEvents(currentDateRange.value.start, currentDateRange.value.end);
+  }
+};
+
 const loadSelectData = async () => {
   try {
     const shouldFetchGroups = canViewAllGroups.value || isTeacher.value;
@@ -1643,6 +1948,43 @@ const loadSelectData = async () => {
     console.error("Error loading select data:", error);
   }
 };
+
+// ============ WATCHERS ============
+
+// Обновляем календарь при изменении режима массового выбора
+watch(bulkSelectionMode, () => {
+  // Перерисовываем события для добавления/удаления чекбоксов
+  nextTick(() => {
+    updateCalendarEvents();
+  });
+});
+
+// Обновляем чекбоксы при изменении выбранных событий
+watch(
+  selectedEventIds,
+  () => {
+    if (bulkSelectionMode.value && currentView.value === "listWeek") {
+      // Обновляем стили выбранных событий
+      const api = calendarRef.value?.getApi();
+      if (api) {
+        api.getEvents().forEach((fcEvent) => {
+          const el = document.querySelector(
+            `[data-event-id="${fcEvent.id}"]`,
+          ) as HTMLElement;
+          if (el) {
+            const isSelected = selectedEventIds.value.has(fcEvent.id);
+            if (isSelected) {
+              el.style.backgroundColor = "rgba(60, 80, 224, 0.1)";
+            } else {
+              el.style.backgroundColor = "";
+            }
+          }
+        });
+      }
+    }
+  },
+  { deep: true },
+);
 
 // Lifecycle
 onMounted(async () => {
@@ -2356,5 +2698,57 @@ onUnmounted(() => {
     rgba(147, 51, 234, 0.15) 0%,
     rgba(147, 51, 234, 0.05) 100%
   ) !important;
+}
+
+/* ============================================
+   РЕЖИМ МАССОВОГО ВЫБОРА
+   ============================================ */
+
+/* Стили для выбранных событий в списке */
+.schedule-calendar .fc-list-event.bulk-selected {
+  background-color: rgba(60, 80, 224, 0.1) !important;
+}
+
+.schedule-calendar .fc-list-event.bulk-selected:hover {
+  background-color: rgba(60, 80, 224, 0.15) !important;
+}
+
+/* Стили чекбокса */
+.bulk-select-checkbox {
+  transition: transform 0.15s ease;
+}
+
+.bulk-select-checkbox:hover {
+  transform: scale(1.1);
+}
+
+.bulk-event-checkbox {
+  transition: all 0.15s ease;
+}
+
+.bulk-event-checkbox:checked {
+  transform: scale(1.05);
+}
+
+/* Анимация появления чекбоксов */
+@keyframes checkboxAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.bulk-select-checkbox {
+  animation: checkboxAppear 0.2s ease;
+}
+
+/* Улучшенные стили для списка в режиме выбора */
+.schedule-calendar .fc-list-event-title {
+  display: flex;
+  align-items: center;
 }
 </style>

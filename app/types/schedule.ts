@@ -48,6 +48,7 @@ export interface ScheduleEvent {
   recurrenceRule?: string;
   notes?: string;
   durationMinutes?: number | null; // Чистое время пар без перерывов
+  academicHours?: number | null; // Количество академических часов
   createdAt: string;
   updatedAt: string;
   allowedStudentIds?: string[] | null;
