@@ -21,10 +21,10 @@
         </div>
         <div
           v-else-if="templates.length === 0"
-          class="text-center py-8 text-gray-500"
+          class="flex flex-col items-center justify-center py-10 text-gray-500 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl"
         >
           <svg
-            class="w-12 h-12 mx-auto mb-3 text-gray-300"
+            class="w-12 h-12 mb-3 text-gray-300 dark:text-gray-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -36,44 +36,120 @@
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <p>Шаблоны не найдены</p>
-          <p class="text-xs mt-1">Создайте шаблон из выбранных занятий</p>
+          <p class="font-medium">Шаблоны не найдены</p>
+          <p class="text-xs mt-1 text-gray-400">
+            Создайте шаблон из выбранных занятий в календаре
+          </p>
         </div>
-        <div v-else class="space-y-2 max-h-48 overflow-y-auto">
-          <label
+        <div v-else class="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+          <div
             v-for="template in templates"
             :key="template.id"
-            class="flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-colors"
-            :class="[
-              selectedTemplateId === template.id
-                ? 'border-primary bg-primary/5'
-                : 'border-stroke dark:border-strokedark hover:border-primary/50',
-            ]"
+            class="relative group"
           >
-            <input
-              type="radio"
-              :value="template.id"
-              v-model="selectedTemplateId"
-              class="mt-1"
-            />
-            <div class="flex-1 min-w-0">
-              <p class="font-medium text-gray-900 dark:text-white">
-                {{ template.name }}
-              </p>
-              <p
-                v-if="template.description"
-                class="text-xs text-gray-500 mt-0.5 truncate"
-              >
-                {{ template.description }}
-              </p>
-              <div class="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                <span>{{ template.eventsData?.length || 0 }} занятий</span>
-                <span v-if="template.sourceGroupCode"
-                  >из группы {{ template.sourceGroupCode }}</span
-                >
+            <label
+              class="relative flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200"
+              :class="[
+                selectedTemplateId === template.id
+                  ? 'border-primary bg-primary/5 shadow-md shadow-primary/10'
+                  : 'border-stroke dark:border-strokedark hover:border-primary/30 hover:bg-gray-50 dark:hover:bg-meta-4',
+              ]"
+            >
+              <div class="pt-1">
+                <input
+                  type="radio"
+                  :value="template.id"
+                  v-model="selectedTemplateId"
+                  class="w-5 h-5 text-primary border-gray-300 focus:ring-primary dark:border-gray-600"
+                />
               </div>
-            </div>
-          </label>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                  <span
+                    class="font-semibold text-base"
+                    :class="
+                      selectedTemplateId === template.id
+                        ? 'text-primary'
+                        : 'text-black dark:text-white'
+                    "
+                  >
+                    {{ template.name }}
+                  </span>
+                </div>
+
+                <p
+                  v-if="template.description"
+                  class="text-sm text-gray-500 dark:text-gray-400 mb-2 line-clamp-2"
+                >
+                  {{ template.description }}
+                </p>
+
+                <div
+                  class="flex flex-wrap items-center gap-3 text-xs text-gray-400"
+                >
+                  <div
+                    class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded"
+                  >
+                    <svg
+                      class="w-3.5 h-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                      />
+                    </svg>
+                    <span>{{ template.eventsData?.length || 0 }} занятий</span>
+                  </div>
+
+                  <div
+                    v-if="template.sourceGroupCode"
+                    class="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded"
+                  >
+                    <svg
+                      class="w-3.5 h-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    <span>Группа: {{ template.sourceGroupCode }}</span>
+                  </div>
+                </div>
+              </div>
+            </label>
+
+            <!-- Delete button -->
+            <button
+              @click.stop="handleDeleteTemplate(template)"
+              class="absolute right-2 top-2 p-2 text-gray-400 hover:text-danger hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+              title="Удалить шаблон"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -324,4 +400,35 @@ watch(
     }
   },
 );
+
+const handleDeleteTemplate = async (template: ScheduleTemplate) => {
+  if (!confirm(`Вы уверены, что хотите удалить шаблон "${template.name}"?`)) {
+    return;
+  }
+
+  try {
+    await authFetch(`/api/schedule/templates/${template.id}`, {
+      method: "DELETE",
+    });
+
+    notification.show({
+      type: "success",
+      title: "Шаблон удалён",
+      message: "Шаблон успешно удалён",
+    });
+
+    await loadTemplates();
+
+    if (selectedTemplateId.value === template.id) {
+      selectedTemplateId.value = "";
+    }
+  } catch (e: any) {
+    console.error("Error deleting template:", e);
+    notification.show({
+      type: "error",
+      title: "Ошибка удаления",
+      message: e.data?.statusMessage || "Не удалось удалить шаблон",
+    });
+  }
+};
 </script>

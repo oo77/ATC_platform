@@ -450,6 +450,7 @@
       :selected-count="selectedEventIds.size"
       :can-create-template="canCreateTemplateFromSelection"
       @copy="showCopyEventsModal = true"
+      @move="showMoveEventsModal = true"
       @create-template="showCreateTemplateModal = true"
       @delete="showBulkDeleteModal = true"
       @cancel="disableBulkSelection"
@@ -461,6 +462,14 @@
       :selected-events="selectedEventsArray"
       @close="showCopyEventsModal = false"
       @copied="handleBulkCopied"
+    />
+
+    <!-- Модальное окно перемещения занятий -->
+    <ScheduleMoveEventsModal
+      :is-open="showMoveEventsModal"
+      :selected-events="selectedEventsArray"
+      @close="showMoveEventsModal = false"
+      @moved="handleBulkMoved"
     />
 
     <!-- Модальное окно создания шаблона -->
@@ -592,6 +601,7 @@ const filters = ref({
 const bulkSelectionMode = ref(false);
 const selectedEventIds = ref<Set<string>>(new Set());
 const showCopyEventsModal = ref(false);
+const showMoveEventsModal = ref(false);
 const showCreateTemplateModal = ref(false);
 const showApplyTemplateModal = ref(false);
 const showBulkDeleteModal = ref(false);
@@ -1876,6 +1886,16 @@ const handleBulkCopied = (result: {
   createdEventIds: string[];
 }) => {
   showCopyEventsModal.value = false;
+  disableBulkSelection();
+  // Перезагружаем события
+  if (currentDateRange.value) {
+    loadEvents(currentDateRange.value.start, currentDateRange.value.end);
+  }
+};
+
+// Обработчик успешного перемещения
+const handleBulkMoved = (result: { movedCount: number }) => {
+  showMoveEventsModal.value = false;
   disableBulkSelection();
   // Перезагружаем события
   if (currentDateRange.value) {

@@ -52,6 +52,28 @@
             Копировать
           </button>
 
+          <!-- Переместить на дату -->
+          <button
+            @click="$emit('move')"
+            class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-warning hover:bg-warning/90 rounded-lg transition-colors"
+            title="Переместить выбранные занятия на другую дату"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+              />
+            </svg>
+            Переместить
+          </button>
+
           <!-- Создать шаблон (только если одна группа) -->
           <button
             v-if="canCreateTemplate"
@@ -138,6 +160,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 defineEmits<{
   copy: [];
+  move: [];
   createTemplate: [];
   delete: [];
   cancel: [];
