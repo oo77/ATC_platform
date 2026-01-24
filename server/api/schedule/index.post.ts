@@ -80,7 +80,9 @@ export default defineEventHandler(async (event) => {
     // РАСЧЕТ АКАДЕМИЧЕСКИХ ЧАСОВ
     // ===============================
 
+    const academicHourMinutes = await getAcademicHourMinutes();
     let calculatedHours: number;
+
     if ((body as any).academicHours) {
       calculatedHours = (body as any).academicHours;
     } else {
@@ -88,7 +90,6 @@ export default defineEventHandler(async (event) => {
       const eventMinutes = (body as any).durationMinutes
         ? (body as any).durationMinutes
         : (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-      const academicHourMinutes = await getAcademicHourMinutes();
       calculatedHours = Math.ceil(eventMinutes / academicHourMinutes);
     }
 

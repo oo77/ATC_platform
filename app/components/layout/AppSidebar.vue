@@ -415,6 +415,7 @@ const allMenuGroups: MenuGroup[] = [
           Permission.ORGANIZATIONS_VIEW,
           Permission.CERTIFICATES_VIEW,
         ],
+        hideForRoles: ["STUDENT"],
         subItems: [
           {
             name: "База организаций",
