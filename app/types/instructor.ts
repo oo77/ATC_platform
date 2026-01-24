@@ -10,6 +10,7 @@ export interface Instructor {
   hireDate?: Date | string | null;
   contractInfo?: string | null;
   maxHours: number;
+  usedHours?: number; // Количество отработанных часов
   isActive: boolean;
   userId?: string | null; // ID связанной учётной записи пользователя
   createdAt: Date | string;

@@ -15,8 +15,8 @@
           <th class="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">
             Прием на работу
           </th>
-          <th class="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white">
-            Макс. часы
+          <th class="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">
+            Часы (Отраб./Макс.)
           </th>
           <th class="min-w-[100px] px-4 py-4 font-medium text-black dark:text-white">
             Статус
@@ -84,7 +84,7 @@
           </td>
           <td class="px-4 py-5">
             <p class="text-black dark:text-white font-medium">
-              {{ instructor.maxHours }}
+              {{ instructor.usedHours !== undefined ? Math.round(instructor.usedHours) : 0 }} / {{ instructor.maxHours }}
             </p>
           </td>
           <td class="px-4 py-5">

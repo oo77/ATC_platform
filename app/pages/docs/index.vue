@@ -52,7 +52,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div class="p-5 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800/30">
                 <div class="flex items-center gap-3 mb-3">
-                  <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                  <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400">
                     <SettingsIcon class="w-6 h-6" />
                   </div>
                   <h3 class="font-bold text-blue-900 dark:text-blue-100">Администратор</h3>
@@ -62,7 +62,7 @@
 
               <div class="p-5 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-100 dark:border-purple-800/30">
                 <div class="flex items-center gap-3 mb-3">
-                  <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center text-white">
+                  <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-600 dark:text-purple-400">
                     <DocsIcon class="w-6 h-6" />
                   </div>
                   <h3 class="font-bold text-purple-900 dark:text-purple-100">Менеджер</h3>
@@ -72,7 +72,7 @@
 
               <div class="p-5 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100 dark:border-emerald-800/30">
                 <div class="flex items-center gap-3 mb-3">
-                  <div class="w-10 h-10 bg-emerald-600 rounded-lg flex items-center justify-center text-white">
+                  <div class="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                     <AcademicCapIcon class="w-6 h-6" />
                   </div>
                   <h3 class="font-bold text-emerald-900 dark:text-emerald-100">Преподаватель</h3>
@@ -82,7 +82,7 @@
 
               <div class="p-5 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border border-orange-100 dark:border-orange-800/30">
                 <div class="flex items-center gap-3 mb-3">
-                  <div class="w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center text-white">
+                  <div class="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center text-orange-600 dark:text-orange-400">
                     <UserCircleIcon class="w-6 h-6" />
                   </div>
                   <h3 class="font-bold text-orange-900 dark:text-orange-100">Студент</h3>
@@ -92,27 +92,29 @@
             </div>
 
             <!-- Первые шаги -->
-            <div class="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700">
-              <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <GridIcon class="w-6 h-6 text-blue-600" />
+            <div class="bg-gradient-to-br from-gray-50 to-blue-50/30 dark:from-gray-800/50 dark:to-blue-900/10 p-6 rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-sm">
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                  <GridIcon class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
                 Первые шаги
               </h3>
-              <ol class="space-y-3 text-gray-700 dark:text-gray-300">
-                <li class="flex items-start gap-3">
-                  <span class="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
-                  <span><strong>Вход в систему:</strong> Используйте ваш Email и пароль для входа на страницу <code class="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-sm">/auth/signin</code></span>
+              <ol class="space-y-4">
+                <li class="flex items-start gap-4">
+                  <span class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md shadow-blue-500/30">1</span>
+                  <span class="text-gray-700 dark:text-gray-300 pt-1"><strong class="text-gray-900 dark:text-white">Вход в систему:</strong> Используйте ваш Email и пароль для входа на страницу <code class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-sm font-mono">/ auth/signin</code></span>
                 </li>
-                <li class="flex items-start gap-3">
-                  <span class="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
-                  <span><strong>Настройка профиля:</strong> После первого входа перейдите в "Профиль" (правый верхний угол) и обновите личные данные.</span>
+                <li class="flex items-start gap-4">
+                  <span class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md shadow-blue-500/30">2</span>
+                  <span class="text-gray-700 dark:text-gray-300 pt-1"><strong class="text-gray-900 dark:text-white">Настройка профиля:</strong> После первого входа перейдите в "Профиль" (правый верхний угол) и обновите личные данные.</span>
                 </li>
-                <li class="flex items-start gap-3">
-                  <span class="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
-                  <span><strong>Изучите интерфейс:</strong> Боковое меню содержит все разделы системы, доступные вашей роли.</span>
+                <li class="flex items-start gap-4">
+                  <span class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md shadow-blue-500/30">3</span>
+                  <span class="text-gray-700 dark:text-gray-300 pt-1"><strong class="text-gray-900 dark:text-white">Изучите интерфейс:</strong> Боковое меню содержит все разделы системы, доступные вашей роли.</span>
                 </li>
-                <li class="flex items-start gap-3">
-                  <span class="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">4</span>
-                  <span><strong>Обратитесь к документации:</strong> Используйте вкладки выше для изучения конкретных функций.</span>
+                <li class="flex items-start gap-4">
+                  <span class="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md shadow-blue-500/30">4</span>
+                  <span class="text-gray-700 dark:text-gray-300 pt-1"><strong class="text-gray-900 dark:text-white">Обратитесь к документации:</strong> Используйте вкладки выше для изучения конкретных функций.</span>
                 </li>
               </ol>
             </div>
@@ -878,4 +880,9 @@ const tabs = [
 ];
 </script>
 
-
+<style scoped>
+/* Увеличиваем толщину обводки для иконок с stroke, чтобы они были лучше видны */
+svg {
+  stroke-width: 2;
+}
+</style>

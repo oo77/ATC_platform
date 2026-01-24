@@ -19,6 +19,7 @@ export interface Instructor {
   hireDate?: Date | null;
   contractInfo?: string | null;
   maxHours: number;
+  usedHours?: number; // Количество отработанных часов
   isActive: boolean;
   userId?: string | null; // ID связанной учётной записи пользователя
   createdAt: Date;
@@ -76,6 +77,7 @@ interface InstructorRow extends RowDataPacket {
   hire_date: Date | null;
   contract_info: string | null;
   max_hours: number;
+  used_hours?: number; // Количество отработанных часов
   is_active: boolean;
   user_id: string | null; // ID связанной учётной записи пользователя
   created_at: Date;
@@ -102,6 +104,7 @@ function mapRowToInstructor(
     hireDate: row.hire_date,
     contractInfo: row.contract_info,
     maxHours: row.max_hours || 0,
+    usedHours: row.used_hours !== undefined ? Number(row.used_hours) : undefined,
     isActive: Boolean(row.is_active),
     userId: row.user_id, // ID связанной учётной записи
     createdAt: row.created_at,
@@ -155,11 +158,20 @@ export async function getInstructorsPaginated(
   );
   const total = countResult[0]?.total || 0;
 
-  // Data with discipline count
+  // Data with discipline count and used hours
   const offset = (page - 1) * limit;
+
+  // Получаем длительность академического часа из настроек
+  const academicHourMinutes = await getAcademicHourMinutes();
+
   const dataQuery = `
     SELECT i.*,
-           (SELECT COUNT(DISTINCT di.discipline_id) FROM discipline_instructors di WHERE di.instructor_id = i.id) as discipline_count
+           (SELECT COUNT(DISTINCT di.discipline_id) FROM discipline_instructors di WHERE di.instructor_id = i.id) as discipline_count,
+           (SELECT COALESCE(SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / ?))), 0)
+            FROM schedule_events se
+            WHERE se.instructor_id = i.id
+              AND EXISTS (SELECT 1 FROM attendance a WHERE a.schedule_event_id = se.id)
+           ) as used_hours
     FROM instructors i
     ${whereClause}
     ORDER BY i.full_name
@@ -167,6 +179,7 @@ export async function getInstructorsPaginated(
   `;
 
   const rows = await executeQuery<InstructorRow[]>(dataQuery, [
+    academicHourMinutes, // для подсчета used_hours
     ...queryParams,
     limit,
     offset,
