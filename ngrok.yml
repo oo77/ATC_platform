@@ -1,6 +1,6 @@
 version: "2"
 # Получите ваш authtoken здесь: https://dashboard.ngrok.com/get-started/your-authtoken
-authtoken: 2tD98dxe6k2alfKrT7ZGRD61d8o_LxTSFPMCeCoqxgy66ssY
+authtoken: 38nYICS6W8kRWRoxM9L3lzMLYP8_4syyS18sYVv8FQ2zLsLYL
 
 tunnels:
   nuxt-dev:
@@ -8,6 +8,6 @@ tunnels:
     addr: 3000
     # Замените на ваш статический домен из https://dashboard.ngrok.com/cloud-edge/domains
     # Пример: atc-platform-abc123.ngrok-free.app
-    domain: charlena-nonarbitrable-eddy.ngrok-free.dev
+    domain: optimistically-shapely-alexandria.ngrok-free.dev
     # Опционально: можно добавить inspect для веб-интерфейса ngrok
     inspect: true

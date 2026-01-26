@@ -11,17 +11,26 @@ export default defineEventHandler(async (event) => {
     console.log("[TG-App Auth] Начало авторизации");
     const body = await readBody(event);
 
-    // Логируем безопасную часть данных для отладки
-    const initDataPreview = body?.initData
-      ? body.initData.length > 20
-        ? body.initData.substring(0, 20) + "..."
-        : body.initData
-      : "missing";
-    console.log("[TG-App Auth] Body:", {
-      hasInitData: !!body?.initData,
-      initDataPreview,
-      hasUser: !!body?.user,
-    });
+    // ===== ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ =====
+    console.log("[TG-App Auth] === ДЕТАЛЬНАЯ ДИАГНОСТИКА ===");
+    console.log("[TG-App Auth] Тип body:", typeof body);
+    console.log("[TG-App Auth] Ключи в body:", Object.keys(body || {}));
+    console.log("[TG-App Auth] Тип initData:", typeof body?.initData);
+    console.log("[TG-App Auth] Длина initData:", body?.initData?.length || 0);
+    console.log(
+      "[TG-App Auth] Первые 100 символов initData:",
+      body?.initData?.substring(0, 100) || "отсутствует",
+    );
+    console.log(
+      "[TG-App Auth] Есть ли 'hash' в строке?",
+      body?.initData?.includes("hash="),
+    );
+    console.log(
+      "[TG-App Auth] Есть ли 'user' в строке?",
+      body?.initData?.includes("user="),
+    );
+    console.log("[TG-App Auth] Объект user в body:", body?.user);
+    console.log("[TG-App Auth] ================================");
 
     const { initData, user: bodyUser } = body;
 
@@ -30,17 +39,20 @@ export default defineEventHandler(async (event) => {
 
     // 1. Пробуем валидировать initData (Самый надежный способ)
     if (initData && initData !== "dev_mode") {
+      console.log("[TG-App Auth] Попытка валидации initData...");
       const validatedData = validateWebAppData(initData);
 
       if (validatedData && validatedData.user) {
-        console.log("[TG-App Auth] initData успешно проверена");
+        console.log("[TG-App Auth] ✅ initData успешно проверена");
         telegramUser = validatedData.user;
         chatId = String(telegramUser.id);
       } else {
         console.warn(
-          "[TG-App Auth] initData не прошла проверку подписи или некорректная",
+          "[TG-App Auth] ❌ initData не прошла проверку подписи или некорректная",
         );
       }
+    } else {
+      console.warn("[TG-App Auth] initData отсутствует или равен 'dev_mode'");
     }
 
     // 2. Обработка режима разработки (Dev Mode)
@@ -49,25 +61,34 @@ export default defineEventHandler(async (event) => {
       initData === "dev_mode" &&
       process.env.NODE_ENV === "development"
     ) {
-      console.warn("[DEV MODE] Используем mock данные");
+      console.warn(
+        "[DEV MODE] Используем mock данные. InitData=dev_mode, ENV=development",
+      );
       chatId = bodyUser?.id ? String(bodyUser.id) : "123456789";
+      telegramUser = bodyUser || {
+        id: "123456789",
+        first_name: "Dev",
+        last_name: "User",
+      };
     }
 
     // 3. Если initData не прошла валидацию (или отсутствует), но есть user в body
-    // В продакшене этому доверять ОПАСНО, но если валидация сломана, можно оставить как fallback
-    // с жирным предупреждением, или запретить.
-    // Для сейчас оставим как fallback, но он не будет работать если хеш неверен.
     if (!chatId && bodyUser && bodyUser.id) {
-      // ВНИМАНИЕ: Это небезопасно, так как данные приходят от клиента без подписи
-      // Используем это только если мы принимаем риск спуфинга или для отладки
       console.warn(
-        "[TG-App Auth] ВНИМАНИЕ: Используем данные user из body (непроверенные)",
+        "[TG-App Auth] ⚠️  ВНИМАНИЕ: Используем данные user из body (непроверенные)",
       );
       chatId = String(bodyUser.id);
+      telegramUser = bodyUser;
     }
 
     if (!chatId) {
-      console.error("[TG-App Auth] Не удалось определить chatId");
+      console.error("[TG-App Auth] ❌ Не удалось определить chatId");
+      console.error(
+        "[TG-App Auth] initData было:",
+        initData ? `"${initData.substring(0, 50)}..."` : "отсутствует",
+      );
+      console.error("[TG-App Auth] bodyUser было:", bodyUser);
+
       throw createError({
         statusCode: 400,
         message:
@@ -75,7 +96,8 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    console.log("[TG-App Auth] Итоговый chatId:", chatId);
+    console.log("[TG-App Auth] ✅ Итоговый chatId:", chatId);
+    console.log("[TG-App Auth] Environment:", process.env.NODE_ENV);
 
     // Проверяем, существует ли представитель
     console.log("[TG-App Auth] Ищем представителя в базе...");
@@ -89,7 +111,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    console.log("[TG-App Auth] Представитель найден:", representative.id);
+    console.log("[TG-App Auth] ✅ Представитель найден:", representative.id);
 
     // Возвращаем данные представителя
     return {

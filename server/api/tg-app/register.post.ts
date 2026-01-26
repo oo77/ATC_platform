@@ -18,6 +18,7 @@ import {
 import { validateWebAppData } from "../../utils/telegramAuth";
 
 export default defineEventHandler(async (event) => {
+  console.log("[TG-App Register] Request received. ENV:", process.env.NODE_ENV);
   try {
     const body = await readBody(event);
     const {
@@ -29,6 +30,17 @@ export default defineEventHandler(async (event) => {
       organizationName,
       username,
     } = body;
+
+    // ===== REGISTER DEBUG =====
+    console.log("[TG-App Register] Initializing registration...");
+    console.log("[TG-App Register] Raw Body Keys:", Object.keys(body));
+    console.log("[TG-App Register] initData type:", typeof initData);
+    console.log("[TG-App Register] initData length:", initData?.length);
+    console.log(
+      "[TG-App Register] initData sample:",
+      initData?.substring(0, 50),
+    );
+    // ==========================
 
     // Валидация
     if (!initData) {
@@ -78,6 +90,7 @@ export default defineEventHandler(async (event) => {
       initData === "dev_mode" &&
       process.env.NODE_ENV === "development"
     ) {
+      console.warn("[TG-App Register] DEV MODE DETECTED. Using Mock ID.");
       chatId = bodyUser?.id ? String(bodyUser.id) : "123456789";
       telegramUser = bodyUser;
     }
@@ -96,7 +109,19 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    if (!chatId) {
+      throw createError({
+        statusCode: 400,
+        message: "Не удалось получить данные пользователя",
+      });
+    }
+
     console.log("[TG-App Register] Регистрация для chatId:", chatId);
+    console.log("[TG-App Register] Environment:", process.env.NODE_ENV);
+    console.log(
+      "[TG-App Register] User Data Source:",
+      telegramUser === bodyUser ? "Body (Unsafe/Mock)" : "InitData (Verified)",
+    );
 
     // Проверяем, не зарегистрирован ли уже
     const existing = await getRepresentativeByTelegramChatId(chatId);

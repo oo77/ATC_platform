@@ -17,7 +17,10 @@ export function validateWebAppData(
     const hash = urlParams.get("hash");
 
     if (!hash) {
-      console.warn("[TelegramAuth] hash отсутствует в initData");
+      console.warn(
+        "[TelegramAuth] Validation Failed: 'hash' missing in initData",
+      );
+      console.debug("[TelegramAuth] Received initData:", initData);
       return null;
     }
 
@@ -42,9 +45,20 @@ export function validateWebAppData(
       .digest("hex");
 
     if (calculatedHash !== hash) {
-      console.warn("[TelegramAuth] Хеш не совпадает");
+      console.warn(`[TelegramAuth] Validation Failed: Hash mismatch.`);
+      console.debug(
+        `[TelegramAuth] Expected: ${calculatedHash}, Received: ${hash}`,
+      );
+      console.debug(
+        `[TelegramAuth] Used Bot Token (first 5 chars): ${botToken.substring(0, 5)}...`,
+      );
       return null;
     }
+
+    console.log(
+      "[TelegramAuth] Validation Successful for user:",
+      Object.fromEntries(urlParams).user,
+    );
 
     // Парсим user, если есть
     const result: Record<string, any> = {};
