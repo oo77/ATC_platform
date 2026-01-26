@@ -26,9 +26,6 @@ logs
 # Storage uploads (local files)
 storage/
 
-# Ngrok configuration (contains authtoken)
-ngrok.yml
-
 
 # SSL certificates (only private keys are sensitive, CA certs are public)
 server/certs/*.key
@@ -37,15 +34,6 @@ server/certs/*-private.pem
 # Debug files and scripts
 debug/
 check-enum.ts
-
-# Documentation (removed for production)
-docs/
-*.md
-!README.md
-!DEPLOYMENT_CHECKLIST.md
-!QUICK_DEPLOY.md
-!DEPLOYMENT_SUMMARY.md
-!NGROK_SETUP.md
 
 # Archives and backups
 *.zip
