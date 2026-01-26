@@ -45,6 +45,7 @@ docs/
 !DEPLOYMENT_CHECKLIST.md
 !QUICK_DEPLOY.md
 !DEPLOYMENT_SUMMARY.md
+!NGROK_SETUP.md
 
 # Archives and backups
 *.zip

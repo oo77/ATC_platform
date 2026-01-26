@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev --host localhost --port 3000",
+    "dev": "nuxt dev --host 0.0.0.0 --port 3000",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
@@ -18,7 +18,7 @@
     "db:reset": "tsx server/database/reset.ts",
     "check:deploy": "node scripts/check-deployment.js",
     "ngrok": "ngrok http 3000",
-    "ngrok:config": "ngrok start nuxt-dev"
+    "ngrok:config": "ngrok start --config=ngrok.yml nuxt-dev"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.19",

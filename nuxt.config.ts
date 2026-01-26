@@ -9,6 +9,24 @@ export default defineNuxtConfig({
     port: 3000,
   },
 
+  // Vite конфигурация для ngrok
+  vite: {
+    server: {
+      hmr: {
+        // Используем WSS (защищенный WebSocket) для ngrok
+        protocol: process.env.NODE_ENV === 'development' ? "wss" : "ws",
+        // Используем ngrok домен вместо localhost
+        host: process.env.NGROK_DOMAIN || "charlena-nonarbitrable-eddy.ngrok-free.dev",
+        // Порт не указываем, используется стандартный для HTTPS (443)
+      },
+      allowedHosts: [
+        ".ngrok-free.app", // Позволяет любым ngrok доменам
+        ".ngrok-free.dev", // Новый формат ngrok
+        ".ngrok.io",        // Старый формат ngrok
+      ],
+    },
+  },
+
   css: ["~/assets/css/main.css"],
 
   postcss: {

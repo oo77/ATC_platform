@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = [
   '/api/db/init',
   '/api/certificates/download', // Скачивание сертификатов (защищено UUID)
   '/api/debug', // Debug endpoints (только для разработки!)
+  '/api/tg-app', // Telegram Mini App (использует свою систему авторизации)
 ]
 
 /**
