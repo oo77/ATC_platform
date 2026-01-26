@@ -3,111 +3,115 @@
  * Используется в Telegram Mini App
  */
 
-import { executeQuery } from '../../utils/db';
-import type { RowDataPacket } from 'mysql2/promise';
-import type { FormattedCertificate } from '../../utils/telegramBot';
+import { executeQuery } from "../../utils/db";
+import type { RowDataPacket } from "mysql2/promise";
+import type { FormattedCertificate } from "../../utils/telegramBot";
 
 interface CertificateRow extends RowDataPacket {
-    id: string;
-    certificateNumber: string;
-    issueDate: string | null;
-    status: 'issued' | 'revoked';
-    pdfFileUrl: string | null;
-    studentId: string;
-    studentName: string;
-    courseName: string;
-    groupCode: string;
+  id: string;
+  certificateNumber: string;
+  issueDate: string | null;
+  status: "issued" | "revoked";
+  pdfFileUrl: string | null;
+  studentId: string;
+  studentName: string;
+  courseName: string;
+  groupCode: string;
 }
 
 interface AttendanceRow extends RowDataPacket {
-    totalEvents: number;
-    presentCount: number;
+  totalEvents: number;
+  presentCount: number;
 }
 
 export default defineEventHandler(async (event) => {
-    try {
-        const query = getQuery(event);
-        const { organizationId } = query;
+  try {
+    const query = getQuery(event);
+    const { organizationId } = query;
 
-        if (!organizationId) {
-            throw createError({
-                statusCode: 400,
-                message: 'organizationId обязателен',
-            });
-        }
+    if (!organizationId) {
+      throw createError({
+        statusCode: 400,
+        message: "organizationId обязателен",
+      });
+    }
 
-        const certificates = await executeQuery<CertificateRow[]>(
-            `SELECT 
+    const certificates = await executeQuery<CertificateRow[]>(
+      `SELECT 
         cert.id,
         cert.certificate_number AS certificateNumber,
         cert.issue_date AS issueDate,
-        cert.status,
+        CASE 
+          WHEN cert.expiry_date < CURRENT_DATE THEN 'expired' 
+          ELSE 'issued' 
+        END as status,
         cert.pdf_file_url AS pdfFileUrl,
         s.id AS studentId,
         s.full_name AS studentName,
         c.name AS courseName,
-        g.group_code AS groupCode
-      FROM certificates cert
+        g.code AS groupCode
+      FROM issued_certificates cert
       INNER JOIN students s ON cert.student_id = s.id
-      INNER JOIN groups g ON s.group_id = g.id
-      INNER JOIN courses c ON g.course_id = c.id
-      WHERE g.organization_id = ?
+      LEFT JOIN study_groups g ON cert.group_id = g.id
+      LEFT JOIN courses c ON g.course_id = c.id
+      WHERE s.organization_id = ?
       ORDER BY cert.issue_date DESC`,
-            [organizationId as string]
-        );
+      [organizationId as string],
+    );
 
-        // Для каждого сертификата проверяем посещаемость
-        const formattedCertificates: FormattedCertificate[] = [];
+    // Для каждого сертификата проверяем посещаемость
+    const formattedCertificates: FormattedCertificate[] = [];
 
-        for (const cert of certificates) {
-            // Получаем статистику посещаемости
-            const attendanceStats = await executeQuery<AttendanceRow[]>(
-                `SELECT 
+    for (const cert of certificates) {
+      // Получаем статистику посещаемости
+      const attendanceStats = await executeQuery<AttendanceRow[]>(
+        `SELECT 
           COUNT(a.id) AS totalEvents,
-          SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) AS presentCount
+          SUM(CASE WHEN a.hours_attended > 0 THEN 1 ELSE 0 END) AS presentCount
         FROM attendance a
-        INNER JOIN schedule_events se ON a.event_id = se.id
-        WHERE a.student_id = ?
-          AND se.group_id = (SELECT group_id FROM students WHERE id = ?)`,
-                [cert.studentId, cert.studentId]
-            );
+        INNER JOIN schedule_events se ON a.schedule_event_id = se.id
+        WHERE a.student_id = ?`,
+        [cert.studentId],
+      );
 
-            const totalEvents = Number(attendanceStats[0]?.totalEvents || 0);
-            const presentCount = Number(attendanceStats[0]?.presentCount || 0);
-            const attendancePercent = totalEvents > 0 ? (presentCount / totalEvents) * 100 : null;
+      const totalEvents = Number(attendanceStats[0]?.totalEvents || 0);
+      const presentCount = Number(attendanceStats[0]?.presentCount || 0);
+      const attendancePercent =
+        totalEvents > 0 ? (presentCount / totalEvents) * 100 : null;
 
-            // Считаем, что студент прошёл обучение, если посещаемость >= 80%
-            const hasPassed = attendancePercent !== null && attendancePercent >= 80;
+      // Считаем, что студент прошёл обучение, если посещаемость >= 80%
+      const hasPassed = attendancePercent !== null && attendancePercent >= 80;
 
-            formattedCertificates.push({
-                id: cert.id,
-                studentName: cert.studentName,
-                certificateNumber: cert.certificateNumber,
-                courseName: cert.courseName,
-                groupCode: cert.groupCode,
-                issueDate: cert.issueDate ? new Date(cert.issueDate).toLocaleDateString('ru-RU') : '',
-                status: cert.status,
-                pdfFileUrl: cert.pdfFileUrl,
-                hasPassed,
-                attendancePercent,
-            });
-        }
-
-        return {
-            success: true,
-            certificates: formattedCertificates,
-        };
-
-    } catch (error: any) {
-        console.error('[TG-App] Ошибка получения сертификатов:', error);
-
-        if (error.statusCode) {
-            throw error;
-        }
-
-        throw createError({
-            statusCode: 500,
-            message: 'Внутренняя ошибка сервера',
-        });
+      formattedCertificates.push({
+        id: cert.id,
+        studentName: cert.studentName,
+        certificateNumber: cert.certificateNumber,
+        courseName: cert.courseName,
+        groupCode: cert.groupCode,
+        issueDate: cert.issueDate
+          ? new Date(cert.issueDate).toLocaleDateString("ru-RU")
+          : "",
+        status: cert.status,
+        pdfFileUrl: cert.pdfFileUrl,
+        hasPassed,
+        attendancePercent,
+      });
     }
+
+    return {
+      success: true,
+      certificates: formattedCertificates,
+    };
+  } catch (error: any) {
+    console.error("[TG-App] Ошибка получения сертификатов:", error);
+
+    if (error.statusCode) {
+      throw error;
+    }
+
+    throw createError({
+      statusCode: 500,
+      message: "Внутренняя ошибка сервера",
+    });
+  }
 });

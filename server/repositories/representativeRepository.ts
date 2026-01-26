@@ -2,15 +2,15 @@
  * Репозиторий для работы с представителями организаций
  */
 
-import { executeQuery } from '../utils/db';
-import type { RowDataPacket, ResultSetHeader } from 'mysql2/promise';
-import { v4 as uuidv4 } from 'uuid';
+import { executeQuery } from "../utils/db";
+import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
+import { v4 as uuidv4 } from "uuid";
 
 // ============================================================================
 // ТИПЫ
 // ============================================================================
 
-export type RepresentativeStatus = 'pending' | 'approved' | 'blocked';
+export type RepresentativeStatus = "pending" | "approved" | "blocked";
 
 /**
  * Разрешения представителя организации
@@ -185,7 +185,7 @@ function mapRowToRepresentative(row: RepresentativeRow): Representative {
  * Получить всех представителей с пагинацией
  */
 export async function getRepresentativesPaginated(
-  params: RepresentativePaginationParams = {}
+  params: RepresentativePaginationParams = {},
 ): Promise<PaginatedRepresentatives> {
   const { page = 1, limit = 20, status, organizationId, search } = params;
 
@@ -193,22 +193,30 @@ export async function getRepresentativesPaginated(
   const queryParams: any[] = [];
 
   if (status) {
-    conditions.push('r.status = ?');
+    conditions.push("r.status = ?");
     queryParams.push(status);
   }
 
   if (organizationId) {
-    conditions.push('r.organization_id = ?');
+    conditions.push("r.organization_id = ?");
     queryParams.push(organizationId);
   }
 
   if (search) {
-    conditions.push('(r.full_name LIKE ? OR r.phone LIKE ? OR r.telegram_username LIKE ? OR o.name LIKE ?)');
+    conditions.push(
+      "(r.full_name LIKE ? OR r.phone LIKE ? OR r.telegram_username LIKE ? OR o.name LIKE ?)",
+    );
     const searchPattern = `%${search}%`;
-    queryParams.push(searchPattern, searchPattern, searchPattern, searchPattern);
+    queryParams.push(
+      searchPattern,
+      searchPattern,
+      searchPattern,
+      searchPattern,
+    );
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // Подсчёт общего количества
   const countQuery = `
@@ -255,7 +263,9 @@ export async function getRepresentativesPaginated(
 /**
  * Получить представителя по ID
  */
-export async function getRepresentativeById(id: string): Promise<Representative | null> {
+export async function getRepresentativeById(
+  id: string,
+): Promise<Representative | null> {
   const rows = await executeQuery<RepresentativeRow[]>(
     `SELECT 
       r.*,
@@ -265,7 +275,7 @@ export async function getRepresentativeById(id: string): Promise<Representative 
     LEFT JOIN organizations o ON r.organization_id = o.id
     LEFT JOIN users u ON r.approved_by = u.id
     WHERE r.id = ? LIMIT 1`,
-    [id]
+    [id],
   );
 
   return rows.length > 0 ? mapRowToRepresentative(rows[0]) : null;
@@ -274,7 +284,9 @@ export async function getRepresentativeById(id: string): Promise<Representative 
 /**
  * Получить представителя по Telegram Chat ID
  */
-export async function getRepresentativeByTelegramChatId(chatId: string): Promise<Representative | null> {
+export async function getRepresentativeByTelegramChatId(
+  chatId: string,
+): Promise<Representative | null> {
   const rows = await executeQuery<RepresentativeRow[]>(
     `SELECT 
       r.*,
@@ -282,7 +294,7 @@ export async function getRepresentativeByTelegramChatId(chatId: string): Promise
     FROM organization_representatives r
     LEFT JOIN organizations o ON r.organization_id = o.id
     WHERE r.telegram_chat_id = ? LIMIT 1`,
-    [chatId]
+    [chatId],
   );
 
   return rows.length > 0 ? mapRowToRepresentative(rows[0]) : null;
@@ -291,7 +303,9 @@ export async function getRepresentativeByTelegramChatId(chatId: string): Promise
 /**
  * Получить представителей по организации
  */
-export async function getRepresentativesByOrganization(organizationId: string): Promise<Representative[]> {
+export async function getRepresentativesByOrganization(
+  organizationId: string,
+): Promise<Representative[]> {
   const rows = await executeQuery<RepresentativeRow[]>(
     `SELECT 
       r.*,
@@ -300,7 +314,7 @@ export async function getRepresentativesByOrganization(organizationId: string): 
     LEFT JOIN organizations o ON r.organization_id = o.id
     WHERE r.organization_id = ?
     ORDER BY r.created_at DESC`,
-    [organizationId]
+    [organizationId],
   );
 
   return rows.map(mapRowToRepresentative);
@@ -317,7 +331,7 @@ export async function getPendingRepresentatives(): Promise<Representative[]> {
     FROM organization_representatives r
     LEFT JOIN organizations o ON r.organization_id = o.id
     WHERE r.status = 'pending'
-    ORDER BY r.created_at ASC`
+    ORDER BY r.created_at ASC`,
   );
 
   return rows.map(mapRowToRepresentative);
@@ -328,7 +342,7 @@ export async function getPendingRepresentatives(): Promise<Representative[]> {
  */
 export async function getPendingCount(): Promise<number> {
   const result = await executeQuery<CountRow[]>(
-    `SELECT COUNT(*) as total FROM organization_representatives WHERE status = 'pending'`
+    `SELECT COUNT(*) as total FROM organization_representatives WHERE status = 'pending'`,
   );
   return result[0]?.total || 0;
 }
@@ -336,7 +350,9 @@ export async function getPendingCount(): Promise<number> {
 /**
  * Создать представителя (из Telegram бота)
  */
-export async function createRepresentative(data: CreateRepresentativeInput): Promise<Representative> {
+export async function createRepresentative(
+  data: CreateRepresentativeInput,
+): Promise<Representative> {
   const id = uuidv4();
   const now = new Date();
 
@@ -353,12 +369,12 @@ export async function createRepresentative(data: CreateRepresentativeInput): Pro
       data.telegramUsername || null,
       now,
       now,
-    ]
+    ],
   );
 
   const representative = await getRepresentativeById(id);
   if (!representative) {
-    throw new Error('Failed to create representative');
+    throw new Error("Failed to create representative");
   }
 
   return representative;
@@ -369,46 +385,46 @@ export async function createRepresentative(data: CreateRepresentativeInput): Pro
  */
 export async function updateRepresentative(
   id: string,
-  data: UpdateRepresentativeInput
+  data: UpdateRepresentativeInput,
 ): Promise<Representative | null> {
-  const updates: string[] = ['updated_at = ?'];
+  const updates: string[] = ["updated_at = ?"];
   const params: any[] = [new Date()];
 
   if (data.fullName !== undefined) {
-    updates.push('full_name = ?');
+    updates.push("full_name = ?");
     params.push(data.fullName);
   }
 
   if (data.phone !== undefined) {
-    updates.push('phone = ?');
+    updates.push("phone = ?");
     params.push(data.phone);
   }
 
   if (data.accessGroups !== undefined) {
-    updates.push('access_groups = ?');
+    updates.push("access_groups = ?");
     params.push(data.accessGroups ? JSON.stringify(data.accessGroups) : null);
   }
 
   if (data.notificationsEnabled !== undefined) {
-    updates.push('notifications_enabled = ?');
+    updates.push("notifications_enabled = ?");
     params.push(data.notificationsEnabled ? 1 : 0);
   }
 
   if (data.canReceiveNotifications !== undefined) {
-    updates.push('can_receive_notifications = ?');
+    updates.push("can_receive_notifications = ?");
     params.push(data.canReceiveNotifications ? 1 : 0);
   }
 
   if (data.permissions !== undefined) {
-    updates.push('permissions = ?');
+    updates.push("permissions = ?");
     params.push(JSON.stringify(data.permissions));
   }
 
   params.push(id);
 
   await executeQuery(
-    `UPDATE organization_representatives SET ${updates.join(', ')} WHERE id = ?`,
-    params
+    `UPDATE organization_representatives SET ${updates.join(", ")} WHERE id = ?`,
+    params,
   );
 
   return getRepresentativeById(id);
@@ -420,7 +436,7 @@ export async function updateRepresentative(
 export async function approveRepresentative(
   id: string,
   approvedBy: string,
-  accessGroups?: string[]
+  accessGroups?: string[],
 ): Promise<Representative | null> {
   const now = new Date();
 
@@ -439,7 +455,7 @@ export async function approveRepresentative(
       accessGroups ? JSON.stringify(accessGroups) : null,
       now,
       id,
-    ]
+    ],
   );
 
   return getRepresentativeById(id);
@@ -451,7 +467,7 @@ export async function approveRepresentative(
 export async function blockRepresentative(
   id: string,
   blockedBy: string,
-  reason: string
+  reason: string,
 ): Promise<Representative | null> {
   const now = new Date();
 
@@ -462,7 +478,29 @@ export async function blockRepresentative(
          approved_by = ?,
          updated_at = ?
      WHERE id = ?`,
-    [reason, blockedBy, now, id]
+    [reason, blockedBy, now, id],
+  );
+
+  return getRepresentativeById(id);
+}
+
+/**
+ * Разблокировать представителя
+ */
+export async function unblockRepresentative(
+  id: string,
+  unblockedBy: string,
+): Promise<Representative | null> {
+  const now = new Date();
+
+  await executeQuery(
+    `UPDATE organization_representatives 
+     SET status = 'approved', 
+         blocked_reason = NULL,
+         approved_by = ?,
+         updated_at = ?
+     WHERE id = ?`,
+    [unblockedBy, now, id],
   );
 
   return getRepresentativeById(id);
@@ -473,8 +511,8 @@ export async function blockRepresentative(
  */
 export async function deleteRepresentative(id: string): Promise<boolean> {
   const result = await executeQuery<ResultSetHeader>(
-    'DELETE FROM organization_representatives WHERE id = ?',
-    [id]
+    "DELETE FROM organization_representatives WHERE id = ?",
+    [id],
   );
 
   return result.affectedRows > 0;
@@ -485,8 +523,8 @@ export async function deleteRepresentative(id: string): Promise<boolean> {
  */
 export async function updateLastActivity(id: string): Promise<void> {
   await executeQuery(
-    'UPDATE organization_representatives SET last_activity_at = ? WHERE id = ?',
-    [new Date(), id]
+    "UPDATE organization_representatives SET last_activity_at = ? WHERE id = ?",
+    [new Date(), id],
   );
 }
 
@@ -494,10 +532,12 @@ export async function updateLastActivity(id: string): Promise<void> {
  * Получить статистику представителей
  */
 export async function getRepresentativeStats(): Promise<RepresentativeStats> {
-  const rows = await executeQuery<(RowDataPacket & { status: RepresentativeStatus; count: number })[]>(
+  const rows = await executeQuery<
+    (RowDataPacket & { status: RepresentativeStatus; count: number })[]
+  >(
     `SELECT status, COUNT(*) as count 
      FROM organization_representatives 
-     GROUP BY status`
+     GROUP BY status`,
   );
 
   const stats: RepresentativeStats = {
@@ -518,10 +558,12 @@ export async function getRepresentativeStats(): Promise<RepresentativeStats> {
 /**
  * Проверить существование представителя по Telegram Chat ID
  */
-export async function representativeExistsByTelegramChatId(chatId: string): Promise<boolean> {
+export async function representativeExistsByTelegramChatId(
+  chatId: string,
+): Promise<boolean> {
   const result = await executeQuery<CountRow[]>(
-    'SELECT COUNT(*) as total FROM organization_representatives WHERE telegram_chat_id = ?',
-    [chatId]
+    "SELECT COUNT(*) as total FROM organization_representatives WHERE telegram_chat_id = ?",
+    [chatId],
   );
   return (result[0]?.total || 0) > 0;
 }

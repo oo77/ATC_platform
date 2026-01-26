@@ -1,7 +1,9 @@
 <template>
   <div>
     <!-- Заголовок и статистика -->
-    <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div>
         <h3 class="text-xl font-semibold text-black dark:text-white">
           Представители организаций
@@ -33,7 +35,9 @@
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <!-- Поиск -->
         <div>
-          <label class="mb-2 block text-sm font-medium text-black dark:text-white">
+          <label
+            class="mb-2 block text-sm font-medium text-black dark:text-white"
+          >
             Поиск
           </label>
           <input
@@ -47,7 +51,9 @@
 
         <!-- Статус -->
         <div>
-          <label class="mb-2 block text-sm font-medium text-black dark:text-white">
+          <label
+            class="mb-2 block text-sm font-medium text-black dark:text-white"
+          >
             Статус
           </label>
           <select
@@ -64,7 +70,9 @@
 
         <!-- Организация -->
         <div>
-          <label class="mb-2 block text-sm font-medium text-black dark:text-white">
+          <label
+            class="mb-2 block text-sm font-medium text-black dark:text-white"
+          >
             Организация
           </label>
           <select
@@ -88,6 +96,7 @@
       @view="handleView"
       @approve="handleApprove"
       @block="handleBlock"
+      @unblock="handleUnblock"
       @delete="handleDelete"
     />
 
@@ -102,7 +111,7 @@
             'px-4 py-2 rounded-lg font-medium transition-colors',
             currentPage === page
               ? 'bg-primary text-white'
-              : 'bg-white dark:bg-boxdark text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4'
+              : 'bg-white dark:bg-boxdark text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4',
           ]"
         >
           {{ page }}
@@ -118,6 +127,7 @@
       @close="closeDetailModal"
       @approve="handleApprove"
       @block="handleBlock"
+      @unblock="handleUnblock"
       @updated="handleRepresentativeUpdated"
     />
 
@@ -136,11 +146,19 @@
       @close="closeBlockModal"
       @submit="submitBlock"
     />
+
+    <RepresentativesUnblockRepresentativeModal
+      v-if="representativeToUnblock"
+      :representative="representativeToUnblock"
+      :is-open="showUnblockModal"
+      @close="closeUnblockModal"
+      @submit="submitUnblock"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted } from "vue";
 
 // Типы
 interface Representative {
@@ -151,7 +169,7 @@ interface Representative {
   phone: string;
   telegramChatId: string | null;
   telegramUsername: string | null;
-  status: 'pending' | 'approved' | 'blocked';
+  status: "pending" | "approved" | "blocked";
   accessGroups: string[] | null;
   notificationsEnabled: boolean;
   lastActivityAt: Date | null;
@@ -186,9 +204,9 @@ const organizations = ref<Organization[]>([]);
 const stats = ref<Stats | null>(null);
 
 const filters = reactive({
-  search: '',
-  status: '',
-  organizationId: '',
+  search: "",
+  status: "",
+  organizationId: "",
 });
 
 const currentPage = ref(1);
@@ -204,6 +222,9 @@ const representativeToApprove = ref<Representative | null>(null);
 
 const showBlockModal = ref(false);
 const representativeToBlock = ref<Representative | null>(null);
+
+const showUnblockModal = ref(false);
+const representativeToUnblock = ref<Representative | null>(null);
 
 // Debounce для поиска
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -224,24 +245,25 @@ const loadRepresentatives = async () => {
       limit: limit.toString(),
     });
 
-    if (filters.search) params.append('search', filters.search);
-    if (filters.status) params.append('status', filters.status);
-    if (filters.organizationId) params.append('organizationId', filters.organizationId);
+    if (filters.search) params.append("search", filters.search);
+    if (filters.status) params.append("status", filters.status);
+    if (filters.organizationId)
+      params.append("organizationId", filters.organizationId);
 
     const response = await authFetch<{
       success: boolean;
       data: Representative[];
       total: number;
       totalPages: number;
-    }>(`/api/representatives?${params.toString()}`, { method: 'GET' });
+    }>(`/api/representatives?${params.toString()}`, { method: "GET" });
 
     if (response.success) {
       representatives.value = response.data;
       totalPages.value = response.totalPages;
     }
   } catch (error) {
-    console.error('Error loading representatives:', error);
-    notification.error('Ошибка при загрузке представителей');
+    console.error("Error loading representatives:", error);
+    notification.error("Ошибка при загрузке представителей");
   } finally {
     loading.value = false;
   }
@@ -252,13 +274,13 @@ const loadOrganizations = async () => {
     const response = await authFetch<{
       success: boolean;
       data: Organization[];
-    }>('/api/organizations?limit=1000', { method: 'GET' });
+    }>("/api/organizations?limit=1000", { method: "GET" });
 
     if (response.success) {
       organizations.value = response.data;
     }
   } catch (error) {
-    console.error('Error loading organizations:', error);
+    console.error("Error loading organizations:", error);
   }
 };
 
@@ -267,13 +289,13 @@ const loadStats = async () => {
     const response = await authFetch<{
       success: boolean;
       data: Stats;
-    }>('/api/representatives/stats', { method: 'GET' });
+    }>("/api/representatives/stats", { method: "GET" });
 
     if (response.success) {
       stats.value = response.data;
     }
   } catch (error) {
-    console.error('Error loading stats:', error);
+    console.error("Error loading stats:", error);
   }
 };
 
@@ -311,18 +333,18 @@ const submitApproval = async (data: { accessGroups?: string[] }) => {
     const response = await authFetch(
       `/api/representatives/${representativeToApprove.value.id}/approve`,
       {
-        method: 'POST',
+        method: "POST",
         body: data,
-      }
+      },
     );
 
     if (response.success) {
-      notification.success('Представитель успешно одобрен');
+      notification.success("Представитель успешно одобрен");
       closeApproveModal();
       await Promise.all([loadRepresentatives(), loadStats()]);
     }
   } catch (error: any) {
-    notification.error(error.data?.message || 'Ошибка при одобрении');
+    notification.error(error.data?.message || "Ошибка при одобрении");
   }
 };
 
@@ -344,18 +366,50 @@ const submitBlock = async (data: { reason: string }) => {
     const response = await authFetch(
       `/api/representatives/${representativeToBlock.value.id}/block`,
       {
-        method: 'POST',
+        method: "POST",
         body: data,
-      }
+      },
     );
 
     if (response.success) {
-      notification.success('Представитель заблокирован');
+      notification.success("Представитель заблокирован");
       closeBlockModal();
       await Promise.all([loadRepresentatives(), loadStats()]);
     }
   } catch (error: any) {
-    notification.error(error.data?.message || 'Ошибка при блокировке');
+    notification.error(error.data?.message || "Ошибка при блокировке");
+  }
+};
+
+const handleUnblock = (representative: Representative) => {
+  representativeToUnblock.value = representative;
+  showUnblockModal.value = true;
+  closeDetailModal();
+};
+
+const closeUnblockModal = () => {
+  showUnblockModal.value = false;
+  representativeToUnblock.value = null;
+};
+
+const submitUnblock = async () => {
+  if (!representativeToUnblock.value) return;
+
+  try {
+    const response = await authFetch(
+      `/api/representatives/${representativeToUnblock.value.id}/unblock`,
+      {
+        method: "POST",
+      },
+    );
+
+    if (response.success) {
+      notification.success("Представитель разблокирован");
+      closeUnblockModal();
+      await Promise.all([loadRepresentatives(), loadStats()]);
+    }
+  } catch (error: any) {
+    notification.error(error.data?.message || "Ошибка при разблокировке");
   }
 };
 
@@ -363,16 +417,19 @@ const handleDelete = async (representative: Representative) => {
   if (!confirm(`Удалить представителя ${representative.fullName}?`)) return;
 
   try {
-    const response = await authFetch(`/api/representatives/${representative.id}`, {
-      method: 'DELETE',
-    });
+    const response = await authFetch(
+      `/api/representatives/${representative.id}`,
+      {
+        method: "DELETE",
+      },
+    );
 
     if (response.success) {
-      notification.success('Представитель удалён');
+      notification.success("Представитель удалён");
       await Promise.all([loadRepresentatives(), loadStats()]);
     }
   } catch (error: any) {
-    notification.error(error.data?.message || 'Ошибка при удалении');
+    notification.error(error.data?.message || "Ошибка при удалении");
   }
 };
 
@@ -383,10 +440,6 @@ const handleRepresentativeUpdated = async () => {
 
 // Инициализация
 onMounted(async () => {
-  await Promise.all([
-    loadRepresentatives(),
-    loadOrganizations(),
-    loadStats(),
-  ]);
+  await Promise.all([loadRepresentatives(), loadOrganizations(), loadStats()]);
 });
 </script>

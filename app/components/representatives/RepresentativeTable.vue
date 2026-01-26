@@ -1,8 +1,12 @@
 <template>
-  <div class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+  <div
+    class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark"
+  >
     <!-- Загрузка -->
     <div v-if="loading" class="p-8 text-center">
-      <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+      <div
+        class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+      ></div>
       <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Загрузка...</p>
     </div>
 
@@ -11,13 +15,29 @@
       <table class="w-full table-auto">
         <thead>
           <tr class="bg-gray-2 text-left dark:bg-meta-4">
-            <th class="py-4 px-4 font-medium text-black dark:text-white">ФИО</th>
-            <th class="py-4 px-4 font-medium text-black dark:text-white">Организация</th>
-            <th class="py-4 px-4 font-medium text-black dark:text-white">Телефон</th>
-            <th class="py-4 px-4 font-medium text-black dark:text-white">Telegram</th>
-            <th class="py-4 px-4 font-medium text-black dark:text-white">Статус</th>
-            <th class="py-4 px-4 font-medium text-black dark:text-white">Дата заявки</th>
-            <th class="py-4 px-4 font-medium text-black dark:text-white text-center">Действия</th>
+            <th class="py-4 px-4 font-medium text-black dark:text-white">
+              ФИО
+            </th>
+            <th class="py-4 px-4 font-medium text-black dark:text-white">
+              Организация
+            </th>
+            <th class="py-4 px-4 font-medium text-black dark:text-white">
+              Телефон
+            </th>
+            <th class="py-4 px-4 font-medium text-black dark:text-white">
+              Telegram
+            </th>
+            <th class="py-4 px-4 font-medium text-black dark:text-white">
+              Статус
+            </th>
+            <th class="py-4 px-4 font-medium text-black dark:text-white">
+              Дата заявки
+            </th>
+            <th
+              class="py-4 px-4 font-medium text-black dark:text-white text-center"
+            >
+              Действия
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -28,13 +48,15 @@
           >
             <!-- ФИО -->
             <td class="py-4 px-4">
-              <p class="font-medium text-black dark:text-white">{{ rep.fullName }}</p>
+              <p class="font-medium text-black dark:text-white">
+                {{ rep.fullName }}
+              </p>
             </td>
 
             <!-- Организация -->
             <td class="py-4 px-4">
               <p class="text-sm text-gray-600 dark:text-gray-400">
-                {{ rep.organizationName || 'Не указана' }}
+                {{ rep.organizationName || "Не указана" }}
               </p>
             </td>
 
@@ -47,7 +69,10 @@
 
             <!-- Telegram -->
             <td class="py-4 px-4">
-              <p v-if="rep.telegramUsername" class="text-sm text-gray-600 dark:text-gray-400">
+              <p
+                v-if="rep.telegramUsername"
+                class="text-sm text-gray-600 dark:text-gray-400"
+              >
                 @{{ rep.telegramUsername }}
               </p>
               <p v-else class="text-sm text-gray-400 dark:text-gray-500 italic">
@@ -94,9 +119,24 @@
                   @click="$emit('view', rep)"
                   title="Просмотр"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                    />
                   </svg>
                 </UiButton>
 
@@ -108,8 +148,18 @@
                   @click="$emit('approve', rep)"
                   title="Одобрить"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 </UiButton>
 
@@ -121,8 +171,41 @@
                   @click="$emit('block', rep)"
                   title="Заблокировать"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                    />
+                  </svg>
+                </UiButton>
+
+                <!-- Разблокировать (только для blocked) -->
+                <UiButton
+                  v-if="rep.status === 'blocked'"
+                  variant="success"
+                  size="sm"
+                  @click="$emit('unblock', rep)"
+                  title="Разблокировать"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+                    />
                   </svg>
                 </UiButton>
 
@@ -133,8 +216,18 @@
                   @click="$emit('delete', rep)"
                   title="Удалить"
                 >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
                   </svg>
                 </UiButton>
               </div>
@@ -146,10 +239,22 @@
 
     <!-- Пусто -->
     <div v-else class="p-8 text-center">
-      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      <svg
+        class="mx-auto h-12 w-12 text-gray-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+        />
       </svg>
-      <p class="mt-4 text-gray-500 dark:text-gray-400">Представители не найдены</p>
+      <p class="mt-4 text-gray-500 dark:text-gray-400">
+        Представители не найдены
+      </p>
     </div>
   </div>
 </template>
@@ -163,7 +268,7 @@ interface Representative {
   phone: string;
   telegramChatId: string | null;
   telegramUsername: string | null;
-  status: 'pending' | 'approved' | 'blocked';
+  status: "pending" | "approved" | "blocked";
   accessGroups: string[] | null;
   notificationsEnabled: boolean;
   lastActivityAt: Date | null;
@@ -186,25 +291,26 @@ defineEmits<{
   view: [representative: Representative];
   approve: [representative: Representative];
   block: [representative: Representative];
+  unblock: [representative: Representative];
   delete: [representative: Representative];
 }>();
 
 // Вспомогательные функции
 const getStatusLabel = (status: string): string => {
   const labels: Record<string, string> = {
-    pending: 'Ожидает',
-    approved: 'Одобрен',
-    blocked: 'Заблокирован',
+    pending: "Ожидает",
+    approved: "Одобрен",
+    blocked: "Заблокирован",
   };
   return labels[status] || status;
 };
 
 const formatDate = (date: Date | string): string => {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 };
 </script>

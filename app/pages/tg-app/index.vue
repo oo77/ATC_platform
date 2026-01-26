@@ -11,29 +11,33 @@
       <div class="tg-error-icon">⚠️</div>
       <h2>Ошибка авторизации</h2>
       <p>{{ authError }}</p>
-      
+
       <div class="tg-debug-info" v-if="showDebug">
         <h3>Отладочная информация:</h3>
         <pre>{{ debugData }}</pre>
-        
+
         <!-- Ручной ввод ID для теста -->
         <div class="tg-manual-auth">
-            <h3>Ручной тест (если данных нет):</h3>
-            <input 
-                v-model="manualUserId" 
-                type="text" 
-                placeholder="Введите Telegram ID (напр. 123456)"
-                class="tg-input-debug"
-            />
-            <button @click="manualAuth" class="tg-btn-primary tg-btn-small">Войти вручную</button>
+          <h3>Ручной тест (если данных нет):</h3>
+          <input
+            v-model="manualUserId"
+            type="text"
+            placeholder="Введите Telegram ID (напр. 123456)"
+            class="tg-input-debug"
+          />
+          <button @click="manualAuth" class="tg-btn-primary tg-btn-small">
+            Войти вручную
+          </button>
         </div>
       </div>
-      
+
       <div class="tg-actions">
-          <button @click="retryAuth" class="tg-btn-primary">Попробовать снова</button>
-          <button @click="showDebug = !showDebug" class="tg-btn-secondary">
-            {{ showDebug ? 'Скрыть детали' : 'Показать детали' }}
-          </button>
+        <button @click="retryAuth" class="tg-btn-primary">
+          Попробовать снова
+        </button>
+        <button @click="showDebug = !showDebug" class="tg-btn-secondary">
+          {{ showDebug ? "Скрыть детали" : "Показать детали" }}
+        </button>
       </div>
     </div>
 
@@ -41,13 +45,15 @@
     <div v-else-if="!representative" class="tg-registration">
       <div class="tg-welcome">
         <div class="tg-logo">
-          <img src="/logo.png" alt="АТЦ">
+          <img src="/logo.png" alt="АТЦ" />
         </div>
         <h1>Добро пожаловать!</h1>
-        <p>Пожалуйста, пройдите регистрацию для доступа к информации о слушателях</p>
+        <p>
+          Пожалуйста, пройдите регистрацию для доступа к информации о слушателях
+        </p>
       </div>
 
-      <RegistrationForm 
+      <RegistrationForm
         :telegram-data="telegramData"
         @registered="handleRegistered"
       />
@@ -77,22 +83,30 @@
       <div v-if="representative.status === 'pending'" class="tg-pending-notice">
         <div class="tg-notice-icon">⏳</div>
         <h3>Ожидает одобрения</h3>
-        <p>Ваша заявка находится на рассмотрении у администратора. Вы получите уведомление после одобрения.</p>
+        <p>
+          Ваша заявка находится на рассмотрении у администратора. Вы получите
+          уведомление после одобрения.
+        </p>
       </div>
 
-      <div v-else-if="representative.status === 'blocked'" class="tg-blocked-notice">
+      <div
+        v-else-if="representative.status === 'blocked'"
+        class="tg-blocked-notice"
+      >
         <div class="tg-notice-icon">🚫</div>
         <h3>Доступ заблокирован</h3>
-        <p>{{ representative.blockedReason || 'Причина не указана' }}</p>
-        <p class="tg-blocked-hint">Обратитесь к администратору учебного центра для решения вопроса.</p>
+        <p>{{ representative.blockedReason || "Причина не указана" }}</p>
+        <p class="tg-blocked-hint">
+          Обратитесь к администратору учебного центра для решения вопроса.
+        </p>
       </div>
 
       <!-- Основное содержимое для одобренных -->
       <div v-else-if="representative.status === 'approved'" class="tg-content">
         <!-- Навигация -->
         <nav class="tg-nav">
-          <button 
-            v-for="tab in availableTabs" 
+          <button
+            v-for="tab in availableTabs"
             :key="tab.id"
             @click="activeTab = tab.id"
             :class="['tg-nav-btn', { active: activeTab === tab.id }]"
@@ -105,28 +119,28 @@
         <!-- Контент вкладок -->
         <div class="tg-tab-content">
           <!-- Слушатели -->
-          <StudentsTab 
+          <StudentsTab
             v-if="activeTab === 'students'"
             :organization-id="representative.organizationId"
             :permissions="representative.permissions"
           />
 
           <!-- Расписание -->
-          <ScheduleTab 
+          <ScheduleTab
             v-if="activeTab === 'schedule'"
             :organization-id="representative.organizationId"
             :permissions="representative.permissions"
           />
 
           <!-- Сертификаты -->
-          <CertificatesTab 
+          <CertificatesTab
             v-if="activeTab === 'certificates'"
             :organization-id="representative.organizationId"
             :permissions="representative.permissions"
           />
 
           <!-- Настройки -->
-          <SettingsTab 
+          <SettingsTab
             v-if="activeTab === 'settings'"
             :representative="representative"
           />
@@ -137,12 +151,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import RegistrationForm from '~/components/tg-app/RegistrationForm.vue';
-import StudentsTab from '~/components/tg-app/StudentsTab.vue';
-import ScheduleTab from '~/components/tg-app/ScheduleTab.vue';
-import CertificatesTab from '~/components/tg-app/CertificatesTab.vue';
-import SettingsTab from '~/components/tg-app/SettingsTab.vue';
+import { ref, computed, onMounted } from "vue";
+import RegistrationForm from "~/components/tg-app/RegistrationForm.vue";
+import StudentsTab from "~/components/tg-app/StudentsTab.vue";
+import ScheduleTab from "~/components/tg-app/ScheduleTab.vue";
+import CertificatesTab from "~/components/tg-app/CertificatesTab.vue";
+import SettingsTab from "~/components/tg-app/SettingsTab.vue";
 
 // Определение мета-данных для SEO
 definePageMeta({
@@ -154,8 +168,8 @@ const loading = ref(true);
 const authError = ref(null);
 const telegramData = ref(null);
 const representative = ref(null);
-const activeTab = ref('students');
-const debugData = ref('{}');
+const activeTab = ref("students");
+const debugData = ref("{}");
 const showDebug = ref(false);
 
 // Доступные вкладки в зависимости от прав
@@ -165,26 +179,26 @@ const availableTabs = computed(() => {
   const tabs = [];
 
   if (representative.value.permissions?.can_view_students) {
-    tabs.push({ id: 'students', icon: '👥', label: 'Слушатели' });
+    tabs.push({ id: "students", icon: "👥", label: "Слушатели" });
   }
 
   if (representative.value.permissions?.can_view_schedule) {
-    tabs.push({ id: 'schedule', icon: '📅', label: 'Расписание' });
+    tabs.push({ id: "schedule", icon: "📅", label: "Расписание" });
   }
 
   if (representative.value.permissions?.can_view_certificates) {
-    tabs.push({ id: 'certificates', icon: '📜', label: 'Сертификаты' });
+    tabs.push({ id: "certificates", icon: "📜", label: "Сертификаты" });
   }
 
-  tabs.push({ id: 'settings', icon: '⚙️', label: 'Настройки' });
+  tabs.push({ id: "settings", icon: "⚙️", label: "Настройки" });
 
   return tabs;
 });
 
 // Получить инициалы
 function getInitials(fullName) {
-  if (!fullName) return '?';
-  const parts = fullName.trim().split(' ');
+  if (!fullName) return "?";
+  const parts = fullName.trim().split(" ");
   if (parts.length >= 2) {
     return parts[0][0] + parts[1][0];
   }
@@ -194,9 +208,9 @@ function getInitials(fullName) {
 // Получить метку статуса
 function getStatusLabel(status) {
   const labels = {
-    pending: '⏳ На рассмотрении',
-    approved: '✅ Одобрен',
-    blocked: '🚫 Заблокирован',
+    pending: "⏳ На рассмотрении",
+    approved: "✅ Одобрен",
+    blocked: "🚫 Заблокирован",
   };
   return labels[status] || status;
 }
@@ -204,144 +218,139 @@ function getStatusLabel(status) {
 // Инициализация Telegram Web App
 async function initTelegramWebApp() {
   try {
-    // Проверяем доступность Telegram WebApp
-    if (!window.Telegram?.WebApp) {
-      // В режиме разработки можем использовать mock данные
+    // 1. Проверяем наличие SDK
+    if (typeof window.Telegram === "undefined" || !window.Telegram.WebApp) {
       if (import.meta.env.DEV) {
-        console.warn('[DEV MODE] Telegram WebApp недоступен, используем mock данные');
-        telegramData.value = {
-          initData: 'dev_mode',
-          user: {
-            id: 123456789,
-            first_name: 'Dev',
-            last_name: 'User',
-            username: 'devuser',
-          },
-          chatId: 123456789,
-        };
-        
-        // Пытаемся проверить авторизацию
-        await checkAuth();
-        loading.value = false;
+        console.warn(
+          "[DEV MODE] Telegram SDK не найден. Используем полный мок.",
+        );
+        useDevMock();
         return;
       }
-      throw new Error('Это приложение работает только в Telegram');
+      throw new Error("Запустите приложение через Telegram (SDK not found)");
     }
 
     const tg = window.Telegram.WebApp;
-    
-    // Расширяем приложение на весь экран
     tg.expand();
-    
-    // Устанавливаем цвета темы
-    tg.setHeaderColor('#1f2937');
-    tg.setBackgroundColor('#111827');
-    
-    // Включаем закрывающую кнопку
     tg.enableClosingConfirmation();
 
-    // Собираем отладочные данные
-    debugData.value = JSON.stringify({
-      version: tg.version,
-      platform: tg.platform,
-      initData: tg.initData,
-      initDataUnsafe: tg.initDataUnsafe,
-      user: tg.initDataUnsafe?.user,
-      colorScheme: tg.colorScheme,
-      isExpanded: tg.isExpanded,
-      viewportHeight: tg.viewportHeight,
-    }, null, 2);
+    // Сохраняем отладочную инфу
+    debugData.value = JSON.stringify(
+      {
+        version: tg.version,
+        platform: tg.platform,
+        initData: tg.initData,
+        initDataUnsafe: tg.initDataUnsafe,
+      },
+      null,
+      2,
+    );
 
-    // Получаем данные пользователя
-    const initData = tg.initData;
-    
-    // В режиме разработки initData может быть пустым
-    if (!initData) {
-      if (import.meta.env.DEV) {
-        console.warn('[DEV MODE] initData пустой, используем mock данные');
+    // 2. Получаем initData
+    const rawInitData = tg.initData;
+    const unsafeUser = tg.initDataUnsafe?.user;
+
+    // 3. Логика для Разработки (Localhost)
+    if (import.meta.env.DEV) {
+      // Если данных нет (открыли localhost в браузере) - используем мок
+      if (!rawInitData || !unsafeUser) {
+        console.log("[DEV MODE] Данных Telegram нет. Активируем DEV MOCK.");
         telegramData.value = {
-          initData: 'dev_mode',
-          user: tg.initDataUnsafe?.user || {
+          initData: "dev_mode", // Специальный ключ для сервера
+          user: {
             id: 123456789,
-            first_name: 'Dev',
-            last_name: 'User',
-            username: 'devuser',
+            first_name: "Dev",
+            last_name: "User",
+            username: "dev_admin",
           },
-          chatId: tg.initDataUnsafe?.user?.id || 123456789,
         };
       } else {
-        // Даже если initData пустой, попробуем взять из unsafe
-         if (tg.initDataUnsafe?.user) {
-             telegramData.value = {
-                 initData: '',
-                 user: tg.initDataUnsafe.user,
-                 chatId: tg.initDataUnsafe.user.id
-             };
-         } else {
-             throw new Error('Не удалось получить данные авторизации. Запустите приложение через Telegram.');
-         }
+        // Если каким-то чудом данные есть (например, через ngrok внутри TG)
+        console.log("[DEV MODE] Обнаружены данные Telegram.");
+        telegramData.value = {
+          initData: rawInitData,
+          user: unsafeUser,
+        };
       }
-    } else {
+    }
+    // 4. Логика для Продакшена
+    else {
+      if (!rawInitData || !unsafeUser) {
+        // В продакшене без данных жить нельзя
+        console.error("initData пуста:", tg);
+        throw new Error(
+          "Ошибка инициализации: данные пользователя не получены. Попробуйте перезапустить бота.",
+        );
+      }
+
       telegramData.value = {
-        initData,
-        user: tg.initDataUnsafe?.user,
-        chatId: tg.initDataUnsafe?.user?.id,
+        initData: rawInitData,
+        user: unsafeUser,
       };
     }
 
-    // Проверяем авторизацию и получаем данные представителя
-    await checkAuth();
-
-  } catch (error) {
-    console.error('Ошибка инициализации Telegram WebApp:', error);
-    authError.value = error.message;
-    // Обновляем дебаг данные даже при ошибке, если tg доступен
-    if (window.Telegram?.WebApp) {
-         const tg = window.Telegram.WebApp;
-         debugData.value = JSON.stringify({
-          error: error.message,
-          version: tg.version,
-          platform: tg.platform,
-          initData: tg.initData,
-          initDataUnsafe: tg.initDataUnsafe,
-        }, null, 2);
+    // Проверяем авторизацию
+    if (telegramData.value) {
+      await checkAuth();
     }
+  } catch (error) {
+    console.error("Ошибка инициализации:", error);
+    authError.value = error.message;
   } finally {
     loading.value = false;
   }
 }
 
+// Хелпер для полного мока (если window.Telegram нет)
+function useDevMock() {
+  telegramData.value = {
+    initData: "dev_mode",
+    user: {
+      id: 123456789,
+      first_name: "Dev",
+      last_name: "User",
+      username: "dev_admin",
+    },
+  };
+  checkAuth().finally(() => (loading.value = false));
+}
+
 // Проверка авторизации
 async function checkAuth() {
   try {
-    console.log('[TG-App Client] Начало проверки авторизации');
-    console.log('[TG-App Client] initData:', telegramData.value?.initData);
-    
-    const response = await $fetch('/api/tg-app/auth', {
-      method: 'POST',
+    console.log("[TG-App Client] Начало проверки авторизации");
+    console.log("[TG-App Client] initData:", telegramData.value?.initData);
+
+    const response = await $fetch("/api/tg-app/auth", {
+      method: "POST",
       body: {
         initData: telegramData.value.initData,
         user: telegramData.value.user, // Явно передаем объект пользователя
       },
     });
 
-    console.log('[TG-App Client] Ответ от сервера:', response);
+    console.log("[TG-App Client] Ответ от сервера:", response);
 
     if (response.representative) {
       representative.value = response.representative;
-      console.log('[TG-App Client] Представитель установлен:', representative.value.fullName);
+      console.log(
+        "[TG-App Client] Представитель установлен:",
+        representative.value.fullName,
+      );
     }
   } catch (error) {
-    console.error('[TG-App Client] Ошибка авторизации:', error);
-    console.error('[TG-App Client] Детали ошибки:', {
+    console.error("[TG-App Client] Ошибка авторизации:", error);
+    console.error("[TG-App Client] Детали ошибки:", {
       statusCode: error.statusCode,
       message: error.message,
       data: error.data,
     });
-    
+
     // Если пользователь не найден, покажем форму регистрации
     if (error.statusCode === 404) {
-      console.log('[TG-App Client] Пользователь не найден, показываем форму регистрации');
+      console.log(
+        "[TG-App Client] Пользователь не найден, показываем форму регистрации",
+      );
       // Ничего не делаем, покажется форма регистрации
     } else {
       throw error;
@@ -357,30 +366,30 @@ function retryAuth() {
 }
 
 // Ручная авторизация (для тестов)
-const manualUserId = ref('');
+const manualUserId = ref("");
 
 async function manualAuth() {
-    if (!manualUserId.value) {
-        alert('Введите ID');
-        return;
-    }
-    
-    // Формируем фейковые данные
-    telegramData.value = {
-        initData: `user={"id":${manualUserId.value},"first_name":"Test","last_name":"User","username":"testuser"}`,
-        user: {
-            id: Number(manualUserId.value),
-            first_name: 'Test',
-            last_name: 'User (' + manualUserId.value + ')',
-            username: 'testuser'
-        }
-    };
-    
-    authError.value = null;
-    loading.value = true;
-    
-    await checkAuth();
-    loading.value = false;
+  if (!manualUserId.value) {
+    alert("Введите ID");
+    return;
+  }
+
+  // Формируем фейковые данные
+  telegramData.value = {
+    initData: `user={"id":${manualUserId.value},"first_name":"Test","last_name":"User","username":"testuser"}`,
+    user: {
+      id: Number(manualUserId.value),
+      first_name: "Test",
+      last_name: "User (" + manualUserId.value + ")",
+      username: "testuser",
+    },
+  };
+
+  authError.value = null;
+  loading.value = true;
+
+  await checkAuth();
+  loading.value = false;
 }
 
 // Обработка успешной регистрации
@@ -391,15 +400,15 @@ function handleRegistered(data) {
 // Подключение скрипта Telegram Web App
 onMounted(() => {
   // Добавляем скрипт Telegram Web App SDK
-  const script = document.createElement('script');
-  script.src = 'https://telegram.org/js/telegram-web-app.js';
+  const script = document.createElement("script");
+  script.src = "https://telegram.org/js/telegram-web-app.js";
   script.async = true;
   script.onload = () => {
     // Даём время на инициализацию
     setTimeout(initTelegramWebApp, 100);
   };
   script.onerror = () => {
-    authError.value = 'Не удалось загрузить Telegram Web App SDK';
+    authError.value = "Не удалось загрузить Telegram Web App SDK";
     loading.value = false;
   };
   document.head.appendChild(script);
@@ -412,7 +421,9 @@ onMounted(() => {
   min-height: 100vh;
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   color: #f1f5f9;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, sans-serif;
   overflow-x: hidden;
 }
 
@@ -436,7 +447,9 @@ onMounted(() => {
 }
 
 @keyframes tg-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Ошибка */
@@ -519,8 +532,8 @@ onMounted(() => {
 .tg-input-debug {
   width: 100%;
   padding: 0.5rem;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   color: white;
   margin-bottom: 0.5rem;
@@ -531,7 +544,6 @@ onMounted(() => {
   font-size: 0.9rem;
   width: 100%;
 }
-
 
 /* Регистрация */
 .tg-registration {
