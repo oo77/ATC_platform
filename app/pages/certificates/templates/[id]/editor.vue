@@ -8,25 +8,33 @@
       @save="handleSave"
       @preview="handlePreview"
     />
-    
+
     <!-- Загрузка -->
     <div v-else-if="isLoading" class="loading-state">
       <div class="loading-spinner"></div>
       <p>Загрузка шаблона...</p>
     </div>
-    
+
     <!-- Ошибка -->
     <div v-else-if="error" class="error-state">
-      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="m15 9-6 6"/>
-        <path d="m9 9 6 6"/>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="48"
+        height="48"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="m15 9-6 6" />
+        <path d="m9 9 6 6" />
       </svg>
       <h2>Ошибка загрузки</h2>
       <p>{{ error }}</p>
       <button @click="loadTemplate">Повторить</button>
     </div>
-    
+
     <!-- Модальное окно предпросмотра -->
     <Teleport to="body">
       <div v-if="showPreview" class="preview-modal" @click.self="closePreview">
@@ -34,13 +42,25 @@
           <div class="preview-header">
             <h3>Предпросмотр сертификата</h3>
             <div class="preview-info" v-if="previewData">
-              <span class="info-badge">{{ previewData.width }}×{{ previewData.height }}px</span>
-              <span class="info-badge">{{ previewData.elementsCount }} элементов</span>
+              <span class="info-badge"
+                >{{ previewData.width }}×{{ previewData.height }}px</span
+              >
+              <span class="info-badge"
+                >{{ previewData.elementsCount }} элементов</span
+              >
             </div>
             <button class="close-btn" @click="closePreview">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 6 6 18"/>
-                <path d="m6 6 12 12"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
               </svg>
             </button>
           </div>
@@ -50,15 +70,23 @@
               <p>Генерация предпросмотра...</p>
             </div>
             <div v-else-if="previewError" class="preview-error">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 8v4"/>
-                <path d="M12 16h.01"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4" />
+                <path d="M12 16h.01" />
               </svg>
               <p>{{ previewError }}</p>
             </div>
-            <div 
-              v-else-if="previewHtml" 
+            <div
+              v-else-if="previewHtml"
               class="preview-certificate"
               :style="{
                 width: `${(previewData?.width || 1123) * previewScale}px`,
@@ -73,10 +101,18 @@
               ></iframe>
             </div>
             <div v-else class="preview-empty">
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                <circle cx="9" cy="9" r="2"/>
-                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                <circle cx="9" cy="9" r="2" />
+                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
               </svg>
               <p>Нажмите "Обновить" для генерации предпросмотра</p>
             </div>
@@ -84,48 +120,86 @@
           <div class="preview-footer">
             <div class="footer-left">
               <span class="scale-label">Масштаб:</span>
-              <button 
-                class="scale-btn" 
+              <button
+                class="scale-btn"
                 :class="{ active: previewScale === 0.5 }"
                 @click="previewScale = 0.5"
-              >50%</button>
-              <button 
-                class="scale-btn" 
+              >
+                50%
+              </button>
+              <button
+                class="scale-btn"
                 :class="{ active: previewScale === 0.75 }"
                 @click="previewScale = 0.75"
-              >75%</button>
-              <button 
-                class="scale-btn" 
+              >
+                75%
+              </button>
+              <button
+                class="scale-btn"
                 :class="{ active: previewScale === 1 }"
                 @click="previewScale = 1"
-              >100%</button>
+              >
+                100%
+              </button>
             </div>
             <div class="footer-right">
-              <button class="btn-refresh" @click="loadPreview" :disabled="previewLoading">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.83 6.72 2.24"/>
-                  <path d="M21 3v6h-6"/>
+              <button
+                class="btn-refresh"
+                @click="loadPreview"
+                :disabled="previewLoading"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.83 6.72 2.24" />
+                  <path d="M21 3v6h-6" />
                 </svg>
                 Обновить
               </button>
-              <button class="btn-secondary" @click="closePreview">Закрыть</button>
+              <button class="btn-secondary" @click="closePreview">
+                Закрыть
+              </button>
             </div>
           </div>
         </div>
       </div>
     </Teleport>
-    
+
     <!-- Уведомления -->
     <Teleport to="body">
       <div v-if="notification" class="notification" :class="notification.type">
-        <svg v-if="notification.type === 'success'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <path d="m9 11 3 3L22 4"/>
+        <svg
+          v-if="notification.type === 'success'"
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <path d="m9 11 3 3L22 4" />
         </svg>
-        <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 8v4"/>
-          <path d="M12 16h.01"/>
+        <svg
+          v-else
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 8v4" />
+          <path d="M12 16h.01" />
         </svg>
         <span>{{ notification.message }}</span>
       </div>
@@ -134,98 +208,115 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useAuthFetch } from '~/composables/useAuthFetch'
-import type { CertificateTemplate, CertificateTemplateData } from '~/types/certificate'
-import CertificateEditor from '~/components/certificates/editor/CertificateEditor.vue'
+import { ref, onMounted, computed, nextTick } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useAuthFetch } from "~/composables/useAuthFetch";
+import type {
+  CertificateTemplate,
+  CertificateTemplateData,
+} from "~/types/certificate";
+import CertificateEditor from "~/components/certificates/editor/CertificateEditor.vue";
 
 definePageMeta({
-  layout: 'blank',
-})
+  layout: "blank",
+});
 
-const route = useRoute()
-const router = useRouter()
-const { authFetch } = useAuthFetch()
+const route = useRoute();
+const router = useRouter();
+const { authFetch } = useAuthFetch();
 
-const templateId = computed(() => route.params.id as string)
-const template = ref<CertificateTemplate | null>(null)
-const isLoading = ref(true)
-const isSaving = ref(false)
-const error = ref<string | null>(null)
-const notification = ref<{ type: 'success' | 'error'; message: string } | null>(null)
+const templateId = computed(() => route.params.id as string);
+const template = ref<CertificateTemplate | null>(null);
+const isLoading = ref(true);
+const isSaving = ref(false);
+const error = ref<string | null>(null);
+const notification = ref<{ type: "success" | "error"; message: string } | null>(
+  null,
+);
 
 // Preview state
-const showPreview = ref(false)
-const previewLoading = ref(false)
-const previewError = ref<string | null>(null)
-const previewHtml = ref<string | null>(null)
-const previewData = ref<{ width: number; height: number; elementsCount: number } | null>(null)
-const previewScale = ref(0.75)
-const previewIframeRef = ref<HTMLIFrameElement | null>(null)
+const showPreview = ref(false);
+const previewLoading = ref(false);
+const previewError = ref<string | null>(null);
+const previewHtml = ref<string | null>(null);
+const previewData = ref<{
+  width: number;
+  height: number;
+  elementsCount: number;
+} | null>(null);
+const previewScale = ref(0.75);
+const previewIframeRef = ref<HTMLIFrameElement | null>(null);
 
 // Загрузка шаблона
 async function loadTemplate() {
-  isLoading.value = true
-  error.value = null
-  
+  isLoading.value = true;
+  error.value = null;
+
   try {
-    const response = await authFetch<{ success: boolean; template: CertificateTemplate }>(`/api/certificates/templates/${templateId.value}`)
-    
+    const response = await authFetch<{
+      success: boolean;
+      template: CertificateTemplate;
+    }>(`/api/certificates/templates/${templateId.value}`);
+
     if (response.success) {
-      template.value = response.template
-      console.log('[CertificateEditor] Шаблон загружен:', template.value?.name)
+      template.value = response.template;
+      console.log("[CertificateEditor] Шаблон загружен:", template.value?.name);
     } else {
-      throw new Error('Шаблон не найден')
+      throw new Error("Шаблон не найден");
     }
   } catch (e) {
-    console.error('[CertificateEditor] Ошибка загрузки шаблона:', e)
-    error.value = e instanceof Error ? e.message : 'Неизвестная ошибка'
+    console.error("[CertificateEditor] Ошибка загрузки шаблона:", e);
+    error.value = e instanceof Error ? e.message : "Неизвестная ошибка";
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
 }
 
 // Сохранение шаблона
 async function handleSave(data: CertificateTemplateData) {
-  isSaving.value = true
-  
+  isSaving.value = true;
+
   try {
-    const response = await authFetch<{ success: boolean; template: CertificateTemplate }>(`/api/certificates/templates/${templateId.value}`, {
-      method: 'PUT',
+    const response = await authFetch<{
+      success: boolean;
+      template: CertificateTemplate;
+    }>(`/api/certificates/templates/${templateId.value}`, {
+      method: "PUT",
       body: {
         templateData: data,
         layout: data.layout,
       },
-    })
-    
+    });
+
     if (response.success) {
-      template.value = response.template
-      showNotification('success', 'Шаблон успешно сохранён')
-      console.log('[CertificateEditor] Шаблон сохранён')
+      template.value = response.template;
+      // Очищаем localStorage после успешного сохранения
+      localStorage.removeItem(`certificate_template_draft_${templateId.value}`);
+      showNotification("success", "Шаблон успешно сохранён");
+      console.log("[CertificateEditor] Шаблон сохранён, localStorage очищен");
     } else {
-      throw new Error('Ошибка сохранения')
+      throw new Error("Ошибка сохранения");
     }
   } catch (e) {
-    console.error('[CertificateEditor] Ошибка сохранения:', e)
-    showNotification('error', 'Ошибка сохранения шаблона')
+    console.error("[CertificateEditor] Ошибка сохранения:", e);
+    showNotification("error", "Ошибка сохранения шаблона");
   } finally {
-    isSaving.value = false
+    isSaving.value = false;
   }
 }
 
 // Предпросмотр
 async function handlePreview() {
-  showPreview.value = true
-  await nextTick()
-  await loadPreview()
+  showPreview.value = true;
+  await nextTick();
+  await loadPreview();
 }
 
 // Загрузка preview с сервера
 async function loadPreview() {
-  previewLoading.value = true
-  previewError.value = null
-  
+  previewLoading.value = true;
+  previewError.value = null;
+
   try {
     const response = await authFetch<{
       success: boolean;
@@ -237,45 +328,45 @@ async function loadPreview() {
         elementsCount: number;
       };
       message?: string;
-    }>(`/api/certificates/templates/${templateId.value}/preview`)
-    
+    }>(`/api/certificates/templates/${templateId.value}/preview`);
+
     if (response.success && response.hasTemplate && response.preview) {
-      previewHtml.value = response.preview.html
+      previewHtml.value = response.preview.html;
       previewData.value = {
         width: response.preview.width,
         height: response.preview.height,
         elementsCount: response.preview.elementsCount,
-      }
+      };
     } else {
-      previewError.value = response.message || 'Шаблон не настроен'
+      previewError.value = response.message || "Шаблон не настроен";
     }
   } catch (e) {
-    console.error('[CertificateEditor] Ошибка загрузки preview:', e)
-    previewError.value = 'Ошибка генерации предпросмотра'
+    console.error("[CertificateEditor] Ошибка загрузки preview:", e);
+    previewError.value = "Ошибка генерации предпросмотра";
   } finally {
-    previewLoading.value = false
+    previewLoading.value = false;
   }
 }
 
 // Закрытие preview
 function closePreview() {
-  showPreview.value = false
-  previewHtml.value = null
-  previewData.value = null
-  previewError.value = null
+  showPreview.value = false;
+  previewHtml.value = null;
+  previewData.value = null;
+  previewError.value = null;
 }
 
 // Показ уведомления
-function showNotification(type: 'success' | 'error', message: string) {
-  notification.value = { type, message }
+function showNotification(type: "success" | "error", message: string) {
+  notification.value = { type, message };
   setTimeout(() => {
-    notification.value = null
-  }, 3000)
+    notification.value = null;
+  }, 3000);
 }
 
 onMounted(() => {
-  loadTemplate()
-})
+  loadTemplate();
+});
 </script>
 
 <style scoped>
@@ -304,7 +395,7 @@ onMounted(() => {
   width: 40px;
   height: 40px;
   border: 3px solid var(--color-gray-200);
-  border-top-color: #3B82F6;
+  border-top-color: #3b82f6;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -338,7 +429,7 @@ onMounted(() => {
 }
 
 .error-state svg {
-  color: #DC2626;
+  color: #dc2626;
 }
 
 .error-state h2 {
@@ -359,7 +450,7 @@ onMounted(() => {
 
 .error-state button {
   padding: 0.625rem 1.5rem;
-  background: #3B82F6;
+  background: #3b82f6;
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -497,7 +588,7 @@ onMounted(() => {
 }
 
 .preview-error svg {
-  color: #F59E0B;
+  color: #f59e0b;
 }
 
 .preview-empty svg {
@@ -561,8 +652,8 @@ onMounted(() => {
 }
 
 .scale-btn.active {
-  background: #3B82F6;
-  border-color: #3B82F6;
+  background: #3b82f6;
+  border-color: #3b82f6;
   color: white;
 }
 
@@ -577,8 +668,8 @@ onMounted(() => {
 }
 
 :root.dark .scale-btn.active {
-  background: #3B82F6;
-  border-color: #3B82F6;
+  background: #3b82f6;
+  border-color: #3b82f6;
   color: white;
 }
 
@@ -662,19 +753,19 @@ onMounted(() => {
 }
 
 .notification.success {
-  border-left: 4px solid #10B981;
+  border-left: 4px solid #10b981;
 }
 
 .notification.success svg {
-  color: #10B981;
+  color: #10b981;
 }
 
 .notification.error {
-  border-left: 4px solid #EF4444;
+  border-left: 4px solid #ef4444;
 }
 
 .notification.error svg {
-  color: #EF4444;
+  color: #ef4444;
 }
 
 .notification span {

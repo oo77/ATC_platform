@@ -350,15 +350,63 @@ const {
 const showPresetConfirm = ref(false);
 const pendingPresetData = ref<CertificateTemplateData | null>(null);
 
+// Буфер обмена для копирования элементов
+const clipboard = ref<TemplateElement | null>(null);
+
+// Ключ для localStorage
+const getStorageKey = () => `certificate_template_draft_${props.templateId}`;
+
+// Автосохранение в localStorage
+function autoSave() {
+  if (isDirty.value) {
+    try {
+      const data = exportData();
+      localStorage.setItem(getStorageKey(), JSON.stringify(data));
+      console.log("✅ Автосохранение выполнено");
+    } catch (error) {
+      console.error("Ошибка автосохранения:", error);
+    }
+  }
+}
+
+// Загрузка из localStorage
+function loadFromStorage() {
+  try {
+    const saved = localStorage.getItem(getStorageKey());
+    if (saved) {
+      const data = JSON.parse(saved);
+      return data;
+    }
+  } catch (error) {
+    console.error("Ошибка загрузки из localStorage:", error);
+  }
+  return null;
+}
+
 // Инициализация при монтировании
 onMounted(() => {
-  initTemplate(props.initialData);
+  // Пытаемся загрузить сохраненную версию
+  const savedData = loadFromStorage();
+  if (savedData) {
+    console.log("📂 Загружена сохраненная версия из localStorage");
+    initTemplate(savedData);
+  } else {
+    initTemplate(props.initialData);
+  }
 
   // Предзагружаем все Google Fonts
   preloadAllFonts();
 
   // Клавиатурные сочетания
   window.addEventListener("keydown", handleKeydown);
+
+  // Автосохранение каждые 5 секунд
+  const autoSaveInterval = setInterval(autoSave, 5000);
+
+  // Очистка при размонтировании
+  onUnmounted(() => {
+    clearInterval(autoSaveInterval);
+  });
 });
 
 onUnmounted(() => {
@@ -390,14 +438,41 @@ function handleKeydown(e: KeyboardEvent) {
     e.preventDefault();
     duplicateElement(selectedElementId.value);
   }
+  // Ctrl+C - копировать
+  if (e.ctrlKey && e.key === "c" && selectedElementId.value) {
+    e.preventDefault();
+    const element = templateData.value.elements.find(
+      (el: TemplateElement) => el.id === selectedElementId.value,
+    );
+    if (element) {
+      clipboard.value = JSON.parse(JSON.stringify(element));
+      console.log("📋 Элемент скопирован в буфер обмена");
+    }
+  }
+  // Ctrl+V - вставить
+  if (e.ctrlKey && e.key === "v" && clipboard.value) {
+    e.preventDefault();
+    const newElement = {
+      ...JSON.parse(JSON.stringify(clipboard.value)),
+      id: `el_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      x: clipboard.value.x + 20,
+      y: clipboard.value.y + 20,
+    };
+    addElement(newElement);
+    console.log("📌 Элемент вставлен из буфера обмена");
+  }
   // Escape - снять выделение
   if (e.key === "Escape") {
     selectElement(null);
   }
   // Ctrl+S - сохранить
-  if (e.ctrlKey && e.key === "s") {
+  if (e.ctrlKey && (e.key === "s" || e.key === "S")) {
     e.preventDefault();
+    e.stopPropagation();
     if (isDirty.value) {
+      // Сохраняем в localStorage
+      autoSave();
+      // Отправляем на сервер
       emit("save", exportData());
     }
   }

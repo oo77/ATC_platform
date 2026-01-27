@@ -1143,10 +1143,27 @@ function onImageSelected(e: Event) {
   font-size: 0.6875rem;
 }
 
-.input-grid.compact .input-group input {
+.input-grid.compact .input-group input[type="number"] {
   padding: 0.375rem 0.25rem;
   font-size: 0.8125rem;
   text-align: center;
+  max-width: 100%;
+  width: 100%;
+}
+
+/* Скрываем стрелки у number-инпутов в компактном режиме */
+.input-grid.compact
+  .input-group
+  input[type="number"]::-webkit-inner-spin-button,
+.input-grid.compact
+  .input-group
+  input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input-grid.compact .input-group input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 .input-group {
