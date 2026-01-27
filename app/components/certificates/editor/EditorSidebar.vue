@@ -1164,6 +1164,7 @@ function onImageSelected(e: Event) {
 
 .input-grid.compact .input-group input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .input-group {

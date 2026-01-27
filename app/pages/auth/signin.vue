@@ -13,10 +13,10 @@
           class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-brand-100/80 rounded-full blur-[120px] opacity-60"
         ></div>
         <div
-          class="absolute -top-32 -left-32 w-[500px] h-[500px] bg-gradient-to-br from-brand-200 to-purple-200 rounded-full blur-[80px] opacity-50 animate-pulse-slow"
+          class="absolute -top-32 -left-32 w-[500px] h-[500px] bg-linear-to-br from-brand-200 to-purple-200 rounded-full blur-[80px] opacity-50 animate-pulse-slow"
         ></div>
         <div
-          class="absolute bottom-0 right-0 w-[600px] h-[600px] bg-gradient-to-tl from-teal-200 to-brand-200 rounded-full blur-[90px] opacity-50"
+          class="absolute bottom-0 right-0 w-[600px] h-[600px] bg-linear-to-tl from-teal-200 to-brand-200 rounded-full blur-[90px] opacity-50"
         ></div>
 
         <!-- Floating Geometric Shapes -->
@@ -95,7 +95,7 @@
 
         <!-- Mesh Grid Overlay -->
         <div
-          class="absolute inset-0 bg-[linear-gradient(rgba(135,135,135,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(135,135,135,0.02)_1px,transparent_1px)] bg-[size:60px_60px]"
+          class="absolute inset-0 bg-[linear-gradient(rgba(135,135,135,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(135,135,135,0.02)_1px,transparent_1px)] bg-size-[60px_60px]"
         ></div>
       </div>
 
@@ -107,7 +107,7 @@
         >
           <!-- Glow behind logo -->
           <div
-            class="absolute inset-4 bg-gradient-to-tr from-brand-400/20 to-purple-400/20 rounded-[3rem] blur-2xl group-hover:blur-3xl transition-all duration-700"
+            class="absolute inset-4 bg-linear-to-tr from-brand-400/20 to-purple-400/20 rounded-[3rem] blur-2xl group-hover:blur-3xl transition-all duration-700"
           ></div>
 
           <!-- Logo Card Back -->
@@ -132,7 +132,7 @@
           class="text-4xl lg:text-6xl font-extrabold text-gray-900 mb-6 tracking-tight leading-none px-4"
         >
           <span
-            class="block text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-purple-600 drop-shadow-sm"
+            class="block text-transparent bg-clip-text bg-linear-to-r from-brand-600 to-purple-600 drop-shadow-sm"
             >Эффективность</span
           >
           <span class="block text-3xl lg:text-5xl mt-2 text-gray-800"
@@ -155,7 +155,7 @@
       <div class="absolute inset-0 pointer-events-none overflow-hidden">
         <!-- Deep gradient base -->
         <div
-          class="absolute inset-0 bg-gradient-to-br from-slate-900 via-[#0f172a] to-[#020617]"
+          class="absolute inset-0 bg-linear-to-br from-slate-900 via-[#0f172a] to-[#020617]"
         ></div>
 
         <!-- Moving Blobs -->
@@ -192,7 +192,7 @@
 
         <!-- Glassy Card -->
         <div
-          class="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 sm:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden group"
+          class="bg-slate-800/40 backdrop-blur-xl border border-white/10 rounded-4xl p-8 sm:p-10 shadow-2xl shadow-blue-900/20 relative overflow-hidden group"
         >
           <!-- Card internal highlight -->
           <div
@@ -326,7 +326,7 @@
                   <div
                     class="w-6 h-6 border-2 border-slate-600 rounded-lg bg-slate-800/50 group-hover/check:border-blue-500 transition-all flex items-center justify-center shadow-inner"
                     :class="{
-                      '!bg-blue-600 !border-blue-600': formData.keepLoggedIn,
+                      'bg-blue-600! border-blue-600!': formData.keepLoggedIn,
                     }"
                   >
                     <svg
@@ -356,7 +356,7 @@
             <button
               type="submit"
               :disabled="isLoading"
-              class="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-lg font-bold rounded-xl shadow-lg shadow-blue-600/30 transform transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-3 mt-4 border border-white/10"
+              class="w-full py-4 px-6 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-lg font-bold rounded-xl shadow-lg shadow-blue-600/30 transform transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-3 mt-4 border border-white/10"
             >
               <span v-if="!isLoading">Войти</span>
               <span v-else class="flex items-center text-white/90">
