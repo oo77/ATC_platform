@@ -3,101 +3,203 @@
     <!-- Заголовок редактора -->
     <div class="editor-header">
       <div class="header-left">
-        <NuxtLink 
+        <NuxtLink
           :to="`/certificates/templates/${templateId}`"
           class="back-button"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m15 18-6-6 6-6"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="m15 18-6-6 6-6" />
           </svg>
           Назад
         </NuxtLink>
-        <h1 class="editor-title">{{ templateName || 'Редактор шаблона' }}</h1>
+        <h1 class="editor-title">{{ templateName || "Редактор шаблона" }}</h1>
       </div>
-      
+
       <div class="header-center">
-        <button 
+        <button
           class="toolbar-btn"
           :disabled="!canUndo"
           @click="undo"
           title="Отменить (Ctrl+Z)"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 7v6h6"/>
-            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 7v6h6" />
+            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
           </svg>
         </button>
-        <button 
+        <button
           class="toolbar-btn"
           :disabled="!canRedo"
           @click="redo"
           title="Повторить (Ctrl+Y)"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 7v6h-6"/>
-            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 7v6h-6" />
+            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
           </svg>
         </button>
-        
+
         <div class="toolbar-divider"></div>
-        
+
         <span class="zoom-label">{{ Math.round(zoom * 100) }}%</span>
-        <button class="toolbar-btn" @click="zoomOut" :disabled="zoom <= minZoom" title="Уменьшить">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.3-4.3"/>
-            <path d="M8 11h6"/>
+        <button
+          class="toolbar-btn"
+          @click="zoomOut"
+          :disabled="zoom <= minZoom"
+          title="Уменьшить"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+            <path d="M8 11h6" />
           </svg>
         </button>
-        <button class="toolbar-btn" @click="zoomIn" :disabled="zoom >= maxZoom" title="Увеличить">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/>
-            <path d="m21 21-4.3-4.3"/>
-            <path d="M11 8v6"/>
-            <path d="M8 11h6"/>
+        <button
+          class="toolbar-btn"
+          @click="zoomIn"
+          :disabled="zoom >= maxZoom"
+          title="Увеличить"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+            <path d="M11 8v6" />
+            <path d="M8 11h6" />
           </svg>
         </button>
         <button class="toolbar-btn" @click="resetZoom" title="Сбросить масштаб">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.83 6.72 2.24"/>
-            <path d="M21 3v6h-6"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.83 6.72 2.24" />
+            <path d="M21 3v6h-6" />
           </svg>
         </button>
       </div>
-      
+
       <div class="header-right">
-        <button 
-          class="btn-preview"
-          @click="$emit('preview')"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-            <circle cx="12" cy="12" r="3"/>
+        <button class="btn-preview" @click="$emit('preview')">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
           </svg>
           Предпросмотр
         </button>
-        <button 
+        <button
           class="btn-save"
           :disabled="isSaving || !isDirty"
           @click="$emit('save', exportData())"
         >
-          <svg v-if="!isSaving" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-            <polyline points="17,21 17,13 7,13 7,21"/>
-            <polyline points="7,3 7,8 15,8"/>
+          <svg
+            v-if="!isSaving"
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+            />
+            <polyline points="17,21 17,13 7,13 7,21" />
+            <polyline points="7,3 7,8 15,8" />
           </svg>
-          <svg v-else class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+          <svg
+            v-else
+            class="animate-spin"
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
           </svg>
-          {{ isSaving ? 'Сохранение...' : 'Сохранить' }}
+          {{ isSaving ? "Сохранение..." : "Сохранить" }}
         </button>
       </div>
     </div>
-    
+
     <!-- Основная область -->
     <div class="editor-main">
       <!-- Панель инструментов слева -->
-      <EditorToolbar 
+      <EditorToolbar
         @add-text="handleAddText"
         @add-variable="handleAddVariable"
         @add-image="handleAddImage"
@@ -108,7 +210,7 @@
         @apply-preset="handleApplyPreset"
         :current-layout="templateData.layout"
       />
-      
+
       <!-- Холст -->
       <div class="canvas-container" ref="canvasContainerRef">
         <EditorCanvas
@@ -120,7 +222,7 @@
           @delete-element="deleteElement"
         />
       </div>
-      
+
       <!-- Панель свойств справа -->
       <EditorSidebar
         :selected-element="selectedElement"
@@ -130,25 +232,45 @@
         @bring-to-front="handleBringToFront"
         @send-to-back="handleSendToBack"
         @toggle-lock="handleToggleLock"
+        @align="handleAlign"
       />
     </div>
-    
+
     <!-- Модальное окно подтверждения применения пресета -->
     <Teleport to="body">
-      <div v-if="showPresetConfirm" class="preset-confirm-overlay" @click.self="cancelPreset">
+      <div
+        v-if="showPresetConfirm"
+        class="preset-confirm-overlay"
+        @click.self="cancelPreset"
+      >
         <div class="preset-confirm-modal">
           <div class="modal-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M12 9v4"/>
-              <path d="M12 17h.01"/>
-              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+            >
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
+              <path
+                d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+              />
             </svg>
           </div>
           <h3>Применить шаблон?</h3>
-          <p>Все текущие элементы будут заменены на элементы выбранного шаблона. Это действие нельзя отменить.</p>
+          <p>
+            Все текущие элементы будут заменены на элементы выбранного шаблона.
+            Это действие нельзя отменить.
+          </p>
           <div class="modal-actions">
             <button class="btn-cancel" @click="cancelPreset">Отмена</button>
-            <button class="btn-confirm" @click="confirmPreset">Применить</button>
+            <button class="btn-confirm" @click="confirmPreset">
+              Применить
+            </button>
           </div>
         </div>
       </div>
@@ -157,40 +279,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { 
-  useCertificateEditor, 
+import { ref, onMounted, onUnmounted } from "vue";
+import {
+  useCertificateEditor,
   createTextElement,
   createVariableElement,
   createImageElement,
   createQRElement,
   createShapeElement,
-} from '~/composables/useCertificateEditor'
-import { preloadAllFonts } from '~/composables/useGoogleFonts'
-import type { 
-  CertificateTemplateData, 
+} from "~/composables/useCertificateEditor";
+import { preloadAllFonts } from "~/composables/useGoogleFonts";
+import type {
+  CertificateTemplateData,
   TemplateElement,
   VariableSource,
   TemplateLayout,
   TemplateBackground,
   ShapeType,
-} from '~/types/certificate'
-import EditorToolbar from './EditorToolbar.vue'
-import EditorCanvas from './EditorCanvas.vue'
-import EditorSidebar from './EditorSidebar.vue'
+} from "~/types/certificate";
+import EditorToolbar from "./EditorToolbar.vue";
+import EditorCanvas from "./EditorCanvas.vue";
+import EditorSidebar from "./EditorSidebar.vue";
 
 const props = defineProps<{
-  templateId: string
-  templateName?: string
-  initialData?: CertificateTemplateData
-}>()
+  templateId: string;
+  templateName?: string;
+  initialData?: CertificateTemplateData;
+}>();
 
 const emit = defineEmits<{
-  (e: 'save', data: CertificateTemplateData): void
-  (e: 'preview'): void
-}>()
+  (e: "save", data: CertificateTemplateData): void;
+  (e: "preview"): void;
+}>();
 
-const canvasContainerRef = ref<HTMLElement | null>(null)
+const canvasContainerRef = ref<HTMLElement | null>(null);
 
 const {
   templateData,
@@ -218,61 +340,65 @@ const {
   sendToBack,
   toggleLock,
   selectElement,
+  alignElement,
   zoomIn,
   zoomOut,
   resetZoom,
-} = useCertificateEditor()
+} = useCertificateEditor();
 
 // Состояние модального окна пресетов
-const showPresetConfirm = ref(false)
-const pendingPresetData = ref<CertificateTemplateData | null>(null)
+const showPresetConfirm = ref(false);
+const pendingPresetData = ref<CertificateTemplateData | null>(null);
 
 // Инициализация при монтировании
 onMounted(() => {
-  initTemplate(props.initialData)
-  
+  initTemplate(props.initialData);
+
   // Предзагружаем все Google Fonts
-  preloadAllFonts()
-  
+  preloadAllFonts();
+
   // Клавиатурные сочетания
-  window.addEventListener('keydown', handleKeydown)
-})
+  window.addEventListener("keydown", handleKeydown);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
+  window.removeEventListener("keydown", handleKeydown);
+});
 
 // Обработка клавиатурных сочетаний
 function handleKeydown(e: KeyboardEvent) {
   // Ctrl+Z - Undo
-  if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
-    e.preventDefault()
-    undo()
+  if (e.ctrlKey && e.key === "z" && !e.shiftKey) {
+    e.preventDefault();
+    undo();
   }
   // Ctrl+Y или Ctrl+Shift+Z - Redo
-  if ((e.ctrlKey && e.key === 'y') || (e.ctrlKey && e.shiftKey && e.key === 'z')) {
-    e.preventDefault()
-    redo()
+  if (
+    (e.ctrlKey && e.key === "y") ||
+    (e.ctrlKey && e.shiftKey && e.key === "z")
+  ) {
+    e.preventDefault();
+    redo();
   }
   // Delete - удалить выбранный элемент
-  if (e.key === 'Delete' && selectedElementId.value) {
-    e.preventDefault()
-    deleteSelectedElement()
+  if (e.key === "Delete" && selectedElementId.value) {
+    e.preventDefault();
+    deleteSelectedElement();
   }
   // Ctrl+D - дублировать
-  if (e.ctrlKey && e.key === 'd' && selectedElementId.value) {
-    e.preventDefault()
-    duplicateElement(selectedElementId.value)
+  if (e.ctrlKey && e.key === "d" && selectedElementId.value) {
+    e.preventDefault();
+    duplicateElement(selectedElementId.value);
   }
   // Escape - снять выделение
-  if (e.key === 'Escape') {
-    selectElement(null)
+  if (e.key === "Escape") {
+    selectElement(null);
   }
   // Ctrl+S - сохранить
-  if (e.ctrlKey && e.key === 's') {
-    e.preventDefault()
+  if (e.ctrlKey && e.key === "s") {
+    e.preventDefault();
     if (isDirty.value) {
-      emit('save', exportData())
+      emit("save", exportData());
     }
   }
 }
@@ -282,93 +408,101 @@ function handleAddText() {
   const element = createTextElement({
     x: templateData.value.width / 2 - 150,
     y: templateData.value.height / 2 - 25,
-  })
-  addElement(element)
+  });
+  addElement(element);
 }
 
 function handleAddVariable(variableKey: VariableSource) {
   const element = createVariableElement(variableKey, {
     x: templateData.value.width / 2 - 175,
     y: templateData.value.height / 2 - 20,
-  })
-  addElement(element)
+  });
+  addElement(element);
 }
 
 function handleAddImage(src: string) {
   const element = createImageElement(src, {
     x: 50,
     y: 50,
-  })
-  addElement(element)
+  });
+  addElement(element);
 }
 
 function handleAddQR() {
   const element = createQRElement({
     x: templateData.value.width - 150,
     y: templateData.value.height - 150,
-  })
-  addElement(element)
+  });
+  addElement(element);
 }
 
 function handleAddShape(shapeType: ShapeType) {
   const element = createShapeElement(shapeType, {
     x: templateData.value.width / 2 - 100,
     y: templateData.value.height / 2 - 50,
-  })
-  addElement(element)
+  });
+  addElement(element);
 }
 
 function handleElementUpdate(id: string, updates: Partial<TemplateElement>) {
-  updateElement(id, updates)
+  updateElement(id, updates);
 }
 
 function handleDuplicate() {
   if (selectedElementId.value) {
-    duplicateElement(selectedElementId.value)
+    duplicateElement(selectedElementId.value);
   }
 }
 
 function handleBringToFront() {
   if (selectedElementId.value) {
-    bringToFront(selectedElementId.value)
+    bringToFront(selectedElementId.value);
   }
 }
 
 function handleSendToBack() {
   if (selectedElementId.value) {
-    sendToBack(selectedElementId.value)
+    sendToBack(selectedElementId.value);
   }
 }
 
 function handleToggleLock() {
   if (selectedElementId.value) {
-    toggleLock(selectedElementId.value)
+    toggleLock(selectedElementId.value);
+  }
+}
+
+function handleAlign(
+  direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
+) {
+  if (selectedElementId.value) {
+    alignElement(selectedElementId.value, direction);
   }
 }
 
 function handleApplyPreset(presetData: CertificateTemplateData) {
   // Если есть элементы — показываем модалку подтверждения
   if (templateData.value.elements.length > 0) {
-    pendingPresetData.value = presetData
-    showPresetConfirm.value = true
-    return
+    pendingPresetData.value = presetData;
+    showPresetConfirm.value = true;
+    return;
   }
-  
+
   // Применяем пресет через initTemplate
-  initTemplate(presetData)
+  initTemplate(presetData);
 }
 
 function confirmPreset() {
   if (pendingPresetData.value) {
-    initTemplate(pendingPresetData.value)
+    initTemplate(pendingPresetData.value);
   }
-  showPresetConfirm.value = false
-  pendingPresetData.value = null
+  showPresetConfirm.value = false;
+  pendingPresetData.value = null;
 }
 
 function cancelPreset() {
-  showPresetConfirm.value = false
-  pendingPresetData.value = null
+  showPresetConfirm.value = false;
+  pendingPresetData.value = null;
 }
 </script>
 
@@ -545,7 +679,7 @@ function cancelPreset() {
   font-size: 0.875rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   border: none;
   border-radius: 0.5rem;
   cursor: pointer;
@@ -554,7 +688,7 @@ function cancelPreset() {
 }
 
 .btn-save:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   box-shadow: 0 4px 8px rgba(37, 99, 235, 0.4);
   transform: translateY(-1px);
 }
@@ -580,13 +714,17 @@ function cancelPreset() {
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: 
+  background:
     linear-gradient(45deg, var(--color-gray-200) 25%, transparent 25%),
     linear-gradient(-45deg, var(--color-gray-200) 25%, transparent 25%),
     linear-gradient(45deg, transparent 75%, var(--color-gray-200) 75%),
     linear-gradient(-45deg, transparent 75%, var(--color-gray-200) 75%);
   background-size: 20px 20px;
-  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  background-position:
+    0 0,
+    0 10px,
+    10px -10px,
+    -10px 0px;
   background-color: var(--color-gray-100);
 }
 
@@ -657,9 +795,9 @@ function cancelPreset() {
   justify-content: center;
   width: 64px;
   height: 64px;
-  background: #FEF3C7;
+  background: #fef3c7;
   border-radius: 50%;
-  color: #D97706;
+  color: #d97706;
   margin-bottom: 1rem;
 }
 
@@ -717,7 +855,7 @@ function cancelPreset() {
 
 .preset-confirm-modal .btn-confirm {
   padding: 0.625rem 1.25rem;
-  background: #3B82F6;
+  background: #3b82f6;
   border: none;
   border-radius: 0.5rem;
   color: white;
@@ -727,6 +865,6 @@ function cancelPreset() {
 }
 
 .preset-confirm-modal .btn-confirm:hover {
-  background: #2563EB;
+  background: #2563eb;
 }
 </style>
