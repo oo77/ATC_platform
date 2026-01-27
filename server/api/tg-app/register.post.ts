@@ -18,12 +18,13 @@ import {
 import { validateWebAppData } from "../../utils/telegramAuth";
 
 export default defineEventHandler(async (event) => {
-  console.log("[TG-App Register] Request received. ENV:", process.env.NODE_ENV);
+  console.log("[TG-App Register] ====== Request received ======");
+  console.log("[TG-App Register] ENV:", process.env.NODE_ENV);
+
   try {
     const body = await readBody(event);
     const {
       initData,
-      user: bodyUser, // Получаем объект user из тела запроса
       fullName,
       phone,
       organizationId,
@@ -31,16 +32,15 @@ export default defineEventHandler(async (event) => {
       username,
     } = body;
 
-    // ===== REGISTER DEBUG =====
-    console.log("[TG-App Register] Initializing registration...");
-    console.log("[TG-App Register] Raw Body Keys:", Object.keys(body));
-    console.log("[TG-App Register] initData type:", typeof initData);
-    console.log("[TG-App Register] initData length:", initData?.length);
-    console.log(
-      "[TG-App Register] initData sample:",
-      initData?.substring(0, 50),
-    );
-    // ==========================
+    console.log("[TG-App Register] Received data:", {
+      hasInitData: !!initData,
+      initDataLength: initData?.length || 0,
+      fullName,
+      phone,
+      organizationId,
+      organizationName,
+      username,
+    });
 
     // Валидация
     if (!initData) {
@@ -72,60 +72,37 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    let chatId: string = "";
-    let telegramUser: any = null;
+    // Валидация initData
+    console.log("[TG-App Register] Начало валидации initData...");
+    const validatedData = validateWebAppData(initData);
 
-    // 1. Проверяем initData
-    if (initData && initData !== "dev_mode") {
-      const validatedData = validateWebAppData(initData);
-      if (validatedData && validatedData.user) {
-        telegramUser = validatedData.user;
-        chatId = String(telegramUser.id);
-      }
-    }
-
-    // 2. Dev Mode Fallback
-    if (
-      !chatId &&
-      initData === "dev_mode" &&
-      process.env.NODE_ENV === "development"
-    ) {
-      console.warn("[TG-App Register] DEV MODE DETECTED. Using Mock ID.");
-      chatId = bodyUser?.id ? String(bodyUser.id) : "123456789";
-      telegramUser = bodyUser;
-    }
-
-    // 3. Unsafe Fallback (как в auth.post.ts)
-    if (!chatId && bodyUser && bodyUser.id) {
-      console.warn("[TG-App Register] Using unsafe body user data");
-      chatId = String(bodyUser.id);
-      telegramUser = bodyUser;
-    }
-
-    if (!chatId) {
+    if (!validatedData || !validatedData.user) {
+      console.error("[TG-App Register] ❌ Валидация initData провалилась");
       throw createError({
-        statusCode: 400,
-        message: "Не удалось получить данные пользователя",
+        statusCode: 401,
+        message: "Не удалось подтвердить подлинность данных (неверная подпись)",
       });
     }
 
-    if (!chatId) {
-      throw createError({
-        statusCode: 400,
-        message: "Не удалось получить данные пользователя",
-      });
-    }
+    console.log("[TG-App Register] ✅ initData валидирован успешно");
+
+    const telegramUser = validatedData.user;
+    const chatId = String(telegramUser.id);
 
     console.log("[TG-App Register] Регистрация для chatId:", chatId);
-    console.log("[TG-App Register] Environment:", process.env.NODE_ENV);
-    console.log(
-      "[TG-App Register] User Data Source:",
-      telegramUser === bodyUser ? "Body (Unsafe/Mock)" : "InitData (Verified)",
-    );
+    console.log("[TG-App Register] User info:", {
+      id: telegramUser.id,
+      first_name: telegramUser.first_name,
+      username: telegramUser.username,
+    });
 
     // Проверяем, не зарегистрирован ли уже
     const existing = await getRepresentativeByTelegramChatId(chatId);
     if (existing) {
+      console.warn(
+        "[TG-App Register] ⚠️ Пользователь уже зарегистрирован:",
+        chatId,
+      );
       throw createError({
         statusCode: 409,
         message: "Вы уже зарегистрированы",
@@ -135,13 +112,19 @@ export default defineEventHandler(async (event) => {
     // Получаем или создаём организацию
     let orgId = organizationId;
     if (!orgId) {
+      console.log(
+        "[TG-App Register] Создание/поиск организации:",
+        organizationName,
+      );
       const organization =
         await getOrCreateOrganizationByName(organizationName);
       orgId = organization.id;
+      console.log("[TG-App Register] Организация ID:", orgId);
     } else {
       // Проверяем, существует ли организация
       const organization = await getOrganizationById(orgId);
       if (!organization) {
+        console.error("[TG-App Register] ❌ Организация не найдена:", orgId);
         throw createError({
           statusCode: 404,
           message: "Организация не найдена",
@@ -150,6 +133,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Создаём представителя
+    console.log("[TG-App Register] Создание представителя...");
     const representative = await createRepresentative({
       fullName: fullName.trim(),
       phone: normalizedPhone,
@@ -157,6 +141,11 @@ export default defineEventHandler(async (event) => {
       telegramUsername: username || telegramUser?.username || null,
       organizationId: orgId,
     });
+
+    console.log(
+      "[TG-App Register] ✅ Представитель успешно создан:",
+      representative.id,
+    );
 
     return {
       success: true,
@@ -175,7 +164,8 @@ export default defineEventHandler(async (event) => {
       },
     };
   } catch (error: any) {
-    console.error("[TG-App] Ошибка регистрации:", error);
+    console.error("[TG-App Register] ❌ Ошибка регистрации:", error.message);
+    console.error("[TG-App Register] Stack:", error.stack);
 
     if (error.statusCode) {
       throw error;

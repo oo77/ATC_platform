@@ -24,17 +24,6 @@
       <div v-if="showDebug" class="tg-debug-info">
         <h3>Debug Info:</h3>
         <pre>{{ debugInfo }}</pre>
-        <div class="tg-manual-auth" v-if="isDev">
-          <h3>Manual Auth (Dev Only)</h3>
-          <input
-            v-model="manualId"
-            placeholder="User ID"
-            class="tg-input-debug"
-          />
-          <button @click="doManualAuth" class="tg-btn-small">
-            Login as ID
-          </button>
-        </div>
       </div>
     </div>
 
@@ -143,13 +132,80 @@ const state = ref("loading");
 const statusMessage = ref("Инициализация...");
 const errorMessage = ref("");
 const showDebug = ref(false);
-const manualId = ref("");
 
 const telegramData = ref(null);
 const representative = ref(null);
 const activeTab = ref("students");
 const debugInfo = ref("");
-const isDev = import.meta.env.DEV;
+
+/**
+ * Парсинг initData из URL hash (для веб-версии Telegram)
+ * Формат: #tgWebAppData=user={...}&chat_instance=...&hash=...&...
+ */
+function parseInitDataFromHash(hash) {
+  try {
+    console.log("[TG] Parsing hash, length:", hash.length);
+
+    // Убираем # в начале
+    const cleanHash = hash.startsWith("#") ? hash.substring(1) : hash;
+    console.log("[TG] Clean hash (first 300):", cleanHash.substring(0, 300));
+
+    // Находим tgWebAppData=... и извлекаем все после него до следующего &tgWebApp
+    const tgWebAppDataMatch = cleanHash.match(
+      /tgWebAppData=([^&]*(?:&(?!tgWebApp)[^&]*)*)/,
+    );
+
+    if (!tgWebAppDataMatch) {
+      console.warn("[TG] No tgWebAppData found in hash");
+      return null;
+    }
+
+    // Это содержит: user={...}&chat_instance=...&auth_date=...&hash=... и т.д.
+    let initData = tgWebAppDataMatch[1];
+    console.log("[TG] Extracted tgWebAppData length:", initData.length);
+    console.log(
+      "[TG] Extracted tgWebAppData (first 300):",
+      initData.substring(0, 300),
+    );
+
+    // Теперь извлекаем остальные параметры, которые могут быть вне tgWebAppData
+    // Парсим весь hash как URLSearchParams чтобы получить отдельные параметры
+    const hashParams = new URLSearchParams(cleanHash);
+
+    // Проверяем, есть ли важные параметры отдельно в hash
+    const importantParams = ["auth_date", "hash", "signature"];
+    importantParams.forEach((param) => {
+      const value = hashParams.get(param);
+      if (value && !initData.includes(`${param}=`)) {
+        console.log(
+          `[TG] Adding ${param} from hash:`,
+          value.substring(0, 20) + "...",
+        );
+        initData += `&${param}=${value}`;
+      }
+    });
+
+    console.log("[TG] Final initData length:", initData.length);
+    console.log("[TG] Final initData (first 300):", initData.substring(0, 300));
+
+    // Проверяем наличие ключевых параметров
+    const hasUser = initData.includes("user=");
+    const hasHash = initData.includes("hash=");
+    const hasAuthDate = initData.includes("auth_date=");
+
+    console.log("[TG] Validation:", { hasUser, hasHash, hasAuthDate });
+
+    if (!hasUser || !hasHash) {
+      console.error("[TG] Missing required parameters in initData");
+      return null;
+    }
+
+    return initData;
+  } catch (error) {
+    console.error("[TG] Error parsing hash:", error);
+    return null;
+  }
+}
 
 // Initialize
 async function initialize() {
@@ -160,61 +216,73 @@ async function initialize() {
     // 1. Check for Telegram WebApp environment
     const tg = window.Telegram?.WebApp;
     if (!tg) {
-      if (isDev) return useDevMock(); // Dev fallback
       throw new Error("Telegram WebApp не найден. Откройте через Telegram.");
     }
 
     tg.expand();
 
-    // 2. Extract Data
-    // FIX: Sometimes SDK fails to parse initData from hash, so we do it manually if needed
+    // 2. Extract initData
     let rawInitData = tg.initData || "";
 
-    if (!rawInitData && window.location.hash.includes("tgWebAppData=")) {
+    console.log(
+      "[TG] SDK initData:",
+      rawInitData ? `length ${rawInitData.length}` : "empty",
+    );
+
+    // ИСПРАВЛЕНИЕ: Если SDK не вернул initData, парсим из hash
+    if ((!rawInitData || rawInitData.length < 50) && window.location.hash) {
       console.warn(
-        "[TG] SDK initData is empty, but hash has data. Manual parsing...",
+        "[TG] SDK initData пуст или слишком короткий, парсим из hash...",
       );
-      const hash = window.location.hash.substring(1);
-      const params = new URLSearchParams(hash);
-      rawInitData = params.get("tgWebAppData") || "";
+      const parsedData = parseInitDataFromHash(window.location.hash);
+
+      if (parsedData && parsedData.length > 50) {
+        rawInitData = parsedData;
+        console.log("[TG] ✅ initData успешно извлечен из hash");
+        console.log("[TG] initData length:", rawInitData.length);
+        console.log("[TG] initData sample:", rawInitData.substring(0, 150));
+      } else {
+        console.error("[TG] ❌ Не удалось извлечь initData из hash");
+      }
     }
 
     const platform = tg.platform || "unknown";
 
-    updateDebugInfo(tg);
+    updateDebugInfo(tg, rawInitData);
 
     // 3. Validate presence of data
     if (!rawInitData) {
-      if (isDev) {
-        console.warn("[TG] Empty initData in DEV -> Switching to Mock");
-        return useDevMock();
-      }
       throw new Error("Отсутствуют данные авторизации (initData пуст).");
     }
 
-    // 4. Set Data
+    // 4. Парсим user из initData для отображения (необязательно для сервера)
+    let userData = tg.initDataUnsafe?.user || null;
+    if (!userData && rawInitData) {
+      // Пытаемся извлечь user из initData
+      try {
+        const params = new URLSearchParams(rawInitData);
+        const userStr = params.get("user");
+        if (userStr) {
+          userData = JSON.parse(decodeURIComponent(userStr));
+        }
+      } catch (e) {
+        console.warn("[TG] Could not parse user from initData:", e);
+      }
+    }
+
+    // 5. Set Data
     telegramData.value = {
       initData: rawInitData,
-      user: tg.initDataUnsafe?.user || {},
+      user: userData || {},
     };
 
-    // 5. Check Auth
+    // 6. Check Auth
     await checkAuth();
   } catch (e) {
     console.error("Init Error:", e);
     state.value = "error";
     errorMessage.value = e.message;
   }
-}
-
-// Dev Mock Logic
-function useDevMock() {
-  console.log("[TG] Using DEV Mock");
-  telegramData.value = {
-    initData: "dev_mode",
-    user: { id: 123456789, first_name: "Dev", last_name: "Admin" },
-  };
-  checkAuth();
 }
 
 // Auth Logic
@@ -225,10 +293,12 @@ async function checkAuth() {
   try {
     const payload = {
       initData: telegramData.value.initData,
-      user: telegramData.value.user,
     };
 
-    console.log("[TG Client] Sending Auth:", payload);
+    console.log(
+      "[TG Client] Sending Auth with initData length:",
+      payload.initData.length,
+    );
 
     const res = await $fetch("/api/tg-app/auth", {
       method: "POST",
@@ -241,10 +311,14 @@ async function checkAuth() {
     }
   } catch (e) {
     console.error("Auth Failed:", e);
+    console.log("Error statusCode:", e.statusCode);
+    console.log("Error data:", e.data);
 
     if (e.statusCode === 404) {
+      console.log("[TG] ✅ Пользователь не найден, переход к регистрации");
       state.value = "registration";
     } else {
+      console.error("[TG] ❌ Ошибка авторизации, показ экрана ошибки");
       state.value = "error";
       errorMessage.value =
         e.data?.message || e.message || "Ошибка соединения с сервером";
@@ -252,33 +326,38 @@ async function checkAuth() {
   }
 }
 
-// Manual Auth (Dev)
-function doManualAuth() {
-  if (!manualId.value) return;
-  telegramData.value = {
-    initData: "dev_mode",
-    user: {
-      id: Number(manualId.value),
-      first_name: "Manual",
-      last_name: "User",
-    },
-  };
-  checkAuth();
-}
-
 // Helpers
-function updateDebugInfo(tg) {
+function updateDebugInfo(tg, parsedInitData) {
+  // Пытаемся извлечь user из parsedInitData
+  let extractedUser = null;
+  if (parsedInitData) {
+    try {
+      const params = new URLSearchParams(parsedInitData);
+      const userStr = params.get("user");
+      if (userStr) {
+        extractedUser = JSON.parse(decodeURIComponent(userStr));
+      }
+    } catch (e) {
+      console.warn("[TG] Could not extract user from parsedInitData:", e);
+    }
+  }
+
   debugInfo.value = JSON.stringify(
     {
       version: tg.version,
       platform: tg.platform,
-      locationHash: window.location.hash,
+      locationHash: window.location.hash.substring(0, 300) + "...",
       locationSearch: window.location.search,
-      initDataLen: tg.initData?.length,
-      initDataSample: tg.initData
-        ? tg.initData.substring(0, 50) + "..."
+      sdkInitDataLen: tg.initData?.length || 0,
+      parsedInitDataLen: parsedInitData?.length || 0,
+      initDataSample: parsedInitData
+        ? parsedInitData.substring(0, 150) + "..."
         : "empty",
-      user: tg.initDataUnsafe?.user,
+      sdkUser: tg.initDataUnsafe?.user,
+      extractedUser: extractedUser,
+      hasHash: parsedInitData?.includes("hash=") || false,
+      hasAuthDate: parsedInitData?.includes("auth_date=") || false,
+      hasUser: parsedInitData?.includes("user=") || false,
     },
     null,
     2,
@@ -437,18 +516,6 @@ const availableTabs = computed(() => {
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
-}
-
-.tg-manual-auth {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tg-manual-auth h3 {
-  font-size: 0.9rem;
-  color: #94a3b8;
-  margin-bottom: 0.5rem;
 }
 
 .tg-input-debug {
