@@ -24,7 +24,11 @@
       <!-- Расписание -->
       <div v-else-if="groupedSchedule.length > 0" class="tg-schedule-list">
         <!-- По датам -->
-        <div v-for="dateGroup in groupedSchedule" :key="dateGroup.date" class="tg-date-group">
+        <div
+          v-for="dateGroup in groupedSchedule"
+          :key="dateGroup.date"
+          class="tg-date-group"
+        >
           <div class="tg-date-header">
             <span class="tg-date-icon">📅</span>
             <div class="tg-date-info">
@@ -36,8 +40,8 @@
 
           <!-- События дня -->
           <div class="tg-events">
-            <div 
-              v-for="(event, index) in dateGroup.events" 
+            <div
+              v-for="(event, index) in dateGroup.events"
               :key="index"
               class="tg-event-card"
             >
@@ -48,9 +52,16 @@
               </div>
 
               <div class="tg-event-content">
-                <div class="tg-event-type" :class="`tg-type-${event.eventType}`">
-                  <span class="tg-type-icon">{{ getTypeIcon(event.eventType) }}</span>
-                  <span class="tg-type-label">{{ getTypeLabel(event.eventType) }}</span>
+                <div
+                  class="tg-event-type"
+                  :class="`tg-type-${event.eventType}`"
+                >
+                  <span class="tg-type-icon">{{
+                    getTypeIcon(event.eventType)
+                  }}</span>
+                  <span class="tg-type-label">{{
+                    getTypeLabel(event.eventType)
+                  }}</span>
                 </div>
 
                 <h4 class="tg-event-discipline">{{ event.disciplineName }}</h4>
@@ -79,14 +90,17 @@
       <div v-else class="tg-empty-state">
         <span class="tg-empty-icon">📅</span>
         <h3>Нет занятий</h3>
-        <p>В ближайшее время нет запланированных занятий для слушателей вашей организации</p>
+        <p>
+          В ближайшее время нет запланированных занятий для слушателей вашей
+          организации
+        </p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch } from "vue";
 
 const props = defineProps({
   organizationId: {
@@ -108,7 +122,7 @@ const schedule = ref([]);
 const groupedSchedule = computed(() => {
   const grouped = {};
 
-  schedule.value.forEach(event => {
+  schedule.value.forEach((event) => {
     const date = event.date;
     if (!grouped[date]) {
       grouped[date] = {
@@ -128,37 +142,37 @@ const groupedSchedule = computed(() => {
 // Форматирование даты
 function formatDate(dateStr) {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  return date.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
 }
 
 // День недели
 function formatDayOfWeek(dateStr) {
   const date = new Date(dateStr);
-  return date.toLocaleDateString('ru-RU', { weekday: 'long' });
+  return date.toLocaleDateString("ru-RU", { weekday: "long" });
 }
 
 // Иконка типа занятия
 function getTypeIcon(type) {
   const icons = {
-    theory: '📖',
-    practice: '💻',
-    knowledge_check: '📝',
-    retake: '🔄',
+    theory: "📖",
+    practice: "💻",
+    knowledge_check: "📝",
+    retake: "🔄",
   };
-  return icons[type] || '📚';
+  return icons[type] || "📚";
 }
 
 // Метка типа занятия
 function getTypeLabel(type) {
   const labels = {
-    theory: 'Теория',
-    practice: 'Практика',
-    knowledge_check: 'Проверка знаний',
-    retake: 'Пересдача',
+    theory: "Теория",
+    practice: "Практика",
+    knowledge_check: "Проверка знаний",
+    retake: "Пересдача",
   };
   return labels[type] || type;
 }
@@ -169,36 +183,39 @@ async function loadSchedule() {
   error.value = null;
 
   try {
-    const data = await $fetch('/api/tg-app/schedule', {
+    const data = await $fetch("/api/tg-app/schedule", {
       params: {
         organizationId: props.organizationId,
       },
     });
 
     schedule.value = data.schedule || [];
-
   } catch (err) {
-    console.error('Ошибка загрузки расписания:', err);
-    error.value = err.data?.message || 'Не удалось загрузить расписание';
+    console.error("Ошибка загрузки расписания:", err);
+    error.value = err.data?.message || "Не удалось загрузить расписание";
   } finally {
     loading.value = false;
   }
 }
 
 // Загрузка при монтировании
-watch(() => props.organizationId, (newId) => {
-  if (newId) {
-    loadSchedule();
-  }
-}, { immediate: true });
+watch(
+  () => props.organizationId,
+  (newId) => {
+    if (newId) {
+      loadSchedule();
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <style scoped>
 .tg-schedule-tab {
-  padding: 1rem 0;
+  padding: 0;
 }
 
-/* Загрузка, ошибка, пусто - используем те же стили */
+/* Общие состояния */
 .tg-loading-block,
 .tg-error-block,
 .tg-empty-state,
@@ -211,32 +228,64 @@ watch(() => props.organizationId, (newId) => {
   text-align: center;
 }
 
-.tg-icon,
-.tg-empty-icon {
-  font-size: 4rem;
-  display: block;
-  margin-bottom: 1rem;
+.tg-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  background: #f1f5f9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+.tg-no-permission h3,
+.tg-empty-state h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #1e293b;
+}
+
+.tg-loading-block p,
+.tg-no-permission p,
+.tg-empty-state p {
+  color: #64748b;
+  font-size: 0.9375rem;
 }
 
 .tg-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(59, 130, 246, 0.2);
-  border-top-color: #3b82f6;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
   border-radius: 50%;
   animation: tg-spin 0.8s linear infinite;
+  margin-bottom: 1rem;
 }
 
 .tg-btn-retry {
-  background: rgba(59, 130, 246, 0.2);
-  color: #3b82f6;
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  padding: 0.625rem 1.5rem;
-  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   margin-top: 1rem;
+}
+
+/* Ошибка */
+.tg-error-block .tg-icon-wrapper {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.tg-error-block p {
+  color: #dc2626;
+  margin-bottom: 1rem;
 }
 
 /* Группа дат */
@@ -249,7 +298,7 @@ watch(() => props.organizationId, (newId) => {
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 0.75rem;
-  padding: 0 0.5rem;
+  padding: 0 0.25rem;
 }
 
 .tg-date-icon {
@@ -263,20 +312,20 @@ watch(() => props.organizationId, (newId) => {
 .tg-date-info h3 {
   font-size: 1.125rem;
   font-weight: 700;
-  color: #f1f5f9;
+  color: #1e293b;
   margin: 0;
 }
 
 .tg-date-info p {
   font-size: 0.875rem;
-  color: #94a3b8;
+  color: #64748b;
   margin: 0;
   text-transform: capitalize;
 }
 
 .tg-events-count {
-  background: rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
+  background: #eff6ff;
+  color: #2563eb;
   padding: 0.25rem 0.625rem;
   border-radius: 8px;
   font-size: 0.8125rem;
@@ -291,18 +340,18 @@ watch(() => props.organizationId, (newId) => {
 }
 
 .tg-event-card {
-  background: rgba(30, 41, 59, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: white;
+  border: 1px solid #e2e8f0;
   border-radius: 16px;
   padding: 1rem;
   display: flex;
   gap: 1rem;
   transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .tg-event-card:active {
-  background: rgba(30, 41, 59, 0.6);
-  transform: scale(0.99);
+  background: #f8fafc;
 }
 
 .tg-event-time {
@@ -311,21 +360,22 @@ watch(() => props.organizationId, (newId) => {
   align-items: center;
   justify-content: center;
   padding: 0.5rem;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
   border-radius: 12px;
   min-width: 70px;
+  align-self: flex-start;
 }
 
 .tg-time {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: #3b82f6;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #2563eb;
 }
 
 .tg-time-separator {
   font-size: 0.75rem;
-  color: #64748b;
+  color: #93c5fd;
   margin: 0.125rem 0;
 }
 
@@ -337,42 +387,47 @@ watch(() => props.organizationId, (newId) => {
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 8px;
-  font-size: 0.8125rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
 }
 
 .tg-type-theory {
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
+  background: #f0f9ff;
+  color: #0284c7;
+  border: 1px solid #e0f2fe;
 }
 
 .tg-type-practice {
-  background: rgba(139, 92, 246, 0.2);
-  color: #a78bfa;
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ede9fe;
 }
 
 .tg-type-knowledge_check {
-  background: rgba(234, 179, 8, 0.2);
-  color: #fbbf24;
+  background: #fefce8;
+  color: #d97706;
+  border: 1px solid #fef9c3;
 }
 
 .tg-type-retake {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
 }
 
 .tg-type-icon {
-  font-size: 1rem;
+  font-size: 0.875rem;
 }
 
 .tg-event-discipline {
-  font-size: 1rem;
+  font-size: 0.9375rem;
   font-weight: 600;
-  color: #f1f5f9;
-  margin: 0 0 0.75rem 0;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.4;
 }
 
 .tg-event-details {
@@ -385,15 +440,19 @@ watch(() => props.organizationId, (newId) => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.875rem;
-  color: #94a3b8;
+  font-size: 0.8125rem;
+  color: #64748b;
 }
 
 .tg-detail-icon {
-  font-size: 1rem;
+  font-size: 0.875rem;
+  width: 1.25rem;
+  text-align: center;
 }
 
 @keyframes tg-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

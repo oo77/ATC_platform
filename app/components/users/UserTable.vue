@@ -3,22 +3,36 @@
     <table class="w-full table-auto">
       <thead>
         <tr class="bg-gray-2 text-left dark:bg-meta-4">
-          <th class="min-w-[220px] px-4 py-4 font-medium text-black dark:text-white xl:pl-11">
+          <th
+            class="min-w-[220px] px-4 py-4 font-medium text-black dark:text-white xl:pl-11"
+          >
             Пользователь
           </th>
-          <th class="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white">
+          <th
+            class="min-w-[150px] px-4 py-4 font-medium text-black dark:text-white"
+          >
             Email
           </th>
-          <th class="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">
+          <th
+            class="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white"
+          >
             Телефон
           </th>
-          <th v-if="showWorkplace" class="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">
+          <th
+            v-if="showWorkplace"
+            class="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white"
+          >
             Место работы
           </th>
-          <th v-if="showPosition" class="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">
+          <th
+            v-if="showPosition"
+            class="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white"
+          >
             Должность
           </th>
-          <th class="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white">
+          <th
+            class="min-w-[120px] px-4 py-4 font-medium text-black dark:text-white"
+          >
             Дата создания
           </th>
           <th class="px-4 py-4 font-medium text-black dark:text-white">
@@ -31,8 +45,12 @@
         <tr v-if="loading">
           <td :colspan="columnCount" class="text-center py-12">
             <div class="flex justify-center items-center">
-              <div class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
-              <span class="ml-3 text-gray-600 dark:text-gray-400">Загрузка...</span>
+              <div
+                class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"
+              ></div>
+              <span class="ml-3 text-gray-600 dark:text-gray-400"
+                >Загрузка...</span
+              >
             </div>
           </td>
         </tr>
@@ -40,7 +58,9 @@
         <!-- Нет данных -->
         <tr v-else-if="users.length === 0">
           <td :colspan="columnCount" class="text-center py-12">
-            <p class="text-gray-600 dark:text-gray-400">Пользователи не найдены</p>
+            <p class="text-gray-600 dark:text-gray-400">
+              Пользователи не найдены
+            </p>
           </td>
         </tr>
 
@@ -51,19 +71,23 @@
           class="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
         >
           <td class="px-4 py-5 pl-9 xl:pl-11">
-            <NuxtLink 
+            <NuxtLink
               :to="`/users/${user.id}`"
               class="flex items-center gap-3 group"
             >
               <div class="shrink-0">
-                <div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center transition-colors group-hover:bg-primary/20">
+                <div
+                  class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center transition-colors group-hover:bg-primary/20"
+                >
                   <span class="text-primary font-medium text-lg">
                     {{ getUserInitials(user.name) }}
                   </span>
                 </div>
               </div>
               <div>
-                <h5 class="font-medium text-black dark:text-white group-hover:text-primary transition-colors">
+                <h5
+                  class="font-medium text-black dark:text-white group-hover:text-primary transition-colors"
+                >
                   {{ user.name }}
                 </h5>
                 <p class="text-sm text-gray-600 dark:text-gray-400">
@@ -77,17 +101,17 @@
           </td>
           <td class="px-4 py-5">
             <p class="text-black dark:text-white">
-              {{ user.phone || '—' }}
+              {{ user.phone || "—" }}
             </p>
           </td>
           <td v-if="showWorkplace" class="px-4 py-5">
             <p class="text-black dark:text-white">
-              {{ user.workplace || '—' }}
+              {{ user.workplace || "—" }}
             </p>
           </td>
           <td v-if="showPosition" class="px-4 py-5">
             <p class="text-black dark:text-white">
-              {{ user.position || '—' }}
+              {{ user.position || "—" }}
             </p>
           </td>
           <td class="px-4 py-5">
@@ -98,11 +122,7 @@
           <td class="px-4 py-5">
             <div class="flex items-center gap-2">
               <NuxtLink :to="`/users/${user.id}`">
-                <UiButton
-                  variant="outline"
-                  size="sm"
-                  title="Просмотр профиля"
-                >
+                <UiButton variant="outline" size="sm" title="Просмотр профиля">
                   <svg
                     class="w-4 h-4"
                     fill="none"
@@ -150,15 +170,30 @@
                 @click="$emit('reset-password', user)"
                 title="Сбросить пароль"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                  />
                 </svg>
               </UiButton>
               <UiButton
                 variant="danger"
                 size="sm"
                 @click="$emit('delete', user.id)"
-                title="Удалить"
+                :disabled="isCurrentUser(user.id)"
+                :title="
+                  isCurrentUser(user.id)
+                    ? 'Нельзя удалить самого себя'
+                    : 'Удалить'
+                "
               >
                 <svg
                   class="w-4 h-4"
@@ -183,8 +218,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { UserRole, UserPublic } from '~/types/auth';
+import { computed } from "vue";
+import type { UserRole, UserPublic } from "~/types/auth";
 
 interface Props {
   users: UserPublic[];
@@ -196,11 +231,11 @@ const props = defineProps<Props>();
 
 // Определяем, какие колонки показывать в зависимости от роли
 const showWorkplace = computed(() => {
-  return ['ADMIN', 'MANAGER', 'TEACHER'].includes(props.role);
+  return ["ADMIN", "MANAGER", "TEACHER"].includes(props.role);
 });
 
 const showPosition = computed(() => {
-  return ['ADMIN', 'MANAGER', 'TEACHER'].includes(props.role);
+  return ["ADMIN", "MANAGER", "TEACHER"].includes(props.role);
 });
 
 const columnCount = computed(() => {
@@ -213,14 +248,20 @@ const columnCount = computed(() => {
 // Эмиты
 defineEmits<{
   edit: [user: UserPublic];
-  'reset-password': [user: UserPublic];
+  "reset-password": [user: UserPublic];
   delete: [userId: string];
 }>();
 
 // Утилиты
 const getUserInitials = (name: string): string => {
-  const parts = name.split(' ').filter(p => p.length > 0);
-  if (parts.length >= 2 && parts[0] && parts[1] && parts[0].length > 0 && parts[1].length > 0) {
+  const parts = name.split(" ").filter((p) => p.length > 0);
+  if (
+    parts.length >= 2 &&
+    parts[0] &&
+    parts[1] &&
+    parts[0].length > 0 &&
+    parts[1].length > 0
+  ) {
     return (parts[0]![0]! + parts[1]![0]!).toUpperCase();
   }
   if (name.length >= 2) {
@@ -231,10 +272,17 @@ const getUserInitials = (name: string): string => {
 
 const formatDate = (date: Date | string): string => {
   const d = new Date(date);
-  return d.toLocaleDateString('ru-RU', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+  return d.toLocaleDateString("ru-RU", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   });
+};
+
+// Получаем текущего пользователя
+const { user: currentUser } = useAuth();
+
+const isCurrentUser = (userId: string) => {
+  return currentUser.value?.id === userId;
 };
 </script>

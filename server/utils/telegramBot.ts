@@ -3,9 +3,9 @@
  * Используется библиотека grammy для работы с Telegram Bot API
  */
 
-import { Bot, Context, InlineKeyboard, Keyboard } from 'grammy';
-import type { ReplyKeyboardMarkup } from 'grammy/types';
-import type { SessionState } from '../repositories/telegramSessionRepository';
+import { Bot, Context, InlineKeyboard, Keyboard, InputFile } from "grammy";
+import type { ReplyKeyboardMarkup } from "grammy/types";
+import type { SessionState } from "../repositories/telegramSessionRepository";
 
 // ============================================================================
 // ТИПЫ
@@ -43,7 +43,7 @@ export interface FormattedCertificate {
   courseName: string;
   groupCode: string;
   issueDate: string;
-  status: 'issued' | 'revoked';
+  status: "issued" | "revoked";
   pdfFileUrl: string | null;
   hasPassed: boolean;
   attendancePercent: number | null;
@@ -105,7 +105,7 @@ export const BOT_MESSAGES = {
 
 К сожалению, ваша заявка была отклонена.
 
-*Причина:* ${reason || 'Не указана'}
+*Причина:* ${reason || "Не указана"}
 
 Если вы считаете это ошибкой, свяжитесь с администратором учебного центра.`,
 
@@ -123,7 +123,7 @@ export const BOT_MESSAGES = {
 
 К сожалению, ваша заявка была отклонена.
 
-*Причина:* ${reason || 'Не указана'}
+*Причина:* ${reason || "Не указана"}
 
 Если вы считаете это ошибкой, свяжитесь с администратором.`,
 
@@ -203,12 +203,12 @@ export const BOT_MESSAGES = {
 // ============================================================================
 
 export const SESSION_STATES: Record<SessionState, SessionState> = {
-  idle: 'idle',
-  awaiting_name: 'awaiting_name',
-  awaiting_phone: 'awaiting_phone',
-  awaiting_organization: 'awaiting_organization',
-  pending_approval: 'pending_approval',
-  completed: 'completed',
+  idle: "idle",
+  awaiting_name: "awaiting_name",
+  awaiting_phone: "awaiting_phone",
+  awaiting_organization: "awaiting_organization",
+  pending_approval: "pending_approval",
+  completed: "completed",
 };
 
 // ============================================================================
@@ -228,7 +228,7 @@ export function validateName(name: string): boolean {
  */
 export function validatePhone(phone: string): boolean {
   // Удаляем все кроме цифр и +
-  const cleaned = phone.replace(/[^\d+]/g, '');
+  const cleaned = phone.replace(/[^\d+]/g, "");
   // Формат: +998XXXXXXXXX (12 символов)
   return /^\+998\d{9}$/.test(cleaned);
 }
@@ -237,16 +237,16 @@ export function validatePhone(phone: string): boolean {
  * Нормализация телефона
  */
 export function normalizePhone(phone: string): string {
-  let cleaned = phone.replace(/[^\d+]/g, '');
+  let cleaned = phone.replace(/[^\d+]/g, "");
 
   // Если начинается с 998 без +, добавляем +
-  if (cleaned.startsWith('998') && !cleaned.startsWith('+')) {
-    cleaned = '+' + cleaned;
+  if (cleaned.startsWith("998") && !cleaned.startsWith("+")) {
+    cleaned = "+" + cleaned;
   }
 
   // Если начинается с 8 или 9 (местный формат)
-  if (cleaned.startsWith('9') && cleaned.length === 9) {
-    cleaned = '+998' + cleaned;
+  if (cleaned.startsWith("9") && cleaned.length === 9) {
+    cleaned = "+998" + cleaned;
   }
 
   return cleaned;
@@ -256,11 +256,11 @@ export function normalizePhone(phone: string): string {
  * Форматирование даты для отображения
  */
 export function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 }
 
@@ -281,21 +281,32 @@ export function formatStudentsList(students: FormattedStudent[]): string {
   }
 
   // Группируем по группам
-  const byGroup = students.reduce((acc, student) => {
-    const key = student.groupName;
-    if (!acc[key]) {
-      acc[key] = {
-        courseName: student.courseName,
-        startDate: student.startDate,
-        endDate: student.endDate,
-        students: [],
-      };
-    }
-    acc[key].students.push(student.fullName);
-    return acc;
-  }, {} as Record<string, { courseName: string; startDate: string; endDate: string; students: string[] }>);
+  const byGroup = students.reduce(
+    (acc, student) => {
+      const key = student.groupName;
+      if (!acc[key]) {
+        acc[key] = {
+          courseName: student.courseName,
+          startDate: student.startDate,
+          endDate: student.endDate,
+          students: [],
+        };
+      }
+      acc[key].students.push(student.fullName);
+      return acc;
+    },
+    {} as Record<
+      string,
+      {
+        courseName: string;
+        startDate: string;
+        endDate: string;
+        students: string[];
+      }
+    >,
+  );
 
-  let message = '📚 *Слушатели вашей организации:*\n\n';
+  let message = "📚 *Слушатели вашей организации:*\n\n";
   let totalStudents = 0;
 
   for (const [groupName, group] of Object.entries(byGroup)) {
@@ -303,12 +314,12 @@ export function formatStudentsList(students: FormattedStudent[]): string {
     message += `📖 _${group.courseName}_\n`;
 
     group.students.forEach((name, index) => {
-      const prefix = index === group.students.length - 1 ? '└' : '├';
+      const prefix = index === group.students.length - 1 ? "└" : "├";
       message += `${prefix} ${name}\n`;
       totalStudents++;
     });
 
-    message += '\n';
+    message += "\n";
   }
 
   message += `*Всего слушателей:* ${totalStudents}`;
@@ -325,29 +336,40 @@ export function formatSchedule(events: FormattedScheduleEvent[]): string {
   }
 
   // Группируем по дате
-  const byDate = events.reduce((acc, event) => {
-    if (!acc[event.date]) {
-      acc[event.date] = [];
-    }
-    const dateEvents = acc[event.date];
-    if (dateEvents) {
-      dateEvents.push(event);
-    }
-    return acc;
-  }, {} as Record<string, FormattedScheduleEvent[]>);
+  const byDate = events.reduce(
+    (acc, event) => {
+      if (!acc[event.date]) {
+        acc[event.date] = [];
+      }
+      const dateEvents = acc[event.date];
+      if (dateEvents) {
+        dateEvents.push(event);
+      }
+      return acc;
+    },
+    {} as Record<string, FormattedScheduleEvent[]>,
+  );
 
-  let message = '📅 *Расписание занятий:*\n\n';
+  let message = "📅 *Расписание занятий:*\n\n";
 
   for (const [date, dateEvents] of Object.entries(byDate)) {
     const dateObj = new Date(date);
-    const dayName = dateObj.toLocaleDateString('ru-RU', { weekday: 'long' });
+    const dayName = dateObj.toLocaleDateString("ru-RU", { weekday: "long" });
     message += `🗓 *${formatDate(date)}* (${dayName})\n\n`;
 
     for (const event of dateEvents) {
-      const typeEmoji = event.eventType === 'theory' ? '📖' :
-        event.eventType === 'practice' ? '💻' : '📝';
-      const typeName = event.eventType === 'theory' ? 'Теория' :
-        event.eventType === 'practice' ? 'Практика' : 'Проверка знаний';
+      const typeEmoji =
+        event.eventType === "theory"
+          ? "📖"
+          : event.eventType === "practice"
+            ? "💻"
+            : "📝";
+      const typeName =
+        event.eventType === "theory"
+          ? "Теория"
+          : event.eventType === "practice"
+            ? "Практика"
+            : "Проверка знаний";
 
       message += `${event.startTime} - ${event.endTime} | ${typeName}\n`;
       message += `${typeEmoji} ${event.disciplineName}\n`;
@@ -365,7 +387,9 @@ export function formatSchedule(events: FormattedScheduleEvent[]): string {
 /**
  * Форматирование списка сертификатов
  */
-export function formatCertificatesList(certificates: FormattedCertificate[]): string {
+export function formatCertificatesList(
+  certificates: FormattedCertificate[],
+): string {
   if (certificates.length === 0) {
     return BOT_MESSAGES.NO_CERTIFICATES;
   }
@@ -375,44 +399,52 @@ export function formatCertificatesList(certificates: FormattedCertificate[]): st
   let totalRevoked = 0;
 
   // Группируем по курсам
-  const byCourse = certificates.reduce((acc, cert) => {
-    const key = `${cert.courseName} (${cert.groupCode})`;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(cert);
-    return acc;
-  }, {} as Record<string, FormattedCertificate[]>);
+  const byCourse = certificates.reduce(
+    (acc, cert) => {
+      const key = `${cert.courseName} (${cert.groupCode})`;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(cert);
+      return acc;
+    },
+    {} as Record<string, FormattedCertificate[]>,
+  );
 
   for (const [courseGroup, certs] of Object.entries(byCourse)) {
     message += `📚 *${courseGroup}*\n`;
 
     for (const cert of certs) {
-      const statusIcon = cert.status === 'issued' ? '✅' : '❌';
-      const passedIcon = cert.hasPassed ? '🎓' : '⚠️';
-      const passedText = cert.hasPassed ? 'Прошёл обучение' : 'Не соответствует требованиям';
+      const statusIcon = cert.status === "issued" ? "✅" : "❌";
+      const passedIcon = cert.hasPassed ? "🎓" : "⚠️";
+      const passedText = cert.hasPassed
+        ? "Прошёл обучение"
+        : "Не соответствует требованиям";
 
       message += `${statusIcon} *${cert.studentName}*\n`;
       message += `   📜 № ${cert.certificateNumber}\n`;
       message += `   📅 Выдан: ${cert.issueDate}\n`;
       message += `   ${passedIcon} ${passedText}`;
 
-      if (cert.attendancePercent !== null && cert.attendancePercent !== undefined) {
+      if (
+        cert.attendancePercent !== null &&
+        cert.attendancePercent !== undefined
+      ) {
         const percent = Number(cert.attendancePercent);
         if (!isNaN(percent)) {
           message += ` (посещ.: ${percent.toFixed(0)}%)`;
         }
       }
-      message += '\n';
+      message += "\n";
 
-      if (cert.status === 'revoked') {
+      if (cert.status === "revoked") {
         message += `   ⛔ _Сертификат отозван_\n`;
         totalRevoked++;
       } else {
         totalIssued++;
       }
 
-      message += '\n';
+      message += "\n";
     }
   }
 
@@ -436,7 +468,9 @@ export function createPhoneKeyboard(): InlineKeyboard {
 /**
  * Создание клавиатуры с организациями
  */
-export function createOrganizationsKeyboard(organizations: { id: string; name: string }[]): InlineKeyboard {
+export function createOrganizationsKeyboard(
+  organizations: { id: string; name: string }[],
+): InlineKeyboard {
   const keyboard = new InlineKeyboard();
 
   organizations.forEach((org, index) => {
@@ -463,12 +497,14 @@ export function getBot(): Bot<Context> | null {
   if (!botInstance) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) {
-      console.warn('[TelegramBot] TELEGRAM_BOT_TOKEN не задан в переменных окружения');
+      console.warn(
+        "[TelegramBot] TELEGRAM_BOT_TOKEN не задан в переменных окружения",
+      );
       return null;
     }
 
     botInstance = new Bot(token);
-    console.log('[TelegramBot] Бот инициализирован');
+    console.log("[TelegramBot] Бот инициализирован");
   }
 
   return botInstance;
@@ -481,24 +517,27 @@ export async function sendMessage(
   chatId: string | number,
   text: string,
   options?: {
-    parseMode?: 'Markdown' | 'HTML';
-    replyMarkup?: InlineKeyboard | ReplyKeyboardMarkup | { remove_keyboard: true };
-  }
+    parseMode?: "Markdown" | "HTML";
+    replyMarkup?:
+      | InlineKeyboard
+      | ReplyKeyboardMarkup
+      | { remove_keyboard: true };
+  },
 ): Promise<boolean> {
   const bot = getBot();
   if (!bot) {
-    console.error('[TelegramBot] Бот не инициализирован');
+    console.error("[TelegramBot] Бот не инициализирован");
     return false;
   }
 
   try {
     await bot.api.sendMessage(chatId, text, {
-      parse_mode: options?.parseMode || 'Markdown',
+      parse_mode: options?.parseMode || "Markdown",
       reply_markup: options?.replyMarkup,
     });
     return true;
   } catch (error) {
-    console.error('[TelegramBot] Ошибка отправки сообщения:', error);
+    console.error("[TelegramBot] Ошибка отправки сообщения:", error);
     return false;
   }
 }
@@ -508,27 +547,30 @@ export async function sendMessage(
  */
 export async function sendMessageWithContactButton(
   chatId: string | number,
-  text: string
+  text: string,
 ): Promise<boolean> {
   const bot = getBot();
   if (!bot) {
-    console.error('[TelegramBot] Бот не инициализирован');
+    console.error("[TelegramBot] Бот не инициализирован");
     return false;
   }
 
   try {
     const keyboard = new Keyboard()
-      .requestContact('📱 Отправить мой контакт')
+      .requestContact("📱 Отправить мой контакт")
       .resized()
       .oneTime();
 
     await bot.api.sendMessage(chatId, text, {
-      parse_mode: 'Markdown',
+      parse_mode: "Markdown",
       reply_markup: keyboard,
     });
     return true;
   } catch (error) {
-    console.error('[TelegramBot] Ошибка отправки сообщения с контактом:', error);
+    console.error(
+      "[TelegramBot] Ошибка отправки сообщения с контактом:",
+      error,
+    );
     return false;
   }
 }
@@ -538,11 +580,58 @@ export async function sendMessageWithContactButton(
  */
 export async function removeKeyboard(
   chatId: string | number,
-  text: string
+  text: string,
 ): Promise<boolean> {
   return sendMessage(chatId, text, {
     replyMarkup: { remove_keyboard: true },
   });
+}
+
+/**
+ * Отправить документ (PDF, ZIP и т.д.)
+ * @param chatId - ID чата
+ * @param document - URL файла или Buffer
+ * @param caption - Подпись к документу
+ * @param filename - Имя файла (обязательно для Buffer)
+ */
+export async function sendDocument(
+  chatId: string | number,
+  document: string | Buffer,
+  caption?: string,
+  filename?: string,
+): Promise<boolean> {
+  const bot = getBot();
+  if (!bot) {
+    console.error("[TelegramBot] Бот не инициализирован");
+    return false;
+  }
+
+  try {
+    // Если это Buffer, создаём InputFile
+    let fileToSend: any;
+
+    if (Buffer.isBuffer(document)) {
+      if (!filename) {
+        throw new Error("Filename обязателен при отправке Buffer");
+      }
+      // Используем уже импортированный InputFile
+      fileToSend = new InputFile(document, filename);
+    } else {
+      // Если это URL, отправляем напрямую
+      fileToSend = document;
+    }
+
+    await bot.api.sendDocument(chatId, fileToSend, {
+      caption: caption,
+      parse_mode: "Markdown",
+    });
+
+    console.log(`[TelegramBot] Документ отправлен в чат ${chatId}`);
+    return true;
+  } catch (error) {
+    console.error("[TelegramBot] Ошибка отправки документа:", error);
+    return false;
+  }
 }
 
 /**
@@ -551,7 +640,7 @@ export async function removeKeyboard(
 export function verifyWebhookSecret(secret: string): boolean {
   const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!expectedSecret) {
-    console.warn('[TelegramBot] TELEGRAM_WEBHOOK_SECRET не задан');
+    console.warn("[TelegramBot] TELEGRAM_WEBHOOK_SECRET не задан");
     return true; // В dev-режиме пропускаем проверку
   }
   return secret === expectedSecret;

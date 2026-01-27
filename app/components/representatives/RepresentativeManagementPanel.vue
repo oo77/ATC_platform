@@ -154,6 +154,21 @@
       @close="closeUnblockModal"
       @submit="submitUnblock"
     />
+
+    <!-- Модальное окно подтверждения удаления -->
+    <UiConfirmModal
+      :is-open="showDeleteModal"
+      title="Удаление представителя"
+      message="Вы уверены, что хотите удалить этого представителя?"
+      :item-name="representativeToDelete?.fullName"
+      warning="Это действие нельзя отменить. Все данные представителя будут удалены."
+      confirm-text="Удалить"
+      cancel-text="Отмена"
+      variant="danger"
+      :loading="deleteLoading"
+      @confirm="confirmDelete"
+      @cancel="closeDeleteModal"
+    />
   </div>
 </template>
 
@@ -225,6 +240,11 @@ const representativeToBlock = ref<Representative | null>(null);
 
 const showUnblockModal = ref(false);
 const representativeToUnblock = ref<Representative | null>(null);
+
+// Модалка удаления
+const showDeleteModal = ref(false);
+const representativeToDelete = ref<Representative | null>(null);
+const deleteLoading = ref(false);
 
 // Debounce для поиска
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -413,12 +433,23 @@ const submitUnblock = async () => {
   }
 };
 
-const handleDelete = async (representative: Representative) => {
-  if (!confirm(`Удалить представителя ${representative.fullName}?`)) return;
+const handleDelete = (representative: Representative) => {
+  representativeToDelete.value = representative;
+  showDeleteModal.value = true;
+};
 
+const closeDeleteModal = () => {
+  showDeleteModal.value = false;
+  representativeToDelete.value = null;
+};
+
+const confirmDelete = async () => {
+  if (!representativeToDelete.value) return;
+
+  deleteLoading.value = true;
   try {
     const response = await authFetch(
-      `/api/representatives/${representative.id}`,
+      `/api/representatives/${representativeToDelete.value.id}`,
       {
         method: "DELETE",
       },
@@ -426,10 +457,13 @@ const handleDelete = async (representative: Representative) => {
 
     if (response.success) {
       notification.success("Представитель удалён");
+      closeDeleteModal();
       await Promise.all([loadRepresentatives(), loadStats()]);
     }
   } catch (error: any) {
     notification.error(error.data?.message || "Ошибка при удалении");
+  } finally {
+    deleteLoading.value = false;
   }
 };
 

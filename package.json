@@ -70,9 +70,13 @@
     "zod": "^4.2.0"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/node-fetch": "^2.6.13",
     "@types/uuid": "^10.0.0",
+    "adm-zip": "^0.5.16",
+    "node-fetch": "^3.3.2",
     "tsx": "^4.21.0"
   }
 }
