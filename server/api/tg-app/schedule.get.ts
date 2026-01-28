@@ -80,7 +80,10 @@ export default defineEventHandler(async (event) => {
       // Хелпер для форматирования даты (Date или string -> YYYY-MM-DD)
       const formatDate = (val: any) => {
         if (val instanceof Date) {
-          return val.toISOString().split("T")[0];
+          const year = val.getFullYear();
+          const month = String(val.getMonth() + 1).padStart(2, "0");
+          const day = String(val.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
         }
         return String(val);
       };

@@ -139,9 +139,18 @@ const groupedSchedule = computed(() => {
   });
 });
 
+// Helper to parse date safely without UTC shift
+function parseDate(dateStr) {
+  if (typeof dateStr === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  return new Date(dateStr);
+}
+
 // Форматирование даты
 function formatDate(dateStr) {
-  const date = new Date(dateStr);
+  const date = parseDate(dateStr);
   return date.toLocaleDateString("ru-RU", {
     day: "numeric",
     month: "long",
@@ -151,7 +160,7 @@ function formatDate(dateStr) {
 
 // День недели
 function formatDayOfWeek(dateStr) {
-  const date = new Date(dateStr);
+  const date = parseDate(dateStr);
   return date.toLocaleDateString("ru-RU", { weekday: "long" });
 }
 
