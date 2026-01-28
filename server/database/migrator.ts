@@ -46,6 +46,7 @@ import * as addDurationMinutes from "./migrations/20260121_002_add_duration_minu
 import * as addAcademicHours from "./migrations/20260122_001_add_academic_hours";
 import * as fixFilesGroupIdType from "./migrations/20260122_002_fix_files_group_id_type";
 import * as scheduleTemplates from "./migrations/20260123_001_schedule_templates";
+import * as fixMissingAllowedStudentIds from "./migrations/20260128_002_fix_missing_allowed_student_ids";
 
 /**
  * ============================================================================
@@ -414,6 +415,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: scheduleTemplates.up,
     down: scheduleTemplates.down,
     description: scheduleTemplates.description,
+  },
+  // ============================================================
+  // Миграция 006: Исправление отсутствующей колонки allowed_student_ids
+  // ============================================================
+  {
+    name: "20260128_002_fix_missing_allowed_student_ids",
+    up: fixMissingAllowedStudentIds.up,
+    down: fixMissingAllowedStudentIds.down,
+    description: fixMissingAllowedStudentIds.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже
