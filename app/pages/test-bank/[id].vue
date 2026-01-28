@@ -552,122 +552,135 @@
           </p>
         </div>
 
-        <div v-else class="divide-y divide-gray-200 dark:divide-gray-700">
-          <div
-            v-for="(question, index) in filteredQuestions"
-            :key="question.id"
-            class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        <div v-else class="overflow-x-auto">
+          <table
+            class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
           >
-            <div class="flex items-start gap-4">
-              <!-- Порядковый номер -->
-              <div
-                class="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-sm font-medium text-gray-600 dark:text-gray-400"
+            <thead class="bg-gray-50 dark:bg-gray-800">
+              <tr>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-12"
+                >
+                  #
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                >
+                  Вопрос
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24"
+                >
+                  Язык
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32"
+                >
+                  Сложность
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24"
+                >
+                  Баллы
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24"
+                >
+                  Статус
+                </th>
+                <th
+                  scope="col"
+                  class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32"
+                >
+                  Действия
+                </th>
+              </tr>
+            </thead>
+            <tbody
+              class="bg-white dark:bg-boxdark divide-y divide-gray-200 dark:divide-gray-700"
+            >
+              <tr
+                v-for="(question, index) in filteredQuestions"
+                :key="question.id"
+                class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
-                {{ index + 1 }}
-              </div>
-
-              <!-- Контент вопроса -->
-              <div class="grow min-w-0">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="grow">
-                    <!-- Текст вопроса -->
-                    <p
-                      class="text-gray-900 dark:text-white font-medium line-clamp-2"
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+                >
+                  {{ index + 1 }}
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex flex-col gap-1">
+                    <div
+                      class="text-sm text-gray-900 dark:text-white font-medium line-clamp-2"
+                      :title="question.question_text"
                     >
                       {{ question.question_text }}
-                    </p>
-
-                    <!-- Мета-информация -->
-                    <div class="flex flex-wrap items-center gap-2 mt-2">
-                      <!-- Язык -->
-                      <span
-                        :class="languageBadgeClasses[question.language || 'ru']"
-                      >
-                        {{ languageFlags[question.language || "ru"] }}
-                        {{ languageLabels[question.language || "ru"] }}
-                      </span>
-
-                      <!-- Тип вопроса -->
+                    </div>
+                    <div class="flex items-center gap-2">
                       <span
                         class="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
                       >
                         {{ questionTypeLabels[question.question_type] }}
                       </span>
-
-                      <!-- Сложность -->
-                      <span
-                        :class="[
-                          'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                          difficultyClasses[question.difficulty],
-                        ]"
-                      >
-                        {{ difficultyLabels[question.difficulty] }}
-                      </span>
-
-                      <!-- Баллы -->
-                      <span
-                        class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400"
-                      >
-                        {{ question.points }}
-                        {{
-                          pluralize(question.points, "балл", "балла", "баллов")
-                        }}
-                      </span>
-
-                      <!-- Статус -->
-                      <span
-                        v-if="!question.is_active"
-                        class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-500 dark:text-gray-500"
-                      >
-                        Неактивен
-                      </span>
-                    </div>
-
-                    <!-- Варианты ответов (для single/multiple) -->
-                    <div
-                      v-if="
-                        question.question_type === 'single' ||
-                        question.question_type === 'multiple'
-                      "
-                      class="mt-3"
-                    >
-                      <div class="flex flex-wrap gap-2">
-                        <span
-                          v-for="option in getQuestionOptions(question)"
-                          :key="option.id"
-                          :class="[
-                            'inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs',
-                            option.correct
-                              ? 'bg-success/10 text-success border border-success/20'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
-                          ]"
-                        >
-                          <svg
-                            v-if="option.correct"
-                            class="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M5 13l4 4L19 7"
-                            />
-                          </svg>
-                          {{ truncateText(option.text, 30) }}
-                        </span>
-                      </div>
                     </div>
                   </div>
-
-                  <!-- Действия -->
-                  <div class="shrink-0 flex items-center gap-1">
+                </td>
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+                >
+                  <span
+                    :class="languageBadgeClasses[question.language || 'ru']"
+                  >
+                    {{ languageFlags[question.language || "ru"] }}
+                    {{ languageLabels[question.language || "ru"] }}
+                  </span>
+                </td>
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
+                >
+                  <span
+                    :class="[
+                      'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                      difficultyClasses[question.difficulty],
+                    ]"
+                  >
+                    {{ difficultyLabels[question.difficulty] }}
+                  </span>
+                </td>
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white"
+                >
+                  {{ question.points }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <span
+                    v-if="question.is_active"
+                    class="inline-flex items-center rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success"
+                  >
+                    Активен
+                  </span>
+                  <span
+                    v-else
+                    class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-500"
+                  >
+                    Неактивен
+                  </span>
+                </td>
+                <td
+                  class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
+                >
+                  <div class="flex items-center justify-end gap-2">
                     <button
                       v-if="canManageTestBanks"
                       @click="openEditQuestionModal(question)"
-                      class="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                      class="text-primary hover:text-primary/80 p-1"
                       title="Редактировать"
                     >
                       <svg
@@ -687,7 +700,12 @@
                     <button
                       v-if="canManageTestBanks"
                       @click="toggleQuestionActive(question)"
-                      class="p-2 text-gray-500 hover:text-warning hover:bg-warning/10 rounded-lg transition-colors"
+                      :class="
+                        question.is_active
+                          ? 'text-warning hover:text-warning/80'
+                          : 'text-success hover:text-success/80'
+                      "
+                      class="p-1"
                       :title="
                         question.is_active ? 'Деактивировать' : 'Активировать'
                       "
@@ -703,7 +721,7 @@
                           stroke-linecap="round"
                           stroke-linejoin="round"
                           stroke-width="2"
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
                       <svg
@@ -717,20 +735,14 @@
                           stroke-linecap="round"
                           stroke-linejoin="round"
                           stroke-width="2"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
                     </button>
                     <button
                       v-if="canManageTestBanks"
                       @click="confirmDeleteQuestion(question)"
-                      class="p-2 text-gray-500 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
+                      class="text-danger hover:text-danger/80 p-1"
                       title="Удалить"
                     >
                       <svg
@@ -748,10 +760,10 @@
                       </svg>
                     </button>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </template>
@@ -763,75 +775,176 @@
       size="lg"
       @close="closeQuestionModal"
     >
-      <form @submit.prevent class="space-y-5">
-        <!-- Тип вопроса -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Тип вопроса <span class="text-danger">*</span>
-          </label>
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
-            <button
-              v-for="type in questionTypes"
-              :key="type.value"
-              type="button"
-              @click="questionForm.question_type = type.value"
-              :class="[
-                'p-3 rounded-lg border-2 text-center transition-all',
-                questionForm.question_type === type.value
-                  ? 'border-primary bg-primary/5 text-primary'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-primary/50',
-              ]"
-              :disabled="type.value !== 'single'"
-              :title="type.value !== 'single' ? 'Скоро будет доступно' : ''"
+      <form @submit.prevent class="space-y-4">
+        <!-- Верхняя панель настроек -->
+        <div class="grid grid-cols-12 gap-3">
+          <!-- Тип вопроса -->
+          <div class="col-span-12 md:col-span-3">
+            <label
+              class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
             >
-              <div
-                class="text-xs font-medium"
-                :class="{ 'opacity-50': type.value !== 'single' }"
+              Тип
+            </label>
+            <div class="relative">
+              <select
+                v-model="questionForm.question_type"
+                class="w-full rounded-lg border border-stroke bg-transparent py-1.5 pl-3 pr-8 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
               >
-                {{ type.label }}
-              </div>
-            </button>
+                <option value="single">Один ответ</option>
+                <option value="multiple">Несколько</option>
+                <option value="text">Текст</option>
+                <option value="order">Порядок</option>
+                <option value="match">Пары</option>
+              </select>
+              <svg
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Язык -->
+          <div class="col-span-6 md:col-span-3">
+            <label
+              class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Язык
+            </label>
+            <div class="relative">
+              <select
+                v-model="questionForm.language"
+                class="w-full rounded-lg border border-stroke bg-transparent py-1.5 pl-3 pr-8 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
+              >
+                <option value="ru">🇷🇺 Русский</option>
+                <option value="uz">🇺🇿 O'zbek</option>
+                <option value="en">🇬🇧 English</option>
+              </select>
+              <svg
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Сложность -->
+          <div class="col-span-6 md:col-span-3">
+            <label
+              class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Сложность
+            </label>
+            <div class="relative">
+              <select
+                v-model="questionForm.difficulty"
+                class="w-full rounded-lg border border-stroke bg-transparent py-1.5 pl-3 pr-8 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
+              >
+                <option value="easy">Лёгкий</option>
+                <option value="medium">Средний</option>
+                <option value="hard">Сложный</option>
+              </select>
+              <svg
+                class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Баллы -->
+          <div class="col-span-6 md:col-span-2">
+            <label
+              class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Баллы
+            </label>
+            <input
+              v-model.number="questionForm.points"
+              type="number"
+              min="1"
+              max="100"
+              class="w-full rounded-lg border border-stroke bg-transparent py-1.5 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+            />
+          </div>
+
+          <!-- Активность -->
+          <div
+            class="col-span-6 md:col-span-1 flex items-end pb-1.5 justify-center"
+          >
+            <label class="cursor-pointer flex items-center" title="Активность">
+              <input
+                v-model="questionForm.is_active"
+                type="checkbox"
+                class="sr-only peer"
+              />
+              <div
+                class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-primary relative"
+              ></div>
+            </label>
           </div>
         </div>
 
         <!-- Текст вопроса -->
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
           >
             Текст вопроса <span class="text-danger">*</span>
           </label>
           <textarea
             v-model="questionForm.question_text"
-            rows="3"
+            rows="2"
             placeholder="Введите текст вопроса..."
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none"
+            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none"
             :class="{ 'border-danger': questionFormErrors.question_text }"
           ></textarea>
           <p
             v-if="questionFormErrors.question_text"
-            class="mt-1 text-sm text-danger"
+            class="mt-1 text-xs text-danger"
           >
             {{ questionFormErrors.question_text }}
           </p>
         </div>
 
         <!-- Варианты ответов (для single) -->
-        <div v-if="questionForm.question_type === 'single'">
+        <div v-if="questionForm.question_type === 'single'" class="space-y-2">
           <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            class="block text-xs font-medium text-gray-700 dark:text-gray-300"
           >
             Варианты ответов <span class="text-danger">*</span>
           </label>
-          <div class="space-y-3">
+          <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
             <div
               v-for="(option, index) in questionForm.options"
               :key="option.id"
-              class="flex items-center gap-3"
+              class="flex items-center gap-2"
             >
-              <!-- Радио-кнопка для выбора правильного ответа -->
+              <!-- Радио-кнопка -->
               <label class="shrink-0 cursor-pointer">
                 <input
                   type="radio"
@@ -841,10 +954,10 @@
                   class="sr-only peer"
                 />
                 <div
-                  class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all peer-checked:border-success peer-checked:bg-success border-gray-300 dark:border-gray-600"
+                  class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all peer-checked:border-success peer-checked:bg-success border-gray-300 dark:border-gray-600"
                 >
                   <svg
-                    class="w-4 h-4 text-white hidden peer-checked:block"
+                    class="w-3 h-3 text-white hidden peer-checked:block"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -859,31 +972,32 @@
                 </div>
               </label>
 
-              <!-- Буква варианта -->
+              <!-- Буква -->
               <span
-                class="shrink-0 w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-600 dark:text-gray-400"
+                class="shrink-0 w-7 h-7 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400"
               >
                 {{ String.fromCharCode(65 + index) }}
               </span>
 
-              <!-- Текст варианта -->
+              <!-- Текст -->
               <input
                 v-model="option.text"
                 type="text"
                 :placeholder="`Вариант ${String.fromCharCode(65 + index)}`"
-                class="grow rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+                class="grow rounded border border-stroke bg-transparent py-1.5 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
                 :class="{ 'border-success': option.correct }"
               />
 
-              <!-- Кнопка удаления -->
+              <!-- Удалить -->
               <button
                 v-if="questionForm.options.length > 2"
                 type="button"
                 @click="removeOption(index)"
-                class="shrink-0 p-2 text-gray-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
+                class="shrink-0 text-gray-400 hover:text-danger p-1"
+                title="Удалить вариант"
               >
                 <svg
-                  class="w-5 h-5"
+                  class="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -903,10 +1017,10 @@
             v-if="questionForm.options.length < 8"
             type="button"
             @click="addOption"
-            class="mt-3 text-sm text-primary hover:text-primary/80 flex items-center gap-1"
+            class="text-xs text-primary hover:text-primary/80 flex items-center gap-1 mt-1"
           >
             <svg
-              class="w-4 h-4"
+              class="w-3 h-3"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -920,133 +1034,23 @@
             </svg>
             Добавить вариант
           </button>
-
-          <p v-if="questionFormErrors.options" class="mt-2 text-sm text-danger">
+          <p v-if="questionFormErrors.options" class="mt-1 text-xs text-danger">
             {{ questionFormErrors.options }}
           </p>
-        </div>
-
-        <!-- Дополнительные настройки -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <!-- Язык -->
-          <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Язык <span class="text-danger">*</span>
-            </label>
-            <div class="relative">
-              <select
-                v-model="questionForm.language"
-                class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
-              >
-                <option value="ru">🇷🇺 Русский</option>
-                <option value="uz">🇺🇿 O'zbek</option>
-                <option value="en">🇬🇧 English</option>
-              </select>
-              <svg
-                class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <!-- Сложность -->
-          <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Сложность
-            </label>
-            <div class="relative">
-              <select
-                v-model="questionForm.difficulty"
-                class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
-              >
-                <option value="easy">Лёгкий</option>
-                <option value="medium">Средний</option>
-                <option value="hard">Сложный</option>
-              </select>
-              <svg
-                class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <!-- Баллы -->
-          <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Баллы
-            </label>
-            <input
-              v-model.number="questionForm.points"
-              type="number"
-              min="1"
-              max="100"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-            />
-          </div>
-
-          <!-- Активность -->
-          <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Статус
-            </label>
-            <label
-              class="relative inline-flex items-center cursor-pointer mt-1"
-            >
-              <input
-                v-model="questionForm.is_active"
-                type="checkbox"
-                class="sr-only peer"
-              />
-              <div
-                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 dark:peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
-              ></div>
-              <span
-                class="ms-3 text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Активен
-              </span>
-            </label>
-          </div>
         </div>
 
         <!-- Объяснение -->
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            class="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
           >
-            Объяснение (показывается после ответа)
+            Объяснение
           </label>
           <textarea
             v-model="questionForm.explanation"
-            rows="2"
-            placeholder="Почему этот ответ правильный..."
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none"
+            rows="1"
+            placeholder="Комментарий к ответу..."
+            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none"
           ></textarea>
         </div>
       </form>
