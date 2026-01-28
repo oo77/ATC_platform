@@ -865,520 +865,430 @@
     <UiModal
       :is-open="modalOpen"
       :title="editingTemplate ? 'Редактировать шаблон' : 'Создать шаблон теста'"
-      size="lg"
+      size="xl"
       @close="closeModal"
     >
-      <form @submit.prevent="saveTemplate" class="space-y-5">
-        <!-- Основная информация -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Название -->
-          <div class="md:col-span-2">
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+      <form @submit.prevent="saveTemplate">
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <!-- Колонка 1: Основная информация -->
+          <div class="space-y-4">
+            <h4
+              class="font-medium text-black dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2"
             >
-              Название <span class="text-danger">*</span>
-            </label>
-            <input
-              v-model="form.name"
-              type="text"
-              placeholder="Например: Тест по охране труда (базовый)"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-              :class="{ 'border-danger': formErrors.name }"
-            />
-            <p v-if="formErrors.name" class="mt-1 text-sm text-danger">
-              {{ formErrors.name }}
-            </p>
-          </div>
+              Общая информация
+            </h4>
 
-          <!-- Код -->
-          <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Код <span class="text-danger">*</span>
-            </label>
-            <input
-              v-model="form.code"
-              type="text"
-              placeholder="OT-TEST-BASE"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary uppercase"
-              :class="{ 'border-danger': formErrors.code }"
-            />
-            <p v-if="formErrors.code" class="mt-1 text-sm text-danger">
-              {{ formErrors.code }}
-            </p>
-          </div>
-
-          <!-- Банк вопросов -->
-          <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Банк вопросов <span class="text-danger">*</span>
-            </label>
-            <div class="relative">
-              <select
-                v-model="form.bank_id"
-                class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
-                :class="{ 'border-danger': formErrors.bank_id }"
+            <!-- Название -->
+            <div>
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                <option value="">Выберите банк</option>
-                <option v-for="bank in banks" :key="bank.id" :value="bank.id">
-                  {{ bank.name }} ({{ bank.questions_count }} вопросов)
-                </option>
-              </select>
-              <svg
-                class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+                Название <span class="text-danger">*</span>
+              </label>
+              <input
+                v-model="form.name"
+                type="text"
+                placeholder="Например: Тест по охране труда"
+                class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+                :class="{ 'border-danger': formErrors.name }"
+              />
+              <p v-if="formErrors.name" class="mt-1 text-xs text-danger">
+                {{ formErrors.name }}
+              </p>
             </div>
-            <p v-if="formErrors.bank_id" class="mt-1 text-sm text-danger">
-              {{ formErrors.bank_id }}
-            </p>
-          </div>
-        </div>
 
-        <!-- Описание -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Описание
-          </label>
-          <textarea
-            v-model="form.description"
-            rows="2"
-            placeholder="Краткое описание теста..."
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none"
-          ></textarea>
-        </div>
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Код -->
+              <div>
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Код <span class="text-danger">*</span>
+                </label>
+                <input
+                  v-model="form.code"
+                  type="text"
+                  placeholder="CODE-01"
+                  class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary uppercase text-sm"
+                  :class="{ 'border-danger': formErrors.code }"
+                />
+                <p v-if="formErrors.code" class="mt-1 text-xs text-danger">
+                  {{ formErrors.code }}
+                </p>
+              </div>
 
-        <!-- Настройки вопросов -->
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-5">
-          <h4 class="font-medium text-gray-900 dark:text-white mb-4">
-            Настройки вопросов
-          </h4>
+              <!-- Банк -->
+              <div>
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Банк <span class="text-danger">*</span>
+                </label>
+                <div class="relative">
+                  <select
+                    v-model="form.bank_id"
+                    class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-3 pr-8 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none text-sm"
+                    :class="{ 'border-danger': formErrors.bank_id }"
+                  >
+                    <option value="">Выберите...</option>
+                    <option
+                      v-for="bank in banks"
+                      :key="bank.id"
+                      :value="bank.id"
+                    >
+                      {{ bank.name }}
+                    </option>
+                  </select>
+                  <svg
+                    class="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
+                <p v-if="formErrors.bank_id" class="mt-1 text-xs text-danger">
+                  {{ formErrors.bank_id }}
+                </p>
+              </div>
+            </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Режим вопросов -->
+            <!-- Описание -->
+            <div>
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                Описание
+              </label>
+              <textarea
+                v-model="form.description"
+                rows="3"
+                class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none text-sm"
+              ></textarea>
+            </div>
+
+            <!-- Языки -->
             <div>
               <label
                 class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
               >
-                Режим выбора вопросов
+                Языки <span class="text-danger">*</span>
               </label>
-              <div class="relative">
+              <div class="flex flex-wrap gap-2">
+                <label
+                  v-for="lang in availableLanguages"
+                  :key="lang.value"
+                  class="flex items-center gap-2 cursor-pointer p-2 rounded-lg border transition-all"
+                  :class="[
+                    form.allowed_languages.includes(lang.value)
+                      ? 'border-primary bg-primary/5'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-primary/50',
+                  ]"
+                >
+                  <input
+                    type="checkbox"
+                    :value="lang.value"
+                    v-model="form.allowed_languages"
+                    class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    @change="onLanguageChange"
+                  />
+                  <span>{{ lang.flag }}</span>
+                </label>
+              </div>
+              <p
+                v-if="formErrors.allowed_languages"
+                class="mt-1 text-xs text-danger"
+              >
+                {{ formErrors.allowed_languages }}
+              </p>
+
+              <!-- Валидация языков -->
+              <div
+                v-if="
+                  form.bank_id &&
+                  form.allowed_languages.length > 0 &&
+                  form.questions_mode === 'random'
+                "
+                class="mt-2 space-y-1"
+              >
+                <div
+                  v-if="languageValidationLoading"
+                  class="text-xs text-gray-500"
+                >
+                  Проверка...
+                </div>
+                <div v-else class="space-y-1">
+                  <div
+                    v-for="validation in languageValidation"
+                    :key="validation.language"
+                    class="flex items-center justify-between px-2 py-1 rounded text-xs"
+                    :class="
+                      validation.isValid ? 'bg-success/10' : 'bg-danger/10'
+                    "
+                  >
+                    <div class="flex items-center gap-1">
+                      <span>{{ validation.flag }}</span>
+                      <span
+                        :class="
+                          validation.isValid ? 'text-success' : 'text-danger'
+                        "
+                      >
+                        {{ validation.available }} / {{ validation.required }}
+                      </span>
+                    </div>
+                  </div>
+                  <p v-if="hasInvalidLanguages" class="text-xs text-danger">
+                    Недостаточно вопросов
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Колонка 2: Настройки теста -->
+          <div class="space-y-4">
+            <h4
+              class="font-medium text-black dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2"
+            >
+              Параметры теста
+            </h4>
+
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Режим вопросов -->
+              <div class="col-span-2">
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Режим выборки
+                </label>
                 <select
                   v-model="form.questions_mode"
-                  class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
+                  class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-3 pr-8 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none text-sm"
                 >
-                  <option value="all">Все вопросы из банка</option>
-                  <option value="random">Случайные N вопросов</option>
+                  <option value="all">Все вопросы</option>
+                  <option value="random">Случайная выборка</option>
                 </select>
-                <svg
-                  class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
               </div>
-            </div>
 
-            <!-- Количество вопросов -->
-            <div v-if="form.questions_mode === 'random'">
-              <label
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Количество вопросов
-              </label>
-              <input
-                v-model.number="form.questions_count"
-                type="number"
-                min="1"
-                max="100"
-                class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4 mt-4">
-            <!-- Перемешивать вопросы -->
-            <label class="flex items-center gap-3 cursor-pointer">
-              <input
-                v-model="form.shuffle_questions"
-                type="checkbox"
-                class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <span class="text-sm text-gray-700 dark:text-gray-300"
-                >Перемешивать вопросы</span
-              >
-            </label>
-
-            <!-- Перемешивать варианты -->
-            <label class="flex items-center gap-3 cursor-pointer">
-              <input
-                v-model="form.shuffle_options"
-                type="checkbox"
-                class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <span class="text-sm text-gray-700 dark:text-gray-300"
-                >Перемешивать варианты</span
-              >
-            </label>
-          </div>
-        </div>
-
-        <!-- Языки тестирования -->
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-5">
-          <h4 class="font-medium text-gray-900 dark:text-white mb-4">
-            Языки тестирования
-          </h4>
-
-          <div class="mb-4">
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
-              Доступные языки <span class="text-danger">*</span>
-            </label>
-            <div class="flex flex-wrap gap-3">
-              <label
-                v-for="lang in availableLanguages"
-                :key="lang.value"
-                class="flex items-center gap-2 cursor-pointer p-3 rounded-lg border-2 transition-all"
-                :class="[
-                  form.allowed_languages.includes(lang.value)
-                    ? 'border-primary bg-primary/5'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-primary/50',
-                ]"
-              >
+              <!-- Количество (если random) -->
+              <div v-if="form.questions_mode === 'random'">
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Кол-во вопросов
+                </label>
                 <input
-                  type="checkbox"
-                  :value="lang.value"
-                  v-model="form.allowed_languages"
-                  class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-                  @change="onLanguageChange"
+                  v-model.number="form.questions_count"
+                  type="number"
+                  min="1"
+                  class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
                 />
-                <span class="text-lg">{{ lang.flag }}</span>
-                <span
-                  class="text-sm font-medium text-gray-700 dark:text-gray-300"
-                  >{{ lang.label }}</span
-                >
-              </label>
-            </div>
-            <p
-              v-if="formErrors.allowed_languages"
-              class="mt-1 text-sm text-danger"
-            >
-              {{ formErrors.allowed_languages }}
-            </p>
-          </div>
-
-          <!-- Валидация количества вопросов по языкам -->
-          <div
-            v-if="
-              form.bank_id &&
-              form.allowed_languages.length > 0 &&
-              form.questions_mode === 'random'
-            "
-            class="space-y-2"
-          >
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              Достаточность вопросов (минимум {{ form.questions_count }} на
-              каждом языке):
-            </p>
-            <div
-              v-if="languageValidationLoading"
-              class="flex items-center gap-2 text-sm text-gray-500"
-            >
-              <div
-                class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"
-              ></div>
-              Проверка...
-            </div>
-            <div v-else class="space-y-2">
-              <div
-                v-for="validation in languageValidation"
-                :key="validation.language"
-                class="flex items-center justify-between p-2 rounded-lg"
-                :class="validation.isValid ? 'bg-success/10' : 'bg-danger/10'"
-              >
-                <div class="flex items-center gap-2">
-                  <span>{{ validation.flag }}</span>
-                  <span
-                    class="text-sm font-medium"
-                    :class="validation.isValid ? 'text-success' : 'text-danger'"
-                  >
-                    {{ validation.label }}
-                  </span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span
-                    class="text-sm"
-                    :class="validation.isValid ? 'text-success' : 'text-danger'"
-                  >
-                    {{ validation.available }} / {{ validation.required }}
-                  </span>
-                  <svg
-                    v-if="validation.isValid"
-                    class="w-5 h-5 text-success"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <svg
-                    v-else
-                    class="w-5 h-5 text-danger"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </div>
               </div>
-            </div>
-            <p v-if="hasInvalidLanguages" class="text-sm text-danger mt-2">
-              ⚠️ Недостаточно вопросов на некоторых языках. Добавьте вопросы или
-              уменьшите количество.
-            </p>
-          </div>
-        </div>
 
-        <!-- Настройки прохождения -->
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-5">
-          <h4 class="font-medium text-gray-900 dark:text-white mb-4">
-            Настройки прохождения
-          </h4>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Лимит времени -->
-            <div>
-              <label
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              <!-- Вопросов на странице -->
+              <div
+                :class="{
+                  'col-span-2': form.questions_mode !== 'random',
+                }"
               >
-                Лимит времени (мин)
-              </label>
-              <input
-                v-model.number="form.time_limit_minutes"
-                type="number"
-                min="0"
-                max="300"
-                placeholder="Без лимита"
-                class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-              />
-              <p class="mt-1 text-xs text-gray-500">0 = без лимита</p>
-            </div>
-
-            <!-- Проходной балл -->
-            <div>
-              <label
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Проходной балл (%)
-              </label>
-              <input
-                v-model.number="form.passing_score"
-                type="number"
-                min="1"
-                max="100"
-                class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-              />
-            </div>
-
-            <!-- Макс. попыток -->
-            <div>
-              <label
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Макс. попыток
-              </label>
-              <input
-                v-model.number="form.max_attempts"
-                type="number"
-                min="1"
-                max="10"
-                class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <!-- Показ результатов -->
-            <div>
-              <label
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Показ результатов
-              </label>
-              <div class="relative">
-                <select
-                  v-model="form.show_results"
-                  class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                 >
-                  <option value="immediately">Сразу после завершения</option>
-                  <option value="after_deadline">После дедлайна</option>
-                  <option value="manual">Вручную преподавателем</option>
-                  <option value="never">Не показывать</option>
-                </select>
-                <svg
-                  class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            <!-- Вопросов на странице -->
-            <div>
-              <label
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Вопросов на странице
-              </label>
-              <div class="relative">
+                  Пагинация
+                </label>
                 <select
                   v-model.number="form.questions_per_page"
-                  class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
+                  class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-3 pr-8 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none text-sm"
                 >
-                  <option :value="1">По одному</option>
-                  <option :value="5">5 вопросов</option>
-                  <option :value="10">10 вопросов</option>
+                  <option :value="1">По 1 вопросу</option>
+                  <option :value="5">По 5 вопросов</option>
+                  <option :value="10">По 10 вопросов</option>
                   <option :value="0">Все сразу</option>
                 </select>
-                <svg
-                  class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
               </div>
+            </div>
+
+            <!-- Чекбоксы перемешивания -->
+            <div class="space-y-2 pt-1">
+              <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input
+                  v-model="form.shuffle_questions"
+                  type="checkbox"
+                  class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <span class="text-gray-700 dark:text-gray-300"
+                  >Перемешивать вопросы</span
+                >
+              </label>
+
+              <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input
+                  v-model="form.shuffle_options"
+                  type="checkbox"
+                  class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <span class="text-gray-700 dark:text-gray-300"
+                  >Перемешивать ответы</span
+                >
+              </label>
+
+              <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input
+                  v-model="form.allow_back"
+                  type="checkbox"
+                  class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <span class="text-gray-700 dark:text-gray-300"
+                  >Разрешить возврат назад</span
+                >
+              </label>
             </div>
           </div>
 
-          <!-- Возврат к вопросам -->
-          <div class="mt-4">
-            <label class="flex items-center gap-3 cursor-pointer">
-              <input
-                v-model="form.allow_back"
-                type="checkbox"
-                class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <span class="text-sm text-gray-700 dark:text-gray-300"
-                >Разрешить возврат к предыдущим вопросам</span
-              >
-            </label>
-          </div>
-        </div>
-
-        <!-- Антипрокторинг -->
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-5">
-          <div class="flex items-center justify-between mb-4">
-            <h4 class="font-medium text-gray-900 dark:text-white">
-              Антипрокторинг
-            </h4>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input
-                v-model="form.proctoring_enabled"
-                type="checkbox"
-                class="sr-only peer"
-              />
-              <div
-                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 dark:peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"
-              ></div>
-            </label>
-          </div>
-
-          <div v-if="form.proctoring_enabled" class="grid grid-cols-2 gap-4">
-            <label class="flex items-center gap-3 cursor-pointer">
-              <input
-                v-model="form.proctoring_settings.blockTabSwitch"
-                type="checkbox"
-                class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <span class="text-sm text-gray-700 dark:text-gray-300"
-                >Блокировать переключение вкладок</span
-              >
-            </label>
-
-            <label class="flex items-center gap-3 cursor-pointer">
-              <input
-                v-model="form.proctoring_settings.blockCopyPaste"
-                type="checkbox"
-                class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <span class="text-sm text-gray-700 dark:text-gray-300"
-                >Блокировать копирование</span
-              >
-            </label>
-
-            <label class="flex items-center gap-3 cursor-pointer">
-              <input
-                v-model="form.proctoring_settings.blockRightClick"
-                type="checkbox"
-                class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-              <span class="text-sm text-gray-700 dark:text-gray-300"
-                >Блокировать правый клик</span
-              >
-            </label>
-          </div>
-        </div>
-
-        <!-- Активность -->
-        <div class="border-t border-gray-200 dark:border-gray-700 pt-5">
-          <label class="flex items-center gap-3 cursor-pointer">
-            <input
-              v-model="form.is_active"
-              type="checkbox"
-              class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
-            />
-            <span class="text-sm font-medium text-gray-700 dark:text-gray-300"
-              >Шаблон активен</span
+          <!-- Колонка 3: Ограничения и Защита -->
+          <div class="space-y-4">
+            <h4
+              class="font-medium text-black dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2"
             >
-          </label>
+              Ограничения и контроль
+            </h4>
+
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Таймер -->
+              <div>
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Время (мин)
+                </label>
+                <input
+                  v-model.number="form.time_limit_minutes"
+                  type="number"
+                  min="0"
+                  placeholder="∞"
+                  class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+                />
+              </div>
+
+              <!-- Попытки -->
+              <div>
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Попытки
+                </label>
+                <input
+                  v-model.number="form.max_attempts"
+                  type="number"
+                  min="1"
+                  class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+                />
+              </div>
+
+              <!-- Проходной балл -->
+              <div>
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  Порог (%)
+                </label>
+                <input
+                  v-model.number="form.passing_score"
+                  type="number"
+                  min="1"
+                  max="100"
+                  class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+                />
+              </div>
+            </div>
+
+            <!-- Результаты -->
+            <div>
+              <label
+                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                Результаты
+              </label>
+              <select
+                v-model="form.show_results"
+                class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-3 pr-8 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none text-sm"
+              >
+                <option value="immediately">Сразу</option>
+                <option value="after_deadline">После дедлайна</option>
+                <option value="manual">Вручную</option>
+                <option value="never">Скрыть</option>
+              </select>
+            </div>
+
+            <!-- Антипрокторинг -->
+            <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+              <div class="flex items-center justify-between mb-2">
+                <span
+                  class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >Антипрокторинг</span
+                >
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    v-model="form.proctoring_enabled"
+                    type="checkbox"
+                    class="sr-only peer"
+                  />
+                  <div
+                    class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-danger"
+                  ></div>
+                </label>
+              </div>
+
+              <div
+                v-if="form.proctoring_enabled"
+                class="space-y-1 pl-1 border-l-2 border-danger/20"
+              >
+                <label class="flex items-center gap-2 cursor-pointer text-xs">
+                  <input
+                    v-model="form.proctoring_settings.blockTabSwitch"
+                    type="checkbox"
+                    class="w-3.5 h-3.5 rounded border-gray-300 text-danger focus:ring-danger"
+                  />
+                  <span>Блок вкладок</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer text-xs">
+                  <input
+                    v-model="form.proctoring_settings.blockCopyPaste"
+                    type="checkbox"
+                    class="w-3.5 h-3.5 rounded border-gray-300 text-danger focus:ring-danger"
+                  />
+                  <span>Блок копирования</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Активность (внизу колонки) -->
+            <div class="pt-2">
+              <label
+                class="flex items-center gap-3 cursor-pointer p-2 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+              >
+                <div class="relative inline-flex items-center">
+                  <input
+                    v-model="form.is_active"
+                    type="checkbox"
+                    class="sr-only peer"
+                  />
+                  <div
+                    class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-success"
+                  ></div>
+                </div>
+                <span class="text-sm font-medium">{{
+                  form.is_active ? "Шаблон активен" : "Черновик"
+                }}</span>
+              </label>
+            </div>
+          </div>
         </div>
       </form>
 
@@ -1574,7 +1484,7 @@ const loadTemplates = async () => {
     }
 
     const response = await authFetch(
-      `/api/test-bank/templates?${params.toString()}`
+      `/api/test-bank/templates?${params.toString()}`,
     );
 
     if (response.success) {
@@ -1694,7 +1604,7 @@ const validateLanguages = async () => {
     const languages = form.value.allowed_languages.join(",");
 
     const response = await authFetch(
-      `/api/test-bank/banks/${form.value.bank_id}/validate-languages?min_count=${minCount}&languages=${languages}`
+      `/api/test-bank/banks/${form.value.bank_id}/validate-languages?min_count=${minCount}&languages=${languages}`,
     );
 
     if (response.success) {
@@ -1771,7 +1681,7 @@ const saveTemplate = async () => {
         {
           method: "PUT",
           body: payload,
-        }
+        },
       );
     } else {
       response = await authFetch("/api/test-bank/templates", {
@@ -1784,7 +1694,7 @@ const saveTemplate = async () => {
       showNotification(
         "success",
         "Успешно",
-        editingTemplate.value ? "Шаблон обновлён" : "Шаблон создан"
+        editingTemplate.value ? "Шаблон обновлён" : "Шаблон создан",
       );
       closeModal();
       loadTemplates();
@@ -1792,7 +1702,7 @@ const saveTemplate = async () => {
       showNotification(
         "error",
         "Ошибка",
-        response.message || "Не удалось сохранить"
+        response.message || "Не удалось сохранить",
       );
     }
   } catch (error) {
@@ -1813,7 +1723,7 @@ const deleteTemplate = async () => {
       `/api/test-bank/templates/${deletingTemplate.value.id}`,
       {
         method: "DELETE",
-      }
+      },
     );
 
     if (response.success) {
@@ -1825,7 +1735,7 @@ const deleteTemplate = async () => {
       showNotification(
         "error",
         "Ошибка",
-        response.message || "Не удалось удалить"
+        response.message || "Не удалось удалить",
       );
     }
   } catch (error) {
