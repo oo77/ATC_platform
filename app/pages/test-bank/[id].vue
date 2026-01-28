@@ -156,14 +156,47 @@
       </div>
 
       <!-- Статистика банка -->
-      <div class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7 mb-6">
-        <div class="rounded-lg bg-white dark:bg-boxdark p-5 shadow-md">
-          <div class="flex items-center gap-3">
+      <!-- Статистика банка -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
+        <!-- Всего вопросов -->
+        <div
+          class="md:col-span-2 rounded-lg bg-white dark:bg-boxdark p-4 shadow-md flex flex-col items-center justify-center"
+        >
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-2"
+          >
+            <svg
+              class="w-6 h-6 text-primary"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400">
+            Всего вопросов
+          </p>
+          <p class="text-2xl font-bold text-black dark:text-white mt-1">
+            {{ stats.total }}
+          </p>
+        </div>
+
+        <!-- Карточка сложности -->
+        <div
+          class="md:col-span-5 rounded-lg bg-white dark:bg-boxdark p-4 shadow-md flex flex-col justify-center"
+        >
+          <div class="flex items-center gap-2 mb-3 px-2">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10"
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-warning/10"
             >
               <svg
-                class="w-5 h-5 text-primary"
+                class="w-4 h-4 text-warning"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -172,28 +205,52 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
                 />
               </svg>
             </div>
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">
-                Всего вопросов
-              </p>
-              <p class="text-xl font-bold text-black dark:text-white">
-                {{ questions.length }}
-              </p>
+            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Сложность
+            </p>
+          </div>
+
+          <div
+            class="grid grid-cols-3 gap-4 divide-x divide-gray-100 dark:divide-gray-700"
+          >
+            <!-- Easy -->
+            <div class="flex flex-col items-center">
+              <span class="text-xs text-gray-500 mb-1">Лёгкие</span>
+              <span class="text-xl font-bold text-success leading-none">{{
+                stats.difficulty.easy
+              }}</span>
+            </div>
+            <!-- Medium -->
+            <div class="flex flex-col items-center">
+              <span class="text-xs text-gray-500 mb-1">Средние</span>
+              <span class="text-xl font-bold text-warning leading-none">{{
+                stats.difficulty.medium
+              }}</span>
+            </div>
+            <!-- Hard -->
+            <div class="flex flex-col items-center">
+              <span class="text-xs text-gray-500 mb-1">Сложные</span>
+              <span class="text-xl font-bold text-danger leading-none">{{
+                stats.difficulty.hard
+              }}</span>
             </div>
           </div>
         </div>
 
-        <div class="rounded-lg bg-white dark:bg-boxdark p-5 shadow-md">
-          <div class="flex items-center gap-3">
+        <!-- Карточка языков -->
+        <div
+          class="md:col-span-5 rounded-lg bg-white dark:bg-boxdark p-4 shadow-md flex flex-col justify-center"
+        >
+          <div class="flex items-center gap-2 mb-3 px-2">
             <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-success/10"
+              class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100/50 dark:bg-blue-900/30"
             >
               <svg
-                class="w-5 h-5 text-success"
+                class="w-4 h-4 text-blue-600 dark:text-blue-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -202,132 +259,41 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
                 />
               </svg>
             </div>
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">
-                Лёгких (Easy)
-              </p>
-              <p class="text-xl font-bold text-black dark:text-white">
-                {{ difficultyStats.easy }}
-              </p>
-            </div>
+            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Языки
+            </p>
           </div>
-        </div>
 
-        <div class="rounded-lg bg-white dark:bg-boxdark p-5 shadow-md">
-          <div class="flex items-center gap-3">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10"
-            >
-              <svg
-                class="w-5 h-5 text-warning"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          <div
+            class="grid grid-cols-3 gap-4 divide-x divide-gray-100 dark:divide-gray-700"
+          >
+            <!-- RU -->
+            <div class="flex flex-col items-center">
+              <span class="text-lg mb-1 leading-none">🇷🇺</span>
+              <span
+                class="text-xl font-bold text-black dark:text-white leading-none"
+                >{{ stats.language.ru }}</span
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
             </div>
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">
-                Средних (Medium)
-              </p>
-              <p class="text-xl font-bold text-black dark:text-white">
-                {{ difficultyStats.medium }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-lg bg-white dark:bg-boxdark p-5 shadow-md">
-          <div class="flex items-center gap-3">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-danger/10"
-            >
-              <svg
-                class="w-5 h-5 text-danger"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <!-- UZ -->
+            <div class="flex flex-col items-center">
+              <span class="text-lg mb-1 leading-none">🇺🇿</span>
+              <span
+                class="text-xl font-bold text-black dark:text-white leading-none"
+                >{{ stats.language.uz }}</span
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
             </div>
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">
-                Сложных (Hard)
-              </p>
-              <p class="text-xl font-bold text-black dark:text-white">
-                {{ difficultyStats.hard }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Статистика по языкам -->
-        <div class="rounded-lg bg-white dark:bg-boxdark p-5 shadow-md">
-          <div class="flex items-center gap-3">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100/50 dark:bg-blue-900/30 text-lg"
-            >
-              🇷🇺
-            </div>
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">
-                Русский
-              </p>
-              <p class="text-xl font-bold text-black dark:text-white">
-                {{ languageStats.ru }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-lg bg-white dark:bg-boxdark p-5 shadow-md">
-          <div class="flex items-center gap-3">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-green-100/50 dark:bg-green-900/30 text-lg"
-            >
-              🇺🇿
-            </div>
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">
-                O'zbek
-              </p>
-              <p class="text-xl font-bold text-black dark:text-white">
-                {{ languageStats.uz }}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-lg bg-white dark:bg-boxdark p-5 shadow-md">
-          <div class="flex items-center gap-3">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100/50 dark:bg-purple-900/30 text-lg"
-            >
-              🇬🇧
-            </div>
-            <div>
-              <p class="text-xs font-medium text-gray-600 dark:text-gray-400">
-                English
-              </p>
-              <p class="text-xl font-bold text-black dark:text-white">
-                {{ languageStats.en }}
-              </p>
+            <!-- EN -->
+            <div class="flex flex-col items-center">
+              <span class="text-lg mb-1 leading-none">🇬🇧</span>
+              <span
+                class="text-xl font-bold text-black dark:text-white leading-none"
+                >{{ stats.language.en }}</span
+              >
             </div>
           </div>
         </div>
@@ -1152,6 +1118,11 @@ const error = ref(null);
 
 const bank = ref(null);
 const questions = ref([]);
+const stats = ref({
+  total: 0,
+  difficulty: { easy: 0, medium: 0, hard: 0 },
+  language: { ru: 0, uz: 0, en: 0 },
+});
 
 // Фильтры вопросов
 const questionFilters = ref({
@@ -1178,31 +1149,31 @@ const filteredQuestions = computed(() => {
   if (questionFilters.value.search) {
     const search = questionFilters.value.search.toLowerCase();
     result = result.filter((q) =>
-      q.question_text.toLowerCase().includes(search)
+      q.question_text.toLowerCase().includes(search),
     );
   }
 
   if (questionFilters.value.type) {
     result = result.filter(
-      (q) => q.question_type === questionFilters.value.type
+      (q) => q.question_type === questionFilters.value.type,
     );
   }
 
   if (questionFilters.value.difficulty) {
     result = result.filter(
-      (q) => q.difficulty === questionFilters.value.difficulty
+      (q) => q.difficulty === questionFilters.value.difficulty,
     );
   }
 
   if (questionFilters.value.language) {
     result = result.filter(
-      (q) => (q.language || "ru") === questionFilters.value.language
+      (q) => (q.language || "ru") === questionFilters.value.language,
     );
   }
 
   if (questionFilters.value.isActive !== undefined) {
     result = result.filter(
-      (q) => q.is_active === questionFilters.value.isActive
+      (q) => q.is_active === questionFilters.value.isActive,
     );
   }
 
@@ -1218,24 +1189,6 @@ const resetQuestionFilters = () => {
     isActive: undefined,
   };
 };
-
-// Статистика по сложности
-const difficultyStats = computed(() => {
-  return {
-    easy: questions.value.filter((q) => q.difficulty === "easy").length,
-    medium: questions.value.filter((q) => q.difficulty === "medium").length,
-    hard: questions.value.filter((q) => q.difficulty === "hard").length,
-  };
-});
-
-// Статистика по языкам
-const languageStats = computed(() => {
-  return {
-    ru: questions.value.filter((q) => (q.language || "ru") === "ru").length,
-    uz: questions.value.filter((q) => q.language === "uz").length,
-    en: questions.value.filter((q) => q.language === "en").length,
-  };
-});
 
 // Константы
 const questionTypes = [
@@ -1346,6 +1299,19 @@ const getQuestionOptions = (question) => {
   return parsed.options || [];
 };
 
+// Обновление статистики (без лоадера)
+const updateStats = async () => {
+  try {
+    const response = await authFetch(`/api/test-bank/banks/${route.params.id}`);
+
+    if (response.success && response.stats) {
+      stats.value = response.stats;
+    }
+  } catch (err) {
+    console.error("Ошибка обновления статистики:", err);
+  }
+};
+
 // Загрузка банка
 const loadBank = async () => {
   loading.value = true;
@@ -1355,6 +1321,9 @@ const loadBank = async () => {
 
     if (response.success) {
       bank.value = response.bank;
+      if (response.stats) {
+        stats.value = response.stats;
+      }
       await loadQuestions();
     } else {
       error.value = response.message || "Банк не найден";
@@ -1372,7 +1341,7 @@ const loadQuestions = async () => {
   questionsLoading.value = true;
   try {
     const response = await authFetch(
-      `/api/test-bank/questions?bank_id=${route.params.id}`
+      `/api/test-bank/questions?bank_id=${route.params.id}`,
     );
 
     if (response.success) {
@@ -1479,7 +1448,7 @@ const validateQuestionForm = () => {
 
   if (questionForm.value.question_type === "single") {
     const filledOptions = questionForm.value.options.filter((o) =>
-      o.text.trim()
+      o.text.trim(),
     );
     if (filledOptions.length < 2) {
       questionFormErrors.value.options = "Минимум 2 варианта ответа";
@@ -1487,7 +1456,7 @@ const validateQuestionForm = () => {
     }
 
     const hasCorrect = questionForm.value.options.some(
-      (o) => o.correct && o.text.trim()
+      (o) => o.correct && o.text.trim(),
     );
     if (!hasCorrect) {
       questionFormErrors.value.options = "Выберите правильный ответ";
@@ -1508,7 +1477,7 @@ const saveQuestion = async () => {
   savingQuestion.value = true;
   try {
     const filteredOptions = questionForm.value.options.filter((o) =>
-      o.text.trim()
+      o.text.trim(),
     );
 
     const payload = {
@@ -1530,7 +1499,7 @@ const saveQuestion = async () => {
         {
           method: "PUT",
           body: payload,
-        }
+        },
       );
     } else {
       response = await authFetch("/api/test-bank/questions", {
@@ -1543,15 +1512,16 @@ const saveQuestion = async () => {
       showNotification(
         "success",
         "Успешно",
-        editingQuestion.value ? "Вопрос обновлён" : "Вопрос добавлен"
+        editingQuestion.value ? "Вопрос обновлён" : "Вопрос добавлен",
       );
       closeQuestionModal();
       loadQuestions();
+      updateStats();
     } else {
       showNotification(
         "error",
         "Ошибка",
-        response.message || "Не удалось сохранить вопрос"
+        response.message || "Не удалось сохранить вопрос",
       );
     }
   } catch (err) {
@@ -1570,7 +1540,7 @@ const toggleQuestionActive = async (question) => {
       {
         method: "PUT",
         body: { is_active: !question.is_active },
-      }
+      },
     );
 
     if (response.success) {
@@ -1578,7 +1548,7 @@ const toggleQuestionActive = async (question) => {
       showNotification(
         "success",
         "Успешно",
-        question.is_active ? "Вопрос активирован" : "Вопрос деактивирован"
+        question.is_active ? "Вопрос активирован" : "Вопрос деактивирован",
       );
     }
   } catch (err) {
@@ -1602,7 +1572,7 @@ const deleteQuestion = async () => {
       `/api/test-bank/questions/${deletingQuestionData.value.id}`,
       {
         method: "DELETE",
-      }
+      },
     );
 
     if (response.success) {
@@ -1610,11 +1580,12 @@ const deleteQuestion = async () => {
       deleteQuestionModalOpen.value = false;
       deletingQuestionData.value = null;
       loadQuestions();
+      updateStats();
     } else {
       showNotification(
         "error",
         "Ошибка",
-        response.message || "Не удалось удалить вопрос"
+        response.message || "Не удалось удалить вопрос",
       );
     }
   } catch (err) {
@@ -1629,6 +1600,7 @@ const deleteQuestion = async () => {
 const onQuestionsImported = () => {
   showImportModal.value = false;
   loadQuestions();
+  updateStats();
   showNotification("success", "Успешно", "Вопросы импортированы");
 };
 
