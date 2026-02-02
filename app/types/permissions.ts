@@ -119,6 +119,10 @@ export enum Permission {
   // ========== ACTIVITY LOGS ==========
   LOGS_VIEW = "logs:view",
 
+  // ========== LIBRARY ==========
+  LIBRARY_VIEW = "library:view",
+  LIBRARY_MANAGE = "library:manage",
+
   // ========== TEST BANKS ==========
   TEST_BANKS_VIEW = "test_banks:view",
   TEST_BANKS_MANAGE = "test_banks:manage",
@@ -235,6 +239,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Logs
     Permission.LOGS_VIEW,
 
+    // Library
+    Permission.LIBRARY_VIEW,
+    Permission.LIBRARY_MANAGE,
+
     // Test Banks (полный доступ)
     Permission.TEST_BANKS_VIEW,
     Permission.TEST_BANKS_MANAGE,
@@ -285,6 +293,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.COURSES_VIEW,
     Permission.DISCIPLINES_VIEW,
 
+    // Library
+    Permission.LIBRARY_VIEW,
+
     // Test Banks (только просмотр)
     Permission.TEST_BANKS_VIEW,
 
@@ -323,6 +334,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CERTIFICATES_VIEW,
     Permission.CERTIFICATES_VIEW_OWN,
     Permission.CERTIFICATES_DOWNLOAD,
+
+    // Library
+    Permission.LIBRARY_VIEW,
 
     // Tests (прохождение тестов)
     Permission.TESTS_TAKE,
@@ -430,7 +444,10 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
   // Database (Students/Instructors)
   {
     path: "/database",
-    anyPermissions: [Permission.ORGANIZATIONS_VIEW, Permission.CERTIFICATES_VIEW],
+    anyPermissions: [
+      Permission.ORGANIZATIONS_VIEW,
+      Permission.CERTIFICATES_VIEW,
+    ],
   },
   {
     path: "/database/import",
@@ -477,6 +494,14 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
   // Activity Logs
   { path: "/activity-logs", requiredPermissions: [Permission.LOGS_VIEW] },
 
+  // Library
+  { path: "/library", requiredPermissions: [Permission.LIBRARY_VIEW] },
+  { path: "/library/[id]", requiredPermissions: [Permission.LIBRARY_VIEW] },
+  {
+    path: "/admin/library/books",
+    requiredPermissions: [Permission.LIBRARY_MANAGE],
+  },
+
   // Test Banks
   {
     path: "/test-bank",
@@ -519,7 +544,7 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
  */
 export function roleHasPermission(
   role: UserRole,
-  permission: Permission
+  permission: Permission,
 ): boolean {
   const permissions = ROLE_PERMISSIONS[role];
   return permissions?.includes(permission) ?? false;
@@ -530,7 +555,7 @@ export function roleHasPermission(
  */
 export function roleHasAllPermissions(
   role: UserRole,
-  permissions: Permission[]
+  permissions: Permission[],
 ): boolean {
   return permissions.every((p) => roleHasPermission(role, p));
 }
@@ -540,7 +565,7 @@ export function roleHasAllPermissions(
  */
 export function roleHasAnyPermission(
   role: UserRole,
-  permissions: Permission[]
+  permissions: Permission[],
 ): boolean {
   return permissions.some((p) => roleHasPermission(role, p));
 }

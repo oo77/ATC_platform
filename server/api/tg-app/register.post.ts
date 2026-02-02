@@ -22,7 +22,22 @@ export default defineEventHandler(async (event) => {
   console.log("[TG-App Register] ENV:", process.env.NODE_ENV);
 
   try {
-    const body = await readBody(event);
+    const body = await readBody<{
+      initData: string;
+      fullName: string;
+      phone: string;
+      organizationId?: number;
+      organizationName?: string;
+      username?: string;
+    }>(event);
+
+    if (!body) {
+      throw createError({
+        statusCode: 400,
+        message: "Отсутствуют данные в запросе",
+      });
+    }
+
     const {
       initData,
       fullName,
@@ -110,14 +125,15 @@ export default defineEventHandler(async (event) => {
     }
 
     // Получаем или создаём организацию
-    let orgId = organizationId;
+    let orgId: string = organizationId ? String(organizationId) : "";
     if (!orgId) {
       console.log(
         "[TG-App Register] Создание/поиск организации:",
         organizationName,
       );
-      const organization =
-        await getOrCreateOrganizationByName(organizationName);
+      const organization = await getOrCreateOrganizationByName(
+        organizationName!,
+      );
       orgId = organization.id;
       console.log("[TG-App Register] Организация ID:", orgId);
     } else {
@@ -138,7 +154,7 @@ export default defineEventHandler(async (event) => {
       fullName: fullName.trim(),
       phone: normalizedPhone,
       telegramChatId: chatId,
-      telegramUsername: username || telegramUser?.username || null,
+      telegramUsername: username || telegramUser?.username || undefined,
       organizationId: orgId,
     });
 

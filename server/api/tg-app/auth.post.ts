@@ -9,7 +9,15 @@ import { validateWebAppData } from "../../utils/telegramAuth";
 export default defineEventHandler(async (event) => {
   try {
     console.log("[TG-App Auth] ====== Начало авторизации ======");
-    const body = await readBody(event);
+    const body = await readBody<{ initData: string }>(event);
+
+    if (!body) {
+      throw createError({
+        statusCode: 400,
+        message: "Отсутствуют данные в запросе",
+      });
+    }
+
     const { initData } = body;
 
     console.log(

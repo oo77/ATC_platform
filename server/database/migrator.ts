@@ -9,44 +9,12 @@ import type { PoolConnection } from "mysql2/promise";
 // 2. Добавьте import ниже
 // 3. Добавьте в MIGRATIONS_REGISTRY
 
-import * as consolidatedSchema from "./migrations/20251224_001_consolidated_schema";
-import * as attendanceGrades from "./migrations/20251225_020_attendance_grades";
-import * as certificateTemplatesExtended from "./migrations/20251226_021_certificate_templates_extended";
-import * as certificateVisualEditor from "./migrations/20251226_022_certificate_visual_editor";
-import * as certificateValidityAndPermissions from "./migrations/20251229_023_certificate_validity_and_permissions";
-import * as telegramBotRequests from "./migrations/20251229_024_telegram_bot_requests";
-import * as unifyCertificates from "./migrations/20251229_025_unify_certificates";
-import * as userEntityLinks from "./migrations/20251230_026_user_entity_links";
-import * as activityLogEnumExpansion from "./migrations/20260103_027_activity_log_view_action";
-import * as testingSystem from "./migrations/20260104_028_testing_system";
-import * as testPreviewMode from "./migrations/20260105_029_test_preview_mode";
-import * as previewSessionsNullableAssignment from "./migrations/20260105_030_preview_sessions_nullable_assignment";
-import * as previewSessionsNullableStudent from "./migrations/20260105_031_preview_sessions_nullable_student";
-import * as multilangQuestions from "./migrations/20260105_032_multilang_questions";
-import * as gradesFromTest from "./migrations/20260106_033_grades_from_test";
-import * as certificateStandalone from "./migrations/20260106_034_certificate_standalone";
-import * as studentPortalTables from "./migrations/20260108_035_student_portal_tables";
-import * as studentNotifications from "./migrations/20260108_036_student_notifications";
-import * as activityLogActionTypes from "./migrations/20260109_037_activity_log_action_types";
-import * as attendanceMarkingSystem from "./migrations/20260109_038_attendance_marking_system";
-import * as fixAttendanceTrigger from "./migrations/20260109_039_fix_attendance_trigger";
-import * as backfillMarkingStatus from "./migrations/20260109_040_backfill_marking_status";
-import * as retakeSystem from "./migrations/20260113_041_retake_system";
-import * as retakeLinkedEvents from "./migrations/20260113_042_retake_linked_events";
-import * as scheduleEventsAllowedStudents from "./migrations/20260113_043_schedule_events_allowed_students";
-import * as addUserRelations from "./migrations/20260113_044_add_user_relations";
-import * as linkExistingUsers from "./migrations/20260113_045_link_existing_users";
-import * as groupArchiveSystem from "./migrations/20260114_046_group_archive_system";
-import * as extendFilesForGroups from "./migrations/20260114_047_extend_files_for_groups";
-import * as courseArchiveSystem from "./migrations/20260114_048_course_archive_system";
-import * as addUserSearchIndexes from "./migrations/20260115_051_add_user_search_indexes";
-import * as linkUsersByEmail from "./migrations/20260115_052_link_users_by_email";
-import * as addAcademicHourSetting from "./migrations/20260121_001_add_academic_hour_setting";
-import * as addDurationMinutes from "./migrations/20260121_002_add_duration_minutes";
-import * as addAcademicHours from "./migrations/20260122_001_add_academic_hours";
-import * as fixFilesGroupIdType from "./migrations/20260122_002_fix_files_group_id_type";
-import * as scheduleTemplates from "./migrations/20260123_001_schedule_templates";
-import * as fixMissingAllowedStudentIds from "./migrations/20260128_002_fix_missing_allowed_student_ids";
+import * as initialSchema from "./migrations/20251224_001_initial_schema";
+import * as testingSystem from "./migrations/20260104_002_testing_system";
+import * as attendanceSystem from "./migrations/20260109_003_attendance_system";
+import * as studentPortal from "./migrations/20260110_004_student_portal";
+import * as scheduleTemplates from "./migrations/20260123_005_schedule_templates";
+import * as librarySystem from "./migrations/20260128_006_library_system";
 
 /**
  * ============================================================================
@@ -83,347 +51,59 @@ interface Migration {
 
 const MIGRATIONS_REGISTRY: Migration[] = [
   // ============================================================
-  // Консолидированная миграция - полная схема БД
-  // Объединяет все предыдущие миграции в одну актуальную
+  // Миграция 001: Начальная консолидированная схема
+  // Объединяет все core-модули и базовую структуру
   // ============================================================
   {
-    name: "20251224_001_consolidated_schema",
-    up: consolidatedSchema.up,
-    down: consolidatedSchema.down,
-    description: consolidatedSchema.description,
+    name: "20251224_001_initial_schema",
+    up: initialSchema.up,
+    down: initialSchema.down,
+    description: initialSchema.description,
   },
   // ============================================================
-  // Миграция 020: Посещаемость и оценки
+  // Миграция 002: Система тестирования
   // ============================================================
   {
-    name: "20251225_020_attendance_grades",
-    up: attendanceGrades.up,
-    down: attendanceGrades.down,
-    description: attendanceGrades.description,
-  },
-  // ============================================================
-  // Миграция 021: Расширение шаблонов сертификатов
-  // ============================================================
-  {
-    name: "20251226_021_certificate_templates_extended",
-    up: certificateTemplatesExtended.up,
-    down: certificateTemplatesExtended.down,
-    description: certificateTemplatesExtended.description,
-  },
-  // ============================================================
-  // Миграция 022: Визуальный редактор сертификатов
-  // ============================================================
-  {
-    name: "20251226_022_certificate_visual_editor",
-    up: certificateVisualEditor.up,
-    down: certificateVisualEditor.down,
-    description: certificateVisualEditor.description,
-  },
-  // ============================================================
-  // Миграция 023: Срок действия сертификатов и разрешения представителей
-  // ============================================================
-  {
-    name: "20251229_023_certificate_validity_and_permissions",
-    up: certificateValidityAndPermissions.up,
-    down: certificateValidityAndPermissions.down,
-    description: certificateValidityAndPermissions.description,
-  },
-  // ============================================================
-  // Миграция 024: Журнал запросов Telegram-бота
-  // ============================================================
-  {
-    name: "20251229_024_telegram_bot_requests",
-    up: telegramBotRequests.up,
-    down: telegramBotRequests.down,
-    description: telegramBotRequests.description,
-  },
-  // ============================================================
-  // Миграция 025: Объединение таблиц сертификатов
-  // ============================================================
-  {
-    name: "20251229_025_unify_certificates",
-    up: unifyCertificates.up,
-    down: unifyCertificates.down,
-    description: unifyCertificates.description,
-  },
-  // ============================================================
-  // Миграция 026: Связь Users с Students/Instructors для системы разрешений
-  // ============================================================
-  {
-    name: "20251230_026_user_entity_links",
-    up: userEntityLinks.up,
-    down: userEntityLinks.down,
-    description: userEntityLinks.description,
-  },
-  // ============================================================
-  // Миграция 027: Расширение ENUM для activity_logs
-  // ============================================================
-  {
-    name: "20260103_027_activity_log_enum_expansion",
-    up: activityLogEnumExpansion.up,
-    down: activityLogEnumExpansion.down,
-    description: activityLogEnumExpansion.description,
-  },
-  // ============================================================
-  // Миграция 028: Система тестирования студентов
-  // ============================================================
-  {
-    name: "20260104_028_testing_system",
+    name: "20260104_002_testing_system",
     up: testingSystem.up,
     down: testingSystem.down,
     description: testingSystem.description,
   },
   // ============================================================
-  // Миграция 029: Режим предпросмотра тестов
+  // Миграция 003: Система посещаемости (отметки, триггеры)
   // ============================================================
   {
-    name: "20260105_029_test_preview_mode",
-    up: testPreviewMode.up,
-    down: testPreviewMode.down,
-    description: testPreviewMode.name,
+    name: "20260109_003_attendance_system",
+    up: attendanceSystem.up,
+    down: attendanceSystem.down,
+    description: attendanceSystem.description,
   },
   // ============================================================
-  // Миграция 030: Nullable assignment_id для preview-сессий
+  // Миграция 004: Портал студента (Настройки, Поддержка, Уведомления)
   // ============================================================
   {
-    name: "20260105_030_preview_sessions_nullable_assignment",
-    up: previewSessionsNullableAssignment.up,
-    down: previewSessionsNullableAssignment.down,
-    description: previewSessionsNullableAssignment.name,
+    name: "20260110_004_student_portal",
+    up: studentPortal.up,
+    down: studentPortal.down,
+    description: studentPortal.description,
   },
   // ============================================================
-  // Миграция 031: Nullable student_id для preview-сессий
+  // Миграция 005: Шаблоны расписания
   // ============================================================
   {
-    name: "20260105_031_preview_sessions_nullable_student",
-    up: previewSessionsNullableStudent.up,
-    down: previewSessionsNullableStudent.down,
-    description: previewSessionsNullableStudent.name,
-  },
-  // ============================================================
-  // Миграция 032: Многоязычная поддержка вопросов
-  // ============================================================
-  {
-    name: "20260105_032_multilang_questions",
-    up: multilangQuestions.up,
-    down: multilangQuestions.down,
-    description: multilangQuestions.description,
-  },
-  // ============================================================
-  // Миграция 033: Поддержка оценок из тестов
-  // ============================================================
-  {
-    name: "20260106_033_grades_from_test",
-    up: gradesFromTest.up,
-    down: gradesFromTest.down,
-    description: gradesFromTest.description,
-  },
-  // ============================================================
-  // Миграция 034: Поддержка standalone сертификатов (импорт, ручное добавление)
-  // ============================================================
-  {
-    name: "20260106_034_certificate_standalone",
-    up: certificateStandalone.up,
-    down: certificateStandalone.down,
-    description: certificateStandalone.description,
-  },
-  // ============================================================
-  // Миграция 035: Портал студента (Настройки и Поддержка)
-  // ============================================================
-  {
-    name: "20260108_035_student_portal_tables",
-    up: studentPortalTables.up,
-    down: studentPortalTables.down,
-    description: "User settings and support tickets tables",
-  },
-  // ============================================================
-  // Миграция 036: Уведомления студентов
-  // ============================================================
-  {
-    name: "20260108_036_student_notifications",
-    up: studentNotifications.up,
-    down: studentNotifications.down,
-    description: studentNotifications.description,
-  },
-  // ============================================================
-  // Миграция 037: Расширение action_type ENUM для activity_logs
-  // ============================================================
-  {
-    name: "20260109_037_activity_log_action_types",
-    up: activityLogActionTypes.up,
-    down: activityLogActionTypes.down,
-    description: activityLogActionTypes.description,
-  },
-  // ============================================================
-  // Миграция 038: Система допуска отметок посещаемости инструкторами
-  // ============================================================
-  {
-    name: "20260109_038_attendance_marking_system",
-    up: attendanceMarkingSystem.up,
-    down: attendanceMarkingSystem.down,
-    description: attendanceMarkingSystem.description,
-  },
-  // ============================================================
-  // Миграция 039: Исправление триггера посещаемости
-  // ============================================================
-  {
-    name: "20260109_039_fix_attendance_trigger",
-    up: fixAttendanceTrigger.up,
-    down: fixAttendanceTrigger.down,
-    description: fixAttendanceTrigger.description,
-  },
-  // ============================================================
-  // Миграция 040: Заполнение marking_status
-  // ============================================================
-  {
-    name: "20260109_040_backfill_marking_status",
-    up: backfillMarkingStatus.up,
-    down: backfillMarkingStatus.down,
-    description: backfillMarkingStatus.description,
-  },
-  // ============================================================
-  // Миграция 041: Система пересдач (Retake System)
-  // ============================================================
-  {
-    name: "20260113_041_retake_system",
-    up: retakeSystem.up,
-    down: retakeSystem.down,
-    description: retakeSystem.description,
-  },
-  // ============================================================
-  // Миграция 042: Связанные пересдачи (original_event_id)
-  // ============================================================
-  {
-    name: "20260113_042_retake_linked_events",
-    up: retakeLinkedEvents.up,
-    down: retakeLinkedEvents.down,
-    description: retakeLinkedEvents.description,
-  },
-  // ============================================================
-  // Миграция 043: Разрешенные студенты для событий (allowed_student_ids)
-  // ============================================================
-  {
-    name: "20260113_043_schedule_events_allowed_students",
-    up: scheduleEventsAllowedStudents.up,
-    down: scheduleEventsAllowedStudents.down,
-    description: scheduleEventsAllowedStudents.description,
-  },
-  // ============================================================
-  // Миграция 044: Связь пользователей со студентами и инструкторами
-  // ============================================================
-  {
-    name: "20260113_044_add_user_relations",
-    up: addUserRelations.up,
-    down: addUserRelations.down,
-    description: addUserRelations.description,
-  },
-  // ============================================================
-  // Миграция 045: Связывание существующих пользователей
-  // ============================================================
-  {
-    name: "20260113_045_link_existing_users",
-    up: linkExistingUsers.up,
-    down: linkExistingUsers.down,
-    description: linkExistingUsers.description,
-  },
-  // ============================================================
-  // Миграция 046: Система архивации групп
-  // ============================================================
-  {
-    name: "20260114_046_group_archive_system",
-    up: groupArchiveSystem.up,
-    down: groupArchiveSystem.down,
-    description: groupArchiveSystem.description,
-  },
-  // ============================================================
-  // Миграция 047: Расширение таблицы files для отчетов групп
-  // ============================================================
-  {
-    name: "20260114_047_extend_files_for_groups",
-    up: extendFilesForGroups.up,
-    down: extendFilesForGroups.down,
-    description: extendFilesForGroups.description,
-  },
-  // ============================================================
-  // Миграция 048: Система архивации учебных программ
-  // ============================================================
-  {
-    name: "20260114_048_course_archive_system",
-    up: courseArchiveSystem.up,
-    down: courseArchiveSystem.down,
-    description: courseArchiveSystem.description,
-  },
-  // ============================================================
-  // Миграция 051: Индексы для поиска пользователей
-  // ============================================================
-  {
-    name: "20260115_051_add_user_search_indexes",
-    up: addUserSearchIndexes.up,
-    down: addUserSearchIndexes.down,
-    description: addUserSearchIndexes.description,
-  },
-  // ============================================================
-  // Миграция 052: Связывание пользователей по email
-  // ============================================================
-  {
-    name: "20260115_052_link_users_by_email",
-    up: linkUsersByEmail.up,
-    down: linkUsersByEmail.down,
-    description: linkUsersByEmail.description,
-  },
-  // ============================================================
-  // Миграция 001: Настройка длительности академического часа
-  // ============================================================
-  {
-    name: "20260121_001_add_academic_hour_setting",
-    up: addAcademicHourSetting.up,
-    down: addAcademicHourSetting.down,
-    description: "Добавление настройки длительности академического часа",
-  },
-  // ============================================================
-  // Миграция 002: Добавление поля duration_minutes
-  // ============================================================
-  {
-    name: "20260121_002_add_duration_minutes",
-    up: addDurationMinutes.up,
-    down: addDurationMinutes.down,
-    description: "Добавление поля duration_minutes в schedule_events",
-  },
-  // ============================================================
-  // Миграция 003: Добавление поля academic_hours в schedule_events
-  // ============================================================
-  {
-    name: "20260122_001_add_academic_hours",
-    up: addAcademicHours.up,
-    down: addAcademicHours.down,
-    description: "Добавление поля academic_hours в schedule_events",
-  },
-  // ============================================================
-  // Миграция 004: Исправление типа group_id в таблице files
-  // ============================================================
-  {
-    name: "20260122_002_fix_files_group_id_type",
-    up: fixFilesGroupIdType.up,
-    down: fixFilesGroupIdType.down,
-    description: fixFilesGroupIdType.description,
-  },
-  // ============================================================
-  // Миграция 005: Таблица шаблонов расписания
-  // ============================================================
-  {
-    name: "20260123_001_schedule_templates",
+    name: "20260123_005_schedule_templates",
     up: scheduleTemplates.up,
     down: scheduleTemplates.down,
     description: scheduleTemplates.description,
   },
   // ============================================================
-  // Миграция 006: Исправление отсутствующей колонки allowed_student_ids
+  // Миграция 006: Библиотека
   // ============================================================
   {
-    name: "20260128_002_fix_missing_allowed_student_ids",
-    up: fixMissingAllowedStudentIds.up,
-    down: fixMissingAllowedStudentIds.down,
-    description: fixMissingAllowedStudentIds.description,
+    name: "20260128_006_library_system",
+    up: librarySystem.up,
+    down: librarySystem.down,
+    description: librarySystem.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже
@@ -437,6 +117,7 @@ const MIGRATIONS_REGISTRY: Migration[] = [
 // консолидированной и не будут применены повторно.
 
 const LEGACY_MIGRATIONS_INCLUDED_IN_CONSOLIDATED = [
+  // Original legacy
   "20251215_001_create_users_table",
   "20251215_002_seed_admin_user",
   "20251216_003_create_students_tables",
@@ -454,6 +135,48 @@ const LEGACY_MIGRATIONS_INCLUDED_IN_CONSOLIDATED = [
   "20251224_014_create_representatives_table",
   "20251224_015_create_telegram_sessions_table",
   "20251224_016_create_schedule_settings_table",
+  "20251224_001_consolidated_schema",
+
+  // Deleted in Feb 2026 consolidation
+  "20251225_020_attendance_grades",
+  "20251226_021_certificate_templates_extended",
+  "20251226_022_certificate_visual_editor",
+  "20251229_023_certificate_validity_and_permissions",
+  "20251229_024_telegram_bot_requests",
+  "20251229_025_unify_certificates",
+  "20251230_026_user_entity_links",
+  "20260103_027_activity_log_enum_expansion",
+  "20260103_027_activity_log_view_action",
+  "20260104_028_testing_system",
+  "20260105_029_test_preview_mode",
+  "20260105_030_preview_sessions_nullable_assignment",
+  "20260105_031_preview_sessions_nullable_student",
+  "20260105_032_multilang_questions",
+  "20260106_033_grades_from_test",
+  "20260106_034_certificate_standalone",
+  "20260108_035_student_portal_tables",
+  "20260108_036_student_notifications",
+  "20260109_037_activity_log_action_types",
+  "20260109_038_attendance_marking_system",
+  "20260109_039_fix_attendance_trigger",
+  "20260109_040_backfill_marking_status",
+  "20260113_041_retake_system",
+  "20260113_042_retake_linked_events",
+  "20260113_043_schedule_events_allowed_students",
+  "20260113_044_add_user_relations",
+  "20260113_045_link_existing_users",
+  "20260114_046_group_archive_system",
+  "20260114_047_extend_files_for_groups",
+  "20260114_048_course_archive_system",
+  "20260115_051_add_user_search_indexes",
+  "20260115_052_link_users_by_email",
+  "20260121_001_add_academic_hour_setting",
+  "20260121_002_add_duration_minutes",
+  "20260122_001_add_academic_hours",
+  "20260122_002_fix_files_group_id_type",
+  "20260123_001_schedule_templates",
+  "20260128_002_fix_missing_allowed_student_ids",
+  "20260128_003_library_system",
 ];
 
 // ============================================================================
@@ -544,16 +267,22 @@ async function consolidateMigrationRecords(
   console.log("🔄 Consolidating old migration records...");
 
   // Удаляем записи о старых миграциях
-  for (const legacyMigration of LEGACY_MIGRATIONS_INCLUDED_IN_CONSOLIDATED) {
-    await connection.query("DELETE FROM migrations WHERE name = ?", [
-      legacyMigration,
-    ]);
+  if (LEGACY_MIGRATIONS_INCLUDED_IN_CONSOLIDATED.length > 0) {
+    // Use standard delete loop or optimize with IN clause if list isn't too huge.
+    // Given ~20-30 items, loop is fine safe-wise, or single query.
+    // Let's do a loop to be safe against huge query limits, though for 30 items IN is better.
+    // But let's stick to simple loop as per original code style.
+    for (const legacyMigration of LEGACY_MIGRATIONS_INCLUDED_IN_CONSOLIDATED) {
+      await connection.query("DELETE FROM migrations WHERE name = ?", [
+        legacyMigration,
+      ]);
+    }
   }
 
   // Добавляем запись о консолидированной миграции
   await connection.query(
     `INSERT IGNORE INTO migrations (name, description) VALUES (?, ?)`,
-    ["20251224_001_consolidated_schema", consolidatedSchema.description],
+    ["20251224_001_initial_schema", initialSchema.description],
   );
 
   console.log("✅ Migration records consolidated");
@@ -789,59 +518,21 @@ export async function getMigrationStatus(): Promise<void> {
 
       if (hasLegacy) {
         console.log(
-          `\n⚠️  Legacy migrations detected. Run migrations to consolidate.`,
+          "\n⚠️  Legacy migrations detected! Run migrations to consolidate.",
         );
       }
 
-      console.log("\nMigrations:");
-      for (const migration of allMigrations) {
-        const status = executedMigrations.includes(migration.name)
-          ? "✅"
-          : "⏳";
-        console.log(`${status} ${migration.name}`);
-        if (migration.description) {
-          console.log(`   ${migration.description}`);
-        }
-      }
+      console.log("\nExecuted Migrations:");
+      executedMigrations.forEach((m) => console.log(` - ${m}`));
 
-      if (hasLegacy) {
-        console.log("\nLegacy migrations in database (will be consolidated):");
-        for (const legacyMigration of LEGACY_MIGRATIONS_INCLUDED_IN_CONSOLIDATED) {
-          if (executedMigrations.includes(legacyMigration)) {
-            console.log(`  📦 ${legacyMigration}`);
-          }
-        }
-      }
+      console.log("\nPending Migrations:");
+      allMigrations
+        .filter((m) => !executedMigrations.includes(m.name))
+        .forEach((m) => console.log(` - ${m.name}`));
     } finally {
       connection.release();
     }
   } catch (error) {
-    console.error("❌ Failed to get migration status:", error);
-    throw error;
-  }
-}
-
-/**
- * Сброс таблицы миграций (опасно! только для разработки)
- */
-export async function resetMigrations(): Promise<void> {
-  console.log("⚠️  Resetting migrations table...");
-
-  try {
-    const pool = getDbPool();
-    const connection = await pool.getConnection();
-
-    try {
-      await connection.query("DROP TABLE IF EXISTS migrations");
-      console.log("✅ Migrations table dropped");
-
-      await createMigrationsTable(connection);
-      console.log("✅ Migrations table recreated");
-    } finally {
-      connection.release();
-    }
-  } catch (error) {
-    console.error("❌ Reset failed:", error);
-    throw error;
+    console.error("❌ Status check failed:", error);
   }
 }

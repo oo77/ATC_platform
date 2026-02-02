@@ -3,18 +3,18 @@
  * GET /api/profile
  */
 
-import { defineEventHandler } from 'h3'
-import { requireAuth } from '../../utils/permissions'
-import { executeQuery } from '../../utils/db'
+import { defineEventHandler } from "h3";
+import { requireAuth } from "../../utils/auth";
+import { executeQuery } from "../../utils/db";
 
 export default defineEventHandler(async (event) => {
-    // Проверяем авторизацию
-    const context = await requireAuth(event)
+  // Проверяем авторизацию
+  const authUser = requireAuth(event);
 
-    try {
-        // Получаем данные пользователя
-        const users = await executeQuery<any[]>(
-            `
+  try {
+    // Получаем данные пользователя
+    const users = await executeQuery<any[]>(
+      `
       SELECT 
         id,
         role,
@@ -29,30 +29,30 @@ export default defineEventHandler(async (event) => {
       FROM users
       WHERE id = ?
       `,
-            [context.userId]
-        )
+      [authUser.id],
+    );
 
-        if (!users || users.length === 0) {
-            throw createError({
-                statusCode: 404,
-                message: 'Пользователь не найден',
-            })
-        }
-
-        const user = users[0]
-
-        return {
-            success: true,
-            user,
-        }
-    } catch (error: any) {
-        console.error('Error fetching profile:', error)
-        if (error.statusCode) {
-            throw error
-        }
-        throw createError({
-            statusCode: 500,
-            message: 'Ошибка при получении данных профиля',
-        })
+    if (!users || users.length === 0) {
+      throw createError({
+        statusCode: 404,
+        message: "Пользователь не найден",
+      });
     }
-})
+
+    const user = users[0];
+
+    return {
+      success: true,
+      user,
+    };
+  } catch (error: any) {
+    console.error("Error fetching profile:", error);
+    if (error.statusCode) {
+      throw error;
+    }
+    throw createError({
+      statusCode: 500,
+      message: "Ошибка при получении данных профиля",
+    });
+  }
+});

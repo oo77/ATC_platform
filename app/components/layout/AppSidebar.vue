@@ -227,18 +227,22 @@
         'bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm',
       ]"
     >
-      <div class="flex flex-col items-center justify-center space-y-2 text-center">
+      <div
+        class="flex flex-col items-center justify-center space-y-2 text-center"
+      >
         <div class="flex items-center gap-2">
-          <span class="text-xs font-semibold text-gray-900 dark:text-white">АТЦ Платформа</span>
-          <span 
+          <span class="text-xs font-semibold text-gray-900 dark:text-white"
+            >АТЦ Платформа</span
+          >
+          <span
             class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100 dark:border-blue-800"
           >
             v1.0
           </span>
         </div>
-        
+
         <p class="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
-          &copy; {{ new Date().getFullYear() }} АТЦ Платформа.<br>
+          &copy; {{ new Date().getFullYear() }} АТЦ Платформа.<br />
           Все права защищены.
         </p>
       </div>
@@ -259,7 +263,9 @@ interface SubMenuItem {
   name: string;
   path: string;
   permission?: Permission;
+  anyPermissions?: Permission[];
   excludePaths?: string[];
+  hideForRoles?: string[];
 }
 
 interface MenuItem {
@@ -292,6 +298,7 @@ import CertificateIcon from "~/components/icons/CertificateIcon.vue";
 import ClipboardCheckIcon from "~/components/icons/ClipboardCheckIcon.vue";
 import BoxCubeIcon from "~/components/icons/BoxCubeIcon.vue";
 import UserCircleIcon from "~/components/icons/UserCircleIcon.vue";
+import BookIcon from "~/components/icons/BookIcon.vue";
 
 const route = useRoute();
 const { isExpanded, isMobileOpen, isHovered, openSubmenu, setIsHovered } =
@@ -318,7 +325,7 @@ const handleMouseLeave = () => {
 
 // Sidebar Color based on user settings
 const userSettings = useState<{ sidebar_color?: string } | null>(
-  "user-settings"
+  "user-settings",
 );
 
 const sidebarColorClass = computed(() => {
@@ -435,6 +442,24 @@ const allMenuGroups: MenuGroup[] = [
     title: "Ресурсы",
     items: [
       {
+        icon: BookIcon,
+        name: "Библиотека",
+        anyPermissions: [Permission.LIBRARY_VIEW, Permission.LIBRARY_MANAGE],
+        subItems: [
+          {
+            name: "Каталог книг",
+            path: "/library",
+            permission: Permission.LIBRARY_VIEW,
+          },
+          {
+            name: "Управление книгами",
+            path: "/admin/library/books",
+            permission: Permission.LIBRARY_MANAGE,
+            hideForRoles: ["STUDENT"],
+          },
+        ],
+      },
+      {
         icon: FolderIcon,
         name: "Файловый менеджер",
         path: "/files",
@@ -521,12 +546,12 @@ const menuGroups = computed((): MenuGroup[] => {
             const currentRole = isAdmin.value
               ? "ADMIN"
               : isManager.value
-              ? "MANAGER"
-              : isTeacher.value
-              ? "TEACHER"
-              : isStudent.value
-              ? "STUDENT"
-              : null;
+                ? "MANAGER"
+                : isTeacher.value
+                  ? "TEACHER"
+                  : isStudent.value
+                    ? "STUDENT"
+                    : null;
             if (!currentRole || !item.showOnlyForRoles.includes(currentRole)) {
               return null;
             }
@@ -536,12 +561,12 @@ const menuGroups = computed((): MenuGroup[] => {
             const currentRole = isAdmin.value
               ? "ADMIN"
               : isManager.value
-              ? "MANAGER"
-              : isTeacher.value
-              ? "TEACHER"
-              : isStudent.value
-              ? "STUDENT"
-              : null;
+                ? "MANAGER"
+                : isTeacher.value
+                  ? "TEACHER"
+                  : isStudent.value
+                    ? "STUDENT"
+                    : null;
             if (currentRole && item.hideForRoles.includes(currentRole)) {
               return null;
             }
@@ -559,9 +584,34 @@ const menuGroups = computed((): MenuGroup[] => {
           // 3. Handle Subitems
           if (item.subItems) {
             const filteredSubItems = item.subItems.filter((subItem) => {
+              // Check hideForRoles
+              if (subItem.hideForRoles) {
+                const currentRole = isAdmin.value
+                  ? "ADMIN"
+                  : isManager.value
+                    ? "MANAGER"
+                    : isTeacher.value
+                      ? "TEACHER"
+                      : isStudent.value
+                        ? "STUDENT"
+                        : null;
+                if (currentRole && subItem.hideForRoles.includes(currentRole)) {
+                  return false;
+                }
+              }
+
+              // Check permissions
               if (subItem.permission && !hasPermission(subItem.permission)) {
                 return false;
               }
+
+              if (
+                subItem.anyPermissions &&
+                !hasAnyPermission(subItem.anyPermissions)
+              ) {
+                return false;
+              }
+
               return true;
             });
 

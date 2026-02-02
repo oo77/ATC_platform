@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { H3Event, createError } from "h3";
 import type { JwtPayload, User, UserPublic } from "../types/auth";
 
 /**
@@ -7,11 +8,13 @@ import type { JwtPayload, User, UserPublic } from "../types/auth";
  */
 
 // Константы
-const JWT_SECRET: string = process.env.JWT_SECRET || "your-super-secret-jwt-key";
+const JWT_SECRET: string =
+  process.env.JWT_SECRET || "your-super-secret-jwt-key";
 const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || "7d";
 const REFRESH_TOKEN_SECRET: string =
   process.env.REFRESH_TOKEN_SECRET || "your-refresh-secret";
-const REFRESH_TOKEN_EXPIRES_IN: string = process.env.REFRESH_TOKEN_EXPIRES_IN || "30d";
+const REFRESH_TOKEN_EXPIRES_IN: string =
+  process.env.REFRESH_TOKEN_EXPIRES_IN || "30d";
 const SALT_ROUNDS = 10;
 
 /**
@@ -31,7 +34,7 @@ export async function hashPassword(password: string): Promise<string> {
  */
 export async function verifyPassword(
   password: string,
-  hash: string
+  hash: string,
 ): Promise<boolean> {
   return await bcrypt.compare(password, hash);
 }
@@ -131,4 +134,21 @@ export function createTokenPayload(user: User): JwtPayload {
     email: user.email,
     role: user.role,
   };
+}
+
+/**
+ * Проверка аутентификации пользователя в запросе
+ * @param event - H3 событие
+ * @returns Пользователь из контекста
+ */
+export function requireAuth(
+  event: H3Event,
+): UserPublic & { username?: string } {
+  if (!event.context.user) {
+    throw createError({
+      statusCode: 401,
+      message: "Unauthorized",
+    });
+  }
+  return event.context.user as UserPublic & { username?: string };
 }

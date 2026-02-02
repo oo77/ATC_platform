@@ -4,7 +4,7 @@
  */
 
 import { defineEventHandler, readBody } from "h3";
-import { requireAuth } from "../../utils/permissions";
+import { requireAuth } from "../../utils/auth";
 import { executeQuery } from "../../utils/db";
 import { logActivity } from "../../utils/activityLogger";
 import { z } from "zod";
@@ -25,7 +25,7 @@ const updateProfileSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   // Проверяем авторизацию
-  const context = await requireAuth(event);
+  const user = requireAuth(event);
 
   // Читаем тело запроса
   const body = await readBody(event);
@@ -77,12 +77,12 @@ export default defineEventHandler(async (event) => {
 
     // Добавляем updated_at
     updateFields.push("updated_at = NOW()");
-    updateValues.push(context.userId);
+    updateValues.push(user.id);
 
     // Выполняем обновление
     await executeQuery(
       `UPDATE users SET ${updateFields.join(", ")} WHERE id = ?`,
-      updateValues
+      updateValues,
     );
 
     // Получаем обновленные данные пользователя
@@ -102,29 +102,22 @@ export default defineEventHandler(async (event) => {
       FROM users
       WHERE id = ?
       `,
-      [context.userId]
+      [user.id],
     );
 
-    const user = users[0];
+    const updatedUser = users[0];
 
     // Логируем действие
-    await logActivity(
-      event,
-      "UPDATE",
-      "USER",
-      context.userId,
-      "Обновление профиля",
-      {
-        updatedFields: Object.keys(data).filter(
-          (k) => (data as any)[k] !== undefined
-        ),
-      }
-    );
+    await logActivity(event, "UPDATE", "USER", user.id, "Обновление профиля", {
+      updatedFields: Object.keys(data).filter(
+        (k) => (data as any)[k] !== undefined,
+      ),
+    });
 
     return {
       success: true,
       message: "Профиль успешно обновлен",
-      user,
+      user: updatedUser,
     };
   } catch (error: any) {
     console.error("Error updating profile:", error);

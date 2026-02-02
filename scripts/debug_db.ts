@@ -22,17 +22,17 @@ async function main() {
     console.log("Checking tables...");
     const [rows] = await connection.query("SHOW TABLES");
     console.log("Tables in DB:", rows);
-  } catch (e) {
-    console.error("Error showing tables:", e.message);
+  } catch (err: any) {
+    console.error("Error showing tables:", err.message);
   }
 
   try {
     console.log("Attempting to select from question_banks...");
     await connection.query("SELECT * FROM question_banks LIMIT 1");
     console.log("Select successful (empty or not)");
-  } catch (e) {
-    console.error("Error selecting from question_banks:", e.message);
-    if (e.message.includes("doesn't exist in engine")) {
+  } catch (err: any) {
+    console.error("Error selecting from question_banks:", err.message);
+    if (err.message && err.message.includes("doesn't exist in engine")) {
       console.log("Found the specific error!");
     }
   }
