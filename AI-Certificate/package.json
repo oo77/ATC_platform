@@ -1,0 +1,39 @@
+{
+  "name": "certificate-ai",
+  "version": "1.0.0",
+  "description": "Интеллектуальная система управления сертификатами с AI",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "canvas": "^3.2.1",
+    "dotenv": "^17.2.3",
+    "mysql2": "^3.16.2",
+    "nuxt": "^4.3.0",
+    "openai": "^6.17.0",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^2.4.5",
+    "pdf-to-png-converter": "^3.11.0",
+    "sharp": "^0.34.5",
+    "tesseract.js": "^7.0.0",
+    "vue": "^3.5.27",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@nuxtjs/tailwindcss": "^6.12.0",
+    "@types/node": "^25.1.0",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1"
+  },
+  "comments": {
+    "future-dependencies": "Для полной AI-функциональности установите: tesseract.js, openai, pdf-parse"
+  }
+}
