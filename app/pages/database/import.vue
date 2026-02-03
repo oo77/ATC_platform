@@ -1,78 +1,116 @@
 <template>
   <div class="mx-auto max-w-7xl">
     <!-- Заголовок -->
-    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
       <h2 class="text-title-md2 font-bold text-black dark:text-white">
         Импорт студентов
       </h2>
     </div>
 
     <!-- Stepper (Индикатор шагов) -->
-    <div class="mb-8 rounded-lg border border-stroke bg-white px-8 py-6 shadow-default dark:border-strokedark dark:bg-boxdark">
+    <div
+      class="mb-8 rounded-lg border border-stroke bg-white px-8 py-6 shadow-default dark:border-strokedark dark:bg-boxdark"
+    >
       <div class="flex items-center justify-between">
-        <div 
-          v-for="step in steps" 
+        <div
+          v-for="step in steps"
           :key="step.id"
           class="relative flex flex-col items-center flex-1"
         >
-          <div 
+          <div
             class="flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors duration-300"
             :class="getStepClasses(step.id)"
           >
             <span v-if="step.id < store.currentStep" class="text-xl">✓</span>
             <span v-else class="text-sm font-bold">{{ step.id }}</span>
           </div>
-          <span 
+          <span
             class="mt-2 text-xs font-medium text-center"
-            :class="step.id <= store.currentStep ? 'text-primary' : 'text-gray-500 dark:text-gray-400'"
+            :class="
+              step.id <= store.currentStep
+                ? 'text-primary'
+                : 'text-gray-500 dark:text-gray-400'
+            "
           >
             {{ step.label }}
           </span>
-          
+
           <!-- Линия прогресса -->
-          <div 
+          <div
             v-if="step.id !== steps.length"
             class="absolute top-5 left-[50%] w-full h-[2px] -z-10"
           >
-             <div 
-               class="h-full transition-all duration-300"
-               :class="step.id < store.currentStep ? 'bg-primary' : 'bg-gray-200 dark:bg-gray-700'"
-             ></div>
+            <div
+              class="h-full transition-all duration-300"
+              :class="
+                step.id < store.currentStep
+                  ? 'bg-primary'
+                  : 'bg-gray-200 dark:bg-gray-700'
+              "
+            ></div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Сообщение об ошибке -->
-    <div 
-      v-if="store.error" 
-      class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20"
+    <div
+      v-if="store.error"
+      class="mb-6 rounded-lg border border-danger/20 bg-danger/5 dark:bg-danger/10 p-4 shadow-sm"
     >
       <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-500">
-          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger"
+        >
+          <svg
+            class="w-6 h-6 text-white"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         </div>
-        <div class="flex-1">
-          <h4 class="font-semibold text-red-900 dark:text-red-100">Ошибка</h4>
-          <p class="text-sm text-red-700 dark:text-red-300">{{ store.error }}</p>
+        <div class="flex-1 min-w-0">
+          <h4 class="font-semibold text-danger dark:text-danger">Ошибка</h4>
+          <p class="text-sm text-danger/80 dark:text-danger/90">
+            {{ store.error }}
+          </p>
         </div>
-        <button 
+        <button
           @click="dismissError"
-          class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200"
+          class="text-danger hover:text-danger/80 dark:hover:text-danger/70 transition-colors shrink-0"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
     </div>
 
     <!-- Контент шагов -->
-    <div class="rounded-lg border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+    <div
+      class="rounded-lg border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark"
+    >
       <!-- Шаг 1: Загрузка файла -->
-      <div v-show="store.currentStep === 1" class="p-6">
+      <div v-if="store.currentStep === 1" class="p-6 lg:p-8">
         <DatabaseImportUploader
           :loading="store.isAnalyzing"
           @file-selected="handleFileSelected"
@@ -80,7 +118,7 @@
       </div>
 
       <!-- Шаг 2: Анализ и предпросмотр -->
-      <div v-show="store.currentStep === 2" class="p-6">
+      <div v-else-if="store.currentStep === 2" class="p-6 lg:p-8">
         <DatabaseImportAnalysis
           v-if="store.analysis"
           :analysis="store.analysis"
@@ -88,31 +126,56 @@
           @confirm="handleConfirmImport"
           @cancel="handleCancelImport"
         />
-         <div v-else-if="!selectedFile && !store.analysis" class="text-center py-10">
-            <p class="text-gray-500">Файл не выбран или данные анализа потеряны. Пожалуйста, начните заново.</p>
-             <button
-              @click="handleCancelImport"
-              class="mt-4 px-6 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 transition-colors"
+        <div v-else class="text-center py-12">
+          <div class="mb-4">
+            <svg
+              class="mx-auto h-16 w-16 text-gray-400 dark:text-gray-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              Вернуться к загрузке
-            </button>
-         </div>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          </div>
+          <p class="text-gray-500 dark:text-gray-400 mb-4">
+            Файл не выбран или данные анализа потеряны. Пожалуйста, начните
+            заново.
+          </p>
+          <button
+            @click="handleCancelImport"
+            class="px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-600 transition-colors font-medium"
+          >
+            Вернуться к загрузке
+          </button>
+        </div>
       </div>
 
-       <!-- Шаг 3: Прогресс импорта -->
-      <div v-show="store.currentStep === 3" class="p-6">
+      <!-- Шаг 3: Прогресс импорта -->
+      <div v-else-if="store.currentStep === 3" class="p-6 lg:p-8">
         <DatabaseImportProgress
           v-if="store.progress"
           :progress="store.progress"
         />
-        <div v-else class="flex flex-col items-center justify-center py-12">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-            <p class="text-gray-500">Инициализация импорта...</p>
+        <div v-else class="flex flex-col items-center justify-center py-16">
+          <div
+            class="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 dark:border-gray-700 border-t-primary mb-6"
+          ></div>
+          <p class="text-gray-600 dark:text-gray-400 font-medium">
+            Инициализация импорта...
+          </p>
+          <p class="text-sm text-gray-500 dark:text-gray-500 mt-2">
+            Пожалуйста, подождите
+          </p>
         </div>
       </div>
 
       <!-- Шаг 4: Результаты -->
-      <div v-show="store.currentStep === 4" class="p-6">
+      <div v-else-if="store.currentStep === 4" class="p-6 lg:p-8">
         <DatabaseImportResults
           v-if="store.progress"
           :result="store.progress"
@@ -126,15 +189,15 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'default',
+  layout: "default",
 });
 
 // Шаги импорта - статичные данные
 const steps = [
-  { id: 1, label: 'Загрузка файла' },
-  { id: 2, label: 'Предпросмотр' },
-  { id: 3, label: 'Импорт' },
-  { id: 4, label: 'Результаты' },
+  { id: 1, label: "Загрузка файла" },
+  { id: 2, label: "Предпросмотр" },
+  { id: 3, label: "Импорт" },
+  { id: 4, label: "Результаты" },
 ] as const;
 
 const store = reactive(useImportStore());
@@ -144,12 +207,12 @@ const { error: showError } = useNotification();
 // Классы для шагов stepper
 const getStepClasses = (stepId: number): string[] => {
   if (stepId < store.currentStep) {
-    return ['border-primary', 'bg-primary', 'text-white'];
+    return ["border-primary", "bg-primary", "text-white"];
   }
   if (stepId === store.currentStep) {
-    return ['border-primary', 'text-primary'];
+    return ["border-primary", "text-primary"];
   }
-  return ['border-gray-300', 'text-gray-400', 'dark:border-gray-600'];
+  return ["border-gray-300", "text-gray-400", "dark:border-gray-600"];
 };
 
 // Восстановление polling при перезагрузке страницы
@@ -177,7 +240,9 @@ const handleConfirmImport = async () => {
     store.executeStudentImport(selectedFile.value);
   } else if (store.analysis) {
     // Если файл потерян при refresh, но analysis есть
-    showError('Файл был потерян при обновлении страницы. Пожалуйста, выберите файл заново.');
+    showError(
+      "Файл был потерян при обновлении страницы. Пожалуйста, выберите файл заново.",
+    );
     store.currentStep = 1;
   }
 };
@@ -196,7 +261,7 @@ const handleNewImport = () => {
 // Переход к базе данных
 const goToDatabase = () => {
   store.reset();
-  navigateTo('/users?tab=students');
+  navigateTo("/users?tab=students");
 };
 
 // Скрытие ошибки

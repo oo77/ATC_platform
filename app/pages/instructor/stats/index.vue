@@ -108,7 +108,6 @@ import InstructorsCourseHistory from "~/components/instructors/CourseHistory.vue
 
 definePageMeta({
   layout: "default",
-  middleware: ["auth"], // Ensure user is logged in
 });
 
 useHead({
@@ -122,7 +121,7 @@ const activeTab = ref("hours");
 // Computed property to get instructor ID safely
 const instructorId = computed(() => user.value?.instructorId);
 const isInstructor = computed(
-  () => !!instructorId.value && hasRole(["TEACHER", "ADMIN", "MANAGER"])
+  () => !!instructorId.value && hasRole(["TEACHER", "ADMIN", "MANAGER"]),
 ); // Admin/Manager with linked instructor profile can also see this
 
 onMounted(async () => {

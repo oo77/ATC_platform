@@ -53,6 +53,25 @@
           </svg>
           Импорт из Excel
         </NuxtLink>
+        <button
+          @click="navigateTo('/admin/database/ai-import-certificates')"
+          class="inline-flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
+        >
+          <svg
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 10V3L4 14h7v7l9-11h-7z"
+            />
+          </svg>
+          AI Импорт
+        </button>
         <UiButton
           variant="secondary"
           size="sm"
@@ -317,7 +336,8 @@
           >
             <option value="all">Все источники</option>
             <option value="group_journal">📋 Журнал группы</option>
-            <option value="import">📥 Импорт</option>
+            <option value="import">📥 Импорт (Excel)</option>
+            <option value="ai">✨ AI Импорт</option>
             <option value="manual">✍️ Ручной ввод</option>
           </select>
         </div>
@@ -510,12 +530,32 @@
                       {{ cert.course.name }}
                     </p>
                     <!-- Бейдж источника -->
+                    <!-- Бейдж источника -->
                     <span
-                      v-if="cert.sourceType === 'import'"
+                      v-if="
+                        cert.sourceType === 'import' &&
+                        cert.importSource === 'ai'
+                      "
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-500/20 text-indigo-600 dark:text-indigo-400"
+                      :title="
+                        cert.aiConfidence
+                          ? 'Уверенность AI: ' +
+                            Math.round(cert.aiConfidence * 100) +
+                            '%'
+                          : 'Импортирован через AI'
+                      "
+                    >
+                      ✨ AI
+                      <span v-if="cert.aiConfidence" class="opacity-75">
+                        {{ Math.round(cert.aiConfidence * 100) }}%
+                      </span>
+                    </span>
+                    <span
+                      v-else-if="cert.sourceType === 'import'"
                       class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-info/20 text-info"
                       title="Импортирован из Excel"
                     >
-                      📥 Импорт
+                      📥 Excel
                     </span>
                     <span
                       v-else-if="cert.sourceType === 'manual'"
@@ -807,7 +847,7 @@ const SortIcon = defineComponent({
                 ? "M5 15l7-7 7 7"
                 : "M19 9l-7 7-7-7",
           }),
-        ]
+        ],
       );
   },
 });
@@ -896,7 +936,7 @@ async function loadData() {
     console.error("Error loading certificates:", error);
     notification.error(
       "Ошибка загрузки",
-      error.message || "Не удалось загрузить сертификаты"
+      error.message || "Не удалось загрузить сертификаты",
     );
   } finally {
     loading.value = false;
@@ -988,27 +1028,27 @@ async function confirmRevoke() {
       {
         method: "PATCH",
         body: { reason: revokeReason.value.trim() },
-      }
+      },
     );
 
     if (response.success) {
       notification.success(
         "Сертификат отозван",
-        `Сертификат ${revokeTarget.value.certificateNumber} успешно отозван`
+        `Сертификат ${revokeTarget.value.certificateNumber} успешно отозван`,
       );
       closeRevokeModal();
       loadData();
     } else {
       notification.error(
         "Ошибка",
-        response.message || "Не удалось отозвать сертификат"
+        response.message || "Не удалось отозвать сертификат",
       );
     }
   } catch (error: any) {
     console.error("Error revoking certificate:", error);
     notification.error(
       "Ошибка",
-      error.message || "Не удалось отозвать сертификат"
+      error.message || "Не удалось отозвать сертификат",
     );
   } finally {
     isRevoking.value = false;
@@ -1035,7 +1075,7 @@ function closeManualFormModal() {
 function handleCertificateCreated(certificate: any) {
   notification.success(
     "Сертификат создан",
-    `Сертификат ${certificate.certificateNumber} успешно добавлен`
+    `Сертификат ${certificate.certificateNumber} успешно добавлен`,
   );
   loadData(); // Перезагрузить данные
 }

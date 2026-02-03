@@ -454,6 +454,13 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
     requiredPermissions: [Permission.STUDENTS_IMPORT],
   },
   {
+    path: "/admin/database/ai-import-certificates",
+    requiredPermissions: [
+      Permission.CERTIFICATES_ISSUE,
+      Permission.STUDENTS_IMPORT,
+    ],
+  },
+  {
     path: "/students/[id]",
     anyPermissions: [
       Permission.STUDENTS_VIEW_ALL,

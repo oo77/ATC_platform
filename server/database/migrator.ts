@@ -15,6 +15,11 @@ import * as attendanceSystem from "./migrations/20260109_003_attendance_system";
 import * as studentPortal from "./migrations/20260110_004_student_portal";
 import * as scheduleTemplates from "./migrations/20260123_005_schedule_templates";
 import * as librarySystem from "./migrations/20260128_006_library_system";
+import * as aiCertificateImport from "./migrations/20260203_007_ai_certificate_import";
+import * as fixIssuedCertificatesSchema from "./migrations/20260203_008_fix_issued_certificates_schema";
+import * as ensureDocxFileUrl from "./migrations/20260203_009_ensure_docx_file_url";
+import * as addUserIdToStudents from "./migrations/20260203_010_add_user_id_to_students";
+import * as aiSettings from "./migrations/20260203_011_ai_settings";
 
 /**
  * ============================================================================
@@ -104,6 +109,51 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: librarySystem.up,
     down: librarySystem.down,
     description: librarySystem.description,
+  },
+  // ============================================================
+  // Миграция 007: AI-импорт сертификатов
+  // ============================================================
+  {
+    name: "20260203_007_ai_certificate_import",
+    up: aiCertificateImport.up,
+    down: aiCertificateImport.down,
+    description: aiCertificateImport.description,
+  },
+  // ============================================================
+  // Миграция 008: Исправление схемы сертификатов
+  // ============================================================
+  {
+    name: "20260203_008_fix_issued_certificates_schema",
+    up: fixIssuedCertificatesSchema.up,
+    down: fixIssuedCertificatesSchema.down,
+    description: fixIssuedCertificatesSchema.description,
+  },
+  // ============================================================
+  // Миграция 009: Ensure docx_file_url
+  // ============================================================
+  {
+    name: "20260203_009_ensure_docx_file_url",
+    up: ensureDocxFileUrl.up,
+    down: ensureDocxFileUrl.down,
+    description: ensureDocxFileUrl.description,
+  },
+  // ============================================================
+  // Миграция 010: Add user_id to students table
+  // ============================================================
+  {
+    name: "20260203_010_add_user_id_to_students",
+    up: addUserIdToStudents.up,
+    down: addUserIdToStudents.down,
+    description: addUserIdToStudents.description,
+  },
+  // ============================================================
+  // Миграция 011: Система настроек AI
+  // ============================================================
+  {
+    name: "20260203_011_ai_settings",
+    up: aiSettings.up,
+    down: aiSettings.down,
+    description: aiSettings.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

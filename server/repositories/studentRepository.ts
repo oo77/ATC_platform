@@ -75,7 +75,23 @@ interface CertificateRow extends RowDataPacket {
   updated_at: Date;
   // Joined fields
   course_name?: string;
+  course_code?: string;
+  course_hours?: number;
   group_code?: string;
+  group_start_date?: Date;
+  group_end_date?: Date;
+  template_name?: string;
+  issued_by_name?: string;
+  // Аудит и доп поля
+  warnings?: any;
+  notes?: string;
+  revoke_reason?: string;
+  revoked_at?: Date;
+  issued_at?: Date;
+  issued_by?: string;
+  source_type?: string;
+  import_source?: string;
+  ai_confidence?: number;
 }
 
 interface CountRow extends RowDataPacket {
@@ -88,7 +104,7 @@ interface CountRow extends RowDataPacket {
 
 function mapRowToStudent(
   row: StudentRow,
-  certificates: StudentCertificate[] = []
+  certificates: StudentCertificate[] = [],
 ): Student {
   return {
     id: row.id,
@@ -106,10 +122,64 @@ function mapRowToStudent(
 function mapRowToCertificate(row: CertificateRow): StudentCertificate {
   // Извлекаем название курса из variables_data или из JOIN
   let courseName = row.course_name || "";
+  let courseCode = row.course_code || "";
+  let courseHours = row.course_hours || null;
+
+  // Try to fallback to variables_data if main fields are missing
   if (!courseName && row.variables_data) {
     try {
-      const varsData = JSON.parse(row.variables_data);
-      courseName = varsData.courseName || varsData.course_name || "";
+      const varsData = JSON.parse(
+        typeof row.variables_data === "string"
+          ? row.variables_data
+          : JSON.stringify(row.variables_data),
+      );
+      if (!courseName)
+        courseName = varsData.courseName || varsData.course_name || "";
+      if (!courseCode)
+        courseCode = varsData.courseCode || varsData.course_code || "";
+    } catch {}
+  }
+
+  // Construct nested objects for UI compatibility
+  const course = {
+    name: courseName || "Не указан",
+    code: courseCode || null,
+    hours: courseHours,
+  };
+
+  const group = {
+    id: row.group_id,
+    code: row.group_code || null,
+    startDate: row.group_start_date,
+    endDate: row.group_end_date,
+  };
+
+  const template = row.template_id
+    ? {
+        id: row.template_id,
+        name: row.template_name,
+      }
+    : null;
+
+  const issuedBy = row.issued_by
+    ? {
+        id: row.issued_by,
+        name: row.issued_by_name,
+      }
+    : null;
+
+  // Determine warnings
+  let hasWarnings = false;
+  if (row.warnings) {
+    try {
+      // Check if warnings is not empty/null
+      // It can be JSON string or object depending on driver setting? Usually object if type casted or string
+      // But assuming raw row, it might be string or object.
+      const w =
+        typeof row.warnings === "string"
+          ? JSON.parse(row.warnings)
+          : row.warnings;
+      if (Array.isArray(w) && w.length > 0) hasWarnings = true;
     } catch {}
   }
 
@@ -118,16 +188,36 @@ function mapRowToCertificate(row: CertificateRow): StudentCertificate {
     studentId: row.student_id,
     groupId: row.group_id,
     templateId: row.template_id,
+
+    // Flat fields (keeping for backward compatibility if needed)
     courseName,
     groupCode: row.group_code || undefined,
     issueDate: row.issue_date,
     certificateNumber: row.certificate_number,
     fileUrl: row.pdf_file_url,
+    docxFileUrl: row.docx_file_url, // Added
     expiryDate: row.expiry_date,
-    status: row.status,
+    status: row.status as any,
+
+    // Rich objects (for Modal)
+    course,
+    group,
+    template,
+    issuedBy,
+
+    // Audit & Extra
+    issuedAt: row.issued_at,
+    revokedAt: row.revoked_at,
+    revokeReason: row.revoke_reason,
+    notes: row.notes,
+    hasWarnings,
+    sourceType: row.source_type,
+    importSource: row.import_source,
+    aiConfidence: row.ai_confidence,
+
     created_at: row.created_at,
     updated_at: row.updated_at,
-  };
+  } as unknown as StudentCertificate; // Cast because we added extra fields not in interface yet (or we update interface later)
 }
 
 // ============================================================================
@@ -139,18 +229,27 @@ function mapRowToCertificate(row: CertificateRow): StudentCertificate {
  * Включает только выданные (issued) сертификаты
  */
 async function getCertificatesByStudentId(
-  studentId: string
+  studentId: string,
 ): Promise<StudentCertificate[]> {
   const rows = await executeQuery<CertificateRow[]>(
-    `SELECT ic.*, 
-            c.name as course_name,
-            sg.code as group_code
+    `SELECT 
+      ic.*, 
+      COALESCE(c.name, ic.course_name) as course_name,
+      COALESCE(c.code, ic.course_code) as course_code,
+      COALESCE(ic.course_hours, NULL) as course_hours, -- TODO: Join disciplines hours if needed, but usually course total
+      COALESCE(sg.code, ic.group_code) as group_code,
+      COALESCE(sg.start_date, ic.group_start_date) as group_start_date,
+      COALESCE(sg.end_date, ic.group_end_date) as group_end_date,
+      ct.name as template_name,
+      u.name as issued_by_name
      FROM issued_certificates ic
      LEFT JOIN study_groups sg ON ic.group_id = sg.id
      LEFT JOIN courses c ON sg.course_id = c.id
+     LEFT JOIN certificate_templates ct ON ic.template_id = ct.id
+     LEFT JOIN users u ON ic.issued_by = u.id
      WHERE ic.student_id = ? AND ic.status = 'issued'
      ORDER BY ic.issue_date DESC`,
-    [studentId]
+    [studentId],
   );
   return rows.map(mapRowToCertificate);
 }
@@ -159,17 +258,26 @@ async function getCertificatesByStudentId(
  * Получить сертификат по ID
  */
 export async function getCertificateById(
-  certificateId: string
+  certificateId: string,
 ): Promise<StudentCertificate | null> {
   const rows = await executeQuery<CertificateRow[]>(
-    `SELECT ic.*, 
-            c.name as course_name,
-            sg.code as group_code
+    `SELECT 
+      ic.*, 
+      COALESCE(c.name, ic.course_name) as course_name,
+      COALESCE(c.code, ic.course_code) as course_code,
+      COALESCE(ic.course_hours, NULL) as course_hours,
+      COALESCE(sg.code, ic.group_code) as group_code,
+      COALESCE(sg.start_date, ic.group_start_date) as group_start_date,
+      COALESCE(sg.end_date, ic.group_end_date) as group_end_date,
+      ct.name as template_name,
+      u.name as issued_by_name
      FROM issued_certificates ic
      LEFT JOIN study_groups sg ON ic.group_id = sg.id
      LEFT JOIN courses c ON sg.course_id = c.id
+     LEFT JOIN certificate_templates ct ON ic.template_id = ct.id
+     LEFT JOIN users u ON ic.issued_by = u.id
      WHERE ic.id = ? LIMIT 1`,
-    [certificateId]
+    [certificateId],
   );
 
   if (rows.length === 0) {
@@ -184,7 +292,7 @@ export async function getCertificateById(
  * Включает только выданные (issued) сертификаты
  */
 async function getCertificatesByStudentIds(
-  studentIds: string[]
+  studentIds: string[],
 ): Promise<Map<string, StudentCertificate[]>> {
   if (studentIds.length === 0) {
     return new Map();
@@ -192,15 +300,24 @@ async function getCertificatesByStudentIds(
 
   const placeholders = studentIds.map(() => "?").join(", ");
   const rows = await executeQuery<CertificateRow[]>(
-    `SELECT ic.*, 
-            c.name as course_name,
-            sg.code as group_code
+    `SELECT 
+      ic.*, 
+      COALESCE(c.name, ic.course_name) as course_name,
+      COALESCE(c.code, ic.course_code) as course_code,
+      COALESCE(ic.course_hours, NULL) as course_hours,
+      COALESCE(sg.code, ic.group_code) as group_code,
+      COALESCE(sg.start_date, ic.group_start_date) as group_start_date,
+      COALESCE(sg.end_date, ic.group_end_date) as group_end_date,
+      ct.name as template_name,
+      u.name as issued_by_name
      FROM issued_certificates ic
      LEFT JOIN study_groups sg ON ic.group_id = sg.id
      LEFT JOIN courses c ON sg.course_id = c.id
+     LEFT JOIN certificate_templates ct ON ic.template_id = ct.id
+     LEFT JOIN users u ON ic.issued_by = u.id
      WHERE ic.student_id IN (${placeholders}) AND ic.status = 'issued'
      ORDER BY ic.issue_date DESC`,
-    studentIds
+    studentIds,
   );
 
   const certificatesMap = new Map<string, StudentCertificate[]>();
@@ -224,7 +341,7 @@ async function getCertificatesByStudentIds(
  */
 export async function getAllStudents(): Promise<Student[]> {
   const rows = await executeQuery<StudentRow[]>(
-    "SELECT * FROM students ORDER BY full_name"
+    "SELECT * FROM students ORDER BY full_name",
   );
 
   if (rows.length === 0) {
@@ -235,7 +352,7 @@ export async function getAllStudents(): Promise<Student[]> {
   const certificatesMap = await getCertificatesByStudentIds(studentIds);
 
   return rows.map((row) =>
-    mapRowToStudent(row, certificatesMap.get(row.id) || [])
+    mapRowToStudent(row, certificatesMap.get(row.id) || []),
   );
 }
 
@@ -243,7 +360,7 @@ export async function getAllStudents(): Promise<Student[]> {
  * Получить студентов с пагинацией и фильтрацией
  */
 export async function getStudentsPaginated(
-  params: PaginationParams = {}
+  params: PaginationParams = {},
 ): Promise<PaginatedResult<Student>> {
   const {
     page = 1,
@@ -264,14 +381,14 @@ export async function getStudentsPaginated(
   // Универсальный поиск (используем LIKE для простоты, FULLTEXT для больших объёмов)
   if (search) {
     conditions.push(
-      "(full_name LIKE ? OR pinfl LIKE ? OR organization LIKE ? OR position LIKE ?)"
+      "(full_name LIKE ? OR pinfl LIKE ? OR organization LIKE ? OR position LIKE ?)",
     );
     const searchPattern = `%${search}%`;
     queryParams.push(
       searchPattern,
       searchPattern,
       searchPattern,
-      searchPattern
+      searchPattern,
     );
   }
 
@@ -302,14 +419,14 @@ export async function getStudentsPaginated(
   // Фильтр по наличию сертификатов (подзапрос) - используем issued_certificates
   if (hasCertificates) {
     conditions.push(
-      `EXISTS (SELECT 1 FROM issued_certificates ic WHERE ic.student_id = students.id AND ic.status = 'issued')`
+      `EXISTS (SELECT 1 FROM issued_certificates ic WHERE ic.student_id = students.id AND ic.status = 'issued')`,
     );
   }
 
   // Фильтр по отсутствию сертификатов (подзапрос)
   if (noCertificates) {
     conditions.push(
-      `NOT EXISTS (SELECT 1 FROM issued_certificates ic WHERE ic.student_id = students.id AND ic.status = 'issued')`
+      `NOT EXISTS (SELECT 1 FROM issued_certificates ic WHERE ic.student_id = students.id AND ic.status = 'issued')`,
     );
   }
 
@@ -338,7 +455,7 @@ export async function getStudentsPaginated(
     const studentIds = rows.map((r) => r.id);
     const certificatesMap = await getCertificatesByStudentIds(studentIds);
     students = rows.map((row) =>
-      mapRowToStudent(row, certificatesMap.get(row.id) || [])
+      mapRowToStudent(row, certificatesMap.get(row.id) || []),
     );
   }
 
@@ -357,7 +474,7 @@ export async function getStudentsPaginated(
 export async function getStudentById(id: string): Promise<Student | null> {
   const rows = await executeQuery<StudentRow[]>(
     "SELECT * FROM students WHERE id = ? LIMIT 1",
-    [id]
+    [id],
   );
 
   if (rows.length === 0) {
@@ -372,11 +489,11 @@ export async function getStudentById(id: string): Promise<Student | null> {
  * Получить студента по ПИНФЛ
  */
 export async function getStudentByPinfl(
-  pinfl: string
+  pinfl: string,
 ): Promise<Student | null> {
   const rows = await executeQuery<StudentRow[]>(
     "SELECT * FROM students WHERE pinfl = ? LIMIT 1",
-    [pinfl]
+    [pinfl],
   );
 
   if (rows.length === 0) {
@@ -392,7 +509,7 @@ export async function getStudentByPinfl(
  */
 export async function studentExistsByPinfl(
   pinfl: string,
-  excludeId?: string
+  excludeId?: string,
 ): Promise<boolean> {
   let query = "SELECT 1 FROM students WHERE pinfl = ?";
   const params: any[] = [pinfl];
@@ -413,7 +530,7 @@ export async function studentExistsByPinfl(
  * Оптимизированный метод для батч-операций
  */
 export async function getExistingStudentsByPinfls(
-  pinfls: string[]
+  pinfls: string[],
 ): Promise<StudentRow[]> {
   if (pinfls.length === 0) {
     return [];
@@ -431,7 +548,7 @@ export async function getExistingStudentsByPinfls(
  * Создать нового студента
  */
 export async function createStudent(
-  data: CreateStudentInput
+  data: CreateStudentInput,
 ): Promise<Student> {
   const id = uuidv4();
   const now = new Date();
@@ -448,7 +565,7 @@ export async function createStudent(
       data.position,
       now,
       now,
-    ]
+    ],
   );
 
   // Возвращаем созданного студента
@@ -465,7 +582,7 @@ export async function createStudent(
  */
 export async function updateStudent(
   id: string,
-  data: UpdateStudentInput
+  data: UpdateStudentInput,
 ): Promise<Student | null> {
   // Проверяем существование
   const existing = await getStudentById(id);
@@ -506,7 +623,7 @@ export async function updateStudent(
 
   await executeQuery(
     `UPDATE students SET ${updates.join(", ")} WHERE id = ?`,
-    params
+    params,
   );
 
   return getStudentById(id);
@@ -518,7 +635,7 @@ export async function updateStudent(
 export async function deleteStudent(id: string): Promise<boolean> {
   const result = await executeQuery<ResultSetHeader>(
     "DELETE FROM students WHERE id = ?",
-    [id]
+    [id],
   );
 
   return result.affectedRows > 0;
@@ -529,7 +646,7 @@ export async function deleteStudent(id: string): Promise<boolean> {
  */
 export async function linkStudentToUser(
   studentId: string,
-  userId: string
+  userId: string,
 ): Promise<void> {
   await executeQuery("UPDATE students SET user_id = ? WHERE id = ?", [
     userId,
@@ -541,11 +658,11 @@ export async function linkStudentToUser(
  * Получить студента по user_id
  */
 export async function getStudentByUserId(
-  userId: string
+  userId: string,
 ): Promise<Student | null> {
   const rows = await executeQuery<StudentRow[]>(
     "SELECT * FROM students WHERE user_id = ? LIMIT 1",
-    [userId]
+    [userId],
   );
 
   if (rows.length === 0) {
@@ -598,7 +715,7 @@ export async function batchUpsertStudents(
     organization: string;
     department?: string | null;
     position: string;
-  }>
+  }>,
 ): Promise<BatchUpsertResult> {
   const result: BatchUpsertResult = {
     created: 0,
@@ -645,7 +762,7 @@ export async function batchUpsertStudents(
         // Проверяем существование по ПИНФЛ
         const [existingRows] = await connection.execute<StudentRow[]>(
           "SELECT id, organization_id, user_id FROM students WHERE pinfl = ? LIMIT 1",
-          [student.pinfl]
+          [student.pinfl],
         );
 
         if (existingRows.length > 0) {
@@ -664,7 +781,7 @@ export async function batchUpsertStudents(
               student.position,
               new Date(),
               student.pinfl,
-            ]
+            ],
           );
           result.updated++;
 
@@ -685,7 +802,7 @@ export async function batchUpsertStudents(
           // Проверяем существование пользователя с таким email
           const [existingUserRows] = await connection.execute<RowDataPacket[]>(
             "SELECT id FROM users WHERE email = ? LIMIT 1",
-            [email]
+            [email],
           );
 
           let userId: string | null = null;
@@ -704,7 +821,7 @@ export async function batchUpsertStudents(
                 student.pinfl,
                 student.organization,
                 student.position,
-              ]
+              ],
             );
             result.accountsCreated++;
           } else {
@@ -727,7 +844,7 @@ export async function batchUpsertStudents(
               userId,
               now,
               now,
-            ]
+            ],
           );
           result.created++;
 
@@ -749,7 +866,7 @@ export async function batchUpsertStudents(
     } catch (error) {
       console.error(
         `Error updating students count for organization ${orgId}:`,
-        error
+        error,
       );
     }
   }
@@ -774,9 +891,9 @@ export async function batchUpsertStudentsWithProgress(
     processed: number,
     created: number,
     updated: number,
-    errors: number
+    errors: number,
   ) => void,
-  batchSize: number = 100
+  batchSize: number = 100,
 ): Promise<BatchUpsertResult> {
   const result: BatchUpsertResult = {
     created: 0,
@@ -826,12 +943,12 @@ export async function batchUpsertStudentsWithProgress(
         const placeholders = batchPinfls.map(() => "?").join(",");
         const [existingStudentRows] = await connection.query<StudentRow[]>(
           `SELECT id, pinfl, user_id, organization_id FROM students WHERE pinfl IN (${placeholders})`,
-          batchPinfls
+          batchPinfls,
         );
 
         const existingStudentsMap = new Map<string, StudentRow>();
         existingStudentRows.forEach((row) =>
-          existingStudentsMap.set(row.pinfl, row)
+          existingStudentsMap.set(row.pinfl, row),
         );
 
         // --- ШАГ B: Подготовка пользователей (Users) ---
@@ -854,11 +971,11 @@ export async function batchUpsertStudentsWithProgress(
           const emailPlaceholders = emailsToCheck.map(() => "?").join(",");
           const [existingUserRows] = await connection.query<RowDataPacket[]>(
             `SELECT id, email FROM users WHERE email IN (${emailPlaceholders})`,
-            emailsToCheck
+            emailsToCheck,
           );
 
           existingUserRows.forEach((row: any) =>
-            userMap.set(row.email, row.id)
+            userMap.set(row.email, row.id),
           );
 
           // Находим тех, кого надо создать
@@ -881,7 +998,7 @@ export async function batchUpsertStudentsWithProgress(
           if (usersToCreate.length > 0) {
             // Пароли хешируем параллельно
             const passwordHashes = await Promise.all(
-              usersToCreate.map((u) => hashPassword(u.pinfl))
+              usersToCreate.map((u) => hashPassword(u.pinfl)),
             );
 
             // Bulk Insert Users
@@ -898,7 +1015,7 @@ export async function batchUpsertStudentsWithProgress(
                   u.organization,
                   u.position,
                   new Date(),
-                  new Date()
+                  new Date(),
                 );
                 // Запоминаем ID для маппинга
                 userMap.set(u.email, u.id);
@@ -908,7 +1025,7 @@ export async function batchUpsertStudentsWithProgress(
 
             await connection.query(
               `INSERT INTO users (id, role, name, email, password_hash, pinfl, workplace, position, created_at, updated_at) VALUES ${userPlaceholders}`,
-              userValues
+              userValues,
             );
             result.accountsCreated += usersToCreate.length;
           }
@@ -941,7 +1058,7 @@ export async function batchUpsertStudentsWithProgress(
               student.position,
               userId,
               now, // created_at
-              now // updated_at
+              now, // updated_at
             );
 
             // Трекинг статистики и затронутых организаций
@@ -994,7 +1111,7 @@ export async function batchUpsertStudentsWithProgress(
         });
         // Откат счетчиков
         result.created -= batch.filter(
-          (s) => !result.errors.find((e) => e.pinfl === s.pinfl)
+          (s) => !result.errors.find((e) => e.pinfl === s.pinfl),
         ).length; // Грубая оценка, но здесь мы просто фейлим всё
         // На самом деле счетчики мы инкрементировали локально, но результирующий объект вернёт неверные данные если не скорректировать.
         // Но так как мы бросаем except, транзакция откатится в executeTransaction.
@@ -1011,7 +1128,7 @@ export async function batchUpsertStudentsWithProgress(
         Math.min(i + batchSize, students.length),
         result.created,
         result.updated,
-        result.errors.length
+        result.errors.length,
       );
     }
 
@@ -1027,7 +1144,7 @@ export async function batchUpsertStudentsWithProgress(
     } catch (error) {
       console.error(
         `Error updating students count for organization ${orgId}:`,
-        error
+        error,
       );
     }
   }

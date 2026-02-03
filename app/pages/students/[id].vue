@@ -533,7 +533,7 @@
               <div
                 v-for="certificate in student.certificates"
                 :key="certificate.id"
-                class="border border-gray-200 dark:border-strokedark rounded-xl p-4 hover:border-primary dark:hover:border-primary hover:shadow-md transition-all cursor-pointer"
+                class="border border-gray-200 dark:border-strokedark rounded-xl p-4 hover:border-primary dark:hover:border-primary hover:shadow-md transition-all cursor-pointer relative"
                 @click="openCertificateDetailModal(certificate)"
               >
                 <div class="flex items-start justify-between gap-4">
@@ -665,7 +665,7 @@
     <!-- Модальное окно деталей сертификата (Read-only) -->
     <DatabaseCertificateDetailModal
       v-if="isCertificateDetailModalOpen && selectedCertificate"
-      :certificate="certificateDetailData!"
+      :certificate="selectedCertificate"
       :is-open="isCertificateDetailModalOpen"
       @close="closeCertificateDetailModal"
     />
@@ -755,10 +755,10 @@ const isCourseDetailModalOpen = ref(false);
 const selectedCourse = ref<CourseRecord | null>(null);
 
 const activeCourses = computed(() =>
-  studentCourses.value.filter((c) => c.status === "active")
+  studentCourses.value.filter((c) => c.status === "active"),
 );
 const completedCourses = computed(() =>
-  studentCourses.value.filter((c) => c.status === "completed")
+  studentCourses.value.filter((c) => c.status === "completed"),
 );
 
 const fetchStudentCourses = async () => {
@@ -831,7 +831,7 @@ const fetchStudent = async () => {
   error.value = null;
   try {
     const response = await authFetch<{ success: boolean; student: Student }>(
-      `/api/students/${studentId}`
+      `/api/students/${studentId}`,
     );
     if (response.success) {
       student.value = response.student;
@@ -863,7 +863,7 @@ const handleUpdate = async (data: UpdateStudentData) => {
       {
         method: "PUT",
         body: data,
-      }
+      },
     );
 
     if (response.success) {
@@ -912,16 +912,7 @@ const confirmDelete = async () => {
 // Сертификаты
 const isCertificatesModalOpen = ref(false);
 const isCertificateDetailModalOpen = ref(false);
-const selectedCertificate = ref<StudentCertificate | null>(null);
-
-const certificateDetailData = computed(() => {
-  if (!selectedCertificate.value || !student.value) return null;
-  return {
-    ...selectedCertificate.value,
-    studentName: student.value.fullName,
-    studentId: student.value.id,
-  };
-});
+const selectedCertificate = ref<any>(null); // Полная информация о сертификате
 
 const openCertificatesModal = () => {
   isCertificatesModalOpen.value = true;
@@ -932,7 +923,21 @@ const closeCertificatesModal = () => {
 };
 
 const openCertificateDetailModal = (cert: StudentCertificate) => {
-  selectedCertificate.value = cert;
+  if (!student.value) return;
+
+  // Формируем объект сертификата для модального окна, добавляя данные студента из текущего контекста
+  // Так как мы уже получили расширенные данные сертификата из репозитория, доп. запрос не нужен
+  selectedCertificate.value = {
+    ...cert,
+    student: {
+      id: student.value.id,
+      fullName: student.value.fullName,
+      pinfl: student.value.pinfl,
+      organization: student.value.organization,
+      position: student.value.position,
+      department: student.value.department,
+    },
+  };
   isCertificateDetailModalOpen.value = true;
 };
 
@@ -943,7 +948,7 @@ const closeCertificateDetailModal = () => {
 
 // Хелперы для статусов сертификатов
 const getExpiryStatus = (
-  expiryDate?: string | Date | null
+  expiryDate?: string | Date | null,
 ): "valid" | "expiring" | "expired" => {
   if (!expiryDate) return "valid";
   const now = new Date();

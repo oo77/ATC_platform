@@ -4,24 +4,36 @@
  * Поддерживает как сертификаты из журнала группы, так и standalone (import/manual)
  */
 
-import { z } from 'zod';
-import { executeQuery } from '../../utils/db';
-import type { RowDataPacket } from 'mysql2/promise';
-import { logActivity } from '../../utils/activityLogger';
+import { z } from "zod";
+import { executeQuery } from "../../utils/db";
+import type { RowDataPacket } from "mysql2/promise";
+import { logActivity } from "../../utils/activityLogger";
 
 const querySchema = z.object({
-  page: z.string().optional().transform(v => v ? parseInt(v, 10) : 1),
-  limit: z.string().optional().transform(v => v ? parseInt(v, 10) : 20),
+  page: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 1)),
+  limit: z
+    .string()
+    .optional()
+    .transform((v) => (v ? parseInt(v, 10) : 20)),
   search: z.string().optional(),
-  status: z.enum(['issued', 'revoked', 'all']).optional().default('all'),
-  sourceType: z.enum(['group_journal', 'manual', 'import', 'all']).optional().default('all'),
+  status: z.enum(["issued", "revoked", "all"]).optional().default("all"),
+  sourceType: z
+    .enum(["group_journal", "manual", "import", "ai", "excel", "all"])
+    .optional()
+    .default("all"),
   groupId: z.string().uuid().optional(),
   templateId: z.string().uuid().optional(),
   organizationName: z.string().optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
-  sortBy: z.enum(['issue_date', 'student_name', 'certificate_number', 'course_name']).optional().default('issue_date'),
-  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+  sortBy: z
+    .enum(["issue_date", "student_name", "certificate_number", "course_name"])
+    .optional()
+    .default("issue_date"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
 interface CertificateRow extends RowDataPacket {
@@ -30,7 +42,7 @@ interface CertificateRow extends RowDataPacket {
   issue_date: Date;
   expiry_date: Date | null;
   status: string;
-  source_type: 'group_journal' | 'manual' | 'import';
+  source_type: "group_journal" | "manual" | "import";
   pdf_file_url: string | null;
   docx_file_url: string | null;
   // Студент
@@ -88,15 +100,23 @@ export default defineEventHandler(async (event) => {
     const queryParams: any[] = [];
 
     // Фильтр по статусу
-    if (params.status && params.status !== 'all') {
-      baseQuery += ' AND ic.status = ?';
+    if (params.status && params.status !== "all") {
+      baseQuery += " AND ic.status = ?";
       queryParams.push(params.status);
     }
 
     // Фильтр по типу источника
-    if (params.sourceType && params.sourceType !== 'all') {
-      baseQuery += ' AND ic.source_type = ?';
-      queryParams.push(params.sourceType);
+    if (params.sourceType && params.sourceType !== "all") {
+      if (params.sourceType === "ai") {
+        baseQuery +=
+          " AND ic.source_type = 'import' AND ic.import_source = 'ai'";
+      } else if (params.sourceType === "excel") {
+        baseQuery +=
+          " AND ic.source_type = 'import' AND (ic.import_source = 'excel' OR ic.import_source IS NULL)";
+      } else {
+        baseQuery += " AND ic.source_type = ?";
+        queryParams.push(params.sourceType);
+      }
     }
 
     // Поиск
@@ -109,54 +129,63 @@ export default defineEventHandler(async (event) => {
         OR ic.course_code LIKE ?
       )`;
       const searchPattern = `%${params.search}%`;
-      queryParams.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern);
+      queryParams.push(
+        searchPattern,
+        searchPattern,
+        searchPattern,
+        searchPattern,
+        searchPattern,
+      );
     }
 
     // Фильтр по группе
     if (params.groupId) {
-      baseQuery += ' AND ic.group_id = ?';
+      baseQuery += " AND ic.group_id = ?";
       queryParams.push(params.groupId);
     }
 
     // Фильтр по шаблону
     if (params.templateId) {
-      baseQuery += ' AND ic.template_id = ?';
+      baseQuery += " AND ic.template_id = ?";
       queryParams.push(params.templateId);
     }
 
     // Фильтр по организации
     if (params.organizationName) {
-      baseQuery += ' AND s.organization LIKE ?';
+      baseQuery += " AND s.organization LIKE ?";
       queryParams.push(`%${params.organizationName}%`);
     }
 
     // Фильтр по дате выдачи
     if (params.dateFrom) {
-      baseQuery += ' AND DATE(ic.issue_date) >= ?';
+      baseQuery += " AND DATE(ic.issue_date) >= ?";
       queryParams.push(params.dateFrom);
     }
 
     if (params.dateTo) {
-      baseQuery += ' AND DATE(ic.issue_date) <= ?';
+      baseQuery += " AND DATE(ic.issue_date) <= ?";
       queryParams.push(params.dateTo);
     }
 
     // Получаем общее количество записей
     const countQuery = `SELECT COUNT(*) as total ${baseQuery}`;
-    const [countResult] = await executeQuery<CountRow[]>(countQuery, queryParams);
+    const [countResult] = await executeQuery<CountRow[]>(
+      countQuery,
+      queryParams,
+    );
     const total = countResult?.total || 0;
 
     // Формируем сортировку (с учётом standalone полей)
-    let orderBy = 'ic.issue_date';
+    let orderBy = "ic.issue_date";
     switch (params.sortBy) {
-      case 'student_name':
-        orderBy = 's.full_name';
+      case "student_name":
+        orderBy = "s.full_name";
         break;
-      case 'certificate_number':
-        orderBy = 'ic.certificate_number';
+      case "certificate_number":
+        orderBy = "ic.certificate_number";
         break;
-      case 'course_name':
-        orderBy = 'COALESCE(c.name, ic.course_name)';
+      case "course_name":
+        orderBy = "COALESCE(c.name, ic.course_name)";
         break;
     }
 
@@ -169,6 +198,8 @@ export default defineEventHandler(async (event) => {
         ic.expiry_date,
         ic.status,
         ic.source_type,
+        ic.import_source,
+        ic.ai_confidence,
         ic.pdf_file_url,
         ic.docx_file_url,
         ic.student_id,
@@ -203,16 +234,21 @@ export default defineEventHandler(async (event) => {
 
     const offset = (params.page - 1) * params.limit;
     const dataParams = [...queryParams, params.limit, offset];
-    const certificates = await executeQuery<CertificateRow[]>(selectQuery, dataParams);
+    const certificates = await executeQuery<CertificateRow[]>(
+      selectQuery,
+      dataParams,
+    );
 
     // Преобразуем в удобный формат (приоритет: данные из связей > standalone данные)
-    const items = certificates.map(row => ({
+    const items = certificates.map((row) => ({
       id: row.id,
       certificateNumber: row.certificate_number,
       issueDate: row.issue_date,
       expiryDate: row.expiry_date,
       status: row.status,
       sourceType: row.source_type,
+      importSource: row.import_source,
+      aiConfidence: row.ai_confidence,
       pdfFileUrl: row.pdf_file_url,
       docxFileUrl: row.docx_file_url,
       student: {
@@ -229,18 +265,22 @@ export default defineEventHandler(async (event) => {
         endDate: row.standalone_group_end_date,
       },
       course: {
-        name: row.course_name || row.standalone_course_name || 'Не указан',
+        name: row.course_name || row.standalone_course_name || "Не указан",
         code: row.course_code || row.standalone_course_code || null,
         hours: row.standalone_course_hours,
       },
-      template: row.template_id ? {
-        id: row.template_id,
-        name: row.template_name,
-      } : null,
-      issuedBy: row.issued_by ? {
-        id: row.issued_by,
-        name: row.issued_by_name,
-      } : null,
+      template: row.template_id
+        ? {
+            id: row.template_id,
+            name: row.template_name,
+          }
+        : null,
+      issuedBy: row.issued_by
+        ? {
+            id: row.issued_by,
+            name: row.issued_by_name,
+          }
+        : null,
       issuedAt: row.issued_at,
       revokedAt: row.revoked_at,
       revokeReason: row.revoke_reason,
@@ -268,14 +308,24 @@ export default defineEventHandler(async (event) => {
     // Логируем просмотр
     await logActivity(
       event,
-      'VIEW',
-      'ISSUED_CERTIFICATE',
+      "VIEW",
+      "ISSUED_CERTIFICATE",
       undefined,
       `Просмотр базы сертификатов (страница ${params.page})`,
-      { filters: { status: params.status, sourceType: params.sourceType, search: params.search, dateFrom: params.dateFrom, dateTo: params.dateTo } }
+      {
+        filters: {
+          status: params.status,
+          sourceType: params.sourceType,
+          search: params.search,
+          dateFrom: params.dateFrom,
+          dateTo: params.dateTo,
+        },
+      },
     );
 
-    console.log(`[GET /api/certificates] Найдено ${total} сертификатов, отображено ${items.length}`);
+    console.log(
+      `[GET /api/certificates] Найдено ${total} сертификатов, отображено ${items.length}`,
+    );
 
     return {
       success: true,
@@ -300,19 +350,19 @@ export default defineEventHandler(async (event) => {
       },
     };
   } catch (error: any) {
-    console.error('[GET /api/certificates] Error:', error);
+    console.error("[GET /api/certificates] Error:", error);
 
-    if (error.name === 'ZodError') {
+    if (error.name === "ZodError") {
       throw createError({
         statusCode: 400,
-        message: 'Ошибка валидации параметров',
+        message: "Ошибка валидации параметров",
         data: error.errors,
       });
     }
 
     throw createError({
       statusCode: 500,
-      message: error.message || 'Ошибка получения списка сертификатов',
+      message: error.message || "Ошибка получения списка сертификатов",
     });
   }
 });

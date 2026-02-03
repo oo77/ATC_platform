@@ -614,3 +614,43 @@ export const up = async (connection: PoolConnection): Promise<void> => {
     console.log("✅ Default schedule periods created");
   }
 };
+
+export const down = async (connection: PoolConnection): Promise<void> => {
+  console.log("🔄 Rolling back Initial Schema Migration...");
+
+  await connection.query("SET FOREIGN_KEY_CHECKS = 0");
+
+  const tables = [
+    "users",
+    "organizations",
+    "organization_representatives",
+    "students",
+    "instructors",
+    "certificate_templates",
+    "courses",
+    "disciplines",
+    "discipline_instructors",
+    "study_groups",
+    "study_group_students",
+    "classrooms",
+    "schedule_events",
+    "attendance",
+    "grades",
+    "final_grades",
+    "schedule_periods",
+    "schedule_settings",
+    "issued_certificates",
+    "folders",
+    "files",
+    "activity_logs",
+    "telegram_bot_sessions",
+  ];
+
+  for (const table of tables) {
+    await connection.query(`DROP TABLE IF EXISTS ${table}`);
+    console.log(`🗑️  Dropped table ${table}`);
+  }
+
+  await connection.query("SET FOREIGN_KEY_CHECKS = 1");
+  console.log("✅ Initial Schema rolled back");
+};

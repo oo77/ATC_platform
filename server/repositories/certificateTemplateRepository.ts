@@ -530,6 +530,7 @@ export async function createStandaloneCertificate(data: {
   groupEndDate?: Date;
   // Источник
   sourceType: "manual" | "import";
+  importSource?: "manual" | "ai_scan" | "excel";
   // Файлы
   pdfFileUrl?: string;
   // Прочее
@@ -543,8 +544,8 @@ export async function createStandaloneCertificate(data: {
     `INSERT INTO issued_certificates 
      (id, student_id, certificate_number, issue_date, expiry_date,
       course_name, course_code, course_hours, group_code, group_start_date, group_end_date,
-      source_type, status, pdf_file_url, issued_by, issued_at, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'issued', ?, ?, ?, ?, ?, ?)`,
+      source_type, import_source, status, pdf_file_url, issued_by, issued_at, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'issued', ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.studentId,
@@ -557,7 +558,9 @@ export async function createStandaloneCertificate(data: {
       data.groupCode || null,
       data.groupStartDate || null,
       data.groupEndDate || null,
+
       data.sourceType,
+      data.importSource || null,
       data.pdfFileUrl || null,
       data.issuedBy || null,
       now,
