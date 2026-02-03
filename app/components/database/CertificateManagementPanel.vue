@@ -536,7 +536,7 @@
                         cert.sourceType === 'import' &&
                         cert.importSource === 'ai'
                       "
-                      class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-indigo-500/20 text-indigo-600 dark:text-indigo-400"
+                      class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-gradient-to-r from-violet-500/10 to-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 shadow-sm"
                       :title="
                         cert.aiConfidence
                           ? 'Уверенность AI: ' +
@@ -545,17 +545,43 @@
                           : 'Импортирован через AI'
                       "
                     >
-                      ✨ AI
-                      <span v-if="cert.aiConfidence" class="opacity-75">
+                      <svg
+                        class="h-3 w-3 text-indigo-500"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                        />
+                      </svg>
+                      AI Import
+                      <span v-if="cert.aiConfidence" class="ml-0.5 opacity-80">
                         {{ Math.round(cert.aiConfidence * 100) }}%
                       </span>
                     </span>
                     <span
                       v-else-if="cert.sourceType === 'import'"
-                      class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-info/20 text-info"
+                      class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-medium bg-success/10 text-success border border-success/20"
                       title="Импортирован из Excel"
                     >
-                      📥 Excel
+                      <svg
+                        class="h-3 w-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                      Excel
                     </span>
                     <span
                       v-else-if="cert.sourceType === 'manual'"

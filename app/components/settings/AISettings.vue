@@ -393,7 +393,6 @@
       <div
         v-if="isModalOpen"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-        @click.self="closeModal"
       >
         <div
           class="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl dark:bg-boxdark mx-auto max-h-[90vh] overflow-y-auto"
@@ -472,8 +471,8 @@
               </label>
               <input
                 v-model="form.apiKey"
-                type="password"
-                :placeholder="editingSettings ? '••••••••••••' : 'sk-...'"
+                type="text"
+                :placeholder="editingSettings ? '(Ключ сохранен)' : 'sk-...'"
                 :required="!editingSettings"
                 class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
               />
