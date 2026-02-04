@@ -392,9 +392,11 @@
     <Teleport to="body">
       <div
         v-if="isModalOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        @click="closeModal"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
       >
         <div
+          @click.stop
           class="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl dark:bg-boxdark mx-auto max-h-[90vh] overflow-y-auto"
         >
           <div class="flex items-center justify-between mb-6">
@@ -652,7 +654,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import {
   Cpu,
   DollarSign,
@@ -1014,4 +1016,28 @@ const saveSettings = async () => {
 onMounted(() => {
   loadSettings();
 });
+
+onUnmounted(() => {
+  // Очистка при размонтировании компонента
+  document.body.style.overflow = "";
+  document.removeEventListener("keydown", handleEscape);
+});
+
+// Блокировка скролла и обработка Escape при открытии модалки
+watch(isModalOpen, (isOpen) => {
+  if (isOpen) {
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleEscape);
+  } else {
+    document.body.style.overflow = "";
+    document.removeEventListener("keydown", handleEscape);
+  }
+});
+
+// Обработчик клавиши Escape
+const handleEscape = (e: KeyboardEvent) => {
+  if (e.key === "Escape") {
+    closeModal();
+  }
+};
 </script>

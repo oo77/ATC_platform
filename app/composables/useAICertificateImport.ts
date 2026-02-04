@@ -69,8 +69,9 @@ export const useAICertificateImport = () => {
       currentStep.value = 2; // Auto-advance optional, or manual
       return result;
     } catch (e: any) {
-      error.value = e.data?.message || e.message || "Ошибка загрузки файла";
-      toast.error(error.value);
+      const msg = e.data?.message || e.message || "Ошибка загрузки файла";
+      error.value = msg;
+      toast.error(msg);
       throw e;
     } finally {
       isProcessing.value = false;
@@ -112,8 +113,9 @@ export const useAICertificateImport = () => {
       return result;
     } catch (e: any) {
       console.error(e);
-      error.value = e.data?.message || e.message || "Ошибка анализа файла";
-      toast.error(error.value);
+      const msg = e.data?.message || e.message || "Ошибка анализа файла";
+      error.value = msg;
+      toast.error(msg);
       throw e;
     } finally {
       isProcessing.value = false;
@@ -186,9 +188,10 @@ export const useAICertificateImport = () => {
       toast.success("Сертификат успешно импортирован");
       return result;
     } catch (e: any) {
-      error.value =
+      const msg =
         e.data?.message || e.message || "Ошибка подтверждения импорта";
-      toast.error(error.value);
+      error.value = msg;
+      toast.error(msg);
       throw e;
     } finally {
       isProcessing.value = false;

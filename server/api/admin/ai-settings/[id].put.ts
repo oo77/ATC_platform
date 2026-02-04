@@ -50,16 +50,16 @@ export default defineEventHandler(async (event) => {
     // Обновляем настройки
     const settings = await aiSettingsRepository.update(id, {
       ...body,
-      updatedBy: user.id,
+      updatedBy: user.userId,
     });
 
     console.log(`[AI Settings API] ✅ Updated settings: ${id}`);
 
+    const { apiKeyEncrypted, ...rest } = settings;
     return {
       success: true,
       data: {
-        ...settings,
-        apiKeyEncrypted: undefined,
+        ...rest,
         apiKeyMasked: settings.apiKeyLastFour
           ? `****${settings.apiKeyLastFour}`
           : "****",

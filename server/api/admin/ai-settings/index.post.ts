@@ -46,16 +46,16 @@ export default defineEventHandler(async (event) => {
     // Создаем настройки
     const settings = await aiSettingsRepository.create({
       ...body,
-      createdBy: user.id,
+      createdBy: user.userId,
     });
 
     console.log(`[AI Settings API] ✅ Created settings: ${settings.id}`);
 
+    const { apiKeyEncrypted, ...rest } = settings;
     return {
       success: true,
       data: {
-        ...settings,
-        apiKeyEncrypted: undefined,
+        ...rest,
         apiKeyMasked: settings.apiKeyLastFour
           ? `****${settings.apiKeyLastFour}`
           : "****",

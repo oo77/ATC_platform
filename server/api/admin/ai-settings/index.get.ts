@@ -17,11 +17,13 @@ export default defineEventHandler(async (event) => {
     const settings = await aiSettingsRepository.getAll();
 
     // Не возвращаем зашифрованные ключи на фронтенд
-    const safeSettings = settings.map((s) => ({
-      ...s,
-      apiKeyEncrypted: undefined, // Убираем зашифрованный ключ
-      apiKeyMasked: s.apiKeyLastFour ? `****${s.apiKeyLastFour}` : "****",
-    }));
+    const safeSettings = settings.map((s) => {
+      const { apiKeyEncrypted, ...rest } = s;
+      return {
+        ...rest,
+        apiKeyMasked: s.apiKeyLastFour ? `****${s.apiKeyLastFour}` : "****",
+      };
+    });
 
     return {
       success: true,

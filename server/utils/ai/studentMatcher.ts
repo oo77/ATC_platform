@@ -383,29 +383,25 @@ export class StudentMatcher {
     extractedData: ExtractedCertificateData,
     students: Student[],
   ): Promise<StudentMatchResult> {
-    try {
-      // Используем асинхронную инициализацию для поддержки настроек из БД
-      const client = await this.initAPIAsync();
+    // Сначала фильтруем кандидатов локально, чтобы не отправлять всю базу (8000+ человек) в AI
+    // Это решает проблему с лимитом токенов и ускоряет работу
+    const candidates = this.getTopCandidates(
+      extractedData.fullName,
+      students,
+      20,
+    );
 
-      // Сначала фильтруем кандидатов локально, чтобы не отправлять всю базу (8000+ человек) в AI
-      // Это решает проблему с лимитом токенов и ускоряет работу
-      const candidates = this.getTopCandidates(
-        extractedData.fullName,
-        students,
-        20,
-      );
+    const topAlternatives = candidates.slice(0, 5);
 
-      const topAlternatives = candidates.slice(0, 5);
+    console.log(`🔍 Отобрано ${candidates.length} кандидатов для AI-анализа`);
 
-      console.log(`🔍 Отобрано ${candidates.length} кандидатов для AI-анализа`);
+    // Формируем список слушателей для AI из отобранных кандидатов
+    const studentList = candidates
+      .map((s, i) => `${i}. ${s.fullName} (${s.organization}, ${s.position})`)
+      .join("\n");
 
-      // Формируем список слушателей для AI из отобранных кандидатов
-      const studentList = candidates
-        .map((s, i) => `${i}. ${s.fullName} (${s.organization}, ${s.position})`)
-        .join("\n");
-
-      // Создаем промпт для AI
-      const systemPrompt = `Ты эксперт по сопоставлению ФИО людей. Твоя задача - найти человека из списка, который ТОЧНО соответствует данным из сертификата.
+    // Создаем промпт для AI
+    const systemPrompt = `Ты эксперт по сопоставлению ФИО людей. Твоя задача - найти человека из списка, который ТОЧНО соответствует данным из сертификата.
 
 КРИТИЧЕСКИ ВАЖНЫЕ ПРАВИЛА:
 
@@ -454,7 +450,7 @@ export class StudentMatcher {
   "reasoning": "<краткое объяснение на русском>"
 }`;
 
-      const userPrompt = `СПИСОК КАНДИДАТОВ:
+    const userPrompt = `СПИСОК КАНДИДАТОВ:
 ${studentList}
 
 ДАННЫЕ ИЗ СЕРТИФИКАТА:
@@ -463,6 +459,10 @@ ${extractedData.organization ? `Организация: "${extractedData.organiz
 ${extractedData.position ? `Должность: "${extractedData.position}"` : ""}
 
 Найди наиболее подходящего слушателя из списка.`;
+
+    try {
+      // Используем асинхронную инициализацию для поддержки настроек из БД
+      const client = await this.initAPIAsync();
 
       console.log("📤 Отправка запроса в AI...");
       const startTime = Date.now();
@@ -639,8 +639,8 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
             const fallbackCompletion = await client.chat.completions.create({
               model: "openai/gpt-3.5-turbo",
               messages: [
-                { role: "system", content: systemPrompt }, // Using locally defined systemPrompt
-                { role: "user", content: userPrompt }, // Using locally defined userPrompt
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
               ],
               temperature: 0.1,
               response_format: { type: "json_object" },

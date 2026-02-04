@@ -67,6 +67,8 @@ export interface StudentMatchResult {
   explanation: string;
   /** Альтернативные кандидаты */
   alternatives?: StudentWithMatchInfo[];
+  /** Топ-N альтернатив с процентами (для batch-режима) */
+  topAlternatives?: StudentWithMatchInfo[];
 }
 
 /**
@@ -393,4 +395,142 @@ export interface IssuedCertificateWithAI extends IssuedCertificate {
   courseHoursAi: number | null;
   /** Организация, выдавшая сертификат */
   issuingOrganization: string | null;
+}
+
+// ============================================================================
+// BATCH-ИМПОРТ СЕРТИФИКАТОВ
+// ============================================================================
+
+/**
+ * Результат загрузки нескольких файлов
+ */
+export interface BatchUploadResult {
+  /** Успешно загруженные файлы */
+  files: UploadFileResult[];
+  /** Количество успешных загрузок */
+  successCount: number;
+  /** Количество ошибок */
+  errorCount: number;
+  /** Ошибки загрузки (если есть) */
+  errors?: Array<{
+    filename: string;
+    error: string;
+  }>;
+}
+
+/**
+ * Результат AI-обработки одного файла в batch
+ */
+export interface BatchAIProcessingResult {
+  /** ID файла */
+  fileId: string;
+  /** Имя файла */
+  filename: string;
+  /** Успешность обработки */
+  success: boolean;
+  /** Извлечённые данные */
+  extractedData: ExtractedCertificateData | null;
+  /** Результат сопоставления со студентом (с топ-5) */
+  matchResult: StudentMatchResult | null;
+  /** Стоимость обработки в USD */
+  aiCost?: string;
+  /** Время обработки в миллисекундах */
+  processingTime?: number;
+  /** Использованные токены */
+  tokensUsed?: TokenUsage;
+  /** Ошибка (если success = false) */
+  error?: string;
+}
+
+/**
+ * Общий результат batch-анализа
+ */
+export interface BatchAnalysisResult {
+  /** Результаты обработки каждого файла */
+  results: BatchAIProcessingResult[];
+  /** Количество успешных обработок */
+  successCount: number;
+  /** Количество ошибок */
+  errorCount: number;
+  /** Общая стоимость в USD */
+  totalCost: string;
+  /** Общее время обработки в миллисекундах */
+  totalProcessingTime: number;
+  /** Общее количество использованных токенов */
+  totalTokensUsed: number;
+}
+
+/**
+ * Элемент подтверждения для одного сертификата
+ */
+export interface BatchConfirmItem {
+  /** ID файла */
+  fileId: string;
+  /** ID выбранного студента */
+  studentId: string;
+  /** Извлечённые данные */
+  extractedData: ExtractedCertificateData;
+  /** Переопределённые данные (ручная корректировка) */
+  overrideData?: Partial<ExtractedCertificateData>;
+}
+
+/**
+ * Входные данные для batch-подтверждения
+ */
+export interface BatchConfirmInput {
+  /** Массив импортов для подтверждения */
+  items: BatchConfirmItem[];
+}
+
+/**
+ * Результат импорта одного сертификата в batch
+ */
+export interface BatchConfirmItemResult {
+  /** ID файла */
+  fileId: string;
+  /** Успешность операции */
+  success: boolean;
+  /** ID созданного сертификата */
+  certificateId?: string;
+  /** Созданный сертификат */
+  certificate?: IssuedCertificate;
+  /** Ошибка (если success = false) */
+  error?: string;
+}
+
+/**
+ * Результат batch-подтверждения
+ */
+export interface BatchConfirmResult {
+  /** Результаты для каждого сертификата */
+  results: BatchConfirmItemResult[];
+  /** Количество успешных импортов */
+  successCount: number;
+  /** Количество ошибок */
+  errorCount: number;
+  /** Общее время операции в миллисекундах */
+  totalTime: number;
+}
+
+/**
+ * Элемент для UI (файл + анализ + выбор)
+ * Используется в frontend для отображения состояния каждого сертификата
+ */
+export interface CertificateImportItem {
+  /** Загруженный файл */
+  file: UploadFileResult;
+  /** Результат анализа (null если ещё не анализировался) */
+  analysisResult: BatchAIProcessingResult | null;
+  /** Выбранный студент (null если не выбран) */
+  selectedStudent: Student | null;
+  /** Статус UI */
+  uiStatus:
+    | "uploaded"
+    | "analyzing"
+    | "analyzed"
+    | "error"
+    | "ready"
+    | "confirmed";
+  /** Развёрнута ли панель в UI */
+  isExpanded: boolean;
 }

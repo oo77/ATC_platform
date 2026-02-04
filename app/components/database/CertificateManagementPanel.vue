@@ -536,7 +536,7 @@
                         cert.sourceType === 'import' &&
                         cert.importSource === 'ai'
                       "
-                      class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-gradient-to-r from-violet-500/10 to-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 shadow-sm"
+                      class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-linear-to-r from-violet-500/10 to-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 shadow-sm"
                       :title="
                         cert.aiConfidence
                           ? 'Уверенность AI: ' +
