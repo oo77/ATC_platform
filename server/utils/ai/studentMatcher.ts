@@ -448,7 +448,14 @@ export class StudentMatcher {
 - 60-80%: Есть сомнения, но вероятно это тот человек
 - <60%: НЕ СОПОСТАВЛЯЙ! Верни null
 
-ФОРМАТ ОТВЕТА (ТОЛЬКО JSON, без markdown):
+ВАЖНО! ФОРМАТ ОТВЕТА:
+Верни ТОЛЬКО чистый JSON объект, БЕЗ:
+- markdown блоков (```json)
+- тегов <think> или других тегов
+- дополнительного текста до или после JSON
+- комментариев
+
+Формат JSON:
 {
   "originalIndex": <номер строки из списка (0, 1, 2...) или null если нет совпадения>,
   "confidence": <уверенность от 0 до 1>,
@@ -488,7 +495,8 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
         ],
         temperature: this.currentConfig?.temperature || 0.1,
         max_tokens: this.currentConfig?.maxTokens || 150,
-        response_format: { type: "json_object" },
+        // Не используем response_format, так как многие бесплатные модели его не поддерживают
+        // Вместо этого используем универсальный парсер JSON
       });
 
       const duration = Date.now() - startTime;
@@ -501,17 +509,47 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
         throw new Error("Пустой ответ от AI");
       }
 
-      // Парсим JSON ответ
+      // Универсальный парсер JSON для всех AI моделей
+      // Поддерживает:
+      // 1. Чистый JSON: {"key": "value"}
+      // 2. JSON в markdown: ```json\n{...}\n```
+      // 3. JSON с тегами <think>: <think>...</think>\n{...}
+      // 4. JSON после текста: "text text\n{...}"
       let aiResponse: any;
       try {
-        aiResponse = JSON.parse(responseText);
+        let jsonText = responseText;
+
+        // Удаляем теги <think>...</think> (DeepSeek R1)
+        jsonText = jsonText.replace(/<think>[\s\S]*?<\/think>/gi, "");
+
+        // Удаляем markdown блоки ```json ... ```
+        jsonText = jsonText.replace(/```json\s*/gi, "").replace(/```\s*/g, "");
+
+        // Ищем первый JSON объект в тексте
+        const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error("JSON объект не найден в ответе");
+        }
+
+        // Парсим найденный JSON
+        aiResponse = JSON.parse(jsonMatch[0]);
+
+        console.log("✅ JSON успешно распарсен:", {
+          originalIndex: aiResponse.originalIndex,
+          confidence: aiResponse.confidence,
+        });
       } catch (parseError: any) {
         console.error("❌ Ошибка парсинга ответа AI:", parseError.message);
+        console.error("📄 Полный ответ AI:", responseText);
         return {
           student: null,
           confidence: 0,
           matchMethod: "none",
-          explanation: "Ошибка парсинга ответа AI",
+          explanation: `Ошибка парсинга ответа AI: ${parseError.message}`,
+          topAlternatives: topAlternatives.map((student) => ({
+            student,
+            matchScore: Math.round((student.matchScore || 0) * 100),
+          })),
         };
       }
 
