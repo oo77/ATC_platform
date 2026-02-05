@@ -634,4 +634,162 @@ export class CertificateAIProcessor {
       errors,
     };
   }
+
+  /**
+   * Batch-обработка нескольких сертификатов
+   *
+   * Оптимизации:
+   * - Переиспользует AI-клиент (инициализация один раз)
+   * - Последовательная обработка с задержками (защита от rate limit)
+   * - Graceful degradation (частичные ошибки не ломают процесс)
+   * - Детальная статистика по каждому файлу
+   * - Автоматическое увеличение задержки при обнаружении rate limit
+   *
+   * @param files - Массив файлов для обработки
+   * @returns Результат batch-обработки с детальной статистикой
+   */
+  static async processBatch(
+    files: Array<{
+      fileId: string;
+      filename: string;
+      buffer: Buffer;
+      mimeType: string;
+    }>,
+  ): Promise<{
+    results: Array<{
+      fileId: string;
+      filename: string;
+      success: boolean;
+      extractedData: ExtractedCertificateData | null;
+      tokensUsed: TokenUsage | null;
+      processingTime: number;
+      error?: string;
+    }>;
+    totalTokens: number;
+    totalCost: string;
+    totalTime: number;
+    successCount: number;
+    errorCount: number;
+  }> {
+    console.log(`🚀 Начинаем batch-обработку ${files.length} файлов...`);
+    const batchStartTime = Date.now();
+
+    // Инициализируем AI-клиент один раз для всех файлов (оптимизация)
+    try {
+      await this.initAPIAsync();
+      console.log("✅ AI-клиент инициализирован для batch-обработки");
+    } catch (error: any) {
+      console.error("❌ Ошибка инициализации AI-клиента:", error.message);
+      // Возвращаем ошибку для всех файлов
+      return {
+        results: files.map((f) => ({
+          fileId: f.fileId,
+          filename: f.filename,
+          success: false,
+          extractedData: null,
+          tokensUsed: null,
+          processingTime: 0,
+          error: `Ошибка инициализации AI: ${error.message}`,
+        })),
+        totalTokens: 0,
+        totalCost: "0.00",
+        totalTime: Date.now() - batchStartTime,
+        successCount: 0,
+        errorCount: files.length,
+      };
+    }
+
+    // Последовательная обработка файлов с задержкой для избежания rate limit
+    const results: Array<{
+      fileId: string;
+      filename: string;
+      success: boolean;
+      extractedData: ExtractedCertificateData | null;
+      tokensUsed: TokenUsage | null;
+      processingTime: number;
+      error?: string;
+    }> = [];
+
+    console.log(
+      `⚙️ Обработка файлов последовательно (защита от rate limit)...`,
+    );
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileStartTime = Date.now();
+
+      try {
+        console.log(
+          `📄 Обработка файла ${i + 1}/${files.length}: ${file.filename}`,
+        );
+
+        const result = await this.processCertificate(
+          file.buffer,
+          file.mimeType,
+          file.filename,
+        );
+
+        results.push({
+          fileId: file.fileId,
+          filename: file.filename,
+          success: true,
+          extractedData: result.extractedData,
+          tokensUsed: result.tokensUsed,
+          processingTime: Date.now() - fileStartTime,
+        });
+
+        // Задержка между запросами для избежания rate limit (кроме последнего файла)
+        if (i < files.length - 1) {
+          const delay = 2000; // 2 секунды между запросами
+          console.log(`⏳ Ожидание ${delay}мс перед следующим файлом...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      } catch (error: any) {
+        console.error(
+          `❌ Ошибка обработки файла ${file.filename}:`,
+          error.message,
+        );
+
+        results.push({
+          fileId: file.fileId,
+          filename: file.filename,
+          success: false,
+          extractedData: null,
+          tokensUsed: null,
+          processingTime: Date.now() - fileStartTime,
+          error: error.message,
+        });
+
+        // Если ошибка rate limit - увеличиваем задержку
+        if (error.message.includes("429") || error.message.includes("rate")) {
+          const retryDelay = 5000; // 5 секунд при rate limit
+          console.log(`⚠️ Rate limit обнаружен, ожидание ${retryDelay}мс...`);
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        }
+      }
+    }
+
+    // Подсчитываем статистику
+    const successCount = results.filter((r) => r.success).length;
+    const errorCount = results.filter((r) => !r.success).length;
+    const totalTokens = results.reduce(
+      (sum, r) => sum + (r.tokensUsed?.total || 0),
+      0,
+    );
+    const totalCost = this.estimateCost(totalTokens);
+    const totalTime = Date.now() - batchStartTime;
+
+    console.log(`✅ Batch-обработка завершена за ${totalTime}мс`);
+    console.log(`📊 Успешно: ${successCount}, Ошибок: ${errorCount}`);
+    console.log(`💰 Всего токенов: ${totalTokens}, Стоимость: $${totalCost}`);
+
+    return {
+      results,
+      totalTokens,
+      totalCost: totalCost.toFixed(6),
+      totalTime,
+      successCount,
+      errorCount,
+    };
+  }
 }

@@ -356,4 +356,104 @@ export const aiCertificateRepository = {
       createdAt: row.created_at,
     };
   },
+
+  /**
+   * Batch-создание логов обработки (транзакционно)
+   *
+   * Используется для batch-импорта сертификатов.
+   * Все логи создаются в одной транзакции (атомарность).
+   *
+   * @param logsData - Массив данных для создания логов
+   * @returns Массив созданных логов
+   */
+  async createBatchLogs(
+    logsData: CreateProcessingLogInput[],
+  ): Promise<AIProcessingLog[]> {
+    const db = getDbPool();
+    const connection = await db.getConnection();
+
+    try {
+      // Начинаем транзакцию
+      await connection.beginTransaction();
+      console.log(
+        `🔄 Начинаем транзакцию для создания ${logsData.length} логов...`,
+      );
+
+      const createdIds: string[] = [];
+      const now = new Date();
+
+      // Подготавливаем batch-insert
+      const query = `
+        INSERT INTO ${TABLE_NAME} (
+          id, certificate_id, original_filename, file_size_bytes,
+          processing_started_at, processing_completed_at, processing_duration_ms,
+          ai_model, ai_tokens_used, ai_cost_usd, ai_confidence,
+          status, extracted_data, error_message,
+          matched_student_id, match_method, match_confidence,
+          processed_by, ip_address, created_at
+        ) VALUES ?
+      `;
+
+      // Формируем массив значений для batch-insert
+      const values = logsData.map((data) => {
+        const id = uuidv4();
+        createdIds.push(id);
+
+        return [
+          id,
+          data.certificateId || null,
+          data.originalFilename,
+          data.fileSizeBytes,
+          data.processingStartedAt,
+          data.processingCompletedAt || null,
+          data.processingDurationMs || null,
+
+          data.aiModel,
+          data.aiTokensUsed || null,
+          data.aiCostUsd || null,
+          data.aiConfidence || null,
+
+          data.status,
+          data.extractedData ? JSON.stringify(data.extractedData) : null,
+          data.errorMessage || null,
+
+          data.matchedStudentId || null,
+          data.matchMethod || null,
+          data.matchConfidence || null,
+
+          data.processedBy,
+          data.ipAddress || null,
+          now,
+        ];
+      });
+
+      // Выполняем batch-insert
+      await connection.query(query, [values]);
+
+      // Коммитим транзакцию
+      await connection.commit();
+      console.log(
+        `✅ Транзакция успешно завершена. Создано ${createdIds.length} логов.`,
+      );
+
+      // Получаем созданные логи
+      const [rows] = await connection.execute<RowDataPacket[]>(
+        `SELECT * FROM ${TABLE_NAME} WHERE id IN (${createdIds.map(() => "?").join(",")})`,
+        createdIds,
+      );
+
+      return rows.map(this.mapRowToLog);
+    } catch (error: any) {
+      // Откатываем транзакцию при ошибке
+      await connection.rollback();
+      console.error(
+        "❌ Ошибка при batch-создании логов. Транзакция отменена:",
+        error.message,
+      );
+      throw new Error(`Не удалось создать логи: ${error.message}`);
+    } finally {
+      // Освобождаем соединение
+      connection.release();
+    }
+  },
 };

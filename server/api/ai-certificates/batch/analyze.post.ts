@@ -346,13 +346,38 @@ export default defineEventHandler(
           return result;
         }
 
+        // Преобразуем alternatives в topAlternatives с matchScore
+        let topAlternatives: Array<{
+          student: Student;
+          matchScore: number;
+        }> = [];
+
+        if (matchData.topAlternatives && matchData.topAlternatives.length > 0) {
+          // Если topAlternatives уже есть (из нового метода)
+          topAlternatives = matchData.topAlternatives.map((alt) => ({
+            student: alt.student,
+            matchScore: Math.round((alt.matchScore || 0) * 100), // Преобразуем 0-1 в 0-100
+          }));
+        } else if (
+          matchData.alternatives &&
+          matchData.alternatives.length > 0
+        ) {
+          // Fallback на alternatives (из старого метода)
+          topAlternatives = matchData.alternatives.map((student, index) => ({
+            student: student,
+            // Генерируем matchScore на основе позиции (первый = 85%, второй = 75%, и т.д.)
+            matchScore: Math.max(50, 85 - index * 10),
+          }));
+        }
+
         return {
           ...result,
           matchResult: {
             student: matchData.student,
             confidence: matchData.confidence,
             matchMethod: matchData.matchMethod,
-            topAlternatives: matchData.topAlternatives || [],
+            explanation: matchData.explanation || "",
+            topAlternatives: topAlternatives,
           },
         };
       },

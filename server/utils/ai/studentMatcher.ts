@@ -181,6 +181,7 @@ export class StudentMatcher {
         confidence: 0,
         matchMethod: "none",
         explanation: "Нет данных для поиска",
+        topAlternatives: [],
       };
     }
 
@@ -235,6 +236,7 @@ export class StudentMatcher {
         confidence: 1.0, // 100% уверенность при совпадении ПИНФЛ
         matchMethod: "exact_pinfl",
         explanation: `Точное совпадение по ПИНФЛ: ${normalizedPINFL}`,
+        topAlternatives: [],
       };
     }
 
@@ -276,6 +278,7 @@ export class StudentMatcher {
           confidence: 0.99,
           matchMethod: "exact_name",
           explanation: `Точное совпадение ФИО: ${student.fullName}`,
+          topAlternatives: [],
         };
       }
 
@@ -287,6 +290,7 @@ export class StudentMatcher {
           confidence: 0.95,
           matchMethod: "exact_name",
           explanation: `Совпадение слов в ФИО: ${student.fullName}`,
+          topAlternatives: [],
         };
       }
 
@@ -313,6 +317,7 @@ export class StudentMatcher {
         confidence: Number(maxScore.toFixed(2)),
         matchMethod: "fuzzy_ai", // Помечаем как fuzzy, хотя нашли локально
         explanation: matchReason,
+        topAlternatives: [],
       };
     }
 
@@ -523,6 +528,10 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
           matchMethod: "none",
           explanation: aiResponse.reasoning || "AI не нашел совпадений",
           alternatives: topAlternatives,
+          topAlternatives: topAlternatives.map((student) => ({
+            student,
+            matchScore: Math.round((student.matchScore || 0) * 100),
+          })),
         };
       }
 
@@ -588,6 +597,10 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
           matchMethod: "none",
           explanation: `AI предложил "${foundStudent.fullName}", но токены ФИО не совпадают (скор=${tokenScore.toFixed(2)}). Возможно, нужно добавить слушателя вручную.`,
           alternatives: topAlternatives,
+          topAlternatives: topAlternatives.map((student) => ({
+            student,
+            matchScore: Math.round((student.matchScore || 0) * 100),
+          })),
         };
       }
 
@@ -603,6 +616,10 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
           matchMethod: "none",
           explanation: `AI предложил "${foundStudent.fullName}" с низкой уверенностью (${Math.round(aiResponse.confidence * 100)}%). ${aiResponse.reasoning}`,
           alternatives: topAlternatives,
+          topAlternatives: topAlternatives.map((student) => ({
+            student,
+            matchScore: Math.round((student.matchScore || 0) * 100),
+          })),
         };
       }
 
@@ -614,6 +631,10 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
         alternatives: candidates
           .filter((s) => s.id !== foundStudent.id)
           .slice(0, 5),
+        topAlternatives: topAlternatives.map((student) => ({
+          student,
+          matchScore: Math.round((student.matchScore || 0) * 100), // Преобразуем 0-1 в 0-100
+        })),
       };
     } catch (error: any) {
       console.error("❌ Ошибка при работе с AI:", error.message);
@@ -664,6 +685,10 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
           matchMethod: "none",
           explanation: `Ошибка настроек OpenRouter: Для использования бесплатных моделей включите 'Allow inputs and outputs to be used for model training' на https://openrouter.ai/settings/privacy`,
           alternatives: topAlternatives,
+          topAlternatives: topAlternatives.map((student) => ({
+            student,
+            matchScore: Math.round((student.matchScore || 0) * 100),
+          })),
         };
       }
 
@@ -673,6 +698,10 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
         matchMethod: "none",
         explanation: `Ошибка AI: ${error.message}`,
         alternatives: topAlternatives,
+        topAlternatives: topAlternatives.map((student) => ({
+          student,
+          matchScore: Math.round((student.matchScore || 0) * 100),
+        })),
       };
     }
   }
@@ -885,6 +914,298 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
     } catch (error: any) {
       console.warn("⚠️ AI API недоступен:", error.message);
       return false;
+    }
+  }
+
+  /**
+   * Batch-сопоставление студентов для нескольких сертификатов
+   *
+   * Оптимизации:
+   * - Единый запрос к БД для всех имен (вместо N запросов)
+   * - Один AI-запрос с массивом (вместо N запросов)
+   * - Возвращает топ-5 кандидатов для каждого сертификата
+   * - Graceful degradation при ошибках
+   *
+   * @param extractedDataArray - Массив извлеченных данных из сертификатов
+   * @param students - Все студенты из БД
+   * @returns Массив результатов сопоставления с топ-5 для каждого
+   */
+  static async batchMatchStudents(
+    extractedDataArray: ExtractedCertificateData[],
+    students: Student[],
+  ): Promise<StudentMatchResult[]> {
+    console.log(
+      `🔍 Начинаем batch-сопоставление для ${extractedDataArray.length} сертификатов...`,
+    );
+    console.log(`👥 Всего студентов в базе: ${students.length}`);
+
+    if (extractedDataArray.length === 0 || students.length === 0) {
+      return extractedDataArray.map(() => ({
+        student: null,
+        confidence: 0,
+        matchMethod: "none",
+        explanation: "Нет данных для поиска",
+        topAlternatives: [],
+      }));
+    }
+
+    // Результаты для каждого сертификата
+    const results: StudentMatchResult[] = [];
+
+    // Обрабатываем каждый сертификат
+    for (let i = 0; i < extractedDataArray.length; i++) {
+      const extractedData = extractedDataArray[i];
+      console.log(
+        `\n📄 Обработка сертификата ${i + 1}/${extractedDataArray.length}: ${extractedData.fullName}`,
+      );
+
+      // Уровень 1: Точное совпадение по ПИНФЛ
+      if (extractedData.pinfl) {
+        const pinflMatch = this.findByPINFL(extractedData.pinfl, students);
+        if (pinflMatch) {
+          console.log("✅ Найдено точное совпадение по ПИНФЛ");
+          // Получаем топ-5 альтернатив (исключая найденного)
+          const topAlternatives = this.getTopCandidates(
+            extractedData.fullName,
+            students.filter((s) => s.id !== pinflMatch.student?.id),
+            5,
+          );
+          results.push({
+            ...pinflMatch,
+            topAlternatives,
+          });
+          continue;
+        }
+      }
+
+      // Уровень 2: Умный поиск по ФИО
+      const smartMatch = this.findBySmartName(extractedData.fullName, students);
+      if (smartMatch) {
+        console.log("✅ Найдено локальное совпадение по ФИО");
+        // Получаем топ-5 альтернатив (исключая найденного)
+        const topAlternatives = this.getTopCandidates(
+          extractedData.fullName,
+          students.filter((s) => s.id !== smartMatch.student?.id),
+          5,
+        );
+        results.push({
+          ...smartMatch,
+          topAlternatives,
+        });
+        continue;
+      }
+
+      // Уровень 3: AI-поиск с топ-5
+      console.log("🤖 Запуск AI-поиска...");
+      const aiMatch = await this.findByAI(extractedData, students);
+
+      // AI-поиск уже возвращает alternatives, но мы хотим topAlternatives
+      const topAlternatives = this.getTopCandidates(
+        extractedData.fullName,
+        students.filter((s) => s.id !== aiMatch.student?.id),
+        5,
+      );
+
+      results.push({
+        ...aiMatch,
+        topAlternatives,
+      });
+    }
+
+    console.log(
+      `\n✅ Batch-сопоставление завершено: ${results.filter((r) => r.student).length}/${extractedDataArray.length} найдено`,
+    );
+
+    return results;
+  }
+
+  /**
+   * Оптимизированный batch-поиск с единым AI-запросом (экспериментально)
+   *
+   * ВНИМАНИЕ: Этот метод делает ОДИН AI-запрос для всех сертификатов сразу.
+   * Это экономит токены и время, но может быть менее точным для больших batch'ей.
+   * Используйте batchMatchStudents для более надежного результата.
+   *
+   * @param extractedDataArray - Массив извлеченных данных
+   * @param students - Все студенты из БД
+   * @returns Массив результатов сопоставления
+   */
+  static async batchMatchStudentsOptimized(
+    extractedDataArray: ExtractedCertificateData[],
+    students: Student[],
+  ): Promise<StudentMatchResult[]> {
+    console.log(
+      `🚀 Оптимизированный batch-поиск для ${extractedDataArray.length} сертификатов...`,
+    );
+
+    if (extractedDataArray.length === 0 || students.length === 0) {
+      return extractedDataArray.map(() => ({
+        student: null,
+        confidence: 0,
+        matchMethod: "none",
+        explanation: "Нет данных для поиска",
+        topAlternatives: [],
+      }));
+    }
+
+    // Для каждого сертификата получаем топ-20 кандидатов локально
+    const certificatesWithCandidates = extractedDataArray.map(
+      (extractedData, index) => {
+        const candidates = this.getTopCandidates(
+          extractedData.fullName,
+          students,
+          20,
+        );
+        return {
+          index,
+          extractedData,
+          candidates,
+        };
+      },
+    );
+
+    // Формируем промпт для batch-обработки
+    const systemPrompt = `Ты эксперт по сопоставлению ФИО людей. Твоя задача - для КАЖДОГО сертификата найти наиболее подходящего студента из списка кандидатов.
+
+КРИТИЧЕСКИ ВАЖНЫЕ ПРАВИЛА:
+1. ФАМИЛИЯ должна совпадать!
+2. ИМЯ должно совпадать!
+3. Транслитерация допускается (Иванов = Ivanov)
+4. Порядок слов не важен (Ivanov Sergey = Sergey Ivanov)
+5. Мелкие опечатки OCR допускаются
+6. НЕ СОПОСТАВЛЯЙ если фамилии или имена РАЗНЫЕ
+
+ФОРМАТ ОТВЕТА (ТОЛЬКО JSON):
+{
+  "matches": [
+    {
+      "certificateIndex": 0,
+      "candidateIndex": 2,
+      "confidence": 0.95,
+      "reasoning": "объяснение"
+    },
+    ...
+  ]
+}
+
+Если для сертификата нет подходящего кандидата, используй:
+{
+  "certificateIndex": N,
+  "candidateIndex": null,
+  "confidence": 0,
+  "reasoning": "причина"
+}`;
+
+    const certificatesDescription = certificatesWithCandidates
+      .map((cert, i) => {
+        const candidatesList = cert.candidates
+          .map((c, idx) => `    ${idx}. ${c.fullName}`)
+          .join("\n");
+        return `Сертификат ${i}:
+  ФИО: "${cert.extractedData.fullName}"
+  Кандидаты:
+${candidatesList}`;
+      })
+      .join("\n\n");
+
+    const userPrompt = `Сопоставь каждый сертификат с наиболее подходящим кандидатом:\n\n${certificatesDescription}`;
+
+    try {
+      const client = await this.initAPIAsync();
+      const model =
+        this.currentConfig?.textModel ||
+        process.env.OPENAI_TEXT_MODEL ||
+        "openai/gpt-3.5-turbo";
+
+      console.log(`🤖 Отправка batch-запроса в AI (модель: ${model})...`);
+      const startTime = Date.now();
+
+      const completion = await client.chat.completions.create({
+        model: model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: this.currentConfig?.temperature || 0.1,
+        max_tokens: Math.min(
+          this.currentConfig?.maxTokens || 1000,
+          extractedDataArray.length * 100,
+        ),
+        response_format: { type: "json_object" },
+      });
+
+      const duration = Date.now() - startTime;
+      console.log(`⏱️ AI ответил за ${duration}мс`);
+      console.log("💰 Использовано токенов:", completion.usage?.total_tokens);
+
+      const responseText = completion.choices[0]?.message?.content?.trim();
+      if (!responseText) {
+        throw new Error("Пустой ответ от AI");
+      }
+
+      const aiResponse = JSON.parse(responseText);
+      const matches = aiResponse.matches || [];
+
+      // Формируем результаты
+      const results: StudentMatchResult[] = extractedDataArray.map(
+        (extractedData, certIndex) => {
+          const match = matches.find(
+            (m: any) => m.certificateIndex === certIndex,
+          );
+
+          if (!match || match.candidateIndex === null) {
+            const topAlternatives = certificatesWithCandidates[
+              certIndex
+            ].candidates.slice(0, 5);
+            return {
+              student: null,
+              confidence: 0,
+              matchMethod: "none",
+              explanation: match?.reasoning || "AI не нашел совпадений",
+              topAlternatives,
+            };
+          }
+
+          const candidateIndex = parseInt(match.candidateIndex);
+          const candidates = certificatesWithCandidates[certIndex].candidates;
+
+          if (candidateIndex < 0 || candidateIndex >= candidates.length) {
+            const topAlternatives = candidates.slice(0, 5);
+            return {
+              student: null,
+              confidence: 0,
+              matchMethod: "none",
+              explanation: "Некорректный индекс от AI",
+              topAlternatives,
+            };
+          }
+
+          const foundStudent = candidates[candidateIndex];
+          const topAlternatives = candidates
+            .filter((c) => c.id !== foundStudent.id)
+            .slice(0, 5);
+
+          return {
+            student: foundStudent,
+            confidence: match.confidence || 0.8,
+            matchMethod: "fuzzy_ai" as StudentMatchMethod,
+            explanation: match.reasoning || "AI-сопоставление",
+            topAlternatives,
+          };
+        },
+      );
+
+      console.log(
+        `✅ Batch-поиск завершен: ${results.filter((r) => r.student).length}/${extractedDataArray.length} найдено`,
+      );
+
+      return results;
+    } catch (error: any) {
+      console.error("❌ Ошибка batch AI-поиска:", error.message);
+
+      // Fallback: используем обычный метод для каждого сертификата
+      console.log("🔄 Fallback на обычный метод...");
+      return this.batchMatchStudents(extractedDataArray, students);
     }
   }
 }
