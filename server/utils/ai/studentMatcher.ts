@@ -396,7 +396,9 @@ export class StudentMatcher {
       20,
     );
 
-    const topAlternatives = candidates.slice(0, 5);
+    const topAlternatives = this.convertToTopAlternatives(
+      candidates.slice(0, 5),
+    );
 
     console.log(`🔍 Отобрано ${candidates.length} кандидатов для AI-анализа`);
 
@@ -450,7 +452,7 @@ export class StudentMatcher {
 
 ВАЖНО! ФОРМАТ ОТВЕТА:
 Верни ТОЛЬКО чистый JSON объект, БЕЗ:
-- markdown блоков (```json)
+- markdown блоков (\\\`\\\`\\\`json)
 - тегов <think> или других тегов
 - дополнительного текста до или после JSON
 - комментариев
@@ -502,6 +504,16 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
       const duration = Date.now() - startTime;
       console.log(`⏱️ AI ответил за ${duration}мс`);
 
+      // Детальное логирование для диагностики
+      console.log("📦 Полный ответ AI:", JSON.stringify(completion, null, 2));
+
+      if (!completion.choices || completion.choices.length === 0) {
+        console.error("❌ AI вернул пустой массив choices:", completion);
+        throw new Error(
+          `AI не вернул ответ. Возможно, модель не поддерживается или превышен лимит токенов. Детали: ${JSON.stringify(completion)}`,
+        );
+      }
+
       const responseText = completion.choices[0]?.message?.content?.trim();
       console.log("📥 Ответ AI:", responseText);
 
@@ -546,10 +558,7 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
           confidence: 0,
           matchMethod: "none",
           explanation: `Ошибка парсинга ответа AI: ${parseError.message}`,
-          topAlternatives: topAlternatives.map((student) => ({
-            student,
-            matchScore: Math.round((student.matchScore || 0) * 100),
-          })),
+          topAlternatives: topAlternatives, // matchScore уже в диапазоне 0-100
         };
       }
 
@@ -565,11 +574,7 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
           confidence: aiResponse.confidence || 0,
           matchMethod: "none",
           explanation: aiResponse.reasoning || "AI не нашел совпадений",
-          alternatives: topAlternatives,
-          topAlternatives: topAlternatives.map((student) => ({
-            student,
-            matchScore: Math.round((student.matchScore || 0) * 100),
-          })),
+          topAlternatives: topAlternatives,
         };
       }
 
@@ -634,11 +639,7 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
           confidence: 0,
           matchMethod: "none",
           explanation: `AI предложил "${foundStudent.fullName}", но токены ФИО не совпадают (скор=${tokenScore.toFixed(2)}). Возможно, нужно добавить слушателя вручную.`,
-          alternatives: topAlternatives,
-          topAlternatives: topAlternatives.map((student) => ({
-            student,
-            matchScore: Math.round((student.matchScore || 0) * 100),
-          })),
+          topAlternatives: topAlternatives,
         };
       }
 
@@ -653,11 +654,7 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
           confidence: aiResponse.confidence,
           matchMethod: "none",
           explanation: `AI предложил "${foundStudent.fullName}" с низкой уверенностью (${Math.round(aiResponse.confidence * 100)}%). ${aiResponse.reasoning}`,
-          alternatives: topAlternatives,
-          topAlternatives: topAlternatives.map((student) => ({
-            student,
-            matchScore: Math.round((student.matchScore || 0) * 100),
-          })),
+          topAlternatives: topAlternatives,
         };
       }
 
@@ -666,13 +663,7 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
         confidence: aiResponse.confidence,
         matchMethod: "fuzzy_ai",
         explanation: aiResponse.reasoning,
-        alternatives: candidates
-          .filter((s) => s.id !== foundStudent.id)
-          .slice(0, 5),
-        topAlternatives: topAlternatives.map((student) => ({
-          student,
-          matchScore: Math.round((student.matchScore || 0) * 100), // Преобразуем 0-1 в 0-100
-        })),
+        topAlternatives: topAlternatives,
       };
     } catch (error: any) {
       console.error("❌ Ошибка при работе с AI:", error.message);
@@ -722,11 +713,7 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
           confidence: 0,
           matchMethod: "none",
           explanation: `Ошибка настроек OpenRouter: Для использования бесплатных моделей включите 'Allow inputs and outputs to be used for model training' на https://openrouter.ai/settings/privacy`,
-          alternatives: topAlternatives,
-          topAlternatives: topAlternatives.map((student) => ({
-            student,
-            matchScore: Math.round((student.matchScore || 0) * 100),
-          })),
+          topAlternatives: topAlternatives,
         };
       }
 
@@ -735,11 +722,7 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
         confidence: 0,
         matchMethod: "none",
         explanation: `Ошибка AI: ${error.message}`,
-        alternatives: topAlternatives,
-        topAlternatives: topAlternatives.map((student) => ({
-          student,
-          matchScore: Math.round((student.matchScore || 0) * 100),
-        })),
+        topAlternatives: topAlternatives,
       };
     }
   }
@@ -816,12 +799,29 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
       );
     });
 
-    // Берем топ N
+    // Берем топ N и сразу конвертируем matchScore в проценты (0-100)
     return filtered.slice(0, limit).map((s) => ({
       ...s.student,
-      matchScore: Number(s.score.toFixed(2)),
+      matchScore: Math.round(s.score * 100), // Конвертируем 0-1 в 0-100
       matchDebug: s.debug,
     }));
+  }
+
+  /**
+   * Преобразует StudentWithMatchInfo[] в формат topAlternatives
+   * {student: Student, matchScore: number}[]
+   */
+  private static convertToTopAlternatives(
+    students: StudentWithMatchInfo[],
+  ): Array<{ student: Student; matchScore: number }> {
+    return students.map((s) => {
+      // Создаём копию студента без matchScore и matchDebug
+      const { matchScore, matchDebug, ...studentData } = s;
+      return {
+        student: studentData as Student,
+        matchScore: matchScore || 0,
+      };
+    });
   }
 
   /**
@@ -1003,11 +1003,12 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
         if (pinflMatch) {
           console.log("✅ Найдено точное совпадение по ПИНФЛ");
           // Получаем топ-5 альтернатив (исключая найденного)
-          const topAlternatives = this.getTopCandidates(
+          const candidates = this.getTopCandidates(
             extractedData.fullName,
             students.filter((s) => s.id !== pinflMatch.student?.id),
             5,
           );
+          const topAlternatives = this.convertToTopAlternatives(candidates);
           results.push({
             ...pinflMatch,
             topAlternatives,
@@ -1021,11 +1022,12 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
       if (smartMatch) {
         console.log("✅ Найдено локальное совпадение по ФИО");
         // Получаем топ-5 альтернатив (исключая найденного)
-        const topAlternatives = this.getTopCandidates(
+        const candidates = this.getTopCandidates(
           extractedData.fullName,
           students.filter((s) => s.id !== smartMatch.student?.id),
           5,
         );
+        const topAlternatives = this.convertToTopAlternatives(candidates);
         results.push({
           ...smartMatch,
           topAlternatives,
@@ -1037,17 +1039,8 @@ ${extractedData.position ? `Должность: "${extractedData.position}"` : "
       console.log("🤖 Запуск AI-поиска...");
       const aiMatch = await this.findByAI(extractedData, students);
 
-      // AI-поиск уже возвращает alternatives, но мы хотим topAlternatives
-      const topAlternatives = this.getTopCandidates(
-        extractedData.fullName,
-        students.filter((s) => s.id !== aiMatch.student?.id),
-        5,
-      );
-
-      results.push({
-        ...aiMatch,
-        topAlternatives,
-      });
+      // AI-поиск уже возвращает topAlternatives в правильном формате
+      results.push(aiMatch);
     }
 
     console.log(

@@ -30,7 +30,7 @@
         <div class="p-4">
           <div class="flex items-start gap-4">
             <!-- Radio Button -->
-            <div class="flex-shrink-0 pt-1">
+            <div class="shrink-0 pt-1">
               <div
                 :class="[
                   'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all',
@@ -78,7 +78,7 @@
                       class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
                     >
                       <svg
-                        class="h-3.5 w-3.5 flex-shrink-0"
+                        class="h-3.5 w-3.5 shrink-0"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -94,11 +94,11 @@
                     </div>
 
                     <div
-                      v-if="alternative.student.department"
+                      v-if="alternative.student.organization"
                       class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
                     >
                       <svg
-                        class="h-3.5 w-3.5 flex-shrink-0"
+                        class="h-3.5 w-3.5 shrink-0"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -106,6 +106,29 @@
                           fill-rule="evenodd"
                           d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
                           clip-rule="evenodd"
+                        />
+                      </svg>
+                      <span class="truncate font-medium">{{
+                        alternative.student.organization
+                      }}</span>
+                    </div>
+
+                    <div
+                      v-if="alternative.student.department"
+                      class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+                    >
+                      <svg
+                        class="h-3.5 w-3.5 shrink-0"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z"
+                          clip-rule="evenodd"
+                        />
+                        <path
+                          d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"
                         />
                       </svg>
                       <span class="truncate">{{
@@ -118,7 +141,7 @@
                       class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
                     >
                       <svg
-                        class="h-3.5 w-3.5 flex-shrink-0"
+                        class="h-3.5 w-3.5 shrink-0"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -137,7 +160,7 @@
                 </div>
 
                 <!-- Match Score -->
-                <div class="flex-shrink-0 text-right">
+                <div class="shrink-0 text-right">
                   <div
                     :class="[
                       'text-2xl font-bold',

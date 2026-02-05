@@ -64,11 +64,14 @@ export interface StudentMatchResult {
   /** Метод сопоставления */
   matchMethod: StudentMatchMethod;
   /** Объяснение от AI (для fuzzy_ai) */
-  explanation: string;
+  explanation?: string;
   /** Альтернативные кандидаты */
   alternatives?: StudentWithMatchInfo[];
   /** Топ-N альтернатив с процентами (для batch-режима) */
-  topAlternatives?: StudentWithMatchInfo[];
+  topAlternatives?: Array<{
+    student: Student;
+    matchScore: number;
+  }>;
 }
 
 /**

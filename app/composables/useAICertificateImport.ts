@@ -374,9 +374,14 @@ export const useAICertificateImport = () => {
               analysisResult.matchResult?.topAlternatives &&
               analysisResult.matchResult.topAlternatives.length > 0
             ) {
-              item.selectedStudent =
+              // topAlternatives содержит объекты {student: Student, matchScore: number}
+              // Извлекаем объект student из первого альтернативного варианта
+              const firstAlternative =
                 analysisResult.matchResult.topAlternatives[0];
-              item.uiStatus = "ready";
+              if (firstAlternative) {
+                item.selectedStudent = firstAlternative.student;
+                item.uiStatus = "ready";
+              }
             }
           } else {
             item.uiStatus = "error";
@@ -397,9 +402,7 @@ export const useAICertificateImport = () => {
           `Проанализировано ${result.successCount} из ${batchItems.value.length} файлов`,
         );
       } else {
-        toast.success(
-          `Успешно проанализировано ${result.successCount} файлов`,
-        );
+        toast.success(`Успешно проанализировано ${result.successCount} файлов`);
       }
 
       batchCurrentStep.value = 3;
