@@ -11,6 +11,7 @@ import type {
   BatchAnalysisResult,
   BatchAIProcessingResult,
   ExtractedCertificateData,
+  StudentMatchMethod,
 } from "../../../types/aiCertificateImport";
 import type { Student } from "../../../types/student";
 
@@ -44,207 +45,225 @@ export default defineEventHandler(
       `[Batch Analyze] Starting analysis for ${fileIds.length} files`,
     );
 
-    // 2. Параллельная обработка файлов через AI Vision
-    const analysisPromises = fileIds.map(
-      async (fileId: string, index: number) => {
-        try {
-          // 2.1 Получение лога
-          const log = await aiCertificateRepository.getLogById(fileId);
-          if (!log) {
-            throw new Error(`Log not found for fileId: ${fileId}`);
-          }
+    // 2. Подготовка файлов для batch-обработки
+    const filesToProcess: Array<{
+      fileId: string;
+      filename: string;
+      buffer: Buffer;
+      mimeType: string;
+      log: any;
+      rawTextFromPdf?: string;
+    }> = [];
 
-          // 2.2 Проверка, не обработан ли уже файл
-          if (
-            log.status === "success" &&
-            log.extractedData &&
-            !("_internal" in log.extractedData)
-          ) {
-            console.log(
-              `[Batch Analyze] File ${index + 1}/${fileIds.length} already processed: ${log.originalFilename}`,
-            );
-            return {
-              success: true,
-              fileId: log.id,
-              filename: log.originalFilename,
-              extractedData: log.extractedData,
-              alreadyProcessed: true,
-            };
-          }
+    // 2.1 Загрузка всех файлов и проверка их статуса
+    for (let i = 0; i < fileIds.length; i++) {
+      const fileId = fileIds[i];
+      try {
+        const log = await aiCertificateRepository.getLogById(fileId);
+        if (!log) {
+          console.error(`[Batch Analyze] Log not found for fileId: ${fileId}`);
+          continue;
+        }
 
-          // 2.3 Получение пути к файлу
-          // @ts-ignore
-          const internalData = log.extractedData?._internal;
-          if (!internalData || !internalData.tempFilePath) {
-            throw new Error(`File path not found for ${log.originalFilename}`);
-          }
-
-          const filePath = internalData.tempFilePath;
-          const mimeType = internalData.mimeType;
-
-          // 2.4 Обновление статуса на processing
-          await aiCertificateRepository.updateLog(fileId, {
-            status: "processing" as ProcessingLogStatus,
-            aiModel: process.env.OPENAI_VISION_MODEL || "gpt-4o",
-          });
-
-          // 2.5 Подготовка файла (конвертация PDF если нужно)
-          let imageBuffer: Buffer;
-          let processingMimeType = mimeType;
-          let rawTextFromPdf = "";
-
-          if (mimeType === "application/pdf") {
-            try {
-              imageBuffer =
-                await pdfConverter.convertFirstPageToImage(filePath);
-              processingMimeType = "image/jpeg";
-              rawTextFromPdf = await pdfConverter.extractText(filePath);
-            } catch (pdfError: any) {
-              throw new Error(`PDF Processing error: ${pdfError.message}`);
-            }
-          } else {
-            try {
-              imageBuffer = await fs.readFile(filePath);
-            } catch (readError: any) {
-              throw new Error(`File read error: ${readError.message}`);
-            }
-          }
-
-          // 2.6 AI-анализ изображения
+        // Проверка, не обработан ли уже файл
+        if (
+          log.status === "success" &&
+          log.extractedData &&
+          !("_internal" in log.extractedData)
+        ) {
           console.log(
-            `[Batch Analyze] Processing file ${index + 1}/${fileIds.length}: ${log.originalFilename}`,
+            `[Batch Analyze] File ${i + 1}/${fileIds.length} already processed: ${log.originalFilename}`,
           );
-
-          const aiResult = await CertificateAIProcessor.processCertificate(
-            imageBuffer,
-            processingMimeType,
-            log.originalFilename,
-          );
-
-          // Добавление текста из PDF если есть
-          if (rawTextFromPdf) {
-            aiResult.extractedData.rawText =
-              (aiResult.extractedData.rawText
-                ? aiResult.extractedData.rawText + "\n\nPDF RAW:\n"
-                : "PDF RAW:\n") + rawTextFromPdf.substring(0, 500);
-          }
-
-          // 2.7 Обновление лога с результатами AI-анализа
-          await aiCertificateRepository.updateLog(fileId, {
-            status: "success" as ProcessingLogStatus,
-            processingCompletedAt: new Date(),
-            processingDurationMs: aiResult.processingTime,
-            aiTokensUsed: aiResult.tokensUsed.total,
-            aiCostUsd: CertificateAIProcessor.estimateCost(
-              aiResult.tokensUsed.total,
-            ),
-            aiConfidence: aiResult.extractedData.confidence,
-            extractedData: aiResult.extractedData,
-          });
-
-          console.log(
-            `[Batch Analyze] ✓ File ${index + 1}/${fileIds.length} analyzed successfully`,
-          );
-
-          return {
-            success: true,
+          // Добавляем как уже обработанный
+          filesToProcess.push({
             fileId: log.id,
             filename: log.originalFilename,
-            extractedData: aiResult.extractedData,
-            tokensUsed: aiResult.tokensUsed,
-            processingTime: aiResult.processingTime,
-            aiCost: CertificateAIProcessor.estimateCost(
-              aiResult.tokensUsed.total,
-            ).toFixed(4),
-          };
-        } catch (error: any) {
+            buffer: Buffer.from(""), // Пустой буфер для уже обработанных
+            mimeType: "",
+            log,
+          });
+          continue;
+        }
+
+        // Получение пути к файлу
+        // @ts-ignore
+        const internalData = log.extractedData?._internal;
+        if (!internalData || !internalData.tempFilePath) {
           console.error(
-            `[Batch Analyze] ✗ Error processing file ${index + 1}/${fileIds.length}:`,
-            error,
+            `[Batch Analyze] File path not found for ${log.originalFilename}`,
           );
+          continue;
+        }
 
-          // Обработка ошибки для конкретного файла
-          const log = await aiCertificateRepository.getLogById(fileId);
-          const filename = log?.originalFilename || `unknown_${index}`;
+        const filePath = internalData.tempFilePath;
+        const mimeType = internalData.mimeType;
 
-          // Классификация ошибки
-          const errorMessage = error.message || String(error);
-          let userMessage = "Ошибка анализа сертификата";
-          let errorType = "unknown";
+        // Обновление статуса на processing
+        await aiCertificateRepository.updateLog(fileId, {
+          status: "processing" as ProcessingLogStatus,
+          aiModel: process.env.OPENAI_VISION_MODEL || "gpt-4o",
+        });
 
-          if (
-            errorMessage.includes("402") ||
-            errorMessage.includes("credits") ||
-            errorMessage.includes("afford")
-          ) {
-            errorType = "insufficient_credits";
-            userMessage = "Недостаточно кредитов на аккаунте API";
-          } else if (
-            errorMessage.includes("401") ||
-            errorMessage.includes("Unauthorized")
-          ) {
-            errorType = "invalid_key";
-            userMessage = "Неверный API ключ";
-          } else if (
-            errorMessage.includes("429") ||
-            errorMessage.includes("rate")
-          ) {
-            errorType = "rate_limit";
-            userMessage = "Превышен лимит запросов к API";
-          } else if (
-            errorMessage.includes("context length") ||
-            errorMessage.includes("16385 tokens")
-          ) {
-            errorType = "context_overflow";
-            userMessage = "Слишком длинный контекст запроса";
-          }
+        // Подготовка файла (конвертация PDF если нужно)
+        let imageBuffer: Buffer;
+        let processingMimeType = mimeType;
+        let rawTextFromPdf: string | undefined;
 
-          // Обновление лога с ошибкой
-          if (log) {
+        if (mimeType === "application/pdf") {
+          try {
+            imageBuffer = await pdfConverter.convertFirstPageToImage(filePath);
+            processingMimeType = "image/jpeg";
+            rawTextFromPdf = await pdfConverter.extractText(filePath);
+          } catch (pdfError: any) {
+            console.error(
+              `[Batch Analyze] PDF error for ${log.originalFilename}:`,
+              pdfError,
+            );
             await aiCertificateRepository.updateLog(fileId, {
               status: "failed" as ProcessingLogStatus,
-              errorMessage: `[${errorType}] ${userMessage}`,
+              errorMessage: `PDF Processing error: ${pdfError.message}`,
               processingCompletedAt: new Date(),
             });
+            continue;
           }
-
-          return {
-            success: false,
-            fileId,
-            filename,
-            error: `${userMessage}: ${errorMessage}`,
-          };
+        } else {
+          try {
+            imageBuffer = await fs.readFile(filePath);
+          } catch (readError: any) {
+            console.error(
+              `[Batch Analyze] File read error for ${log.originalFilename}:`,
+              readError,
+            );
+            await aiCertificateRepository.updateLog(fileId, {
+              status: "failed" as ProcessingLogStatus,
+              errorMessage: `File read error: ${readError.message}`,
+              processingCompletedAt: new Date(),
+            });
+            continue;
+          }
         }
-      },
+
+        filesToProcess.push({
+          fileId: log.id,
+          filename: log.originalFilename,
+          buffer: imageBuffer,
+          mimeType: processingMimeType,
+          log,
+          rawTextFromPdf,
+        });
+      } catch (error: any) {
+        console.error(`[Batch Analyze] Error preparing file ${i + 1}:`, error);
+      }
+    }
+
+    console.log(
+      `[Batch Analyze] Prepared ${filesToProcess.length} files for processing`,
     );
 
-    // 3. Ожидание завершения всех AI-анализов
-    const analysisResults = await Promise.allSettled(analysisPromises);
+    // 3. Batch AI-обработка через CertificateAIProcessor.processBatch()
+    // Этот метод уже реализует последовательную обработку с задержками
+    const aiProcessingResult = await CertificateAIProcessor.processBatch(
+      filesToProcess.map((f) => ({
+        fileId: f.fileId,
+        filename: f.filename,
+        buffer: f.buffer,
+        mimeType: f.mimeType,
+      })),
+    );
 
-    // 4. Разделение на успешные и неудачные
+    console.log(
+      `[Batch Analyze] Batch processing completed: ${aiProcessingResult.successCount} success, ${aiProcessingResult.errorCount} failed`,
+    );
+
+    // 4. Обновление логов с результатами AI-анализа
     const processedResults: BatchAIProcessingResult[] = [];
-    const errors: string[] = [];
 
-    analysisResults.forEach((result, index) => {
-      if (result.status === "fulfilled") {
-        processedResults.push(result.value);
-        if (!result.value.success) {
-          errors.push(
-            `Файл ${index + 1} (${result.value.filename}): ${result.value.error}`,
-          );
+    for (const result of aiProcessingResult.results) {
+      const fileData = filesToProcess.find((f) => f.fileId === result.fileId);
+      if (!fileData) continue;
+
+      if (result.success && result.extractedData) {
+        // Добавление текста из PDF если есть
+        if (fileData.rawTextFromPdf) {
+          result.extractedData.rawText =
+            (result.extractedData.rawText
+              ? result.extractedData.rawText + "\n\nPDF RAW:\n"
+              : "PDF RAW:\n") + fileData.rawTextFromPdf.substring(0, 500);
         }
+
+        // Обновление лога с результатами
+        await aiCertificateRepository.updateLog(result.fileId, {
+          status: "success" as ProcessingLogStatus,
+          processingCompletedAt: new Date(),
+          processingDurationMs: result.processingTime,
+          aiTokensUsed: result.tokensUsed?.total || 0,
+          aiCostUsd: result.tokensUsed
+            ? CertificateAIProcessor.estimateCost(result.tokensUsed.total)
+            : 0,
+          aiConfidence: result.extractedData.confidence,
+          extractedData: result.extractedData,
+        });
+
+        processedResults.push({
+          success: true,
+          fileId: result.fileId,
+          filename: result.filename,
+          extractedData: result.extractedData,
+          matchResult: null, // Будет заполнено позже при сопоставлении студентов
+          tokensUsed: result.tokensUsed || undefined,
+          processingTime: result.processingTime,
+          aiCost: result.tokensUsed
+            ? CertificateAIProcessor.estimateCost(
+                result.tokensUsed.total,
+              ).toFixed(4)
+            : undefined,
+        });
       } else {
-        errors.push(
-          `Файл ${index + 1}: Критическая ошибка - ${result.reason?.message || "Unknown error"}`,
-        );
+        // Обработка ошибки
+        const errorMessage = result.error || "Unknown error";
+        let userMessage = "Ошибка анализа сертификата";
+        let errorType = "unknown";
+
+        if (
+          errorMessage.includes("402") ||
+          errorMessage.includes("credits") ||
+          errorMessage.includes("afford")
+        ) {
+          errorType = "insufficient_credits";
+          userMessage = "Недостаточно кредитов на аккаунте API";
+        } else if (
+          errorMessage.includes("401") ||
+          errorMessage.includes("Unauthorized")
+        ) {
+          errorType = "invalid_key";
+          userMessage = "Неверный API ключ";
+        } else if (
+          errorMessage.includes("429") ||
+          errorMessage.includes("rate")
+        ) {
+          errorType = "rate_limit";
+          userMessage = "Превышен лимит запросов к API";
+        } else if (errorMessage.includes("Пустой ответ")) {
+          errorType = "empty_response";
+          userMessage = "Пустой ответ от AI (возможно rate limiting)";
+        }
+
+        await aiCertificateRepository.updateLog(result.fileId, {
+          status: "failed" as ProcessingLogStatus,
+          errorMessage: `[${errorType}] ${userMessage}`,
+          processingCompletedAt: new Date(),
+        });
+
         processedResults.push({
           success: false,
-          fileId: fileIds[index],
-          filename: `unknown_${index}`,
-          error: result.reason?.message || "Критическая ошибка обработки",
+          fileId: result.fileId,
+          filename: result.filename,
+          extractedData: null,
+          matchResult: null,
+          error: `${userMessage}: ${errorMessage}`,
         });
       }
-    });
+    }
 
     // 5. Подсчёт успешных анализов
     const successfulAnalyses = processedResults.filter(
@@ -252,7 +271,7 @@ export default defineEventHandler(
     );
 
     console.log(
-      `[Batch Analyze] AI Analysis completed: ${successfulAnalyses.length} success, ${errors.length} failed`,
+      `[Batch Analyze] AI Analysis completed: ${successfulAnalyses.length} success, ${processedResults.filter((r) => !r.success).length} failed`,
     );
 
     // 6. Единый batch-поиск студентов для всех успешных анализов
@@ -306,7 +325,7 @@ export default defineEventHandler(
               matchResult: {
                 student: null,
                 confidence: 0,
-                matchMethod: "error",
+                matchMethod: "none" as StudentMatchMethod,
                 topAlternatives: [],
               },
             };
@@ -330,7 +349,6 @@ export default defineEventHandler(
           "[Batch Analyze] Error loading students from database:",
           dbError,
         );
-        errors.push(`Ошибка загрузки студентов из БД: ${dbError.message}`);
       }
     }
 
@@ -346,38 +364,15 @@ export default defineEventHandler(
           return result;
         }
 
-        // Преобразуем alternatives в topAlternatives с matchScore
-        let topAlternatives: Array<{
-          student: Student;
-          matchScore: number;
-        }> = [];
-
-        if (matchData.topAlternatives && matchData.topAlternatives.length > 0) {
-          // Если topAlternatives уже есть (из нового метода)
-          topAlternatives = matchData.topAlternatives;
-        } else if (
-          matchData.alternatives &&
-          matchData.alternatives.length > 0
-        ) {
-          // Fallback на alternatives (из старого метода)
-          topAlternatives = matchData.alternatives.map(
-            (student: Student, index: number) => ({
-              student: student,
-              // Генерируем matchScore на основе позиции (первый = 85%, второй = 75%, и т.д.)
-              matchScore: Math.max(50, 85 - index * 10),
-            }),
-          );
-        }
+        // topAlternatives уже в правильном формате из StudentMatcher
+        const topAlternatives = matchData.topAlternatives || [];
 
         return {
           ...result,
           matchResult: {
             student: matchData.student,
             confidence: matchData.confidence,
-            matchMethod: matchData.matchMethod,
-            ...(matchData.explanation && {
-              explanation: matchData.explanation,
-            }),
+            matchMethod: matchData.matchMethod as StudentMatchMethod,
             topAlternatives: topAlternatives,
           },
         };
@@ -409,12 +404,16 @@ export default defineEventHandler(
     );
 
     // 10. Формирование финального результата
+    const totalProcessingTime = enrichedResults
+      .filter((r) => r.success && r.processingTime)
+      .reduce((sum, r) => sum + (r.processingTime || 0), 0);
+
     const batchResult: BatchAnalysisResult = {
       results: enrichedResults,
       successCount,
       errorCount: failedCount,
       totalCost: totalCost.toFixed(4),
-      totalProcessingTime: 0, // TODO: подсчитать общее время
+      totalProcessingTime,
       totalTokensUsed: totalTokens,
     };
 

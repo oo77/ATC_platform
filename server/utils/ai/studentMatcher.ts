@@ -1185,9 +1185,10 @@ ${candidatesList}`;
           );
 
           if (!match || match.candidateIndex === null) {
-            const topAlternatives = certificatesWithCandidates[
+            const candidates = certificatesWithCandidates[
               certIndex
             ].candidates.slice(0, 5);
+            const topAlternatives = this.convertToTopAlternatives(candidates);
             return {
               student: null,
               confidence: 0,
@@ -1201,7 +1202,9 @@ ${candidatesList}`;
           const candidates = certificatesWithCandidates[certIndex].candidates;
 
           if (candidateIndex < 0 || candidateIndex >= candidates.length) {
-            const topAlternatives = candidates.slice(0, 5);
+            const topAlternatives = this.convertToTopAlternatives(
+              candidates.slice(0, 5),
+            );
             return {
               student: null,
               confidence: 0,
@@ -1212,9 +1215,12 @@ ${candidatesList}`;
           }
 
           const foundStudent = candidates[candidateIndex];
-          const topAlternatives = candidates
+          const alternativeCandidates = candidates
             .filter((c) => c.id !== foundStudent.id)
             .slice(0, 5);
+          const topAlternatives = this.convertToTopAlternatives(
+            alternativeCandidates,
+          );
 
           return {
             student: foundStudent,

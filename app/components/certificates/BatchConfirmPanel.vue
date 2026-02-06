@@ -91,7 +91,9 @@
         </h4>
       </div>
 
-      <div class="divide-y divide-stroke dark:divide-strokedark max-h-96 overflow-y-auto">
+      <div
+        class="divide-y divide-stroke dark:divide-strokedark max-h-96 overflow-y-auto"
+      >
         <div
           v-for="item in readyItems"
           :key="item.file.fileId"
@@ -120,24 +122,39 @@
             <!-- Info -->
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-1">
-                <h5 class="text-sm font-semibold text-black dark:text-white truncate">
-                  {{ item.analysisResult?.extractedData?.fullName || 'Без имени' }}
+                <h5
+                  class="text-sm font-semibold text-black dark:text-white truncate"
+                >
+                  {{
+                    item.analysisResult?.extractedData?.fullName || "Без имени"
+                  }}
                 </h5>
                 <span
                   class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
                 >
-                  {{ item.analysisResult?.extractedData?.certificateNumber || 'Без номера' }}
+                  {{
+                    item.analysisResult?.extractedData?.certificateNumber ||
+                    "Без номера"
+                  }}
                 </span>
               </div>
-              <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <div
+                class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+              >
+                <svg
+                  class="h-3.5 w-3.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
                   <path
                     fill-rule="evenodd"
                     d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
                     clip-rule="evenodd"
                   />
                 </svg>
-                <span class="truncate">{{ item.selectedStudent?.fullName }}</span>
+                <span class="truncate">{{
+                  item.selectedStudent?.fullName
+                }}</span>
               </div>
             </div>
 
@@ -210,7 +227,12 @@
         :disabled="loading"
         class="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-boxdark hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
       >
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          class="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -272,7 +294,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed } from "vue";
 
 const props = defineProps({
   items: {
@@ -287,51 +309,64 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-})
+});
 
-const emit = defineEmits(['confirm', 'cancel'])
+const emit = defineEmits(["confirm", "cancel"]);
 
 // Computed
 const readyItems = computed(() => {
   return props.items.filter(
     (item) =>
-      item.uiStatus === 'ready' &&
+      item.uiStatus === "ready" &&
       item.selectedStudent &&
-      item.analysisResult?.extractedData
-  )
-})
+      item.analysisResult?.extractedData,
+  );
+});
 
 const itemsNeedingAttention = computed(() => {
   return props.items.filter(
     (item) =>
-      item.uiStatus !== 'ready' ||
+      item.uiStatus !== "ready" ||
       !item.selectedStudent ||
-      !item.analysisResult?.extractedData
-  )
-})
+      !item.analysisResult?.extractedData,
+  );
+});
 
 const canConfirm = computed(() => {
-  return readyItems.value.length > 0 && !props.loading
-})
+  return readyItems.value.length > 0 && !props.loading;
+});
 
 // Methods
 const getMatchScore = (item) => {
-  if (!item.selectedStudent?.matchScore) return 0
-  return item.selectedStudent.matchScore
-}
+  if (
+    !item.selectedStudent ||
+    !item.analysisResult?.matchResult?.topAlternatives
+  ) {
+    return 0;
+  }
+
+  // Ищем выбранного студента в topAlternatives
+  const matchedAlternative =
+    item.analysisResult.matchResult.topAlternatives.find(
+      (alt) => alt.student.id === item.selectedStudent.id,
+    );
+
+  return matchedAlternative?.matchScore || 0;
+};
 
 const getItemIssue = (item) => {
-  if (item.uiStatus === 'error') return 'ошибка анализа'
-  if (!item.selectedStudent) return 'не выбран студент'
-  if (!item.analysisResult?.extractedData) return 'нет данных'
-  return 'требует проверки'
-}
+  if (item.uiStatus === "error") return "ошибка анализа";
+  if (!item.selectedStudent) return "не выбран студент";
+  if (!item.analysisResult?.extractedData) return "нет данных";
+  return "требует проверки";
+};
 </script>
 
 <style scoped>
 /* Анимация градиента для кнопки */
 @keyframes gradient-shift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {

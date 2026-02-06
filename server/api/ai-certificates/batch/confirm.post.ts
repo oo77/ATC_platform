@@ -8,6 +8,7 @@ import type {
   BatchConfirmInput,
   BatchConfirmResult,
   BatchConfirmItemResult,
+  ExtractedCertificateData,
 } from "../../../types/aiCertificateImport";
 
 /**
@@ -92,34 +93,44 @@ export default defineEventHandler(
                 success: true,
                 fileId,
                 certificateId: log.certificateId,
-                alreadyCreated: true,
               });
               continue;
             }
 
             // 3.3 Слияние данных: override > AI extracted
             const baseData = log.extractedData || {};
-            const finalData = { ...baseData, ...overrideData };
+            const mergedData = { ...baseData, ...overrideData };
+
+            // Обеспечиваем обязательные поля для ExtractedCertificateData
+            const finalData: ExtractedCertificateData = {
+              fullName: mergedData.fullName || "Unknown",
+              certificateNumber: mergedData.certificateNumber || "UNKNOWN",
+              issueDate: mergedData.issueDate || new Date().toISOString(),
+              organization: mergedData.organization || "Unknown Organization",
+              courseName: mergedData.courseName || "Unknown Course",
+              confidence: mergedData.confidence || 1.0,
+              expiryDate: mergedData.expiryDate,
+              courseHours: mergedData.courseHours,
+              position: mergedData.position,
+              department: mergedData.department,
+              pinfl: mergedData.pinfl,
+              rawText: mergedData.rawText,
+            };
 
             // 3.4 Получение URL файла
             // @ts-ignore
             const fileUuid = log.extractedData?._internal?.fileUuid;
             const pdfUrl = fileUuid ? storage.getPublicUrl(fileUuid) : null;
 
-            // Очистка _internal данных
-            if ("_internal" in finalData) {
-              delete (finalData as any)._internal;
-            }
-
             // 3.5 Создание сертификата
             const cert = await createStandaloneCertificate({
               studentId: studentId,
-              certificateNumber: finalData.certificateNumber || "UNKNOWN",
-              issueDate: new Date(finalData.issueDate || Date.now()),
+              certificateNumber: finalData.certificateNumber,
+              issueDate: new Date(finalData.issueDate),
               expiryDate: finalData.expiryDate
                 ? new Date(finalData.expiryDate)
                 : null,
-              courseName: finalData.courseName || "Unknown Course",
+              courseName: finalData.courseName,
               courseHours: finalData.courseHours
                 ? Number(finalData.courseHours)
                 : undefined,
@@ -184,11 +195,10 @@ export default defineEventHandler(
 
       // 5. Формирование финального результата
       const batchResult: BatchConfirmResult = {
-        success: true,
-        totalItems: items.length,
-        successCount: results.length,
-        failedCount: 0,
         results,
+        successCount: results.length,
+        errorCount: 0,
+        totalTime: 0, // TODO: подсчитать общее время
       };
 
       return batchResult;
