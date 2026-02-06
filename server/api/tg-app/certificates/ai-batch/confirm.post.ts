@@ -168,12 +168,41 @@ export default defineEventHandler(
       };
     }
 
-    // 4. Транзакционное сохранение
+    // 4. Предварительная загрузка путей к файлам (ДО транзакции)
+    console.log(
+      `[TG-App] Предварительная загрузка данных для ${validItems.length} сертификатов...`,
+    );
+    const itemsWithFileUrls: Array<{
+      item: ConfirmItem;
+      originalFileUrl: string | null;
+    }> = [];
+
+    for (const item of validItems) {
+      let originalFileUrl: string | null = null;
+      try {
+        const log = await aiCertificateRepository.getLogById(item.fileId);
+        if (log?.extractedData) {
+          const internalData = (log.extractedData as any)?._internal;
+          if (internalData?.tempFilePath) {
+            originalFileUrl = internalData.tempFilePath;
+          }
+        }
+      } catch (logErr) {
+        console.warn(
+          `[TG-App] Не удалось получить путь к файлу из лога ${item.fileId}:`,
+          logErr,
+        );
+      }
+
+      itemsWithFileUrls.push({ item, originalFileUrl });
+    }
+
+    // 5. Транзакционное сохранение (БЕЗ дополнительных запросов внутри)
     try {
       await executeTransaction(async (connection: PoolConnection) => {
         const now = new Date();
 
-        for (const item of validItems) {
+        for (const { item, originalFileUrl } of itemsWithFileUrls) {
           const certificateId = uuidv4();
           const data = item.extractedData;
 
@@ -201,25 +230,6 @@ export default defineEventHandler(
             } catch {
               parsedExpiryDate = null;
             }
-          }
-
-          // Получаем путь к файлу из лога
-          let originalFileUrl: string | null = null;
-          try {
-            const log = await aiCertificateRepository.getLogById(item.fileId);
-            if (log?.extractedData) {
-              const internalData = (log.extractedData as any)?._internal;
-              if (internalData?.tempFilePath) {
-                // Сохраняем путь к временному файлу как URL для скачивания
-                // В будущем можно переместить файл в постоянное хранилище
-                originalFileUrl = internalData.tempFilePath;
-              }
-            }
-          } catch (logErr) {
-            console.warn(
-              `[TG-App] Не удалось получить путь к файлу из лога ${item.fileId}:`,
-              logErr,
-            );
           }
 
           // Создаём сертификат
@@ -259,13 +269,16 @@ export default defineEventHandler(
             ],
           );
 
-          // Обновляем лог обработки
-          await aiCertificateRepository.updateLog(item.fileId, {
-            certificateId: certificateId,
-            matchedStudentId: item.studentId,
-            processingCompletedAt: now,
-            status: "success", // Используем строковый литерал вместо типа
-          });
+          // Обновляем лог обработки (используем connection для консистентности)
+          await connection.execute<ResultSetHeader>(
+            `UPDATE ai_certificate_processing_logs 
+             SET certificate_id = ?, 
+                 matched_student_id = ?, 
+                 processing_completed_at = ?, 
+                 status = 'success'
+             WHERE id = ?`,
+            [certificateId, item.studentId, now, item.fileId],
+          );
 
           created++;
           console.log(

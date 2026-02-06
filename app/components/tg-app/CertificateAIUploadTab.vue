@@ -226,7 +226,7 @@
               <div class="tg-card-header" @click="toggleExpand(item.fileId)">
                 <div class="tg-card-info">
                   <h4>
-                    {{ item.extractedData?.studentName || "Имя не распознано" }}
+                    {{ item.extractedData?.fullName || "Имя не распознано" }}
                   </h4>
                   <p class="tg-card-meta">
                     № {{ item.extractedData?.certificateNumber || "—" }}
@@ -611,10 +611,14 @@ async function runAnalysis() {
   analysisProgress.value = 10;
 
   try {
-    // Имитация прогресса
+    // Имитация прогресса (ограничиваем до 90%)
     const progressInterval = setInterval(() => {
       if (analysisProgress.value < 90) {
-        analysisProgress.value += Math.random() * 10;
+        const increment = Math.random() * 8; // Случайное увеличение от 0 до 8
+        analysisProgress.value = Math.min(
+          90,
+          Math.round(analysisProgress.value + increment),
+        );
       }
     }, 500);
 
