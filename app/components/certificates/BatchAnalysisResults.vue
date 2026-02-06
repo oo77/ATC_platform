@@ -17,14 +17,14 @@
           <div class="text-2xl font-bold text-primary">
             {{ Math.round((stats.analyzedFiles / stats.totalFiles) * 100) }}%
           </div>
-          <div class="text-xs text-gray-500 dark:text-gray-400">
-            прогресс
-          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">прогресс</div>
         </div>
       </div>
 
       <!-- Progress Bar -->
-      <div class="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+      <div
+        class="relative h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
+      >
         <div
           class="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-success transition-all duration-500 ease-out"
           :style="{
@@ -113,7 +113,10 @@
                   getStatusClasses(item.uiStatus),
                 ]"
               >
-                <span class="h-1.5 w-1.5 rounded-full" :class="getStatusDotClasses(item.uiStatus)"></span>
+                <span
+                  class="h-1.5 w-1.5 rounded-full"
+                  :class="getStatusDotClasses(item.uiStatus)"
+                ></span>
                 {{ getStatusText(item.uiStatus) }}
               </span>
 
@@ -178,7 +181,9 @@
                     />
                   </svg>
                   <div class="flex-1">
-                    <h5 class="text-sm font-semibold text-red-900 dark:text-red-200">
+                    <h5
+                      class="text-sm font-semibold text-red-900 dark:text-red-200"
+                    >
                       Ошибка обработки
                     </h5>
                     <p class="text-sm text-red-700 dark:text-red-300 mt-1">
@@ -189,26 +194,159 @@
               </div>
 
               <!-- Extracted Data -->
-              <div
-                v-if="item.analysisResult?.extractedData"
-                class="space-y-4"
-              >
-                <h5 class="text-sm font-semibold text-black dark:text-white">
-                  Извлечённые данные
-                </h5>
+              <div v-if="item.analysisResult?.extractedData" class="space-y-4">
+                <div class="flex items-center justify-between mb-2">
+                  <h5 class="text-sm font-semibold text-black dark:text-white">
+                    Извлечённые данные
+                  </h5>
+                  <span class="text-xs text-gray-500 dark:text-gray-400">
+                    Все поля редактируемы
+                  </span>
+                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div
-                    v-for="field in getExtractedFields(item.analysisResult.extractedData)"
-                    :key="field.key"
-                    class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3"
-                  >
-                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      {{ field.label }}
-                    </div>
-                    <div class="text-sm font-medium text-black dark:text-white">
-                      {{ field.value || '—' }}
-                    </div>
+                  <!-- ФИО -->
+                  <div class="space-y-1.5">
+                    <label
+                      class="text-xs font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      ФИО <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                      v-model="item.analysisResult.extractedData.fullName"
+                      @input="
+                        handleFieldChange(
+                          item.file.fileId,
+                          'fullName',
+                          $event.target.value,
+                        )
+                      "
+                      type="text"
+                      required
+                      class="w-full px-3 py-2 border rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-boxdark text-black dark:text-white border-gray-300 dark:border-gray-600"
+                      :class="{
+                        'border-red-500 dark:border-red-500':
+                          !item.analysisResult.extractedData.fullName,
+                      }"
+                      placeholder="Введите ФИО"
+                    />
+                    <span
+                      v-if="!item.analysisResult.extractedData.fullName"
+                      class="text-xs text-red-500"
+                    >
+                      Обязательное поле
+                    </span>
+                  </div>
+
+                  <!-- Номер сертификата -->
+                  <div class="space-y-1.5">
+                    <label
+                      class="text-xs font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      Номер сертификата
+                    </label>
+                    <input
+                      v-model="
+                        item.analysisResult.extractedData.certificateNumber
+                      "
+                      @input="
+                        handleFieldChange(
+                          item.file.fileId,
+                          'certificateNumber',
+                          $event.target.value,
+                        )
+                      "
+                      type="text"
+                      class="w-full px-3 py-2 border rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-boxdark text-black dark:text-white border-gray-300 dark:border-gray-600"
+                      placeholder="Введите номер сертификата"
+                    />
+                  </div>
+
+                  <!-- Дата выдачи -->
+                  <div class="space-y-1.5">
+                    <label
+                      class="text-xs font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      Дата выдачи
+                    </label>
+                    <input
+                      v-model="item.analysisResult.extractedData.issueDate"
+                      @input="
+                        handleFieldChange(
+                          item.file.fileId,
+                          'issueDate',
+                          $event.target.value,
+                        )
+                      "
+                      type="date"
+                      class="w-full px-3 py-2 border rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-boxdark text-black dark:text-white border-gray-300 dark:border-gray-600"
+                    />
+                  </div>
+
+                  <!-- Название курса -->
+                  <div class="space-y-1.5">
+                    <label
+                      class="text-xs font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      Название курса
+                    </label>
+                    <input
+                      v-model="item.analysisResult.extractedData.courseName"
+                      @input="
+                        handleFieldChange(
+                          item.file.fileId,
+                          'courseName',
+                          $event.target.value,
+                        )
+                      "
+                      type="text"
+                      class="w-full px-3 py-2 border rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-boxdark text-black dark:text-white border-gray-300 dark:border-gray-600"
+                      placeholder="Введите название курса"
+                    />
+                  </div>
+
+                  <!-- Организация -->
+                  <div class="space-y-1.5">
+                    <label
+                      class="text-xs font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      Организация
+                    </label>
+                    <input
+                      v-model="item.analysisResult.extractedData.organization"
+                      @input="
+                        handleFieldChange(
+                          item.file.fileId,
+                          'organization',
+                          $event.target.value,
+                        )
+                      "
+                      type="text"
+                      class="w-full px-3 py-2 border rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-boxdark text-black dark:text-white border-gray-300 dark:border-gray-600"
+                      placeholder="Введите организацию"
+                    />
+                  </div>
+
+                  <!-- Длительность -->
+                  <div class="space-y-1.5">
+                    <label
+                      class="text-xs font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      Длительность
+                    </label>
+                    <input
+                      v-model="item.analysisResult.extractedData.duration"
+                      @input="
+                        handleFieldChange(
+                          item.file.fileId,
+                          'duration',
+                          $event.target.value,
+                        )
+                      "
+                      type="text"
+                      class="w-full px-3 py-2 border rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-boxdark text-black dark:text-white border-gray-300 dark:border-gray-600"
+                      placeholder="Например: 72 часа"
+                    />
                   </div>
                 </div>
               </div>
@@ -219,7 +357,10 @@
                   :file-id="item.file.fileId"
                   :match-result="item.analysisResult.matchResult"
                   :selected-student="item.selectedStudent"
-                  @select="(student) => $emit('select-student', item.file.fileId, student)"
+                  @select="
+                    (student) =>
+                      $emit('select-student', item.file.fileId, student)
+                  "
                 />
               </div>
             </div>
@@ -231,8 +372,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import StudentMatchAccordion from './StudentMatchAccordion.vue'
+import { computed } from "vue";
+import StudentMatchAccordion from "./StudentMatchAccordion.vue";
 
 const props = defineProps({
   items: {
@@ -243,75 +384,57 @@ const props = defineProps({
     type: Object,
     required: true,
   },
-})
+});
 
-const emit = defineEmits(['toggle-item', 'select-student'])
+const emit = defineEmits(["toggle-item", "select-student", "update-field"]);
 
 // Methods
 const toggleItem = (fileId) => {
-  emit('toggle-item', fileId)
-}
+  emit("toggle-item", fileId);
+};
+
+const handleFieldChange = (fileId, field, value) => {
+  // Эмитим изменение поля наверх для сохранения в состоянии
+  emit("update-field", { fileId, field, value });
+};
 
 const getStatusClasses = (status) => {
   const classes = {
-    uploaded: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
-    analyzing: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    analyzed: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-    ready: 'bg-success/10 text-success dark:bg-success/20',
-    error: 'bg-danger/10 text-danger dark:bg-danger/20',
-    confirmed: 'bg-success/10 text-success dark:bg-success/20',
-  }
-  return classes[status] || classes.uploaded
-}
+    uploaded: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+    analyzing:
+      "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    analyzed:
+      "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+    ready: "bg-success/10 text-success dark:bg-success/20",
+    error: "bg-danger/10 text-danger dark:bg-danger/20",
+    confirmed: "bg-success/10 text-success dark:bg-success/20",
+  };
+  return classes[status] || classes.uploaded;
+};
 
 const getStatusDotClasses = (status) => {
   const classes = {
-    uploaded: 'bg-gray-500',
-    analyzing: 'bg-blue-500 animate-pulse',
-    analyzed: 'bg-purple-500',
-    ready: 'bg-success',
-    error: 'bg-danger',
-    confirmed: 'bg-success',
-  }
-  return classes[status] || classes.uploaded
-}
+    uploaded: "bg-gray-500",
+    analyzing: "bg-blue-500 animate-pulse",
+    analyzed: "bg-purple-500",
+    ready: "bg-success",
+    error: "bg-danger",
+    confirmed: "bg-success",
+  };
+  return classes[status] || classes.uploaded;
+};
 
 const getStatusText = (status) => {
   const texts = {
-    uploaded: 'Загружен',
-    analyzing: 'Анализ...',
-    analyzed: 'Проанализирован',
-    ready: 'Готов',
-    error: 'Ошибка',
-    confirmed: 'Подтверждён',
-  }
-  return texts[status] || 'Неизвестно'
-}
-
-const getExtractedFields = (data) => {
-  return [
-    { key: 'fullName', label: 'ФИО', value: data.fullName },
-    { key: 'certificateNumber', label: 'Номер сертификата', value: data.certificateNumber },
-    { key: 'issueDate', label: 'Дата выдачи', value: formatDate(data.issueDate) },
-    { key: 'courseName', label: 'Название курса', value: data.courseName },
-    { key: 'organization', label: 'Организация', value: data.organization },
-    { key: 'duration', label: 'Длительность', value: data.duration },
-  ]
-}
-
-const formatDate = (dateString) => {
-  if (!dateString) return null
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('ru-RU', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  } catch {
-    return dateString
-  }
-}
+    uploaded: "Загружен",
+    analyzing: "Анализ...",
+    analyzed: "Проанализирован",
+    ready: "Готов",
+    error: "Ошибка",
+    confirmed: "Подтверждён",
+  };
+  return texts[status] || "Неизвестно";
+};
 </script>
 
 <style scoped>

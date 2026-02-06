@@ -337,7 +337,12 @@ export default defineEventHandler(
         // 6.3 Формирование Map с результатами сопоставления
         matchResultsArray.forEach((result) => {
           if (result.status === "fulfilled" && result.value) {
-            matchResults.set(result.value.fileId, result.value.matchResult);
+            // Гарантируем, что topAlternatives всегда массив
+            const matchResult = result.value.matchResult;
+            matchResults.set(result.value.fileId, {
+              ...matchResult,
+              topAlternatives: matchResult.topAlternatives || [],
+            });
           }
         });
 

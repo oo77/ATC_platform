@@ -20,6 +20,7 @@ import * as fixIssuedCertificatesSchema from "./migrations/20260203_008_fix_issu
 import * as ensureDocxFileUrl from "./migrations/20260203_009_ensure_docx_file_url";
 import * as addUserIdToStudents from "./migrations/20260203_010_add_user_id_to_students";
 import * as aiSettings from "./migrations/20260203_011_ai_settings";
+import * as addLanguageToQuestions from "./migrations/20260206_012_add_language_to_questions";
 
 /**
  * ============================================================================
@@ -154,6 +155,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: aiSettings.up,
     down: aiSettings.down,
     description: aiSettings.description,
+  },
+  // ============================================================
+  // Миграция 012: Добавление колонки language в таблицу questions
+  // ============================================================
+  {
+    name: "20260206_012_add_language_to_questions",
+    up: addLanguageToQuestions.up,
+    down: addLanguageToQuestions.down,
+    description: addLanguageToQuestions.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже
