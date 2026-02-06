@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div
     class="bg-white dark:bg-boxdark shadow-sm rounded-lg border border-stroke dark:border-strokedark overflow-hidden"
   >
@@ -9,7 +9,7 @@
     >
       <div class="flex items-center gap-3">
         <h3 class="text-lg font-medium text-gray-900 dark:text-white">
-          История импортов
+          РСЃС‚РѕСЂРёСЏ РёРјРїРѕСЂС‚РѕРІ
         </h3>
         <span
           v-if="logs.length > 0"
@@ -23,7 +23,7 @@
         <button
           @click.stop="$emit('refresh')"
           class="p-2 text-gray-500 dark:text-gray-400 hover:text-primary rounded-full hover:bg-white dark:hover:bg-boxdark transition-colors"
-          title="Обновить"
+          title="РћР±РЅРѕРІРёС‚СЊ"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -77,37 +77,37 @@
                   scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Дата
+                  Р”Р°С‚Р°
                 </th>
                 <th
                   scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Файл
+                  Р¤Р°Р№Р»
                 </th>
                 <th
                   scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Студент
+                  РЎС‚СѓРґРµРЅС‚
                 </th>
                 <th
                   scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  AI Модель
+                  AI РњРѕРґРµР»СЊ
                 </th>
                 <th
                   scope="col"
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Статус
+                  РЎС‚Р°С‚СѓСЃ
                 </th>
                 <th
                   scope="col"
                   class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Стоимость
+                  РЎС‚РѕРёРјРѕСЃС‚СЊ
                 </th>
               </tr>
             </thead>
@@ -140,7 +140,7 @@
                   <div v-if="log.extractedData" class="text-gray-900">
                     {{ log.extractedData.fullName }}
                   </div>
-                  <div v-else class="text-gray-400 italic">Нет данных</div>
+                  <div v-else class="text-gray-400 italic">РќРµС‚ РґР°РЅРЅС‹С…</div>
 
                   <div
                     v-if="log.matchMethod"
@@ -149,12 +149,12 @@
                     <span
                       v-if="log.matchMethod === 'exact_pinfl'"
                       class="text-green-600 bg-green-50 px-1.5 rounded"
-                      >ПИНФЛ</span
+                      >РџРРќР¤Р›</span
                     >
                     <span
                       v-else-if="log.matchMethod === 'exact_name'"
                       class="text-blue-600 bg-blue-50 px-1.5 rounded"
-                      >ФИО</span
+                      >Р¤РРћ</span
                     >
                     <span
                       v-else-if="log.matchMethod === 'fuzzy_ai'"
@@ -162,7 +162,7 @@
                       >AI</span
                     >
                     <span v-else class="text-gray-400 bg-gray-50 px-1.5 rounded"
-                      >Ручной</span
+                      >Р СѓС‡РЅРѕР№</span
                     >
 
                     <span v-if="log.matchConfidence" class="ml-1 text-gray-400">
@@ -179,7 +179,7 @@
                     {{ log.aiModel }}
                   </span>
                   <div class="text-xs text-gray-400 mt-1">
-                    {{ log.aiTokensUsed }} токенов
+                    {{ log.aiTokensUsed }} С‚РѕРєРµРЅРѕРІ
                   </div>
                 </td>
 
@@ -216,7 +216,7 @@
                   colspan="6"
                   class="px-6 py-8 text-center text-gray-500 text-sm"
                 >
-                  Истории обработок пока нет
+                  РСЃС‚РѕСЂРёРё РѕР±СЂР°Р±РѕС‚РѕРє РїРѕРєР° РЅРµС‚
                 </td>
               </tr>
             </tbody>
@@ -249,7 +249,7 @@
           >
             <div>
               <p class="text-sm text-gray-700 dark:text-gray-300">
-                Страница <span class="font-medium">{{ currentPage }}</span> из
+                РЎС‚СЂР°РЅРёС†Р° <span class="font-medium">{{ currentPage }}</span> РёР·
                 <span class="font-medium">{{ totalPages }}</span>
               </p>
             </div>
@@ -345,11 +345,11 @@ const formatBytes = (bytes: number) => {
 const getStatusLabel = (status: string) => {
   switch (status) {
     case "success":
-      return "Успешно";
+      return "РЈСЃРїРµС€РЅРѕ";
     case "failed":
-      return "Ошибка";
+      return "РћС€РёР±РєР°";
     case "partial":
-      return "Частично";
+      return "Р§Р°СЃС‚РёС‡РЅРѕ";
     default:
       return status;
   }
@@ -357,7 +357,7 @@ const getStatusLabel = (status: string) => {
 </script>
 
 <style scoped>
-/* Плавная анимация для accordion */
+/* РџР»Р°РІРЅР°СЏ Р°РЅРёРјР°С†РёСЏ РґР»СЏ accordion */
 .max-h-0 {
   max-height: 0;
   overflow: hidden;

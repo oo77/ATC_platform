@@ -21,6 +21,7 @@ import * as ensureDocxFileUrl from "./migrations/20260203_009_ensure_docx_file_u
 import * as addUserIdToStudents from "./migrations/20260203_010_add_user_id_to_students";
 import * as aiSettings from "./migrations/20260203_011_ai_settings";
 import * as addLanguageToQuestions from "./migrations/20260206_012_add_language_to_questions";
+import * as fixAiLogsForeignKey from "./migrations/20260206_013_fix_ai_logs_foreign_key";
 
 /**
  * ============================================================================
@@ -164,6 +165,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: addLanguageToQuestions.up,
     down: addLanguageToQuestions.down,
     description: addLanguageToQuestions.description,
+  },
+  // ============================================================
+  // Миграция 013: Fix AI Logs Foreign Key
+  // ============================================================
+  {
+    name: "20260206_013_fix_ai_logs_foreign_key",
+    up: fixAiLogsForeignKey.up,
+    down: fixAiLogsForeignKey.down,
+    description: fixAiLogsForeignKey.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

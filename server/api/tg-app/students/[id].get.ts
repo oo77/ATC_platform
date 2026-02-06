@@ -29,6 +29,7 @@ interface CertificateRow extends RowDataPacket {
   expiryDate: Date | null;
   status: string;
   pdfFileUrl: string | null;
+  originalFileUrl: string | null;
   sourceType: string | null;
   importSource: string | null;
 }
@@ -97,6 +98,7 @@ export default defineEventHandler(async (event) => {
         ic.expiry_date as expiryDate,
         ic.status,
         ic.pdf_file_url as pdfFileUrl,
+        ic.original_file_url as originalFileUrl,
         ic.source_type as sourceType,
         ic.import_source as importSource
       FROM issued_certificates ic
@@ -127,8 +129,8 @@ export default defineEventHandler(async (event) => {
       isExpired: cert.expiryDate
         ? new Date(cert.expiryDate) < new Date()
         : false,
-      hasPdf: !!cert.pdfFileUrl,
-      pdfFileUrl: cert.pdfFileUrl,
+      hasPdf: !!(cert.pdfFileUrl || cert.originalFileUrl),
+      pdfFileUrl: cert.pdfFileUrl || cert.originalFileUrl, // Fallback на оригинальный файл
       sourceType: cert.sourceType,
       importSource: cert.importSource,
     }));

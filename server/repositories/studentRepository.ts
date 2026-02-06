@@ -357,6 +357,30 @@ export async function getAllStudents(): Promise<Student[]> {
 }
 
 /**
+ * Получить студентов по ID организации (для ТГ-приложения)
+ * Используется при AI-импорте сертификатов с ограничением по организации
+ */
+export async function getStudentsByOrganizationId(
+  organizationId: string,
+): Promise<Student[]> {
+  const rows = await executeQuery<StudentRow[]>(
+    "SELECT * FROM students WHERE organization_id = ? ORDER BY full_name",
+    [organizationId],
+  );
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const studentIds = rows.map((r) => r.id);
+  const certificatesMap = await getCertificatesByStudentIds(studentIds);
+
+  return rows.map((row) =>
+    mapRowToStudent(row, certificatesMap.get(row.id) || []),
+  );
+}
+
+/**
  * Получить студентов с пагинацией и фильтрацией
  */
 export async function getStudentsPaginated(

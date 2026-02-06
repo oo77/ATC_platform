@@ -62,7 +62,7 @@
           class="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700"
         >
           <div
-            class="h-full bg-gradient-to-r from-primary to-success transition-all duration-500"
+            class="h-full bg-linear-to-r from-primary to-success transition-all duration-500"
             :style="{
               width: `${((batchCurrentStep - 1) / (batchSteps.length - 1)) * 100}%`,
             }"
@@ -494,7 +494,8 @@ const handleFieldUpdate = ({
   // Обновляем поле в batchItems
   const item = batchItems.value.find((i) => i.file.fileId === fileId);
   if (item?.analysisResult?.extractedData) {
-    item.analysisResult.extractedData[field] = value;
+    // Используем type assertion для динамического доступа к полям
+    (item.analysisResult.extractedData as any)[field] = value;
   }
 };
 

@@ -17,14 +17,36 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Если pdfUrl относительный, пытаемся найти файл локально
+    // Определяем путь к файлу
+    // pdfUrl может быть:
+    // 1. Относительный URL (/storage/..., /public/...)
+    // 2. Абсолютный путь ОС (C:\temp\..., /tmp/...)
+    // 3. Внешний URL (https://...)
     let documentToSend: string | Buffer = pdfUrl;
     let filename: string | undefined = undefined;
 
-    if (pdfUrl.startsWith("/")) {
-      const fs = await import("fs/promises");
-      const path = await import("path");
+    const fs = await import("fs/promises");
+    const path = await import("path");
 
+    // Проверяем, является ли это абсолютным путём файловой системы
+    const isAbsolutePath = path.isAbsolute(pdfUrl);
+
+    if (isAbsolutePath) {
+      // Абсолютный путь к файлу (для AI-импортированных сертификатов)
+      try {
+        const fileBuffer = await fs.readFile(pdfUrl);
+        documentToSend = fileBuffer;
+        filename = path.basename(pdfUrl);
+        console.log(`[TG-App] Читаем файл по абсолютному пути: ${pdfUrl}`);
+      } catch (err) {
+        console.warn(`[TG-App] Не удалось прочитать файл ${pdfUrl}:`, err);
+        throw createError({
+          statusCode: 404,
+          message: "Файл сертификата не найден",
+        });
+      }
+    } else if (pdfUrl.startsWith("/")) {
+      // Относительный URL
       let filePath: string;
       if (pdfUrl.startsWith("/storage/")) {
         filePath = path.join(process.cwd(), pdfUrl.substring(1));
@@ -50,6 +72,7 @@ export default defineEventHandler(async (event) => {
         // Если не удалось прочитать, пробуем отправить как есть (возможно это внешний URL)
       }
     }
+    // Если pdfUrl - внешний URL (https://...), отправляем как есть
 
     // Отправляем документ в Telegram
     const caption = `📜 Сертификат\n\n👤 ${studentName}\n№ ${certificateNumber}`;
