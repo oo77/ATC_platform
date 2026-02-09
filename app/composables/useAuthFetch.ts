@@ -3,23 +3,26 @@
  * Автоматически добавляет токен авторизации в заголовки
  */
 
-import { useCookie } from '#app';
+import { useCookie } from "#app";
 
 export const useAuthFetch = () => {
-  const token = useCookie('auth_token');
+  const token = useCookie("auth_token");
 
   /**
    * Выполняет авторизованный запрос
    * Автоматически добавляет Bearer токен в заголовки
    */
-  const authFetch = async <T = any>(url: string, options: any = {}) => {
+  const authFetch = async <T = any>(
+    url: string,
+    options: any = {},
+  ): Promise<T> => {
     const headers = {
       ...options.headers,
     };
 
     // Добавляем токен авторизации, если он есть
     if (token.value) {
-      headers['Authorization'] = `Bearer ${token.value}`;
+      headers["Authorization"] = `Bearer ${token.value}`;
     }
 
     return $fetch<T>(url, {

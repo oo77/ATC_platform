@@ -24,10 +24,18 @@ import {
   type VariableContext,
 } from "../../../utils/pdfGenerator";
 import { logActivity } from "../../../utils/activityLogger";
+import { executeQuery } from "../../../utils/db";
+import type { RowDataPacket } from "mysql2/promise";
 import type {
   IssueWarning,
   CertificateTemplateData,
 } from "../../../types/certificate";
+
+interface InstructorRow extends RowDataPacket {
+  id: string;
+  full_name: string;
+  position: string | null;
+}
 
 const issueSchema = z.object({
   templateId: z.string().uuid("Некорректный ID шаблона"),
@@ -37,6 +45,7 @@ const issueSchema = z.object({
   issueDate: z.string().optional(),
   expiryMode: z.enum(["auto", "custom", "none"]).optional().default("auto"),
   expiryDate: z.string().nullable().optional(), // Конкретная дата истечения (при expiryMode = 'custom')
+  instructorId: z.string().uuid().nullable().optional(), // ID инструктора для сертификата
   overrideWarnings: z.boolean().optional(),
   notes: z.string().max(1000).optional(),
 });
@@ -97,6 +106,26 @@ export default defineEventHandler(async (event) => {
     // Создаём директорию для генерируемых файлов
     if (!fs.existsSync(GENERATED_DIR)) {
       fs.mkdirSync(GENERATED_DIR, { recursive: true });
+    }
+
+    // Получаем инструктора, если указан
+    let instructor: {
+      id: string;
+      fullName: string;
+      position: string | null;
+    } | null = null;
+    if (validated.instructorId) {
+      const instructorRows = await executeQuery<InstructorRow[]>(
+        `SELECT id, full_name, position FROM instructors WHERE id = ? AND is_active = true LIMIT 1`,
+        [validated.instructorId],
+      );
+      if (instructorRows.length > 0) {
+        instructor = {
+          id: instructorRows[0].id,
+          fullName: instructorRows[0].full_name,
+          position: instructorRows[0].position,
+        };
+      }
     }
 
     const issueDate = validated.issueDate
@@ -167,7 +196,7 @@ export default defineEventHandler(async (event) => {
         const courseCode = group.course?.code || "UNKNOWN";
         const certificateNumber = await generateCertificateNumber(
           template.id,
-          courseCode
+          courseCode,
         );
 
         // Подготавливаем контекст для генерации PDF
@@ -201,12 +230,13 @@ export default defineEventHandler(async (event) => {
               process.env.APP_URL || "https://atc.uz"
             }/verify/${certificateNumber}`,
           },
+          instructor,
         };
 
         // Генерируем PDF
         const pdfFilename = `${certificateNumber.replace(
           /[\/\\:*?"<>|]/g,
-          "_"
+          "_",
         )}.pdf`;
         const pdfPath = path.join(GENERATED_DIR, pdfFilename);
 
@@ -238,7 +268,7 @@ export default defineEventHandler(async (event) => {
             if (group.course?.certificateValidityMonths) {
               expiryDate = new Date(issueDate);
               expiryDate.setMonth(
-                expiryDate.getMonth() + group.course.certificateValidityMonths
+                expiryDate.getMonth() + group.course.certificateValidityMonths,
               );
             }
             break;
@@ -269,7 +299,7 @@ export default defineEventHandler(async (event) => {
         ) {
           // Переиздаём существующий сертификат
           console.log(
-            `[Certificates] Reissuing certificate for student ${studentId}, existing status: ${existing.status}`
+            `[Certificates] Reissuing certificate for student ${studentId}, existing status: ${existing.status}`,
           );
           certificate = await reissueCertificate(existing.id, certData);
         } else {
@@ -299,7 +329,7 @@ export default defineEventHandler(async (event) => {
             hasWarnings: eligibility.warnings.length > 0,
             overrideWarnings: validated.overrideWarnings,
             reissued: !!existing,
-          }
+          },
         );
 
         results.push({
@@ -315,7 +345,7 @@ export default defineEventHandler(async (event) => {
       } catch (studentError: any) {
         console.error(
           `Error issuing certificate for student ${studentId}:`,
-          studentError
+          studentError,
         );
         results.push({
           studentId,
@@ -330,7 +360,7 @@ export default defineEventHandler(async (event) => {
     const failCount = results.filter((r) => !r.success).length;
 
     console.log(
-      `[POST /api/certificates/issue/${groupId}] Выдано: ${successCount}, ошибок: ${failCount}`
+      `[POST /api/certificates/issue/${groupId}] Выдано: ${successCount}, ошибок: ${failCount}`,
     );
 
     return {

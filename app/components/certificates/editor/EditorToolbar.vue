@@ -2,39 +2,82 @@
   <div class="editor-toolbar">
     <div class="toolbar-section">
       <h3 class="section-title">Элементы</h3>
-      
-      <button class="tool-btn" @click="$emit('add-text')" title="Добавить текст">
+
+      <button
+        class="tool-btn"
+        @click="$emit('add-text')"
+        title="Добавить текст"
+      >
         <div class="tool-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="4,7 4,4 20,4 20,7"/>
-            <line x1="9" y1="20" x2="15" y2="20"/>
-            <line x1="12" y1="4" x2="12" y2="20"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="4,7 4,4 20,4 20,7" />
+            <line x1="9" y1="20" x2="15" y2="20" />
+            <line x1="12" y1="4" x2="12" y2="20" />
           </svg>
         </div>
         <span class="tool-label">Текст</span>
       </button>
-      
+
       <div class="tool-dropdown">
-        <button class="tool-btn" @click="toggleVariableMenu" title="Добавить переменную">
+        <button
+          class="tool-btn"
+          @click="toggleVariableMenu"
+          title="Добавить переменную"
+        >
           <div class="tool-icon variable-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-              <path d="M8 10h8"/>
-              <path d="M8 14h4"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"
+              />
+              <path d="M8 10h8" />
+              <path d="M8 14h4" />
             </svg>
           </div>
           <span class="tool-label">Переменная</span>
-          <svg class="dropdown-arrow" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m6 9 6 6 6-6"/>
+          <svg
+            class="dropdown-arrow"
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="m6 9 6 6 6-6" />
           </svg>
         </button>
-        
+
         <div v-if="showVariableMenu" class="dropdown-menu">
           <div class="dropdown-header">Выберите переменную</div>
-          <div class="dropdown-group" v-for="group in variableGroups" :key="group.name">
+          <div
+            class="dropdown-group"
+            v-for="group in variableGroups"
+            :key="group.name"
+          >
             <div class="group-title">{{ group.name }}</div>
-            <button 
-              v-for="variable in group.variables" 
+            <button
+              v-for="variable in group.variables"
               :key="variable.key"
               class="dropdown-item"
               @click="selectVariable(variable.key)"
@@ -45,86 +88,163 @@
           </div>
         </div>
       </div>
-      
-      <button class="tool-btn" @click="handleImageUpload" title="Добавить изображение">
+
+      <button
+        class="tool-btn"
+        @click="handleImageUpload"
+        title="Добавить изображение"
+      >
         <div class="tool-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-            <circle cx="9" cy="9" r="2"/>
-            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <circle cx="9" cy="9" r="2" />
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
           </svg>
         </div>
         <span class="tool-label">Изображение</span>
       </button>
-      <input 
+      <input
         ref="imageInputRef"
-        type="file" 
-        accept="image/*" 
+        type="file"
+        accept="image/*"
         class="hidden-input"
         @change="onImageSelected"
-      >
-      
+      />
+
       <button class="tool-btn" @click="$emit('add-qr')" title="Добавить QR-код">
         <div class="tool-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="5" height="5" x="3" y="3" rx="1"/>
-            <rect width="5" height="5" x="16" y="3" rx="1"/>
-            <rect width="5" height="5" x="3" y="16" rx="1"/>
-            <path d="M21 16h-3a2 2 0 0 0-2 2v3"/>
-            <path d="M21 21v.01"/>
-            <path d="M12 7v3a2 2 0 0 1-2 2H7"/>
-            <path d="M3 12h.01"/>
-            <path d="M12 3h.01"/>
-            <path d="M12 16v.01"/>
-            <path d="M16 12h1"/>
-            <path d="M21 12v.01"/>
-            <path d="M12 21v-1"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect width="5" height="5" x="3" y="3" rx="1" />
+            <rect width="5" height="5" x="16" y="3" rx="1" />
+            <rect width="5" height="5" x="3" y="16" rx="1" />
+            <path d="M21 16h-3a2 2 0 0 0-2 2v3" />
+            <path d="M21 21v.01" />
+            <path d="M12 7v3a2 2 0 0 1-2 2H7" />
+            <path d="M3 12h.01" />
+            <path d="M12 3h.01" />
+            <path d="M12 16v.01" />
+            <path d="M16 12h1" />
+            <path d="M21 12v.01" />
+            <path d="M12 21v-1" />
           </svg>
         </div>
         <span class="tool-label">QR-код</span>
       </button>
-      
+
       <div class="tool-dropdown">
-        <button class="tool-btn" @click="toggleShapeMenu" title="Добавить фигуру">
+        <button
+          class="tool-btn"
+          @click="toggleShapeMenu"
+          title="Добавить фигуру"
+        >
           <div class="tool-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect width="14" height="14" x="5" y="5" rx="2"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect width="14" height="14" x="5" y="5" rx="2" />
             </svg>
           </div>
           <span class="tool-label">Фигуры</span>
-          <svg class="dropdown-arrow" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m6 9 6 6 6-6"/>
+          <svg
+            class="dropdown-arrow"
+            xmlns="http://www.w3.org/2000/svg"
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="m6 9 6 6 6-6" />
           </svg>
         </button>
-        
+
         <div v-if="showShapeMenu" class="dropdown-menu shapes-menu">
-          <button class="dropdown-item shape-item" @click="selectShape('rectangle')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect width="18" height="14" x="3" y="5" rx="2"/>
+          <button
+            class="dropdown-item shape-item"
+            @click="selectShape('rectangle')"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect width="18" height="14" x="3" y="5" rx="2" />
             </svg>
             <span>Прямоугольник</span>
           </button>
-          <button class="dropdown-item shape-item" @click="selectShape('circle')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="9"/>
+          <button
+            class="dropdown-item shape-item"
+            @click="selectShape('circle')"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="9" />
             </svg>
             <span>Круг</span>
           </button>
           <button class="dropdown-item shape-item" @click="selectShape('line')">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M5 19L19 5"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M5 19L19 5" />
             </svg>
             <span>Линия</span>
           </button>
         </div>
       </div>
     </div>
-    
+
     <div class="toolbar-section">
       <h3 class="section-title">Макет</h3>
-      
+
       <div class="layout-options">
-        <button 
+        <button
           class="layout-btn"
           :class="{ active: currentLayout === 'A4_landscape' }"
           @click="$emit('set-layout', 'A4_landscape')"
@@ -133,7 +253,7 @@
           <div class="layout-preview landscape"></div>
           <span>Альбомная</span>
         </button>
-        <button 
+        <button
           class="layout-btn"
           :class="{ active: currentLayout === 'A4_portrait' }"
           @click="$emit('set-layout', 'A4_portrait')"
@@ -144,64 +264,79 @@
         </button>
       </div>
     </div>
-    
+
     <div class="toolbar-section">
       <h3 class="section-title">Фон</h3>
-      
+
       <div class="background-options">
-        <button 
+        <button
           class="bg-btn"
           @click="setBackgroundColor('#FFFFFF')"
           title="Белый фон"
         >
-          <div class="color-swatch" style="background: #FFFFFF; border: 1px solid #E5E7EB;"></div>
+          <div
+            class="color-swatch"
+            style="background: #ffffff; border: 1px solid #e5e7eb"
+          ></div>
         </button>
-        <button 
+        <button
           class="bg-btn"
           @click="setBackgroundColor('#FFF8E7')"
           title="Кремовый фон"
         >
-          <div class="color-swatch" style="background: #FFF8E7;"></div>
+          <div class="color-swatch" style="background: #fff8e7"></div>
         </button>
-        <button 
+        <button
           class="bg-btn"
           @click="setBackgroundColor('#F0F9FF')"
           title="Голубоватый фон"
         >
-          <div class="color-swatch" style="background: #F0F9FF;"></div>
+          <div class="color-swatch" style="background: #f0f9ff"></div>
         </button>
-        <button 
+        <button
           class="bg-btn"
           @click="setBackgroundColor('#F0FDF4')"
           title="Зеленоватый фон"
         >
-          <div class="color-swatch" style="background: #F0FDF4;"></div>
+          <div class="color-swatch" style="background: #f0fdf4"></div>
         </button>
-        <button 
+        <button
           class="bg-btn upload-bg"
           @click="handleBackgroundUpload"
           title="Загрузить фон"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
         </button>
       </div>
-      <input 
+      <input
         ref="bgInputRef"
-        type="file" 
-        accept="image/*" 
+        type="file"
+        accept="image/*"
         class="hidden-input"
         @change="onBackgroundSelected"
-      >
+      />
     </div>
-    
+
     <div class="toolbar-section presets-section">
       <h3 class="section-title">Шаблоны</h3>
-      
-      <button class="preset-btn" @click="applyPreset('classic')" title="Классический">
+
+      <button
+        class="preset-btn"
+        @click="applyPreset('classic')"
+        title="Классический"
+      >
         <div class="preset-preview classic">
           <div class="pp-line"></div>
           <div class="pp-line short"></div>
@@ -209,8 +344,12 @@
         </div>
         <span>Классический</span>
       </button>
-      
-      <button class="preset-btn" @click="applyPreset('modern')" title="Современный">
+
+      <button
+        class="preset-btn"
+        @click="applyPreset('modern')"
+        title="Современный"
+      >
         <div class="preset-preview modern">
           <div class="pp-line"></div>
           <div class="pp-line short"></div>
@@ -218,8 +357,12 @@
         </div>
         <span>Современный</span>
       </button>
-      
-      <button class="preset-btn" @click="applyPreset('minimal')" title="Минималистичный">
+
+      <button
+        class="preset-btn"
+        @click="applyPreset('minimal')"
+        title="Минималистичный"
+      >
         <div class="preset-preview minimal">
           <div class="pp-line"></div>
           <div class="pp-line short"></div>
@@ -231,135 +374,149 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { AVAILABLE_VARIABLES } from '~/composables/useCertificateEditor'
-import { getPreset } from '~/utils/certificatePresets'
-import type { VariableSource, TemplateLayout, TemplateBackground, ShapeType, CertificateTemplateData } from '~/types/certificate'
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { AVAILABLE_VARIABLES } from "~/composables/useCertificateEditor";
+import { getPreset } from "~/utils/certificatePresets";
+import type {
+  VariableSource,
+  TemplateLayout,
+  TemplateBackground,
+  ShapeType,
+  CertificateTemplateData,
+} from "~/types/certificate";
 
 const props = defineProps<{
-  currentLayout: TemplateLayout
-}>()
+  currentLayout: TemplateLayout;
+}>();
 
 const emit = defineEmits<{
-  (e: 'add-text'): void
-  (e: 'add-variable', key: VariableSource): void
-  (e: 'add-image', src: string): void
-  (e: 'add-qr'): void
-  (e: 'add-shape', type: ShapeType): void
-  (e: 'set-layout', layout: TemplateLayout): void
-  (e: 'set-background', bg: TemplateBackground): void
-  (e: 'apply-preset', data: CertificateTemplateData): void
-}>()
+  (e: "add-text"): void;
+  (e: "add-variable", key: VariableSource): void;
+  (e: "add-image", src: string): void;
+  (e: "add-qr"): void;
+  (e: "add-shape", type: ShapeType): void;
+  (e: "set-layout", layout: TemplateLayout): void;
+  (e: "set-background", bg: TemplateBackground): void;
+  (e: "apply-preset", data: CertificateTemplateData): void;
+}>();
 
-const showVariableMenu = ref(false)
-const showShapeMenu = ref(false)
-const imageInputRef = ref<HTMLInputElement | null>(null)
-const bgInputRef = ref<HTMLInputElement | null>(null)
+const showVariableMenu = ref(false);
+const showShapeMenu = ref(false);
+const imageInputRef = ref<HTMLInputElement | null>(null);
+const bgInputRef = ref<HTMLInputElement | null>(null);
 
 // Группировка переменных для удобного отображения
 const variableGroups = computed(() => [
   {
-    name: 'Студент',
-    variables: AVAILABLE_VARIABLES.filter(v => v.key.startsWith('student.')),
+    name: "Студент",
+    variables: AVAILABLE_VARIABLES.filter((v) => v.key.startsWith("student.")),
   },
   {
-    name: 'Курс',
-    variables: AVAILABLE_VARIABLES.filter(v => v.key.startsWith('course.')),
+    name: "Курс",
+    variables: AVAILABLE_VARIABLES.filter((v) => v.key.startsWith("course.")),
   },
   {
-    name: 'Группа',
-    variables: AVAILABLE_VARIABLES.filter(v => v.key.startsWith('group.')),
+    name: "Группа",
+    variables: AVAILABLE_VARIABLES.filter((v) => v.key.startsWith("group.")),
   },
   {
-    name: 'Сертификат',
-    variables: AVAILABLE_VARIABLES.filter(v => v.key.startsWith('certificate.')),
+    name: "Сертификат",
+    variables: AVAILABLE_VARIABLES.filter((v) =>
+      v.key.startsWith("certificate."),
+    ),
   },
-])
+  {
+    name: "Инструктор",
+    variables: AVAILABLE_VARIABLES.filter((v) =>
+      v.key.startsWith("instructor."),
+    ),
+  },
+]);
 
 function toggleVariableMenu() {
-  showVariableMenu.value = !showVariableMenu.value
-  showShapeMenu.value = false
+  showVariableMenu.value = !showVariableMenu.value;
+  showShapeMenu.value = false;
 }
 
 function toggleShapeMenu() {
-  showShapeMenu.value = !showShapeMenu.value
-  showVariableMenu.value = false
+  showShapeMenu.value = !showShapeMenu.value;
+  showVariableMenu.value = false;
 }
 
 function selectVariable(key: VariableSource) {
-  emit('add-variable', key)
-  showVariableMenu.value = false
+  emit("add-variable", key);
+  showVariableMenu.value = false;
 }
 
 function selectShape(type: ShapeType) {
-  emit('add-shape', type)
-  showShapeMenu.value = false
+  emit("add-shape", type);
+  showShapeMenu.value = false;
 }
 
 function handleImageUpload() {
-  imageInputRef.value?.click()
+  imageInputRef.value?.click();
 }
 
 function onImageSelected(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  
-  const reader = new FileReader()
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
   reader.onload = (event) => {
-    const src = event.target?.result as string
-    emit('add-image', src)
-  }
-  reader.readAsDataURL(file)
-  
+    const src = event.target?.result as string;
+    emit("add-image", src);
+  };
+  reader.readAsDataURL(file);
+
   // Сброс input для повторной загрузки того же файла
-  input.value = ''
+  input.value = "";
 }
 
 function handleBackgroundUpload() {
-  bgInputRef.value?.click()
+  bgInputRef.value?.click();
 }
 
 function onBackgroundSelected(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-  
-  const reader = new FileReader()
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
   reader.onload = (event) => {
-    const src = event.target?.result as string
-    emit('set-background', { type: 'image', value: src })
-  }
-  reader.readAsDataURL(file)
-  
-  input.value = ''
+    const src = event.target?.result as string;
+    emit("set-background", { type: "image", value: src });
+  };
+  reader.readAsDataURL(file);
+
+  input.value = "";
 }
 
 function setBackgroundColor(color: string) {
-  emit('set-background', { type: 'color', value: color })
+  emit("set-background", { type: "color", value: color });
 }
 
-function applyPreset(preset: 'classic' | 'modern' | 'minimal') {
-  const presetData = getPreset(preset)
-  emit('apply-preset', presetData)
+function applyPreset(preset: "classic" | "modern" | "minimal") {
+  const presetData = getPreset(preset);
+  emit("apply-preset", presetData);
 }
 
 // Закрытие меню при клике вне
 function handleClickOutside(e: MouseEvent) {
-  const target = e.target as HTMLElement
-  if (!target.closest('.tool-dropdown')) {
-    showVariableMenu.value = false
-    showShapeMenu.value = false
+  const target = e.target as HTMLElement;
+  if (!target.closest(".tool-dropdown")) {
+    showVariableMenu.value = false;
+    showShapeMenu.value = false;
   }
 }
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
+  document.addEventListener("click", handleClickOutside);
+});
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+  document.removeEventListener("click", handleClickOutside);
+});
 </script>
 
 <style scoped>
@@ -435,13 +592,13 @@ onUnmounted(() => {
 }
 
 .variable-icon {
-  background: linear-gradient(135deg, #EEF2FF, #E0E7FF);
-  color: #4F46E5;
+  background: linear-gradient(135deg, #eef2ff, #e0e7ff);
+  color: #4f46e5;
 }
 
 :root.dark .variable-icon {
-  background: linear-gradient(135deg, #312E81, #3730A3);
-  color: #A5B4FC;
+  background: linear-gradient(135deg, #312e81, #3730a3);
+  color: #a5b4fc;
 }
 
 .tool-label {
@@ -600,8 +757,8 @@ onUnmounted(() => {
 }
 
 .layout-btn.active {
-  border-color: #3B82F6;
-  background: #EFF6FF;
+  border-color: #3b82f6;
+  background: #eff6ff;
 }
 
 :root.dark .layout-btn {
@@ -609,7 +766,7 @@ onUnmounted(() => {
 }
 
 :root.dark .layout-btn.active {
-  border-color: #3B82F6;
+  border-color: #3b82f6;
   background: rgba(59, 130, 246, 0.1);
 }
 
@@ -728,18 +885,18 @@ onUnmounted(() => {
 }
 
 .preset-preview.classic {
-  background: linear-gradient(to bottom, #FEF3C7, #FDE68A);
-  border: 1px solid #F59E0B;
+  background: linear-gradient(to bottom, #fef3c7, #fde68a);
+  border: 1px solid #f59e0b;
 }
 
 .preset-preview.modern {
-  background: linear-gradient(135deg, #EEF2FF, #C7D2FE);
-  border: 1px solid #6366F1;
+  background: linear-gradient(135deg, #eef2ff, #c7d2fe);
+  border: 1px solid #6366f1;
 }
 
 .preset-preview.minimal {
-  background: #FFFFFF;
-  border: 1px solid #E5E7EB;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
 }
 
 .pp-line {

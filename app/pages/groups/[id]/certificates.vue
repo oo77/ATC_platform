@@ -98,6 +98,28 @@
               </NuxtLink>
             </div>
 
+            <!-- Выбор инструктора -->
+            <div v-if="instructors.length > 0" class="flex items-center gap-2">
+              <label
+                class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap"
+                >Инструктор:</label
+              >
+              <select
+                v-model="selectedInstructorId"
+                class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 min-w-[200px]"
+              >
+                <option :value="null">Не указан</option>
+                <option
+                  v-for="instructor in instructors"
+                  :key="instructor.id"
+                  :value="instructor.id"
+                >
+                  {{ instructor.fullName }}
+                  <template v-if="instructor.isPrimary"> (основной)</template>
+                </option>
+              </select>
+            </div>
+
             <!-- Дата выдачи -->
             <div class="flex items-center gap-2">
               <label
@@ -756,6 +778,17 @@ const template = ref<CertificateTemplate | null>(null);
 // Issue settings
 const issueDate = ref(new Date().toISOString().split("T")[0]); // Сегодняшняя дата
 
+// Инструкторы для выбора
+interface InstructorOption {
+  id: string;
+  fullName: string;
+  position: string | null;
+  isPrimary: boolean;
+}
+const instructors = ref<InstructorOption[]>([]);
+const selectedInstructorId = ref<string | null>(null);
+const loadingInstructors = ref(false);
+
 // Selection
 const selectedStudentIds = ref<string[]>([]);
 
@@ -829,6 +862,29 @@ const loadData = async () => {
       journal.value = journalRes.journal;
       stats.value = journalRes.stats;
       template.value = journalRes.template;
+    }
+
+    // Загружаем инструкторов для выбора
+    loadingInstructors.value = true;
+    try {
+      const instructorsRes = await authFetch<{
+        success: boolean;
+        instructors: InstructorOption[];
+        defaultInstructorId: string | null;
+      }>(`/api/certificates/issue/${groupId.value}/instructors`);
+
+      if (instructorsRes.success) {
+        instructors.value = instructorsRes.instructors;
+        // Устанавливаем дефолтного инструктора
+        if (instructorsRes.defaultInstructorId && !selectedInstructorId.value) {
+          selectedInstructorId.value = instructorsRes.defaultInstructorId;
+        }
+      }
+    } catch (instrError: any) {
+      console.error("Error loading instructors:", instrError);
+      // Не показываем ошибку - инструкторы не обязательны
+    } finally {
+      loadingInstructors.value = false;
     }
   } catch (e: any) {
     console.error("Error loading data:", e);
@@ -967,6 +1023,7 @@ const executeBulkIssue = async () => {
     templateId: template.value.id,
     templateName: template.value.name,
     issueDate: issueDate.value ?? new Date().toISOString().split("T")[0]!,
+    instructorId: selectedInstructorId.value,
     studentIds: bulkIssueStudentIds.value,
     studentData: studentRows.map((r) => ({
       id: r.student.id,
@@ -1030,6 +1087,7 @@ const issueToStudents = async (
           templateId: template.value!.id,
           studentIds,
           issueDate: issueDate.value,
+          instructorId: selectedInstructorId.value,
           expiryMode: group.value?.course?.certificateValidityMonths
             ? "auto"
             : "none",

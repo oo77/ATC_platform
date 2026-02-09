@@ -11,32 +11,36 @@
  */
 export type VariableSource =
   // Данные студента
-  | 'student.fullName'
-  | 'student.shortName'          // Сокращённое ФИО (Иванов И.И.)
-  | 'student.lastName'
-  | 'student.firstName'
-  | 'student.middleName'
-  | 'student.organization'
-  | 'student.position'
-  | 'student.department'
-  | 'student.pinfl'
+  | "student.fullName"
+  | "student.shortName" // Сокращённое ФИО (Иванов И.И.)
+  | "student.lastName"
+  | "student.firstName"
+  | "student.middleName"
+  | "student.organization"
+  | "student.position"
+  | "student.department"
+  | "student.pinfl"
   // Данные курса
-  | 'course.name'
-  | 'course.shortName'
-  | 'course.code'
-  | 'course.totalHours'
-  | 'course.description'
+  | "course.name"
+  | "course.shortName"
+  | "course.code"
+  | "course.totalHours"
+  | "course.description"
   // Данные группы
-  | 'group.code'
-  | 'group.startDate'
-  | 'group.endDate'
-  | 'group.classroom'
+  | "group.code"
+  | "group.startDate"
+  | "group.endDate"
+  | "group.classroom"
   // Данные сертификата
-  | 'certificate.number'
-  | 'certificate.issueDate'
-  | 'certificate.issueDateFormatted'  // "26 декабря 2025 года"
+  | "certificate.number"
+  | "certificate.issueDate"
+  | "certificate.issueDateFormatted" // "26 декабря 2025 года"
+  // Данные инструктора
+  | "instructor.fullName"
+  | "instructor.shortName" // Петров П.П.
+  | "instructor.position"
   // Кастомные
-  | 'custom';
+  | "custom";
 
 /**
  * Маппинг одной переменной
@@ -77,17 +81,17 @@ export interface CertificateTemplate {
   id: string;
   name: string;
   description: string | null;
-  templateFileUrl: string | null;      // PDF preview или первая страница
-  originalFileUrl: string | null;      // Оригинальный DOCX (для обратной совместимости)
+  templateFileUrl: string | null; // PDF preview или первая страница
+  originalFileUrl: string | null; // Оригинальный DOCX (для обратной совместимости)
   variables: VariableMapping[] | null;
   qrSettings: QRSettings | null;
-  numberFormat: string;                // Формат номера, например "ATC{YY}_{CODE}_{NUM}"
-  lastNumber: number;                  // Последний использованный номер
+  numberFormat: string; // Формат номера, например "ATC{YY}_{CODE}_{NUM}"
+  lastNumber: number; // Последний использованный номер
   isActive: boolean;
   // Новые поля для визуального редактора
-  templateData: CertificateTemplateData | null;  // JSON-структура редактора
-  layout: TemplateLayout | null;                  // Макет (A4_portrait, A4_landscape и т.д.)
-  backgroundUrl: string | null;                   // URL фонового изображения
+  templateData: CertificateTemplateData | null; // JSON-структура редактора
+  layout: TemplateLayout | null; // Макет (A4_portrait, A4_landscape и т.д.)
+  backgroundUrl: string | null; // URL фонового изображения
   createdAt: Date;
   updatedAt: Date;
 }
@@ -124,15 +128,18 @@ export interface UpdateCertificateTemplateInput {
  * Макет сертификата
  */
 export type TemplateLayout =
-  | 'A4_portrait'
-  | 'A4_landscape'
-  | 'letter_portrait'
-  | 'letter_landscape';
+  | "A4_portrait"
+  | "A4_landscape"
+  | "letter_portrait"
+  | "letter_landscape";
 
 /**
  * Размеры макетов в пикселях (при 96 DPI)
  */
-export const LAYOUT_DIMENSIONS: Record<TemplateLayout, { width: number; height: number }> = {
+export const LAYOUT_DIMENSIONS: Record<
+  TemplateLayout,
+  { width: number; height: number }
+> = {
   A4_portrait: { width: 794, height: 1123 },
   A4_landscape: { width: 1123, height: 794 },
   letter_portrait: { width: 816, height: 1056 },
@@ -142,7 +149,7 @@ export const LAYOUT_DIMENSIONS: Record<TemplateLayout, { width: number; height: 
 /**
  * Тип фона
  */
-export type BackgroundType = 'color' | 'image' | 'preset';
+export type BackgroundType = "color" | "image" | "preset";
 
 /**
  * Настройки фона
@@ -158,7 +165,7 @@ export interface TemplateBackground {
  */
 export interface BaseElement {
   id: string;
-  type: 'text' | 'variable' | 'image' | 'qr' | 'shape';
+  type: "text" | "variable" | "image" | "qr" | "shape";
   x: number;
   y: number;
   width: number;
@@ -172,13 +179,13 @@ export interface BaseElement {
  * Элемент статического текста
  */
 export interface TextElement extends BaseElement {
-  type: 'text';
+  type: "text";
   content: string;
   fontFamily: string;
   fontSize: number;
-  fontWeight: 'normal' | 'bold';
-  fontStyle: 'normal' | 'italic';
-  textAlign: 'left' | 'center' | 'right';
+  fontWeight: "normal" | "bold";
+  fontStyle: "normal" | "italic";
+  textAlign: "left" | "center" | "right";
   color: string;
   lineHeight: number;
 }
@@ -187,7 +194,7 @@ export interface TextElement extends BaseElement {
  * Элемент переменной (динамические данные)
  */
 export interface VariableElement extends BaseElement {
-  type: 'variable';
+  type: "variable";
   /** Ключ переменной, например 'student.fullName' */
   variableKey: VariableSource;
   /** Отображаемый текст в редакторе */
@@ -195,9 +202,9 @@ export interface VariableElement extends BaseElement {
   /** Стили текста */
   fontFamily: string;
   fontSize: number;
-  fontWeight: 'normal' | 'bold';
-  fontStyle: 'normal' | 'italic';
-  textAlign: 'left' | 'center' | 'right';
+  fontWeight: "normal" | "bold";
+  fontStyle: "normal" | "italic";
+  textAlign: "left" | "center" | "right";
   color: string;
   lineHeight: number;
 }
@@ -205,13 +212,13 @@ export interface VariableElement extends BaseElement {
 /**
  * Режим подгонки изображения
  */
-export type ImageObjectFit = 'contain' | 'cover' | 'fill';
+export type ImageObjectFit = "contain" | "cover" | "fill";
 
 /**
  * Элемент изображения
  */
 export interface ImageElement extends BaseElement {
-  type: 'image';
+  type: "image";
   /** URL или base64 */
   src: string;
   objectFit: ImageObjectFit;
@@ -221,13 +228,13 @@ export interface ImageElement extends BaseElement {
 /**
  * Источник данных для QR-кода
  */
-export type QRDataSource = 'certificate_url' | 'certificate_number' | 'custom';
+export type QRDataSource = "certificate_url" | "certificate_number" | "custom";
 
 /**
  * Элемент QR-кода
  */
 export interface QRElement extends BaseElement {
-  type: 'qr';
+  type: "qr";
   /** Источник данных для QR-кода */
   dataSource: QRDataSource;
   /** Кастомные данные (если dataSource = 'custom') */
@@ -240,13 +247,13 @@ export interface QRElement extends BaseElement {
 /**
  * Тип фигуры
  */
-export type ShapeType = 'rectangle' | 'circle' | 'line';
+export type ShapeType = "rectangle" | "circle" | "line";
 
 /**
  * Элемент фигуры
  */
 export interface ShapeElement extends BaseElement {
-  type: 'shape';
+  type: "shape";
   shapeType: ShapeType;
   fillColor: string;
   strokeColor: string;
@@ -288,18 +295,22 @@ export interface CertificateTemplateData {
 /**
  * Статус выданного сертификата
  */
-export type IssuedCertificateStatus = 'draft' | 'issued' | 'revoked';
+export type IssuedCertificateStatus = "draft" | "issued" | "revoked";
 
 /**
  * Источник создания сертификата
  */
-export type CertificateSourceType = 'group_journal' | 'manual' | 'import';
+export type CertificateSourceType = "group_journal" | "manual" | "import";
 
 /**
  * Предупреждение при выдаче
  */
 export interface IssueWarning {
-  type: 'low_attendance' | 'missing_grades' | 'low_grade' | 'incomplete_disciplines';
+  type:
+    | "low_attendance"
+    | "missing_grades"
+    | "low_grade"
+    | "incomplete_disciplines";
   message: string;
   details?: Record<string, any>;
 }
@@ -309,9 +320,9 @@ export interface IssueWarning {
  */
 export interface IssuedCertificate {
   id: string;
-  groupId: string | null;       // NULL для standalone сертификатов
+  groupId: string | null; // NULL для standalone сертификатов
   studentId: string;
-  templateId: string | null;    // NULL для standalone сертификатов
+  templateId: string | null; // NULL для standalone сертификатов
   certificateNumber: string;
   issueDate: Date;
 
@@ -376,9 +387,9 @@ export interface IssueCertificateInput {
   groupId: string;
   studentId: string;
   templateId: string;
-  issueDate?: string;          // Если не указана, используется текущая дата
+  issueDate?: string; // Если не указана, используется текущая дата
   notes?: string;
-  overrideWarnings?: boolean;  // Игнорировать предупреждения
+  overrideWarnings?: boolean; // Игнорировать предупреждения
 }
 
 /**
@@ -404,7 +415,7 @@ export interface StudentEligibility {
   completedDisciplines: number;
   totalDisciplines: number;
   averageGrade: number | null;
-  hasCertificate: boolean;       // Уже выдан сертификат?
+  hasCertificate: boolean; // Уже выдан сертификат?
   certificateStatus?: IssuedCertificateStatus;
 }
 
@@ -442,7 +453,7 @@ export interface CertificateJournalRow {
     attendedHours: number;
     totalHours: number;
     finalGrade: number | null;
-    gradeStatus: 'not_graded' | 'passed' | 'failed';
+    gradeStatus: "not_graded" | "passed" | "failed";
   }[];
   /** Общая статистика */
   totalAttendancePercent: number;

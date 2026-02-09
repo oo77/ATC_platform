@@ -1,14 +1,14 @@
 /**
  * Генератор PDF для сертификатов на основе визуального редактора
- * 
+ *
  * Использует Puppeteer для рендеринга HTML в PDF с высоким качеством.
  * Поддерживает все типы элементов: текст, переменные, изображения, QR-коды, фигуры.
  */
 
-import puppeteer from 'puppeteer';
-import QRCode from 'qrcode';
-import * as fs from 'fs';
-import * as path from 'path';
+import puppeteer from "puppeteer";
+import QRCode from "qrcode";
+import * as fs from "fs";
+import * as path from "path";
 import type {
   CertificateTemplateData,
   TemplateElement,
@@ -19,7 +19,7 @@ import type {
   ShapeElement,
   VariableSource,
   TemplateLayout,
-} from '../types/certificate';
+} from "../types/certificate";
 
 // ============================================================================
 // КОНТЕКСТ ПЕРЕМЕННЫХ
@@ -53,6 +53,11 @@ export interface VariableContext {
     issueDate: Date;
     verificationUrl?: string;
   };
+  instructor?: {
+    id: string;
+    fullName: string;
+    position?: string | null;
+  } | null;
 }
 
 // ============================================================================
@@ -65,10 +70,13 @@ export interface VariableContext {
 function getShortName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 0) return fullName;
-  
+
   const lastName = parts[0];
-  const initials = parts.slice(1).map(p => p.charAt(0).toUpperCase() + '.').join('');
-  
+  const initials = parts
+    .slice(1)
+    .map((p) => p.charAt(0).toUpperCase() + ".")
+    .join("");
+
   return `${lastName} ${initials}`.trim();
 }
 
@@ -78,10 +86,20 @@ function getShortName(fullName: string): string {
 function formatDateFormatted(date: Date | string): string {
   const d = new Date(date);
   const months = [
-    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+    "января",
+    "февраля",
+    "марта",
+    "апреля",
+    "мая",
+    "июня",
+    "июля",
+    "августа",
+    "сентября",
+    "октября",
+    "ноября",
+    "декабря",
   ];
-  
+
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} года`;
 }
 
@@ -90,10 +108,10 @@ function formatDateFormatted(date: Date | string): string {
  */
 function formatDate(date: Date | string): string {
   const d = new Date(date);
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
   const year = d.getFullYear();
-  
+
   return `${day}.${month}.${year}`;
 }
 
@@ -102,7 +120,7 @@ function formatDate(date: Date | string): string {
  */
 export function resolveVariable(
   key: VariableSource,
-  context: VariableContext
+  context: VariableContext,
 ): string {
   const { student, course, group, certificate } = context;
   const fullName = student.fullName;
@@ -110,59 +128,69 @@ export function resolveVariable(
 
   switch (key) {
     // Студент
-    case 'student.fullName':
+    case "student.fullName":
       return student.fullName;
-    case 'student.shortName':
+    case "student.shortName":
       return getShortName(student.fullName);
-    case 'student.lastName':
-      return nameParts[0] || '';
-    case 'student.firstName':
-      return nameParts[1] || '';
-    case 'student.middleName':
-      return nameParts[2] || '';
-    case 'student.organization':
+    case "student.lastName":
+      return nameParts[0] || "";
+    case "student.firstName":
+      return nameParts[1] || "";
+    case "student.middleName":
+      return nameParts[2] || "";
+    case "student.organization":
       return student.organization;
-    case 'student.position':
+    case "student.position":
       return student.position;
-    case 'student.department':
-      return student.department || '';
-    case 'student.pinfl':
+    case "student.department":
+      return student.department || "";
+    case "student.pinfl":
       return student.pinfl;
-    
+
     // Курс
-    case 'course.name':
+    case "course.name":
       return course.name;
-    case 'course.shortName':
+    case "course.shortName":
       return course.shortName;
-    case 'course.code':
+    case "course.code":
       return course.code;
-    case 'course.totalHours':
+    case "course.totalHours":
       return course.totalHours.toString();
-    case 'course.description':
-      return '';
-    
+    case "course.description":
+      return "";
+
     // Группа
-    case 'group.code':
+    case "group.code":
       return group.code;
-    case 'group.startDate':
+    case "group.startDate":
       return formatDate(group.startDate);
-    case 'group.endDate':
+    case "group.endDate":
       return formatDate(group.endDate);
-    case 'group.classroom':
-      return group.classroom || '';
-    
+    case "group.classroom":
+      return group.classroom || "";
+
     // Сертификат
-    case 'certificate.number':
+    case "certificate.number":
       return certificate.number;
-    case 'certificate.issueDate':
+    case "certificate.issueDate":
       return formatDate(certificate.issueDate);
-    case 'certificate.issueDateFormatted':
+    case "certificate.issueDateFormatted":
       return formatDateFormatted(certificate.issueDate);
-    
+
+    // Инструктор
+    case "instructor.fullName":
+      return context.instructor?.fullName || "";
+    case "instructor.shortName":
+      return context.instructor?.fullName
+        ? getShortName(context.instructor.fullName)
+        : "";
+    case "instructor.position":
+      return context.instructor?.position || "";
+
     // Кастомное
-    case 'custom':
-      return '';
-    
+    case "custom":
+      return "";
+
     default:
       console.warn(`[pdfGenerator] Unknown variable: ${key}`);
       return `[${key}]`;
@@ -178,7 +206,7 @@ export function resolveVariable(
  */
 async function generateQRDataUrl(
   data: string,
-  options: { size: number; color: string; backgroundColor: string }
+  options: { size: number; color: string; backgroundColor: string },
 ): Promise<string> {
   return await QRCode.toDataURL(data, {
     width: options.size,
@@ -195,7 +223,7 @@ async function generateQRDataUrl(
  */
 async function elementToHtml(
   element: TemplateElement,
-  context: VariableContext
+  context: VariableContext,
 ): Promise<string> {
   const baseStyles = `
     position: absolute;
@@ -203,11 +231,11 @@ async function elementToHtml(
     top: ${element.y}px;
     width: ${element.width}px;
     height: ${element.height}px;
-    ${element.rotation ? `transform: rotate(${element.rotation}deg);` : ''}
+    ${element.rotation ? `transform: rotate(${element.rotation}deg);` : ""}
   `;
 
   switch (element.type) {
-    case 'text': {
+    case "text": {
       const el = element as TextElement;
       const textStyles = `
         font-family: '${el.fontFamily}', sans-serif;
@@ -219,14 +247,14 @@ async function elementToHtml(
         line-height: ${el.lineHeight};
         display: flex;
         align-items: center;
-        justify-content: ${el.textAlign === 'left' ? 'flex-start' : el.textAlign === 'right' ? 'flex-end' : 'center'};
+        justify-content: ${el.textAlign === "left" ? "flex-start" : el.textAlign === "right" ? "flex-end" : "center"};
         white-space: pre-wrap;
         word-break: break-word;
       `;
       return `<div style="${baseStyles}${textStyles}">${escapeHtml(el.content)}</div>`;
     }
 
-    case 'variable': {
+    case "variable": {
       const el = element as VariableElement;
       const value = resolveVariable(el.variableKey, context);
       const textStyles = `
@@ -239,14 +267,14 @@ async function elementToHtml(
         line-height: ${el.lineHeight};
         display: flex;
         align-items: center;
-        justify-content: ${el.textAlign === 'left' ? 'flex-start' : el.textAlign === 'right' ? 'flex-end' : 'center'};
+        justify-content: ${el.textAlign === "left" ? "flex-start" : el.textAlign === "right" ? "flex-end" : "center"};
         white-space: pre-wrap;
         word-break: break-word;
       `;
       return `<div style="${baseStyles}${textStyles}">${escapeHtml(value)}</div>`;
     }
 
-    case 'image': {
+    case "image": {
       const el = element as ImageElement;
       const imageStyles = `
         object-fit: ${el.objectFit};
@@ -257,19 +285,21 @@ async function elementToHtml(
       return `<div style="${baseStyles}"><img src="${el.src}" style="${imageStyles}" /></div>`;
     }
 
-    case 'qr': {
+    case "qr": {
       const el = element as QRElement;
-      let qrData = '';
-      
+      let qrData = "";
+
       switch (el.dataSource) {
-        case 'certificate_url':
-          qrData = context.certificate.verificationUrl || `https://example.com/verify/${context.certificate.number}`;
+        case "certificate_url":
+          qrData =
+            context.certificate.verificationUrl ||
+            `https://example.com/verify/${context.certificate.number}`;
           break;
-        case 'certificate_number':
+        case "certificate_number":
           qrData = context.certificate.number;
           break;
-        case 'custom':
-          qrData = el.customData || '';
+        case "custom":
+          qrData = el.customData || "";
           break;
       }
 
@@ -282,29 +312,29 @@ async function elementToHtml(
       return `<div style="${baseStyles}"><img src="${qrDataUrl}" style="width: 100%; height: 100%;" /></div>`;
     }
 
-    case 'shape': {
+    case "shape": {
       const el = element as ShapeElement;
-      
-      if (el.shapeType === 'rectangle') {
+
+      if (el.shapeType === "rectangle") {
         const shapeStyles = `
-          background: ${el.fillColor === 'transparent' ? 'transparent' : el.fillColor};
+          background: ${el.fillColor === "transparent" ? "transparent" : el.fillColor};
           border: ${el.strokeWidth}px solid ${el.strokeColor};
           box-sizing: border-box;
         `;
         return `<div style="${baseStyles}${shapeStyles}"></div>`;
       }
-      
-      if (el.shapeType === 'circle') {
+
+      if (el.shapeType === "circle") {
         const shapeStyles = `
-          background: ${el.fillColor === 'transparent' ? 'transparent' : el.fillColor};
+          background: ${el.fillColor === "transparent" ? "transparent" : el.fillColor};
           border: ${el.strokeWidth}px solid ${el.strokeColor};
           border-radius: 50%;
           box-sizing: border-box;
         `;
         return `<div style="${baseStyles}${shapeStyles}"></div>`;
       }
-      
-      if (el.shapeType === 'line') {
+
+      if (el.shapeType === "line") {
         // SVG line
         return `
           <svg style="${baseStyles}" viewBox="0 0 ${el.width} ${el.height}">
@@ -313,12 +343,12 @@ async function elementToHtml(
           </svg>
         `;
       }
-      
-      return '';
+
+      return "";
     }
 
     default:
-      return '';
+      return "";
   }
 }
 
@@ -327,13 +357,13 @@ async function elementToHtml(
  */
 function escapeHtml(text: string): string {
   const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
   };
-  return text.replace(/[&<>"']/g, m => map[m] || m);
+  return text.replace(/[&<>"']/g, (m) => map[m] || m);
 }
 
 /**
@@ -341,11 +371,13 @@ function escapeHtml(text: string): string {
  */
 async function generateCertificateHtml(
   templateData: CertificateTemplateData,
-  context: VariableContext
+  context: VariableContext,
 ): Promise<string> {
   // Сортируем элементы по zIndex
-  const sortedElements = [...templateData.elements].sort((a, b) => a.zIndex - b.zIndex);
-  
+  const sortedElements = [...templateData.elements].sort(
+    (a, b) => a.zIndex - b.zIndex,
+  );
+
   // Генерируем HTML для каждого элемента
   const elementsHtml: string[] = [];
   for (const element of sortedElements) {
@@ -354,11 +386,11 @@ async function generateCertificateHtml(
   }
 
   // Фон
-  let backgroundStyle = '';
+  let backgroundStyle = "";
   if (templateData.background) {
-    if (templateData.background.type === 'color') {
+    if (templateData.background.type === "color") {
       backgroundStyle = `background-color: ${templateData.background.value};`;
-    } else if (templateData.background.type === 'image') {
+    } else if (templateData.background.type === "image") {
       backgroundStyle = `
         background-image: url(${templateData.background.value});
         background-size: cover;
@@ -370,15 +402,18 @@ async function generateCertificateHtml(
   // Google Fonts для использования в PDF
   const fonts = new Set<string>();
   for (const el of templateData.elements) {
-    if (el.type === 'text' || el.type === 'variable') {
+    if (el.type === "text" || el.type === "variable") {
       fonts.add((el as TextElement).fontFamily);
     }
   }
 
   const fontLinks = Array.from(fonts)
-    .filter(f => !['Arial', 'Times New Roman', 'Georgia'].includes(f))
-    .map(f => `<link href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(f)}:wght@400;700&display=swap" rel="stylesheet">`)
-    .join('\n');
+    .filter((f) => !["Arial", "Times New Roman", "Georgia"].includes(f))
+    .map(
+      (f) =>
+        `<link href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(f)}:wght@400;700&display=swap" rel="stylesheet">`,
+    )
+    .join("\n");
 
   return `
     <!DOCTYPE html>
@@ -406,7 +441,7 @@ async function generateCertificateHtml(
       </style>
     </head>
     <body>
-      ${elementsHtml.join('\n')}
+      ${elementsHtml.join("\n")}
     </body>
     </html>
   `;
@@ -425,11 +460,15 @@ interface GeneratePdfOptions {
 /**
  * Сгенерировать PDF сертификата
  */
-export async function generateCertificatePdf(options: GeneratePdfOptions): Promise<void> {
+export async function generateCertificatePdf(
+  options: GeneratePdfOptions,
+): Promise<void> {
   const { templateData, context, outputPath } = options;
 
-  console.log('[pdfGenerator] Starting PDF generation...');
-  console.log(`[pdfGenerator] Template size: ${templateData.width}x${templateData.height}`);
+  console.log("[pdfGenerator] Starting PDF generation...");
+  console.log(
+    `[pdfGenerator] Template size: ${templateData.width}x${templateData.height}`,
+  );
   console.log(`[pdfGenerator] Elements: ${templateData.elements.length}`);
 
   // Генерируем HTML
@@ -438,7 +477,7 @@ export async function generateCertificatePdf(options: GeneratePdfOptions): Promi
   // Запускаем Puppeteer
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
   try {
@@ -453,11 +492,11 @@ export async function generateCertificatePdf(options: GeneratePdfOptions): Promi
 
     // Загружаем HTML
     await page.setContent(html, {
-      waitUntil: 'networkidle0', // Ждём загрузки шрифтов и изображений
+      waitUntil: "networkidle0", // Ждём загрузки шрифтов и изображений
     });
 
     // Даём время на загрузку шрифтов
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Создаём директорию, если не существует
     const dir = path.dirname(outputPath);
@@ -471,7 +510,7 @@ export async function generateCertificatePdf(options: GeneratePdfOptions): Promi
       width: templateData.width,
       height: templateData.height,
       printBackground: true,
-      pageRanges: '1',
+      pageRanges: "1",
     });
 
     console.log(`[pdfGenerator] PDF saved to: ${outputPath}`);
@@ -485,15 +524,15 @@ export async function generateCertificatePdf(options: GeneratePdfOptions): Promi
  */
 export async function generateCertificatePdfBuffer(
   templateData: CertificateTemplateData,
-  context: VariableContext
+  context: VariableContext,
 ): Promise<Buffer> {
-  console.log('[pdfGenerator] Generating PDF buffer...');
+  console.log("[pdfGenerator] Generating PDF buffer...");
 
   const html = await generateCertificateHtml(templateData, context);
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
   try {
@@ -506,19 +545,19 @@ export async function generateCertificatePdfBuffer(
     });
 
     await page.setContent(html, {
-      waitUntil: 'networkidle0',
+      waitUntil: "networkidle0",
     });
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     const pdfBuffer = await page.pdf({
       width: templateData.width,
       height: templateData.height,
       printBackground: true,
-      pageRanges: '1',
+      pageRanges: "1",
     });
 
-    console.log('[pdfGenerator] PDF buffer generated');
+    console.log("[pdfGenerator] PDF buffer generated");
     return Buffer.from(pdfBuffer);
   } finally {
     await browser.close();
@@ -529,8 +568,4 @@ export async function generateCertificatePdfBuffer(
 // ЭКСПОРТ
 // ============================================================================
 
-export {
-  getShortName,
-  formatDateFormatted,
-  generateCertificateHtml,
-};
+export { getShortName, formatDateFormatted, generateCertificateHtml };

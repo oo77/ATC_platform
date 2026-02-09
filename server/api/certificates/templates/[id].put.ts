@@ -3,12 +3,12 @@
  * Обновить шаблон сертификата
  */
 
-import { z } from 'zod';
-import { 
-  getTemplateById, 
-  updateTemplate 
-} from '../../../repositories/certificateTemplateRepository';
-import { logActivity } from '../../../utils/activityLogger';
+import { z } from "zod";
+import {
+  getTemplateById,
+  updateTemplate,
+} from "../../../repositories/certificateTemplateRepository";
+import { logActivity } from "../../../utils/activityLogger";
 
 const variableMappingSchema = z.object({
   placeholder: z.string(),
@@ -41,12 +41,12 @@ const updateTemplateSchema = z.object({
 
 export default defineEventHandler(async (event) => {
   try {
-    const id = getRouterParam(event, 'id');
+    const id = getRouterParam(event, "id");
 
     if (!id) {
       throw createError({
         statusCode: 400,
-        message: 'ID шаблона обязателен',
+        message: "ID шаблона обязателен",
       });
     }
 
@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
     if (!existing) {
       throw createError({
         statusCode: 404,
-        message: 'Шаблон не найден',
+        message: "Шаблон не найден",
       });
     }
 
@@ -67,38 +67,40 @@ export default defineEventHandler(async (event) => {
     // Логируем действие
     await logActivity(
       event,
-      'UPDATE',
-      'CERTIFICATE_TEMPLATE',
+      "UPDATE",
+      "CERTIFICATE_TEMPLATE",
       id,
       template?.name || existing.name,
-      { updatedFields: Object.keys(validated) }
+      { updatedFields: Object.keys(validated) },
     );
 
-    console.log(`[PUT /api/certificates/templates/${id}] Обновлён шаблон: ${template?.name}`);
+    console.log(
+      `[PUT /api/certificates/templates/${id}] Обновлён шаблон: ${template?.name}`,
+    );
 
     return {
       success: true,
       template,
-      message: 'Шаблон успешно обновлён',
+      message: "Шаблон успешно обновлён",
     };
   } catch (error: any) {
-    console.error('[PUT /api/certificates/templates/[id]] Error:', error);
+    console.error("[PUT /api/certificates/templates/[id]] Error:", error);
 
     if (error.statusCode) {
       throw error;
     }
 
-    if (error.name === 'ZodError') {
+    if (error.name === "ZodError") {
       throw createError({
         statusCode: 400,
-        message: 'Ошибка валидации',
+        message: "Ошибка валидации",
         data: error.errors,
       });
     }
 
     throw createError({
       statusCode: 500,
-      message: error.message || 'Ошибка обновления шаблона',
+      message: error.message || "Ошибка обновления шаблона",
     });
   }
 });

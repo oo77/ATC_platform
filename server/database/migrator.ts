@@ -22,6 +22,8 @@ import * as addUserIdToStudents from "./migrations/20260203_010_add_user_id_to_s
 import * as aiSettings from "./migrations/20260203_011_ai_settings";
 import * as addLanguageToQuestions from "./migrations/20260206_012_add_language_to_questions";
 import * as fixAiLogsForeignKey from "./migrations/20260206_013_fix_ai_logs_foreign_key";
+import * as addNumberFormatToTemplates from "./migrations/20260209_014_add_number_format_to_templates";
+import * as fixCertificateTemplatesColumns from "./migrations/20260209_015_fix_certificate_templates_columns";
 
 /**
  * ============================================================================
@@ -174,6 +176,24 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: fixAiLogsForeignKey.up,
     down: fixAiLogsForeignKey.down,
     description: fixAiLogsForeignKey.description,
+  },
+  // ============================================================
+  // Миграция 014: Add number_format and last_number to certificate_templates
+  // ============================================================
+  {
+    name: "20260209_014_add_number_format_to_templates",
+    up: addNumberFormatToTemplates.up,
+    down: addNumberFormatToTemplates.down,
+    description: addNumberFormatToTemplates.description,
+  },
+  // ============================================================
+  // Миграция 015: Fix certificate_templates columns
+  // ============================================================
+  {
+    name: "20260209_015_fix_certificate_templates_columns",
+    up: fixCertificateTemplatesColumns.up,
+    down: fixCertificateTemplatesColumns.down,
+    description: fixCertificateTemplatesColumns.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

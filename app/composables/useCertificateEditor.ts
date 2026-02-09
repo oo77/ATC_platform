@@ -97,6 +97,22 @@ export const AVAILABLE_VARIABLES: {
     label: "Дата выдачи (прописью)",
     placeholder: "26 декабря 2025 года",
   },
+  // Инструктор
+  {
+    key: "instructor.fullName",
+    label: "ФИО инструктора",
+    placeholder: "Петров Петр Петрович",
+  },
+  {
+    key: "instructor.shortName",
+    label: "ФИО инструктора (сокращённо)",
+    placeholder: "Петров П.П.",
+  },
+  {
+    key: "instructor.position",
+    label: "Должность инструктора",
+    placeholder: "Инструктор-методист",
+  },
 ];
 
 // Доступные шрифты (реэкспорт из useGoogleFonts)
