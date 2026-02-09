@@ -162,7 +162,11 @@ export interface ImageElement extends BaseElement {
 /**
  * Источник данных для QR-кода
  */
-export type QRDataSource = "certificate_url" | "certificate_number" | "custom";
+export type QRDataSource =
+  | "certificate_url"
+  | "certificate_number"
+  | "custom"
+  | "custom_url";
 
 /**
  * Элемент QR-кода

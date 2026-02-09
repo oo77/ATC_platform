@@ -589,15 +589,24 @@
             >
               <option value="certificate_url">URL сертификата</option>
               <option value="certificate_number">Номер сертификата</option>
-              <option value="custom">Кастомный</option>
+              <option value="custom">Кастомный текст</option>
+              <option value="custom_url">Кастомный URL</option>
             </select>
           </div>
 
           <div
-            v-if="(selectedElement as QRElement).dataSource === 'custom'"
+            v-if="
+              ['custom', 'custom_url'].includes(
+                (selectedElement as QRElement).dataSource,
+              )
+            "
             class="input-group full"
           >
-            <label>Данные</label>
+            <label>{{
+              (selectedElement as QRElement).dataSource === "custom_url"
+                ? "Базовый URL"
+                : "Данные"
+            }}</label>
             <input
               type="text"
               :value="(selectedElement as QRElement).customData"
@@ -608,8 +617,18 @@
                 )
               "
               :disabled="selectedElement.locked"
-              placeholder="Введите данные для QR"
+              :placeholder="
+                (selectedElement as QRElement).dataSource === 'custom_url'
+                  ? 'https://example.com'
+                  : 'Введите данные для QR'
+              "
             />
+            <p
+              v-if="(selectedElement as QRElement).dataSource === 'custom_url'"
+              class="help-text mt-1 text-xs text-gray-500"
+            >
+              Пример: https://domain.com/verify/{{ "{NUMBER}" }}
+            </p>
           </div>
 
           <div class="input-grid">

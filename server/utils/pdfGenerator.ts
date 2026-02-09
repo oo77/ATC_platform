@@ -301,6 +301,10 @@ async function elementToHtml(
         case "custom":
           qrData = el.customData || "";
           break;
+        case "custom_url":
+          const baseUrl = (el.customData || "").replace(/\/$/, "");
+          qrData = `${baseUrl}/verify/${context.certificate.number}`;
+          break;
       }
 
       const qrDataUrl = await generateQRDataUrl(qrData, {
