@@ -34,7 +34,6 @@ import type {
 interface InstructorRow extends RowDataPacket {
   id: string;
   full_name: string;
-  position: string | null;
 }
 
 const issueSchema = z.object({
@@ -112,18 +111,18 @@ export default defineEventHandler(async (event) => {
     let instructor: {
       id: string;
       fullName: string;
-      position: string | null;
+      position: null;
     } | null = null;
     if (validated.instructorId) {
       const instructorRows = await executeQuery<InstructorRow[]>(
-        `SELECT id, full_name, position FROM instructors WHERE id = ? AND is_active = true LIMIT 1`,
+        `SELECT id, full_name FROM instructors WHERE id = ? AND is_active = true LIMIT 1`,
         [validated.instructorId],
       );
       if (instructorRows.length > 0) {
         instructor = {
           id: instructorRows[0].id,
           fullName: instructorRows[0].full_name,
-          position: instructorRows[0].position,
+          position: null,
         };
       }
     }
