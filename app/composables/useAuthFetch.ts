@@ -25,10 +25,10 @@ export const useAuthFetch = () => {
       headers["Authorization"] = `Bearer ${token.value}`;
     }
 
-    return $fetch<T>(url, {
+    return $fetch(url, {
       ...options,
       headers,
-    });
+    }) as Promise<T>;
   };
 
   return {
