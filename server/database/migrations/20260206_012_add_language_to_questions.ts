@@ -12,17 +12,33 @@ export const up = async (connection: PoolConnection): Promise<void> => {
   console.log("🔄 Running migration: Add language column to questions table");
 
   // Добавляем колонку language в таблицу questions
-  await connection.query(`
-    ALTER TABLE questions 
-    ADD COLUMN language ENUM('ru', 'uz', 'en') NOT NULL DEFAULT 'ru' 
-    AFTER difficulty
-  `);
+  try {
+    await connection.query(`
+      ALTER TABLE questions 
+      ADD COLUMN language ENUM('ru', 'uz', 'en') NOT NULL DEFAULT 'ru' 
+      AFTER difficulty
+    `);
+  } catch (error: any) {
+    if (error.errno === 1060) {
+      console.log("⚠️ Column language already exists, skipping");
+    } else {
+      throw error;
+    }
+  }
 
   // Добавляем индекс для оптимизации запросов по языку
-  await connection.query(`
-    ALTER TABLE questions 
-    ADD INDEX idx_language (language)
-  `);
+  try {
+    await connection.query(`
+      ALTER TABLE questions 
+      ADD INDEX idx_language (language)
+    `);
+  } catch (error: any) {
+    if (error.errno === 1061) {
+      console.log("⚠️ Index idx_language already exists, skipping");
+    } else {
+      throw error;
+    }
+  }
 
   console.log("✅ Language column added to questions table");
 };
