@@ -1,25 +1,25 @@
 /**
  * GET /api/certificates/templates/[id]/preview
  * Получить предпросмотр шаблона с тестовыми данными
- * 
+ *
  * Возвращает HTML для отображения preview шаблона
  */
 
-import { getTemplateById } from '../../../../repositories/certificateTemplateRepository';
+import { getTemplateById } from "../../../../repositories/certificateTemplateRepository";
 import {
   generateCertificateHtml,
   type VariableContext,
-} from '../../../../utils/pdfGenerator';
-import type { CertificateTemplateData } from '../../../../types/certificate';
+} from "../../../../utils/pdfGenerator";
+import type { CertificateTemplateData } from "../../../../types/certificate";
 
 export default defineEventHandler(async (event) => {
   try {
-    const id = getRouterParam(event, 'id');
+    const id = getRouterParam(event, "id");
 
     if (!id) {
       throw createError({
         statusCode: 400,
-        message: 'ID шаблона обязателен',
+        message: "ID шаблона обязателен",
       });
     }
 
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     if (!template) {
       throw createError({
         statusCode: 404,
-        message: 'Шаблон не найден',
+        message: "Шаблон не найден",
       });
     }
 
@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
     if (!template.templateData) {
       return {
         success: false,
-        message: 'Шаблон не настроен. Откройте визуальный редактор.',
+        message: "Шаблон не настроен. Откройте визуальный редактор.",
         hasTemplate: false,
       };
     }
@@ -46,31 +46,31 @@ export default defineEventHandler(async (event) => {
     // Тестовые данные для preview
     const testContext: VariableContext = {
       student: {
-        id: 'test-student-id',
-        fullName: 'Иванов Иван Иванович',
+        id: "test-student-id",
+        fullName: "Иванов Иван Иванович",
         organization: 'ООО "Тестовая компания"',
-        position: 'Инженер-программист',
-        department: 'IT-отдел',
-        pinfl: '12345678901234',
+        position: "Инженер-программист",
+        department: "IT-отдел",
+        pinfl: "12345678901234",
       },
       course: {
-        id: 'test-course-id',
-        name: 'Повышение квалификации в области информационных технологий',
-        shortName: 'ИТ-специалист',
-        code: 'IT-2024',
+        id: "test-course-id",
+        name: "Повышение квалификации в области информационных технологий",
+        shortName: "ИТ-специалист",
+        code: "IT-2024",
         totalHours: 72,
       },
       group: {
-        id: 'test-group-id',
-        code: 'ПК-2024-001',
-        startDate: new Date('2024-12-01'),
-        endDate: new Date('2024-12-15'),
-        classroom: 'Аудитория 301',
+        id: "test-group-id",
+        code: "ПК-2024-001",
+        startDate: new Date("2024-12-01"),
+        endDate: new Date("2024-12-15"),
+        classroom: "Аудитория 301",
       },
       certificate: {
-        number: 'ATC24_IT_0001',
+        number: "ATC24_IT_0001",
         issueDate: new Date(),
-        verificationUrl: 'https://atc.uz/verify/ATC24_IT_0001',
+        verificationUrl: "https://atc.uz/verify/ATC24_IT_0001",
       },
     };
 
@@ -95,7 +95,10 @@ export default defineEventHandler(async (event) => {
       },
     };
   } catch (error: any) {
-    console.error('[GET /api/certificates/templates/[id]/preview] Error:', error);
+    console.error(
+      "[GET /api/certificates/templates/[id]/preview] Error:",
+      error,
+    );
 
     if (error.statusCode) {
       throw error;
@@ -103,7 +106,7 @@ export default defineEventHandler(async (event) => {
 
     throw createError({
       statusCode: 500,
-      message: error.message || 'Ошибка получения предпросмотра',
+      message: error.message || "Ошибка получения предпросмотра",
     });
   }
 });
