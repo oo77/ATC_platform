@@ -10,7 +10,6 @@ import type { RowDataPacket } from "mysql2/promise";
 interface InstructorRow extends RowDataPacket {
   id: string;
   full_name: string;
-  position: string | null;
   email: string | null;
   is_primary: boolean;
 }
@@ -48,7 +47,6 @@ export default defineEventHandler(async (event) => {
       `SELECT DISTINCT 
         i.id,
         i.full_name,
-        i.position,
         i.email,
         CASE WHEN di.is_primary = 1 THEN true ELSE false END as is_primary
       FROM discipline_instructors di
@@ -63,7 +61,7 @@ export default defineEventHandler(async (event) => {
     const instructors = instructorRows.map((row) => ({
       id: row.id,
       fullName: row.full_name,
-      position: row.position,
+      position: null, // Position column doesn't exist in instructors table
       email: row.email,
       isPrimary: Boolean(row.is_primary),
     }));
