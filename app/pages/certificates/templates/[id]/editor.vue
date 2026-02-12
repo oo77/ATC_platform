@@ -277,6 +277,23 @@ async function handleSave(data: CertificateTemplateData) {
   isSaving.value = true;
 
   try {
+    // Проверяем наличие base64-изображений
+    const hasBase64Images = checkForBase64Images(data);
+    if (hasBase64Images) {
+      console.warn(
+        "[CertificateEditor] ⚠️  Обнаружены base64-изображения в templateData",
+      );
+      console.warn(
+        "   Рекомендуется заменить их на загруженные файлы для уменьшения размера данных",
+      );
+      showNotification(
+        "error",
+        "Обнаружены встроенные изображения. Замените их через кнопку 'Загрузить фон' или 'Изображение' для оптимизации.",
+      );
+      isSaving.value = false;
+      return;
+    }
+
     const response = await authFetch<{
       success: boolean;
       template: CertificateTemplate;
@@ -303,6 +320,29 @@ async function handleSave(data: CertificateTemplateData) {
   } finally {
     isSaving.value = false;
   }
+}
+
+// Проверка наличия base64-изображений
+function checkForBase64Images(data: CertificateTemplateData): boolean {
+  // Проверяем фон
+  if (
+    data.background?.type === "image" &&
+    data.background.value?.startsWith("data:image/")
+  ) {
+    return true;
+  }
+
+  // Проверяем элементы изображений
+  for (const element of data.elements) {
+    if (
+      element.type === "image" &&
+      (element as any).src?.startsWith("data:image/")
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 // Предпросмотр

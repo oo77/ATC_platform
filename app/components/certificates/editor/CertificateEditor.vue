@@ -209,6 +209,7 @@
         @set-background="setBackground"
         @apply-preset="handleApplyPreset"
         :current-layout="templateData.layout"
+        :template-id="templateId"
       />
 
       <!-- Холст -->
@@ -226,6 +227,7 @@
       <!-- Панель свойств справа -->
       <EditorSidebar
         :selected-element="selectedElement"
+        :template-id="templateId"
         @update="handleElementUpdate"
         @delete="deleteSelectedElement"
         @duplicate="handleDuplicate"

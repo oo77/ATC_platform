@@ -560,6 +560,66 @@ export function useCertificateEditor() {
     return JSON.parse(JSON.stringify(templateData.value));
   }
 
+  /**
+   * Загрузить фоновое изображение
+   * @param file - Файл изображения
+   * @param templateId - ID шаблона
+   * @returns URL загруженного изображения
+   */
+  async function uploadBackgroundImage(
+    file: File,
+    templateId: string,
+  ): Promise<string> {
+    const formData = new FormData();
+    formData.append("background", file);
+
+    const { authFetch } = useAuthFetch();
+    const response = await authFetch<{
+      success: boolean;
+      url: string;
+      message: string;
+    }>(`/api/certificates/templates/${templateId}/upload-background`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.success) {
+      throw new Error(response.message || "Ошибка загрузки изображения");
+    }
+
+    return response.url;
+  }
+
+  /**
+   * Загрузить изображение элемента (логотип, печать и т.д.)
+   * @param file - Файл изображения
+   * @param templateId - ID шаблона
+   * @returns URL загруженного изображения
+   */
+  async function uploadElementImage(
+    file: File,
+    templateId: string,
+  ): Promise<string> {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const { authFetch } = useAuthFetch();
+    const response = await authFetch<{
+      success: boolean;
+      url: string;
+      message: string;
+    }>(`/api/certificates/templates/${templateId}/upload-image`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.success) {
+      throw new Error(response.message || "Ошибка загрузки изображения");
+    }
+
+    return response.url;
+  }
+
   return {
     // Состояние
     templateData,
@@ -605,6 +665,10 @@ export function useCertificateEditor() {
     zoomIn,
     zoomOut,
     resetZoom,
+
+    // Методы загрузки изображений
+    uploadBackgroundImage,
+    uploadElementImage,
 
     // Константы
     minZoom,

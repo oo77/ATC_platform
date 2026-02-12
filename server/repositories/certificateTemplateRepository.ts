@@ -287,7 +287,25 @@ export async function updateTemplate(
   // Новые поля для визуального редактора
   if (data.templateData !== undefined) {
     updates.push("template_data = ?");
-    params.push(JSON.stringify(data.templateData));
+    const templateDataJson = JSON.stringify(data.templateData);
+    const sizeInBytes = Buffer.byteLength(templateDataJson, "utf8");
+    const sizeInMB = (sizeInBytes / 1024 / 1024).toFixed(2);
+
+    console.log(
+      `[updateTemplate] templateData size: ${sizeInMB} MB (${sizeInBytes} bytes)`,
+    );
+
+    // Предупреждение, если размер больше 16MB (типичный лимит MySQL)
+    if (sizeInBytes > 16 * 1024 * 1024) {
+      console.warn(
+        `⚠️  [updateTemplate] templateData очень большой (${sizeInMB} MB)! Это может вызвать ошибку max_allowed_packet.`,
+      );
+      console.warn(
+        `   Рекомендуется использовать загрузку изображений через API вместо base64.`,
+      );
+    }
+
+    params.push(templateDataJson);
   }
 
   if (data.layout !== undefined) {

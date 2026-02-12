@@ -384,9 +384,12 @@ import type {
   ShapeType,
   CertificateTemplateData,
 } from "~/types/certificate";
+import { useAuthFetch } from "~/composables/useAuthFetch";
+import { useNotification } from "~/composables/useNotification";
 
 const props = defineProps<{
   currentLayout: TemplateLayout;
+  templateId: string; // Добавляем templateId для загрузки изображений
 }>();
 
 const emit = defineEmits<{
@@ -400,10 +403,15 @@ const emit = defineEmits<{
   (e: "apply-preset", data: CertificateTemplateData): void;
 }>();
 
+const { authFetch } = useAuthFetch();
+const { error: showError } = useNotification();
+
 const showVariableMenu = ref(false);
 const showShapeMenu = ref(false);
 const imageInputRef = ref<HTMLInputElement | null>(null);
 const bgInputRef = ref<HTMLInputElement | null>(null);
+const isUploadingImage = ref(false);
+const isUploadingBackground = ref(false);
 
 // Группировка переменных для удобного отображения
 const variableGroups = computed(() => [
@@ -457,39 +465,79 @@ function handleImageUpload() {
   imageInputRef.value?.click();
 }
 
-function onImageSelected(e: Event) {
+async function onImageSelected(e: Event) {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const src = event.target?.result as string;
-    emit("add-image", src);
-  };
-  reader.readAsDataURL(file);
+  isUploadingImage.value = true;
 
-  // Сброс input для повторной загрузки того же файла
-  input.value = "";
+  try {
+    // Загружаем файл через API
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await authFetch<{
+      success: boolean;
+      url: string;
+      message: string;
+    }>(`/api/certificates/templates/${props.templateId}/upload-image`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.success) {
+      emit("add-image", response.url);
+    } else {
+      throw new Error(response.message || "Ошибка загрузки изображения");
+    }
+  } catch (error: any) {
+    console.error("Error uploading image:", error);
+    showError(error.message || "Ошибка загрузки изображения");
+  } finally {
+    isUploadingImage.value = false;
+    // Сброс input для повторной загрузки того же файла
+    input.value = "";
+  }
 }
 
 function handleBackgroundUpload() {
   bgInputRef.value?.click();
 }
 
-function onBackgroundSelected(e: Event) {
+async function onBackgroundSelected(e: Event) {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const src = event.target?.result as string;
-    emit("set-background", { type: "image", value: src });
-  };
-  reader.readAsDataURL(file);
+  isUploadingBackground.value = true;
 
-  input.value = "";
+  try {
+    // Загружаем файл через API
+    const formData = new FormData();
+    formData.append("background", file);
+
+    const response = await authFetch<{
+      success: boolean;
+      url: string;
+      message: string;
+    }>(`/api/certificates/templates/${props.templateId}/upload-background`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.success) {
+      emit("set-background", { type: "image", value: response.url });
+    } else {
+      throw new Error(response.message || "Ошибка загрузки фона");
+    }
+  } catch (error: any) {
+    console.error("Error uploading background:", error);
+    showError(error.message || "Ошибка загрузки фона");
+  } finally {
+    isUploadingBackground.value = false;
+    input.value = "";
+  }
 }
 
 function setBackgroundColor(color: string) {

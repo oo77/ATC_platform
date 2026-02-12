@@ -820,6 +820,8 @@ import {
   AVAILABLE_VARIABLES,
   AVAILABLE_FONTS,
 } from "~/composables/useCertificateEditor";
+import { useAuthFetch } from "~/composables/useAuthFetch";
+import { useNotification } from "~/composables/useNotification";
 import type {
   TemplateElement,
   TextElement,
@@ -832,6 +834,7 @@ import type {
 
 const props = defineProps<{
   selectedElement: TemplateElement | null;
+  templateId: string; // Добавляем templateId для загрузки изображений
 }>();
 
 const emit = defineEmits<{
@@ -847,7 +850,11 @@ const emit = defineEmits<{
   ): void;
 }>();
 
+const { authFetch } = useAuthFetch();
+const { error: showError } = useNotification();
+
 const imageInputRef = ref<HTMLInputElement | null>(null);
+const isUploadingImage = ref(false);
 
 // Группы переменных
 const variableGroups = computed(() => [
@@ -971,19 +978,39 @@ function handleChangeImage() {
   imageInputRef.value?.click();
 }
 
-function onImageSelected(e: Event) {
+async function onImageSelected(e: Event) {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const src = event.target?.result as string;
-    updateProp("src", src);
-  };
-  reader.readAsDataURL(file);
+  isUploadingImage.value = true;
 
-  input.value = "";
+  try {
+    // Загружаем файл через API
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await authFetch<{
+      success: boolean;
+      url: string;
+      message: string;
+    }>(`/api/certificates/templates/${props.templateId}/upload-image`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.success) {
+      updateProp("src", response.url);
+    } else {
+      throw new Error(response.message || "Ошибка загрузки изображения");
+    }
+  } catch (error: any) {
+    console.error("Error uploading image:", error);
+    showError(error.message || "Ошибка загрузки изображения");
+  } finally {
+    isUploadingImage.value = false;
+    input.value = "";
+  }
 }
 </script>
 
