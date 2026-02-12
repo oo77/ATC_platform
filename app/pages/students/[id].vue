@@ -46,12 +46,8 @@
       <div
         class="bg-white dark:bg-boxdark rounded-2xl shadow-lg overflow-hidden mb-6"
       >
-        <!-- Фоновый градиент -->
-        <div
-          class="h-32 bg-linear-to-r from-primary via-purple-500 to-pink-500 relative"
-        >
-          <div class="absolute inset-0 bg-black/10"></div>
-        </div>
+        <!-- Фоновый фон -->
+        <div class="h-32 bg-white dark:bg-boxdark relative"></div>
 
         <!-- Основная информация -->
         <div class="relative px-8 pb-8">

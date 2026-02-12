@@ -24,6 +24,7 @@ import * as addLanguageToQuestions from "./migrations/20260206_012_add_language_
 import * as fixAiLogsForeignKey from "./migrations/20260206_013_fix_ai_logs_foreign_key";
 import * as addNumberFormatToTemplates from "./migrations/20260209_014_add_number_format_to_templates";
 import * as fixCertificateTemplatesColumns from "./migrations/20260209_015_fix_certificate_templates_columns";
+import * as addUserIdToInstructors from "./migrations/20260212_017_add_user_id_to_instructors";
 
 /**
  * ============================================================================
@@ -194,6 +195,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: fixCertificateTemplatesColumns.up,
     down: fixCertificateTemplatesColumns.down,
     description: fixCertificateTemplatesColumns.description,
+  },
+  // ============================================================
+  // Миграция 017: Add user_id to instructors table
+  // ============================================================
+  {
+    name: "20260212_017_add_user_id_to_instructors",
+    up: addUserIdToInstructors.up,
+    down: addUserIdToInstructors.down,
+    description: addUserIdToInstructors.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже
