@@ -87,8 +87,9 @@ const dbConfig: mysql.PoolOptions = {
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   ssl: getSslConfig(),
-  // Увеличиваем лимит для поддержки больших JSON-данных (шаблоны сертификатов с base64-изображениями)
-  maxAllowedPacket: 67108864, // 64MB
+  // Примечание: max_allowed_packet настраивается на сервере MySQL, а не в клиенте
+  // Для работы с большими данными (шаблоны с изображениями) убедитесь, что на сервере установлено:
+  // SET GLOBAL max_allowed_packet = 67108864; -- 64MB
 };
 
 // Создание пула подключений

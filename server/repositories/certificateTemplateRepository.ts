@@ -67,6 +67,7 @@ interface IssuedCertificateRow extends RowDataPacket {
   // Файлы
   docx_file_url: string | null;
   pdf_file_url: string | null;
+  original_file_url: string | null;
   // Статус и данные
   status: IssuedCertificateStatus;
   variables_data: string | null;
@@ -145,6 +146,7 @@ function mapRowToIssuedCertificate(
     // Файлы
     docxFileUrl: row.docx_file_url,
     pdfFileUrl: row.pdf_file_url,
+    originalFileUrl: row.original_file_url,
     // Статус и данные
     status: row.status,
     variablesData: row.variables_data ? JSON.parse(row.variables_data) : null,

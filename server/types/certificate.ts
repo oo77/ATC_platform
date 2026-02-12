@@ -346,6 +346,7 @@ export interface IssuedCertificate {
   // Файлы
   docxFileUrl: string | null;
   pdfFileUrl: string | null;
+  originalFileUrl: string | null; // Оригинальный файл (для AI-импорта)
 
   // Статус и данные
   status: IssuedCertificateStatus;

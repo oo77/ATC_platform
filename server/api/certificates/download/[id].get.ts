@@ -1,6 +1,6 @@
 /**
  * GET /api/certificates/download/[id]
- * Скачать сертификат (PDF или DOCX)
+ * Скачать сертификат (PDF, DOCX или оригинальный файл)
  */
 
 import * as fs from "fs";
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     const requestedFormat = (query.format as string) || "pdf";
 
     console.log(
-      `[DOWNLOAD] Запрос скачивания сертификата ${id}, формат: ${requestedFormat}`
+      `[DOWNLOAD] Запрос скачивания сертификата ${id}, формат: ${requestedFormat}`,
     );
 
     if (!id) {
@@ -37,23 +37,79 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log(
-      `[DOWNLOAD] Сертификат найден: ${certificate.certificateNumber}`
+      `[DOWNLOAD] Сертификат найден: ${certificate.certificateNumber}, источник: ${certificate.sourceType || "unknown"}`,
     );
 
-    // Определяем имя файла
+    // Стратегии поиска файла
+    const candidates: string[] = [];
     let fileName = "";
-    if (requestedFormat === "docx" && certificate.docxFileUrl) {
-      fileName = path.basename(certificate.docxFileUrl);
-    } else if (certificate.pdfFileUrl) {
-      fileName = path.basename(certificate.pdfFileUrl);
-    }
+    let extension = requestedFormat;
 
-    // Если в URL нет имени файла, пробуем сгенерировать из номера
-    if (!fileName && certificate.certificateNumber) {
-      fileName = `${certificate.certificateNumber.replace(
+    // Для сертификатов, импортированных через AI, используем original_file_url
+    if (certificate.sourceType === "ai_scan" && certificate.originalFileUrl) {
+      console.log(
+        `[DOWNLOAD] AI-сертификат, используем original_file_url: ${certificate.originalFileUrl}`,
+      );
+
+      // Добавляем прямой путь из БД
+      candidates.push(certificate.originalFileUrl);
+
+      // Извлекаем имя файла из пути
+      const originalFileName = path.basename(certificate.originalFileUrl);
+      fileName = originalFileName;
+
+      // Определяем расширение из оригинального файла
+      const fileExt = path.extname(originalFileName).toLowerCase().slice(1);
+      if (fileExt) {
+        extension = fileExt;
+      }
+
+      // Добавляем альтернативные пути
+      candidates.push(
+        path.join("storage", "uploads", "certificates", originalFileName),
+      );
+      candidates.push(path.join("storage", "Certificates", originalFileName));
+    } else {
+      // Для обычных сертификатов используем стандартную логику
+      if (requestedFormat === "docx" && certificate.docxFileUrl) {
+        fileName = path.basename(certificate.docxFileUrl);
+        candidates.push(certificate.docxFileUrl);
+      } else if (certificate.pdfFileUrl) {
+        fileName = path.basename(certificate.pdfFileUrl);
+        candidates.push(certificate.pdfFileUrl);
+      }
+
+      // Если в URL нет имени файла, пробуем сгенерировать из номера
+      if (!fileName && certificate.certificateNumber) {
+        fileName = `${certificate.certificateNumber.replace(
+          /[\/\\:*?"<>|]/g,
+          "_",
+        )}.${requestedFormat}`;
+      }
+
+      // Добавляем стандартные пути поиска
+      candidates.push(path.join("storage", "Certificates", fileName));
+
+      // Сгенерированное имя из номера
+      const generatedName = `${certificate.certificateNumber.replace(
         /[\/\\:*?"<>|]/g,
-        "_"
+        "_",
       )}.${requestedFormat}`;
+      candidates.push(path.join("storage", "Certificates", generatedName));
+
+      // Legacy пути
+      candidates.push(
+        path.join("storage", "Certificates", "generated", fileName),
+      );
+      candidates.push(
+        path.join("storage", "Certificates", "generated", generatedName),
+      );
+
+      // Lowercase варианты
+      candidates.push(path.join("storage", "certificates", fileName));
+      candidates.push(
+        path.join("storage", "certificates", "generated", fileName),
+      );
     }
 
     if (!fileName) {
@@ -63,41 +119,9 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Стратегии поиска файла
-    const candidates: string[] = [];
-
-    // 1. Прямой путь из БД (если есть)
-    if (requestedFormat === "docx" && certificate.docxFileUrl)
-      candidates.push(certificate.docxFileUrl);
-    else if (certificate.pdfFileUrl) candidates.push(certificate.pdfFileUrl);
-
-    // 2. В папке storage/Certificates
-    candidates.push(path.join("storage", "Certificates", fileName));
-
-    // 3. В папке storage/Certificates (сгенерированное имя из номера)
-    const generatedName = `${certificate.certificateNumber.replace(
-      /[\/\\:*?"<>|]/g,
-      "_"
-    )}.${requestedFormat}`;
-    candidates.push(path.join("storage", "Certificates", generatedName));
-
-    // 4. В папке storage/Certificates/generated (legacy)
-    candidates.push(
-      path.join("storage", "Certificates", "generated", fileName)
-    );
-    candidates.push(
-      path.join("storage", "Certificates", "generated", generatedName)
-    );
-
-    // 5. То же самое но с lowercase 'certificates' (на всякий случай)
-    candidates.push(path.join("storage", "certificates", fileName));
-    candidates.push(
-      path.join("storage", "certificates", "generated", fileName)
-    );
-
     let filePath: string | null = null;
-    let extension = requestedFormat;
 
+    // Ищем файл по всем кандидатам
     for (const candidate of candidates) {
       if (!candidate) continue;
 
@@ -108,29 +132,43 @@ export default defineEventHandler(async (event) => {
           : candidate;
       const absPath = path.join(process.cwd(), cleanCandidate);
 
+      console.log(`[DOWNLOAD] Проверяем путь: ${absPath}`);
+
       if (fs.existsSync(absPath)) {
         filePath = absPath;
+        console.log(`[DOWNLOAD] Файл найден: ${absPath}`);
         break;
       }
     }
 
-    // Если не нашли, попробуем поискать рекурсивно в storage/Certificates
+    // Если не нашли, попробуем поискать рекурсивно в storage
     if (!filePath) {
       console.log(
-        `[DOWNLOAD] Файл не найден по стандартным путям. Ищем рекурсивно в storage/Certificates...`
+        `[DOWNLOAD] Файл не найден по стандартным путям. Ищем рекурсивно...`,
       );
-      const searchRoot = path.join(STORAGE_ROOT, "Certificates");
-      const found =
-        findFileRecursively(searchRoot, fileName) ||
-        findFileRecursively(searchRoot, generatedName);
-      if (found) {
-        filePath = found;
+
+      // Для AI-сертификатов ищем в uploads/certificates
+      if (certificate.sourceType === "ai_scan") {
+        const uploadRoot = path.join(STORAGE_ROOT, "uploads", "certificates");
+        const found = findFileRecursively(uploadRoot, fileName);
+        if (found) {
+          filePath = found;
+        }
+      }
+
+      // Если не нашли, ищем в Certificates
+      if (!filePath) {
+        const searchRoot = path.join(STORAGE_ROOT, "Certificates");
+        const found = findFileRecursively(searchRoot, fileName);
+        if (found) {
+          filePath = found;
+        }
       }
     }
 
     if (!filePath) {
       console.error(
-        `[DOWNLOAD] Файл сертификата ${id} не найден. Имя файла: ${fileName}`
+        `[DOWNLOAD] Файл сертификата ${id} не найден. Имя файла: ${fileName}, кандидаты: ${candidates.join(", ")}`,
       );
       throw createError({
         statusCode: 404,
@@ -143,16 +181,23 @@ export default defineEventHandler(async (event) => {
     // Читаем файл
     const fileBuffer = fs.readFileSync(filePath);
 
-    // MIME type
-    const contentType =
-      extension === "docx"
-        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        : "application/pdf";
+    // Определяем MIME type по расширению
+    const mimeTypes: Record<string, string> = {
+      pdf: "application/pdf",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      webp: "image/webp",
+    };
+
+    const contentType = mimeTypes[extension] || "application/octet-stream";
 
     // Имя для скачивания (безопасное)
     const downloadFilename = `Certificate_${certificate.certificateNumber.replace(
       /[\/\\:*?"<>|]/g,
-      "_"
+      "_",
     )}.${extension}`;
 
     // Устанавливаем заголовки
@@ -160,9 +205,14 @@ export default defineEventHandler(async (event) => {
     setHeader(
       event,
       "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(downloadFilename)}"`
+      `attachment; filename="${encodeURIComponent(downloadFilename)}"`,
     );
     setHeader(event, "Content-Length", fileBuffer.length);
+
+    // Логируем успешное скачивание
+    console.log(
+      `[DOWNLOAD] Успешно отдан файл ${downloadFilename}, размер: ${fileBuffer.length} байт`,
+    );
 
     return fileBuffer;
   } catch (error: any) {
