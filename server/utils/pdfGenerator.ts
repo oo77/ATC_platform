@@ -219,6 +219,60 @@ async function generateQRDataUrl(
 }
 
 /**
+ * Конвертировать URL изображения в base64
+ * Если URL относительный (/uploads/...), читаем файл из файловой системы
+ * Если URL уже base64 (data:image/...), возвращаем как есть
+ */
+async function convertImageUrlToBase64(url: string): Promise<string> {
+  // Если уже base64, возвращаем как есть
+  if (url.startsWith("data:image/")) {
+    return url;
+  }
+
+  // Если относительный путь, конвертируем в base64
+  if (url.startsWith("/uploads/")) {
+    try {
+      // Очищаем URL от query параметров
+      const cleanUrl = url.split("?")[0];
+      const publicDir = path.join(process.cwd(), "public");
+      const filePath = path.join(publicDir, cleanUrl);
+
+      // Проверяем существование файла
+      if (!fs.existsSync(filePath)) {
+        console.error(`[pdfGenerator] Image file not found: ${filePath}`);
+        return url; // Возвращаем оригинальный URL
+      }
+
+      // Читаем файл
+      const imageBuffer = fs.readFileSync(filePath);
+      const ext = path.extname(filePath).toLowerCase();
+
+      // Определяем MIME-тип
+      let mimeType = "image/png";
+      if (ext === ".jpg" || ext === ".jpeg") {
+        mimeType = "image/jpeg";
+      } else if (ext === ".png") {
+        mimeType = "image/png";
+      } else if (ext === ".webp") {
+        mimeType = "image/webp";
+      } else if (ext === ".svg") {
+        mimeType = "image/svg+xml";
+      }
+
+      // Конвертируем в base64
+      const base64 = imageBuffer.toString("base64");
+      return `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+      console.error(`[pdfGenerator] Error converting image to base64:`, error);
+      return url; // Возвращаем оригинальный URL в случае ошибки
+    }
+  }
+
+  // Для абсолютных URL возвращаем как есть
+  return url;
+}
+
+/**
  * Конвертировать элемент в HTML
  */
 async function elementToHtml(
@@ -276,13 +330,15 @@ async function elementToHtml(
 
     case "image": {
       const el = element as ImageElement;
+      // Конвертируем URL в base64, если это относительный путь
+      const imageSrc = await convertImageUrlToBase64(el.src);
       const imageStyles = `
         object-fit: ${el.objectFit};
         opacity: ${el.opacity};
         width: 100%;
         height: 100%;
       `;
-      return `<div style="${baseStyles}"><img src="${el.src}" style="${imageStyles}" /></div>`;
+      return `<div style="${baseStyles}"><img src="${imageSrc}" style="${imageStyles}" /></div>`;
     }
 
     case "qr": {
@@ -395,8 +451,12 @@ async function generateCertificateHtml(
     if (templateData.background.type === "color") {
       backgroundStyle = `background-color: ${templateData.background.value};`;
     } else if (templateData.background.type === "image") {
+      // Конвертируем URL в base64, если это относительный путь
+      const backgroundImageUrl = await convertImageUrlToBase64(
+        templateData.background.value,
+      );
       backgroundStyle = `
-        background-image: url(${templateData.background.value});
+        background-image: url(${backgroundImageUrl});
         background-size: cover;
         background-position: center;
       `;
