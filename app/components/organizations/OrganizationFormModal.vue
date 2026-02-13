@@ -27,18 +27,24 @@
           </p>
         </div>
 
-        <!-- Краткое название и Код -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Multilingual Names -->
+        <h4
+          class="font-medium text-black dark:text-white border-b border-stroke dark:border-strokedark pb-2"
+        >
+          Названия на языках (необязательно)
+        </h4>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
-              Краткое название
+              Название (UZ)
             </label>
             <input
-              v-model="form.shortName"
+              v-model="form.nameUz"
               type="text"
-              placeholder="Сокращённое название"
+              placeholder="O'zbek tilida"
               class="w-full rounded-lg border border-stroke bg-transparent py-3 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
             />
           </div>
@@ -47,19 +53,50 @@
             <label
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
-              Код
+              Name (EN)
             </label>
             <input
-              v-model="form.code"
+              v-model="form.nameEn"
               type="text"
-              placeholder="Уникальный код (генерируется автоматически)"
+              placeholder="In English"
               class="w-full rounded-lg border border-stroke bg-transparent py-3 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-              :class="{ 'border-red-500': errors.code }"
             />
-            <p v-if="errors.code" class="mt-1 text-sm text-red-500">
-              {{ errors.code }}
-            </p>
           </div>
+
+          <div>
+            <label
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              Название (RU)
+            </label>
+            <input
+              v-model="form.nameRu"
+              type="text"
+              placeholder="На русском"
+              class="w-full rounded-lg border border-stroke bg-transparent py-3 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+            />
+          </div>
+        </div>
+
+        <div class="border-t border-stroke dark:border-strokedark pt-2"></div>
+
+        <!-- Код -->
+        <div>
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          >
+            Код организации
+          </label>
+          <input
+            v-model="form.code"
+            type="text"
+            placeholder="Уникальный код (генерируется автоматически)"
+            class="w-full rounded-lg border border-stroke bg-transparent py-3 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+            :class="{ 'border-red-500': errors.code }"
+          />
+          <p v-if="errors.code" class="mt-1 text-sm text-red-500">
+            {{ errors.code }}
+          </p>
         </div>
 
         <!-- Телефон и Email -->
@@ -174,7 +211,9 @@ interface Organization {
   id: string;
   code: string;
   name: string;
-  shortName: string | null;
+  nameUz: string | null;
+  nameEn: string | null;
+  nameRu: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
   address: string | null;
@@ -188,7 +227,9 @@ interface Organization {
 interface FormData {
   name: string;
   code: string;
-  shortName: string;
+  nameUz: string;
+  nameEn: string;
+  nameRu: string;
   contactPhone: string;
   contactEmail: string;
   address: string;
@@ -228,7 +269,9 @@ const initForm = () => {
     form.value = {
       name: props.organization.name,
       code: props.organization.code,
-      shortName: props.organization.shortName || "",
+      nameUz: props.organization.nameUz || "",
+      nameEn: props.organization.nameEn || "",
+      nameRu: props.organization.nameRu || "",
       contactPhone: props.organization.contactPhone || "",
       contactEmail: props.organization.contactEmail || "",
       address: props.organization.address || "",
@@ -239,7 +282,9 @@ const initForm = () => {
     form.value = {
       name: "",
       code: "",
-      shortName: "",
+      nameUz: "",
+      nameEn: "",
+      nameRu: "",
       contactPhone: "",
       contactEmail: "",
       address: "",
@@ -257,7 +302,7 @@ watch(
     if (newValue) {
       initForm();
     }
-  }
+  },
 );
 
 onMounted(() => {
@@ -301,11 +346,24 @@ const handleSubmit = async () => {
     if (form.value.code.trim()) {
       data.code = form.value.code.trim();
     }
-    if (form.value.shortName.trim()) {
-      data.shortName = form.value.shortName.trim();
+
+    // Multilingual names
+    if (form.value.nameUz.trim()) {
+      data.nameUz = form.value.nameUz.trim();
     } else {
-      data.shortName = null;
+      data.nameUz = null;
     }
+    if (form.value.nameEn.trim()) {
+      data.nameEn = form.value.nameEn.trim();
+    } else {
+      data.nameEn = null;
+    }
+    if (form.value.nameRu.trim()) {
+      data.nameRu = form.value.nameRu.trim();
+    } else {
+      data.nameRu = null;
+    }
+
     if (form.value.contactPhone.trim()) {
       data.contactPhone = form.value.contactPhone.trim();
     } else {

@@ -380,6 +380,9 @@ export interface IssuedCertificate {
     id: string;
     fullName: string;
     organization: string;
+    organizationUz?: string;
+    organizationEn?: string;
+    organizationRu?: string;
     position: string;
   };
   template?: CertificateTemplate;

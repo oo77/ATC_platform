@@ -90,8 +90,13 @@ interface IssuedCertificateRow extends RowDataPacket {
   created_at: Date;
   updated_at: Date;
   // Joined fields
+  updated_at: Date;
+  // Joined fields
   student_full_name?: string;
   student_organization?: string;
+  student_organization_uz?: string;
+  student_organization_en?: string;
+  student_organization_ru?: string;
   student_position?: string;
   template_name?: string;
 }
@@ -176,6 +181,9 @@ function mapRowToIssuedCertificate(
       id: row.student_id,
       fullName: row.student_full_name,
       organization: row.student_organization || "",
+      organizationUz: row.student_organization_uz || "",
+      organizationEn: row.student_organization_en || "",
+      organizationRu: row.student_organization_ru || "",
       position: row.student_position || "",
     };
   }
@@ -437,9 +445,13 @@ export async function getIssuedCertificatesByGroup(
     `SELECT ic.*, 
             s.full_name as student_full_name,
             s.organization as student_organization,
+            o.name_uz as student_organization_uz,
+            o.name_en as student_organization_en,
+            o.name_ru as student_organization_ru,
             s.position as student_position
      FROM issued_certificates ic
      LEFT JOIN students s ON ic.student_id = s.id
+     LEFT JOIN organizations o ON s.organization_id = o.id
      WHERE ic.group_id = ?
      ORDER BY s.full_name ASC`,
     [groupId],
@@ -458,9 +470,13 @@ export async function getIssuedCertificateById(
     `SELECT ic.*, 
             s.full_name as student_full_name,
             s.organization as student_organization,
+            o.name_uz as student_organization_uz,
+            o.name_en as student_organization_en,
+            o.name_ru as student_organization_ru,
             s.position as student_position
      FROM issued_certificates ic
      LEFT JOIN students s ON ic.student_id = s.id
+     LEFT JOIN organizations o ON s.organization_id = o.id
      WHERE ic.id = ?
      LIMIT 1`,
     [id],
@@ -603,9 +619,13 @@ export async function getCertificateByNumber(
     `SELECT ic.*, 
             s.full_name as student_full_name,
             s.organization as student_organization,
+            o.name_uz as student_organization_uz,
+            o.name_en as student_organization_en,
+            o.name_ru as student_organization_ru,
             s.position as student_position
      FROM issued_certificates ic
      LEFT JOIN students s ON ic.student_id = s.id
+     LEFT JOIN organizations o ON s.organization_id = o.id
      WHERE ic.certificate_number = ?
      LIMIT 1`,
     [certificateNumber],

@@ -52,6 +52,9 @@ export interface StudentRow extends RowDataPacket {
   pinfl: string;
   organization: string;
   organization_id: string | null;
+  name_uz?: string | null;
+  name_en?: string | null;
+  name_ru?: string | null;
   department: string | null;
   position: string;
   created_at: Date;
@@ -111,6 +114,9 @@ function mapRowToStudent(
     fullName: row.full_name,
     pinfl: row.pinfl,
     organization: row.organization,
+    organizationUz: row.name_uz,
+    organizationEn: row.name_en,
+    organizationRu: row.name_ru,
     department: row.department,
     position: row.position,
     certificates,
@@ -497,7 +503,11 @@ export async function getStudentsPaginated(
  */
 export async function getStudentById(id: string): Promise<Student | null> {
   const rows = await executeQuery<StudentRow[]>(
-    "SELECT * FROM students WHERE id = ? LIMIT 1",
+    `SELECT s.*, o.name_uz, o.name_en, o.name_ru 
+     FROM students s
+     LEFT JOIN organizations o ON s.organization_id = o.id 
+     WHERE s.id = ? 
+     LIMIT 1`,
     [id],
   );
 
@@ -577,14 +587,22 @@ export async function createStudent(
   const id = uuidv4();
   const now = new Date();
 
+  // Получаем или создаем организацию
+  const org = await getOrCreateOrganizationByName(data.organization, {
+    nameUz: data.organizationUz,
+    nameEn: data.organizationEn,
+    nameRu: data.organizationRu,
+  });
+
   await executeQuery(
-    `INSERT INTO students (id, full_name, pinfl, organization, department, position, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO students (id, full_name, pinfl, organization, organization_id, department, position, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.fullName,
       data.pinfl,
       data.organization,
+      org.id,
       data.department || null,
       data.position,
       now,
@@ -629,6 +647,15 @@ export async function updateStudent(
   if (data.organization !== undefined) {
     updates.push("organization = ?");
     params.push(data.organization);
+
+    // Обновляем organization_id
+    const org = await getOrCreateOrganizationByName(data.organization, {
+      nameUz: data.organizationUz,
+      nameEn: data.organizationEn,
+      nameRu: data.organizationRu,
+    });
+    updates.push("organization_id = ?");
+    params.push(org.id);
   }
   if (data.department !== undefined) {
     updates.push("department = ?");

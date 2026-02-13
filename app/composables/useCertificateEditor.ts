@@ -43,6 +43,21 @@ export const AVAILABLE_VARIABLES: {
     label: "Организация",
     placeholder: 'ООО "Компания"',
   },
+  {
+    key: "student.organizationUz",
+    label: "Организация (UZ)",
+    placeholder: 'MChJ "Kompaniya"',
+  },
+  {
+    key: "student.organizationEn",
+    label: "Organization (EN)",
+    placeholder: 'LLC "Company"',
+  },
+  {
+    key: "student.organizationRu",
+    label: "Организация (RU)",
+    placeholder: 'ООО "Компания"',
+  },
   { key: "student.position", label: "Должность", placeholder: "Инженер" },
   {
     key: "student.department",

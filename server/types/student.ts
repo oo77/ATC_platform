@@ -14,11 +14,10 @@ export interface StudentCertificate {
   certificateNumber: string;
   fileUrl?: string | null;
   expiryDate?: Date | null;
-  status: 'draft' | 'issued' | 'revoked';
+  status: "draft" | "issued" | "revoked";
   created_at: Date;
   updated_at: Date;
 }
-
 
 // Полная информация о студенте
 export interface Student {
@@ -26,6 +25,9 @@ export interface Student {
   fullName: string;
   pinfl: string;
   organization: string;
+  organizationUz?: string | null;
+  organizationEn?: string | null;
+  organizationRu?: string | null;
   department?: string | null;
   position: string;
   certificates: StudentCertificate[];
@@ -38,6 +40,9 @@ export interface CreateStudentInput {
   fullName: string;
   pinfl: string;
   organization: string;
+  organizationUz?: string;
+  organizationEn?: string;
+  organizationRu?: string;
   department?: string;
   position: string;
 }
@@ -47,6 +52,9 @@ export interface UpdateStudentInput {
   fullName?: string;
   pinfl?: string;
   organization?: string;
+  organizationUz?: string;
+  organizationEn?: string;
+  organizationRu?: string;
   department?: string;
   position?: string;
 }

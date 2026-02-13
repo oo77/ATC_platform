@@ -3,9 +3,13 @@
  * Управление организациями слушателей
  */
 
-import { executeQuery, executeTransaction } from '../utils/db';
-import { v4 as uuidv4 } from 'uuid';
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import { executeQuery, executeTransaction } from "../utils/db";
+import { v4 as uuidv4 } from "uuid";
+import type {
+  PoolConnection,
+  ResultSetHeader,
+  RowDataPacket,
+} from "mysql2/promise";
 
 // ============================================================================
 // ИНТЕРФЕЙСЫ
@@ -14,8 +18,10 @@ import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/prom
 export interface Organization {
   id: string;
   code: string;
-  name: string;
-  shortName: string | null;
+  name: string; // Основное название (обычно RU)
+  nameUz: string | null;
+  nameEn: string | null;
+  nameRu: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
   address: string | null;
@@ -29,7 +35,9 @@ export interface Organization {
 export interface CreateOrganizationInput {
   code?: string;
   name: string;
-  shortName?: string;
+  nameUz?: string;
+  nameEn?: string;
+  nameRu?: string;
   contactPhone?: string;
   contactEmail?: string;
   address?: string;
@@ -40,7 +48,9 @@ export interface CreateOrganizationInput {
 export interface UpdateOrganizationInput {
   code?: string;
   name?: string;
-  shortName?: string | null;
+  nameUz?: string | null;
+  nameEn?: string | null;
+  nameRu?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
   address?: string | null;
@@ -75,7 +85,9 @@ interface OrganizationRow extends RowDataPacket {
   id: string;
   code: string;
   name: string;
-  short_name: string | null;
+  name_uz: string | null;
+  name_en: string | null;
+  name_ru: string | null;
   contact_phone: string | null;
   contact_email: string | null;
   address: string | null;
@@ -99,7 +111,9 @@ function mapRowToOrganization(row: OrganizationRow): Organization {
     id: row.id,
     code: row.code,
     name: row.name,
-    shortName: row.short_name,
+    nameUz: row.name_uz,
+    nameEn: row.name_en,
+    nameRu: row.name_ru,
     contactPhone: row.contact_phone,
     contactEmail: row.contact_email,
     address: row.address,
@@ -115,11 +129,13 @@ function mapRowToOrganization(row: OrganizationRow): Organization {
  * Генерирует код организации из названия
  */
 function generateCodeFromName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-zа-яё0-9\s]/gi, '')
-    .replace(/\s+/g, '_')
-    .substring(0, 100) || uuidv4().substring(0, 8);
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-zа-яё0-9\s]/gi, "")
+      .replace(/\s+/g, "_")
+      .substring(0, 100) || uuidv4().substring(0, 8)
+  );
 }
 
 // ============================================================================
@@ -131,7 +147,7 @@ function generateCodeFromName(name: string): string {
  */
 export async function getAllOrganizations(): Promise<Organization[]> {
   const rows = await executeQuery<OrganizationRow[]>(
-    'SELECT * FROM organizations ORDER BY name ASC'
+    "SELECT * FROM organizations ORDER BY name ASC",
   );
   return rows.map(mapRowToOrganization);
 }
@@ -140,7 +156,7 @@ export async function getAllOrganizations(): Promise<Organization[]> {
  * Получить организации с пагинацией и фильтрами
  */
 export async function getOrganizationsPaginated(
-  params: PaginationParams = {}
+  params: PaginationParams = {},
 ): Promise<PaginatedResult<Organization>> {
   const { page = 1, limit = 20, filters = {} } = params;
   const offset = (page - 1) * limit;
@@ -151,17 +167,26 @@ export async function getOrganizationsPaginated(
   const queryParams: any[] = [];
 
   if (search) {
-    conditions.push('(name LIKE ? OR short_name LIKE ? OR code LIKE ?)');
+    conditions.push(
+      "(name LIKE ? OR name_uz LIKE ? OR name_en LIKE ? OR name_ru LIKE ? OR code LIKE ?)",
+    );
     const searchPattern = `%${search}%`;
-    queryParams.push(searchPattern, searchPattern, searchPattern);
+    queryParams.push(
+      searchPattern,
+      searchPattern,
+      searchPattern,
+      searchPattern,
+      searchPattern,
+    );
   }
 
   if (isActive !== undefined) {
-    conditions.push('is_active = ?');
+    conditions.push("is_active = ?");
     queryParams.push(isActive);
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // Получаем общее количество
   const countQuery = `SELECT COUNT(*) as total FROM organizations ${whereClause}`;
@@ -175,10 +200,11 @@ export async function getOrganizationsPaginated(
     ORDER BY name ASC
     LIMIT ? OFFSET ?
   `;
-  const rows = await executeQuery<OrganizationRow[]>(
-    dataQuery,
-    [...queryParams, limit, offset]
-  );
+  const rows = await executeQuery<OrganizationRow[]>(dataQuery, [
+    ...queryParams,
+    limit,
+    offset,
+  ]);
 
   return {
     data: rows.map(mapRowToOrganization),
@@ -192,10 +218,12 @@ export async function getOrganizationsPaginated(
 /**
  * Получить организацию по ID
  */
-export async function getOrganizationById(id: string): Promise<Organization | null> {
+export async function getOrganizationById(
+  id: string,
+): Promise<Organization | null> {
   const rows = await executeQuery<OrganizationRow[]>(
-    'SELECT * FROM organizations WHERE id = ?',
-    [id]
+    "SELECT * FROM organizations WHERE id = ?",
+    [id],
   );
   return rows.length > 0 ? mapRowToOrganization(rows[0]) : null;
 }
@@ -203,10 +231,12 @@ export async function getOrganizationById(id: string): Promise<Organization | nu
 /**
  * Получить организацию по коду
  */
-export async function getOrganizationByCode(code: string): Promise<Organization | null> {
+export async function getOrganizationByCode(
+  code: string,
+): Promise<Organization | null> {
   const rows = await executeQuery<OrganizationRow[]>(
-    'SELECT * FROM organizations WHERE code = ?',
-    [code]
+    "SELECT * FROM organizations WHERE code = ?",
+    [code],
   );
   return rows.length > 0 ? mapRowToOrganization(rows[0]) : null;
 }
@@ -214,10 +244,12 @@ export async function getOrganizationByCode(code: string): Promise<Organization 
 /**
  * Получить организацию по названию (точное совпадение)
  */
-export async function getOrganizationByName(name: string): Promise<Organization | null> {
+export async function getOrganizationByName(
+  name: string,
+): Promise<Organization | null> {
   const rows = await executeQuery<OrganizationRow[]>(
-    'SELECT * FROM organizations WHERE name = ?',
-    [name.trim()]
+    "SELECT * FROM organizations WHERE name = ?",
+    [name.trim()],
   );
   return rows.length > 0 ? mapRowToOrganization(rows[0]) : null;
 }
@@ -225,13 +257,16 @@ export async function getOrganizationByName(name: string): Promise<Organization 
 /**
  * Поиск организаций по названию (для автокомплита)
  */
-export async function searchOrganizations(query: string, limit: number = 10): Promise<Organization[]> {
+export async function searchOrganizations(
+  query: string,
+  limit: number = 10,
+): Promise<Organization[]> {
   const rows = await executeQuery<OrganizationRow[]>(
     `SELECT * FROM organizations 
-     WHERE name LIKE ? OR short_name LIKE ?
+     WHERE name LIKE ? OR name_uz LIKE ? OR name_en LIKE ? OR name_ru LIKE ?
      ORDER BY name ASC
      LIMIT ?`,
-    [`%${query}%`, `%${query}%`, limit]
+    [`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, limit],
   );
   return rows.map(mapRowToOrganization);
 }
@@ -239,12 +274,15 @@ export async function searchOrganizations(query: string, limit: number = 10): Pr
 /**
  * Проверить существование кода организации
  */
-export async function organizationCodeExists(code: string, excludeId?: string): Promise<boolean> {
-  let query = 'SELECT COUNT(*) as total FROM organizations WHERE code = ?';
+export async function organizationCodeExists(
+  code: string,
+  excludeId?: string,
+): Promise<boolean> {
+  let query = "SELECT COUNT(*) as total FROM organizations WHERE code = ?";
   const params: any[] = [code];
 
   if (excludeId) {
-    query += ' AND id != ?';
+    query += " AND id != ?";
     params.push(excludeId);
   }
 
@@ -255,10 +293,12 @@ export async function organizationCodeExists(code: string, excludeId?: string): 
 /**
  * Создать новую организацию
  */
-export async function createOrganization(data: CreateOrganizationInput): Promise<Organization> {
+export async function createOrganization(
+  data: CreateOrganizationInput,
+): Promise<Organization> {
   const id = uuidv4();
   const now = new Date();
-  
+
   // Генерируем код если не указан
   let code = data.code?.trim();
   if (!code) {
@@ -275,13 +315,15 @@ export async function createOrganization(data: CreateOrganizationInput): Promise
 
   await executeQuery<ResultSetHeader>(
     `INSERT INTO organizations 
-     (id, code, name, short_name, contact_phone, contact_email, address, description, is_active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (id, code, name, name_uz, name_en, name_ru, contact_phone, contact_email, address, description, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       code,
       data.name.trim(),
-      data.shortName?.trim() || null,
+      data.nameUz?.trim() || null,
+      data.nameEn?.trim() || null,
+      data.nameRu?.trim() || null,
       data.contactPhone?.trim() || null,
       data.contactEmail?.trim() || null,
       data.address?.trim() || null,
@@ -289,12 +331,12 @@ export async function createOrganization(data: CreateOrganizationInput): Promise
       data.isActive !== false,
       now,
       now,
-    ]
+    ],
   );
 
   const created = await getOrganizationById(id);
   if (!created) {
-    throw new Error('Failed to create organization');
+    throw new Error("Failed to create organization");
   }
   return created;
 }
@@ -304,7 +346,7 @@ export async function createOrganization(data: CreateOrganizationInput): Promise
  */
 export async function updateOrganization(
   id: string,
-  data: UpdateOrganizationInput
+  data: UpdateOrganizationInput,
 ): Promise<Organization | null> {
   const existing = await getOrganizationById(id);
   if (!existing) {
@@ -315,35 +357,43 @@ export async function updateOrganization(
   const params: any[] = [];
 
   if (data.code !== undefined) {
-    updates.push('code = ?');
+    updates.push("code = ?");
     params.push(data.code.trim());
   }
   if (data.name !== undefined) {
-    updates.push('name = ?');
+    updates.push("name = ?");
     params.push(data.name.trim());
   }
-  if (data.shortName !== undefined) {
-    updates.push('short_name = ?');
-    params.push(data.shortName?.trim() || null);
+  if (data.nameUz !== undefined) {
+    updates.push("name_uz = ?");
+    params.push(data.nameUz?.trim() || null);
+  }
+  if (data.nameEn !== undefined) {
+    updates.push("name_en = ?");
+    params.push(data.nameEn?.trim() || null);
+  }
+  if (data.nameRu !== undefined) {
+    updates.push("name_ru = ?");
+    params.push(data.nameRu?.trim() || null);
   }
   if (data.contactPhone !== undefined) {
-    updates.push('contact_phone = ?');
+    updates.push("contact_phone = ?");
     params.push(data.contactPhone?.trim() || null);
   }
   if (data.contactEmail !== undefined) {
-    updates.push('contact_email = ?');
+    updates.push("contact_email = ?");
     params.push(data.contactEmail?.trim() || null);
   }
   if (data.address !== undefined) {
-    updates.push('address = ?');
+    updates.push("address = ?");
     params.push(data.address?.trim() || null);
   }
   if (data.description !== undefined) {
-    updates.push('description = ?');
+    updates.push("description = ?");
     params.push(data.description?.trim() || null);
   }
   if (data.isActive !== undefined) {
-    updates.push('is_active = ?');
+    updates.push("is_active = ?");
     params.push(data.isActive);
   }
 
@@ -351,13 +401,13 @@ export async function updateOrganization(
     return existing;
   }
 
-  updates.push('updated_at = ?');
+  updates.push("updated_at = ?");
   params.push(new Date());
   params.push(id);
 
   await executeQuery<ResultSetHeader>(
-    `UPDATE organizations SET ${updates.join(', ')} WHERE id = ?`,
-    params
+    `UPDATE organizations SET ${updates.join(", ")} WHERE id = ?`,
+    params,
   );
 
   return getOrganizationById(id);
@@ -369,17 +419,17 @@ export async function updateOrganization(
 export async function deleteOrganization(id: string): Promise<boolean> {
   // Проверяем есть ли связанные студенты
   const studentsCount = await executeQuery<CountRow[]>(
-    'SELECT COUNT(*) as total FROM students WHERE organization_id = ?',
-    [id]
+    "SELECT COUNT(*) as total FROM students WHERE organization_id = ?",
+    [id],
   );
 
   if ((studentsCount[0]?.total || 0) > 0) {
-    throw new Error('Невозможно удалить организацию: есть связанные слушатели');
+    throw new Error("Невозможно удалить организацию: есть связанные слушатели");
   }
 
   const result = await executeQuery<ResultSetHeader>(
-    'DELETE FROM organizations WHERE id = ?',
-    [id]
+    "DELETE FROM organizations WHERE id = ?",
+    [id],
   );
 
   return result.affectedRows > 0;
@@ -388,9 +438,12 @@ export async function deleteOrganization(id: string): Promise<boolean> {
 /**
  * Получить или создать организацию по названию (для импорта)
  */
-export async function getOrCreateOrganizationByName(name: string): Promise<Organization> {
+export async function getOrCreateOrganizationByName(
+  name: string,
+  names?: { nameUz?: string; nameEn?: string; nameRu?: string },
+): Promise<Organization> {
   const trimmedName = name.trim();
-  
+
   // Сначала ищем существующую
   const existing = await getOrganizationByName(trimmedName);
   if (existing) {
@@ -398,18 +451,25 @@ export async function getOrCreateOrganizationByName(name: string): Promise<Organ
   }
 
   // Создаём новую
-  return createOrganization({ name: trimmedName });
+  return createOrganization({
+    name: trimmedName,
+    nameUz: names?.nameUz,
+    nameEn: names?.nameEn,
+    nameRu: names?.nameRu,
+  });
 }
 
 /**
  * Обновить счётчик студентов для организации
  */
-export async function updateStudentsCount(organizationId: string): Promise<void> {
+export async function updateStudentsCount(
+  organizationId: string,
+): Promise<void> {
   await executeQuery<ResultSetHeader>(
     `UPDATE organizations 
      SET students_count = (SELECT COUNT(*) FROM students WHERE organization_id = ?)
      WHERE id = ?`,
-    [organizationId, organizationId]
+    [organizationId, organizationId],
   );
 }
 

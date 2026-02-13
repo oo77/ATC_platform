@@ -204,8 +204,11 @@ export default defineEventHandler(async (event) => {
             id: student.id,
             fullName: student.fullName,
             organization: student.organization,
+            organizationUz: student.organizationUz,
+            organizationEn: student.organizationEn,
+            organizationRu: student.organizationRu,
             position: student.position,
-            department: null,
+            department: student.department || null,
             pinfl: student.pinfl,
           },
           course: {

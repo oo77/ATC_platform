@@ -1,6 +1,9 @@
-import { defineEventHandler, readBody, createError } from 'h3';
-import { createOrganization, organizationCodeExists } from '../../repositories/organizationRepository';
-import { createActivityLog } from '../../repositories/activityLogRepository';
+import { defineEventHandler, readBody, createError } from "h3";
+import {
+  createOrganization,
+  organizationCodeExists,
+} from "../../repositories/organizationRepository";
+import { createActivityLog } from "../../repositories/activityLogRepository";
 
 /**
  * POST /api/organizations
@@ -14,7 +17,7 @@ export default defineEventHandler(async (event) => {
     if (!body.name || !body.name.trim()) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Название организации обязательно',
+        statusMessage: "Название организации обязательно",
       });
     }
 
@@ -24,7 +27,7 @@ export default defineEventHandler(async (event) => {
       if (codeExists) {
         throw createError({
           statusCode: 400,
-          statusMessage: 'Организация с таким кодом уже существует',
+          statusMessage: "Организация с таким кодом уже существует",
         });
       }
     }
@@ -32,7 +35,9 @@ export default defineEventHandler(async (event) => {
     const organization = await createOrganization({
       code: body.code?.trim(),
       name: body.name.trim(),
-      shortName: body.shortName?.trim(),
+      nameUz: body.nameUz?.trim(),
+      nameEn: body.nameEn?.trim(),
+      nameRu: body.nameRu?.trim(),
       contactPhone: body.contactPhone?.trim(),
       contactEmail: body.contactEmail?.trim(),
       address: body.address?.trim(),
@@ -42,9 +47,9 @@ export default defineEventHandler(async (event) => {
 
     // Логирование действия
     await createActivityLog({
-      userId: event.context.user?.id || 'system',
-      actionType: 'CREATE',
-      entityType: 'ORGANIZATION',
+      userId: event.context.user?.id || "system",
+      actionType: "CREATE",
+      entityType: "ORGANIZATION",
       entityId: organization.id,
       entityName: organization.name,
       details: {
@@ -56,18 +61,18 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       data: organization,
-      message: 'Организация успешно создана',
+      message: "Организация успешно создана",
     };
   } catch (error: any) {
-    console.error('Error creating organization:', error);
-    
+    console.error("Error creating organization:", error);
+
     if (error.statusCode) {
       throw error;
     }
 
     throw createError({
       statusCode: 500,
-      statusMessage: 'Ошибка при создании организации',
+      statusMessage: "Ошибка при создании организации",
     });
   }
 });

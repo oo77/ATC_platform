@@ -1,6 +1,10 @@
-import { defineEventHandler, readBody, createError } from 'h3';
-import { updateOrganization, getOrganizationById, organizationCodeExists } from '../../repositories/organizationRepository';
-import { createActivityLog } from '../../repositories/activityLogRepository';
+import { defineEventHandler, readBody, createError } from "h3";
+import {
+  updateOrganization,
+  getOrganizationById,
+  organizationCodeExists,
+} from "../../repositories/organizationRepository";
+import { createActivityLog } from "../../repositories/activityLogRepository";
 
 /**
  * PUT /api/organizations/:id
@@ -13,7 +17,7 @@ export default defineEventHandler(async (event) => {
     if (!id) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'ID организации не указан',
+        statusMessage: "ID организации не указан",
       });
     }
 
@@ -21,7 +25,7 @@ export default defineEventHandler(async (event) => {
     if (!existing) {
       throw createError({
         statusCode: 404,
-        statusMessage: 'Организация не найдена',
+        statusMessage: "Организация не найдена",
       });
     }
 
@@ -31,7 +35,7 @@ export default defineEventHandler(async (event) => {
     if (body.name !== undefined && !body.name.trim()) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Название организации не может быть пустым',
+        statusMessage: "Название организации не может быть пустым",
       });
     }
 
@@ -41,7 +45,7 @@ export default defineEventHandler(async (event) => {
       if (codeExists) {
         throw createError({
           statusCode: 400,
-          statusMessage: 'Организация с таким кодом уже существует',
+          statusMessage: "Организация с таким кодом уже существует",
         });
       }
     }
@@ -49,7 +53,9 @@ export default defineEventHandler(async (event) => {
     const updated = await updateOrganization(id, {
       code: body.code,
       name: body.name,
-      shortName: body.shortName,
+      nameUz: body.nameUz,
+      nameEn: body.nameEn,
+      nameRu: body.nameRu,
       contactPhone: body.contactPhone,
       contactEmail: body.contactEmail,
       address: body.address,
@@ -60,38 +66,38 @@ export default defineEventHandler(async (event) => {
     if (!updated) {
       throw createError({
         statusCode: 500,
-        statusMessage: 'Не удалось обновить организацию',
+        statusMessage: "Не удалось обновить организацию",
       });
     }
 
     // Логирование действия
     await createActivityLog({
-      userId: event.context.user?.id || 'system',
-      actionType: 'UPDATE',
-      entityType: 'ORGANIZATION',
+      userId: event.context.user?.id || "system",
+      actionType: "UPDATE",
+      entityType: "ORGANIZATION",
       entityId: id,
       entityName: updated.name,
       details: {
         name: updated.name,
-        changes: Object.keys(body).filter(k => body[k] !== undefined),
+        changes: Object.keys(body).filter((k) => body[k] !== undefined),
       },
     });
 
     return {
       success: true,
       data: updated,
-      message: 'Организация успешно обновлена',
+      message: "Организация успешно обновлена",
     };
   } catch (error: any) {
-    console.error('Error updating organization:', error);
-    
+    console.error("Error updating organization:", error);
+
     if (error.statusCode) {
       throw error;
     }
 
     throw createError({
       statusCode: 500,
-      statusMessage: 'Ошибка при обновлении организации',
+      statusMessage: "Ошибка при обновлении организации",
     });
   }
 });

@@ -94,19 +94,10 @@
           class="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors cursor-pointer"
           @click="emit('view', organization)"
         >
-          <!-- Название -->
           <td class="py-4 px-4">
-            <div class="flex flex-col">
-              <span class="font-medium text-black dark:text-white">
-                {{ organization.name }}
-              </span>
-              <span
-                v-if="organization.shortName"
-                class="text-sm text-gray-500 dark:text-gray-400"
-              >
-                {{ organization.shortName }}
-              </span>
-            </div>
+            <span class="font-medium text-black dark:text-white">
+              {{ organization.name }}
+            </span>
           </td>
 
           <!-- Код -->
@@ -283,7 +274,9 @@ interface Organization {
   id: string;
   code: string;
   name: string;
-  shortName: string | null;
+  nameUz: string | null;
+  nameEn: string | null;
+  nameRu: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
   address: string | null;

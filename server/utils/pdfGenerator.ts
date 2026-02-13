@@ -30,6 +30,9 @@ export interface VariableContext {
     id: string;
     fullName: string;
     organization: string;
+    organizationUz?: string | null;
+    organizationEn?: string | null;
+    organizationRu?: string | null;
     position: string;
     department?: string | null;
     pinfl: string;
@@ -140,6 +143,12 @@ export function resolveVariable(
       return nameParts[2] || "";
     case "student.organization":
       return student.organization;
+    case "student.organizationUz":
+      return student.organizationUz || "";
+    case "student.organizationEn":
+      return student.organizationEn || "";
+    case "student.organizationRu":
+      return student.organizationRu || "";
     case "student.position":
       return student.position;
     case "student.department":
