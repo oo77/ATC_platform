@@ -205,7 +205,7 @@ export default defineEventHandler(async (event) => {
       // Убрали LIMIT в SQL, чтобы получить полные данные
       const orgQuery = `
                 SELECT 
-                    COALESCE(o.short_name, o.name, s.organization, 'Не указано') as name,
+                    COALESCE(o.name, s.organization, 'Не указано') as name,
                     COUNT(s.id) as count
                 FROM students s
                 LEFT JOIN organizations o ON s.organization_id = o.id

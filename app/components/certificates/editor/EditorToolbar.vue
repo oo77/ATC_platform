@@ -262,6 +262,67 @@
           <div class="layout-preview portrait"></div>
           <span>Книжная</span>
         </button>
+        <button
+          class="layout-btn"
+          :class="{ active: currentLayout === 'custom' }"
+          @click="toggleCustomSize"
+          title="Кастомный размер"
+        >
+          <div class="layout-preview custom">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M3 3h18v18H3z" />
+              <path d="M9 3v18" />
+              <path d="M15 3v18" />
+              <path d="M3 9h18" />
+              <path d="M3 15h18" />
+            </svg>
+          </div>
+          <span>Свой</span>
+        </button>
+      </div>
+
+      <!-- Поля для кастомных размеров -->
+      <div v-if="showCustomSize" class="custom-size-panel">
+        <div class="custom-size-inputs">
+          <div class="size-input-group">
+            <label>Ширина (px)</label>
+            <input
+              type="number"
+              v-model.number="customWidth"
+              @input="validateCustomSize"
+              min="200"
+              max="5000"
+              placeholder="794"
+            />
+          </div>
+          <div class="size-input-group">
+            <label>Высота (px)</label>
+            <input
+              type="number"
+              v-model.number="customHeight"
+              @input="validateCustomSize"
+              min="200"
+              max="5000"
+              placeholder="1123"
+            />
+          </div>
+        </div>
+        <button
+          class="apply-custom-btn"
+          @click="applyCustomSize"
+          :disabled="!isCustomSizeValid"
+        >
+          Применить размер
+        </button>
+        <p class="size-hint">Минимум: 200px, Максимум: 5000px</p>
       </div>
     </div>
 
