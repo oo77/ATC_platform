@@ -90,8 +90,6 @@ interface IssuedCertificateRow extends RowDataPacket {
   created_at: Date;
   updated_at: Date;
   // Joined fields
-  updated_at: Date;
-  // Joined fields
   student_full_name?: string;
   student_organization?: string;
   student_organization_uz?: string;
@@ -390,6 +388,7 @@ export async function deleteTemplate(id: string): Promise<boolean> {
 
 /**
  * Генерировать следующий номер сертификата
+ * Проверяет существующие номера и находит первый свободный
  */
 export async function generateCertificateNumber(
   templateId: string,
@@ -407,27 +406,136 @@ export async function generateCertificateNumber(
     }
 
     const tpl = template[0];
-    const nextNumber = (tpl.last_number || 0) + 1;
     const format = tpl.number_format || "ATC{YY}_{CODE}_{NUM}";
-
-    // Формируем номер
     const now = new Date();
-    const year = now.getFullYear().toString().slice(-2); // "25"
-    const paddedNum = nextNumber.toString().padStart(4, "0"); // "0001"
+    const year = now.getFullYear().toString().slice(-2);
+    const fullYear = now.getFullYear().toString();
 
-    let certificateNumber = format
-      .replace("{YY}", year)
-      .replace("{YYYY}", now.getFullYear().toString())
-      .replace("{CODE}", courseCode)
-      .replace("{NUM}", paddedNum);
+    // Начинаем с last_number + 1, но будем искать первый свободный номер
+    let attemptNumber = (tpl.last_number || 0) + 1;
+    let certificateNumber = "";
+    let maxAttempts = 1000; // Защита от бесконечного цикла
+    let attempts = 0;
 
-    // Обновляем счётчик
+    while (attempts < maxAttempts) {
+      const paddedNum = attemptNumber.toString().padStart(4, "0");
+
+      certificateNumber = format
+        .replace("{YY}", year)
+        .replace("{YYYY}", fullYear)
+        .replace("{CODE}", courseCode)
+        .replace("{NUM}", paddedNum);
+
+      // Проверяем, существует ли уже такой номер
+      const [existing] = await connection.query<RowDataPacket[]>(
+        "SELECT id FROM issued_certificates WHERE certificate_number = ? LIMIT 1",
+        [certificateNumber],
+      );
+
+      if (!existing || existing.length === 0) {
+        // Номер свободен, используем его
+        break;
+      }
+
+      // Номер занят, пробуем следующий
+      console.log(
+        `[generateCertificateNumber] Номер ${certificateNumber} уже существует, пробуем следующий`,
+      );
+      attemptNumber++;
+      attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+      throw new Error(
+        `Не удалось сгенерировать уникальный номер сертификата после ${maxAttempts} попыток`,
+      );
+    }
+
+    // Обновляем счётчик на найденный номер
     await connection.query(
       "UPDATE certificate_templates SET last_number = ?, updated_at = ? WHERE id = ?",
-      [nextNumber, new Date(), templateId],
+      [attemptNumber, new Date(), templateId],
+    );
+
+    console.log(
+      `[generateCertificateNumber] Сгенерирован номер: ${certificateNumber} (попыток: ${attempts + 1})`,
     );
 
     return certificateNumber;
+  });
+}
+
+/**
+ * Синхронизировать счетчик номеров с реальными данными
+ * Полезно после импорта сертификатов или если счетчик сбился
+ */
+export async function syncCertificateNumberCounter(
+  templateId: string,
+): Promise<{ oldCounter: number; newCounter: number; synced: boolean }> {
+  return executeTransaction(async (connection) => {
+    // Получаем текущий счетчик
+    const [template] = await connection.query<TemplateRow[]>(
+      "SELECT last_number, number_format FROM certificate_templates WHERE id = ? FOR UPDATE",
+      [templateId],
+    );
+
+    if (!template || template.length === 0) {
+      throw new Error("Шаблон не найден");
+    }
+
+    const oldCounter = template[0].last_number || 0;
+    const format = template[0].number_format || "ATC{YY}_{CODE}_{NUM}";
+
+    // Извлекаем паттерн для поиска номеров этого шаблона
+    // Например: "ATC{YY}_{CODE}_{NUM}" -> "ATC%"
+    const searchPattern = format.split("{")[0] + "%";
+
+    // Находим максимальный номер среди существующих сертификатов
+    const [maxCerts] = await connection.query<RowDataPacket[]>(
+      `SELECT certificate_number 
+       FROM issued_certificates 
+       WHERE template_id = ? AND certificate_number LIKE ?
+       ORDER BY certificate_number DESC
+       LIMIT 100`,
+      [templateId, searchPattern],
+    );
+
+    let maxNumber = 0;
+
+    if (maxCerts && maxCerts.length > 0) {
+      // Извлекаем числовую часть из каждого номера
+      for (const cert of maxCerts) {
+        const certNumber = cert.certificate_number;
+        // Ищем последовательность цифр в конце номера
+        const match = certNumber.match(/_(\d+)$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNumber) {
+            maxNumber = num;
+          }
+        }
+      }
+    }
+
+    const newCounter = Math.max(oldCounter, maxNumber);
+    const synced = newCounter !== oldCounter;
+
+    if (synced) {
+      await connection.query(
+        "UPDATE certificate_templates SET last_number = ?, updated_at = ? WHERE id = ?",
+        [newCounter, new Date(), templateId],
+      );
+
+      console.log(
+        `[syncCertificateNumberCounter] Счетчик обновлен: ${oldCounter} -> ${newCounter}`,
+      );
+    } else {
+      console.log(
+        `[syncCertificateNumberCounter] Счетчик актуален: ${oldCounter}`,
+      );
+    }
+
+    return { oldCounter, newCounter, synced };
   });
 }
 

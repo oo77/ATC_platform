@@ -65,6 +65,7 @@
           :class="{ 'border-red-500': errors.language }"
         >
           <option value="ru">Русский</option>
+          <option value="uz">O'zbekcha</option>
           <option value="en">English</option>
           <option value="kk">Қазақша</option>
         </select>

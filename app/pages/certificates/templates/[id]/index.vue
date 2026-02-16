@@ -355,6 +355,33 @@
                   formatDate(template.updatedAt)
                 }}</span>
               </div>
+
+              <!-- Кнопка синхронизации счетчика -->
+              <UiButton
+                variant="outline"
+                class="w-full"
+                @click="syncCounter"
+                :loading="isSyncingCounter"
+              >
+                <svg
+                  class="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Синхронизировать счетчик
+              </UiButton>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                Используйте, если счетчик сбился после импорта или возникли
+                дубликаты номеров
+              </p>
             </div>
           </div>
 
@@ -547,6 +574,7 @@ const isSavingFormat = ref(false);
 const isTogglingActive = ref(false);
 const isDeleting = ref(false);
 const isDuplicating = ref(false);
+const isSyncingCounter = ref(false);
 
 // Computed
 const id = computed(() => route.params.id as string);
@@ -784,6 +812,43 @@ const duplicateTemplate = async () => {
     showError(e.data?.message || e.message || "Ошибка дублирования");
   } finally {
     isDuplicating.value = false;
+  }
+};
+
+// Sync counter
+const syncCounter = async () => {
+  if (!template.value) return;
+
+  isSyncingCounter.value = true;
+  try {
+    const response = await authFetch<{
+      success: boolean;
+      data: {
+        oldCounter: number;
+        newCounter: number;
+        synced: boolean;
+      };
+      message: string;
+    }>(`/api/certificates/templates/${id.value}/sync-counter`, {
+      method: "POST",
+    });
+
+    if (response.success) {
+      showSuccess(response.message);
+
+      // Обновляем lastNumber в шаблоне
+      if (template.value) {
+        template.value.lastNumber = response.data.newCounter;
+      }
+
+      // Перезагружаем шаблон для актуализации данных
+      await loadTemplate();
+    }
+  } catch (e: any) {
+    console.error("Sync counter error:", e);
+    showError(e.data?.message || e.message || "Ошибка синхронизации счетчика");
+  } finally {
+    isSyncingCounter.value = false;
   }
 };
 

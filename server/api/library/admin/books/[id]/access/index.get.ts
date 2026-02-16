@@ -63,15 +63,18 @@ export default defineEventHandler(async (event) => {
         u.name,
         u.email,
         gbu.name as granted_by_username,
-        (SELECT COUNT(*) FROM book_reading_sessions WHERE book_id = ? AND user_id = ba.user_id) as sessions_count,
-        (SELECT MAX(last_page_read) FROM book_reading_progress WHERE book_id = ? AND user_id = ba.user_id) as last_page_read,
-        (SELECT MAX(updated_at) FROM book_reading_progress WHERE book_id = ? AND user_id = ba.user_id) as last_read_at
+        COUNT(DISTINCT brs.id) as sessions_count,
+        MAX(brp.last_page) as last_page_read,
+        MAX(brp.last_read_at) as last_read_at
       FROM book_access ba
       LEFT JOIN users u ON ba.user_id = u.id
       LEFT JOIN users gbu ON ba.granted_by = gbu.id
+      LEFT JOIN book_reading_sessions brs ON brs.book_id = ? AND brs.user_id = ba.user_id
+      LEFT JOIN book_reading_progress brp ON brp.book_id = ? AND brp.user_id = ba.user_id
       WHERE ba.book_id = ?
+      GROUP BY ba.id, ba.user_id, ba.role_name, ba.created_at, ba.expires_at, u.name, u.email, gbu.name
       ORDER BY ba.created_at DESC`,
-      [bookId, bookId, bookId, bookId],
+      [bookId, bookId, bookId],
     );
 
     console.log(

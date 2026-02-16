@@ -85,7 +85,7 @@ export default defineEventHandler(async (event) => {
     const countQuery = `
       SELECT COUNT(*) as count
       FROM books
-      ${whereClause}
+      ${whereClause ? whereClause + " AND books.deleted_at IS NULL" : "WHERE books.deleted_at IS NULL"}
     `;
     const countResult = await executeQuery<any[]>(countQuery, params);
     const totalBooks = countResult[0]?.count || 0;
@@ -143,7 +143,7 @@ export default defineEventHandler(async (event) => {
         id: book.id,
         title: book.title,
         author: book.author,
-        description: book.description,
+        description: book.description || null,
         isbn: book.isbn,
         publisher: book.publisher,
         publishedYear: book.published_year,
@@ -152,7 +152,7 @@ export default defineEventHandler(async (event) => {
         pageCount: book.page_count,
         fileSize: book.file_size,
         coverPath: book.cover_path,
-        cover_url: book.cover_path, // Frontend uses cover_url and cover_path
+        cover_url: book.cover_path ? `/api/library/covers/${book.id}` : null,
         status: book.status === "error" ? "failed" : book.status,
         errorMessage: book.error_message,
         uploadedBy: {

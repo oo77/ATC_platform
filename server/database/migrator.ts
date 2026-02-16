@@ -26,6 +26,8 @@ import * as addNumberFormatToTemplates from "./migrations/20260209_014_add_numbe
 import * as fixCertificateTemplatesColumns from "./migrations/20260209_015_fix_certificate_templates_columns";
 import * as addUserIdToInstructors from "./migrations/20260212_017_add_user_id_to_instructors";
 import * as addOrganizationLanguages from "./migrations/20260213_018_add_organization_languages";
+import * as addCertificateValidityToCourses from "./migrations/20260216_019_add_certificate_validity_to_courses";
+import * as faceRecognitionSystem from "./migrations/20260216_020_face_recognition_system";
 
 /**
  * ============================================================================
@@ -214,6 +216,24 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: addOrganizationLanguages.up,
     down: addOrganizationLanguages.down,
     description: addOrganizationLanguages.description,
+  },
+  // ============================================================
+  // Миграция 019: Add certificate_validity_months to courses
+  // ============================================================
+  {
+    name: "20260216_019_add_certificate_validity_to_courses",
+    up: addCertificateValidityToCourses.up,
+    down: addCertificateValidityToCourses.down,
+    description: addCertificateValidityToCourses.description,
+  },
+  // ============================================================
+  // Миграция 020: Face Recognition System
+  // ============================================================
+  {
+    name: "20260216_020_face_recognition_system",
+    up: faceRecognitionSystem.up,
+    down: faceRecognitionSystem.down,
+    description: faceRecognitionSystem.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

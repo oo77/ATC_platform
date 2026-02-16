@@ -301,6 +301,7 @@
             >
               <option value="">Все языки</option>
               <option value="ru">Русский</option>
+              <option value="uz">O'zbekcha</option>
               <option value="en">English</option>
               <option value="kk">Қазақша</option>
             </select>
@@ -352,114 +353,147 @@
         <p class="mt-2">Загрузите первую книгу в библиотеку</p>
       </div>
 
+      <!-- Таблица книг -->
       <div v-else class="overflow-x-auto">
         <table class="w-full">
-          <thead>
-            <tr
-              class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-            >
+          <thead class="bg-gray-50 dark:bg-meta-4">
+            <tr class="border-b border-stroke dark:border-strokedark">
               <th
-                class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                class="px-4 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
               >
-                Книга
+                Обложка
               </th>
               <th
-                class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                class="px-4 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
               >
-                Автор
+                Название / Автор
               </th>
               <th
-                class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                class="px-4 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
               >
-                Страниц
+                Язык
               </th>
               <th
-                class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                class="px-4 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+              >
+                Страницы
+              </th>
+              <th
+                class="px-4 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
               >
                 Статус
               </th>
               <th
-                class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                class="px-4 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
               >
-                Загружено
+                Читатели
               </th>
               <th
-                class="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                class="px-4 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+              >
+                Дата загрузки
+              </th>
+              <th
+                class="px-4 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
               >
                 Действия
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody class="divide-y divide-stroke dark:divide-strokedark">
             <tr
               v-for="book in books"
               :key="book.id"
-              class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              class="hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
             >
-              <!-- Книга -->
-              <td class="px-6 py-4">
-                <div class="flex items-center gap-3">
+              <!-- Обложка -->
+              <td class="px-4 py-3">
+                <div
+                  class="h-16 w-12 rounded bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0"
+                >
+                  <img
+                    v-if="book.cover_url"
+                    :src="book.cover_url"
+                    :alt="book.title"
+                    class="h-full w-full object-cover"
+                  />
                   <div
-                    class="h-16 w-12 rounded bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0"
+                    v-else
+                    class="h-full w-full flex items-center justify-center bg-primary/10"
                   >
-                    <img
-                      v-if="book.cover_url"
-                      :src="book.cover_url"
-                      :alt="book.title"
-                      class="h-full w-full object-cover"
-                    />
-                    <div
-                      v-else
-                      class="h-full w-full flex items-center justify-center"
+                    <svg
+                      class="w-6 h-6 text-primary/40"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      <svg
-                        class="w-6 h-6 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                  <div class="min-w-0">
-                    <div class="font-medium text-gray-900 dark:text-white">
-                      {{ book.title }}
-                    </div>
-                    <div
-                      v-if="book.description"
-                      class="text-sm text-gray-500 dark:text-gray-400 line-clamp-1"
-                    >
-                      {{ book.description }}
-                    </div>
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+                      />
+                    </svg>
                   </div>
                 </div>
               </td>
 
-              <!-- Автор -->
-              <td class="px-6 py-4">
-                <span class="text-sm text-gray-900 dark:text-white">
-                  {{ book.author || "—" }}
+              <!-- Название / Автор -->
+              <td class="px-4 py-3">
+                <div class="max-w-md">
+                  <p
+                    class="font-semibold text-gray-900 dark:text-white line-clamp-2"
+                  >
+                    {{ book.title }}
+                  </p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {{ book.author || "Автор не указан" }}
+                  </p>
+                  <p
+                    v-if="book.description"
+                    class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1"
+                  >
+                    {{ book.description }}
+                  </p>
+                </div>
+              </td>
+
+              <!-- Язык -->
+              <td class="px-4 py-3">
+                <span
+                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                >
+                  {{ getLanguageLabel(book.language) }}
                 </span>
               </td>
 
-              <!-- Страниц -->
-              <td class="px-6 py-4 text-center">
-                <span class="text-sm text-gray-900 dark:text-white">
-                  {{ book.total_pages || 0 }}
-                </span>
+              <!-- Страницы -->
+              <td class="px-4 py-3 text-center">
+                <div class="flex items-center justify-center gap-1">
+                  <svg
+                    class="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span class="text-sm text-gray-900 dark:text-white">
+                    {{ book.total_pages || 0 }}
+                  </span>
+                </div>
               </td>
 
               <!-- Статус -->
-              <td class="px-6 py-4">
+              <td class="px-4 py-3 text-center">
                 <span
                   :class="[
-                    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                    'inline-flex items-center rounded-full px-3 py-1 text-xs font-medium',
                     book.status === 'ready'
                       ? 'bg-success/10 text-success'
                       : book.status === 'processing'
@@ -471,16 +505,38 @@
                 </span>
               </td>
 
-              <!-- Загружено -->
-              <td class="px-6 py-4">
-                <span class="text-sm text-gray-500 dark:text-gray-400">
+              <!-- Читатели -->
+              <td class="px-4 py-3 text-center">
+                <div class="flex items-center justify-center gap-1">
+                  <svg
+                    class="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  <span class="text-sm text-gray-900 dark:text-white">
+                    {{ book.readers_count || 0 }}
+                  </span>
+                </div>
+              </td>
+
+              <!-- Дата загрузки -->
+              <td class="px-4 py-3">
+                <span class="text-sm text-gray-600 dark:text-gray-400">
                   {{ formatDate(book.created_at) }}
                 </span>
               </td>
 
               <!-- Действия -->
-              <td class="px-6 py-4 text-right">
-                <div class="flex items-center justify-end gap-2">
+              <td class="px-4 py-3">
+                <div class="flex items-center justify-center gap-1">
                   <button
                     @click="viewAnalytics(book)"
                     class="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
@@ -596,7 +652,7 @@
           :limit="pagination.limit"
           @update:page="handlePageChange"
           @update:limit="
-            (l) => {
+            (l: number) => {
               pagination.limit = l;
               fetchBooks();
             }
@@ -671,6 +727,7 @@ interface Book {
   total_pages: number;
   status: "processing" | "ready" | "failed";
   created_at: string;
+  readers_count?: number;
 }
 
 interface Pagination {
@@ -729,11 +786,11 @@ const fetchBooks = async () => {
       ...(filters.value.language && { language: filters.value.language }),
     });
 
-    const response = await $fetch<{
+    const response = (await $fetch(`/api/library/admin/books?${params}`)) as {
       books: Book[];
       total: number;
       stats: { ready: number; processing: number; failed: number };
-    }>(`/api/library/admin/books?${params}`);
+    };
     books.value = response.books;
     pagination.value.total = response.total;
     stats.value = response.stats;
@@ -868,6 +925,18 @@ const formatDate = (date: string) => {
     month: "2-digit",
     year: "numeric",
   });
+};
+
+const getLanguageLabel = (lang: string | null) => {
+  if (!lang) return "—";
+
+  const labels: Record<string, string> = {
+    ru: "🇷🇺 Русский",
+    uz: "🇺🇿 O'zbekcha",
+    en: "🇬🇧 English",
+    kk: "🇰🇿 Қазақша",
+  };
+  return labels[lang] || lang.toUpperCase();
 };
 
 // Lifecycle

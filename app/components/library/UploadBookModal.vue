@@ -223,6 +223,7 @@
           >
             <option value="">Выберите язык</option>
             <option value="ru">Русский</option>
+            <option value="uz">O'zbekcha</option>
             <option value="en">English</option>
             <option value="kk">Қазақша</option>
           </select>

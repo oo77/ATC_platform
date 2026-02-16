@@ -339,11 +339,10 @@ const fetchAnalytics = async () => {
 
   loading.value = true;
   try {
-    const response = await $fetch<
-      Analytics | { success: boolean; data: Analytics }
-    >(`/api/library/admin/books/${props.book.id}/analytics`);
-    // Обработка разных форматов ответа
-    analytics.value = "data" in response ? response.data : response;
+    const response = await $fetch<Analytics>(
+      `/api/library/admin/books/${props.book.id}/analytics`,
+    );
+    analytics.value = response;
   } catch (error: any) {
     toast.error(error.data?.message || "Ошибка загрузки аналитики");
   } finally {

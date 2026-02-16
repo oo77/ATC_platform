@@ -46,6 +46,7 @@
           >
             <option value="">Все языки</option>
             <option value="ru">🇷🇺 Русский</option>
+            <option value="uz">🇺🇿 O'zbekcha</option>
             <option value="en">🇬🇧 English</option>
             <option value="kk">🇰🇿 Қазақша</option>
           </select>
@@ -103,110 +104,164 @@
       </p>
     </div>
 
-    <!-- Сетка книг -->
+    <!-- Таблица книг -->
     <div
       v-else
-      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+      class="bg-white dark:bg-boxdark rounded-xl shadow-md overflow-hidden"
     >
-      <div
-        v-for="book in books"
-        :key="book.id"
-        class="group bg-white dark:bg-boxdark rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
-        @click="openBook(book)"
-      >
-        <!-- Обложка -->
-        <div
-          class="relative aspect-3/4 bg-gray-100 dark:bg-gray-800 overflow-hidden"
-        >
-          <img
-            v-if="book.cover_url"
-            :src="book.cover_url"
-            :alt="book.title"
-            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-          <div
-            v-else
-            class="w-full h-full flex items-center justify-center bg-linear-to-br from-primary/20 to-primary/5"
-          >
-            <svg
-              class="w-20 h-20 text-primary/40"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1.5"
-                d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-              />
-            </svg>
-          </div>
-
-          <!-- Прогресс чтения -->
-          <div
-            v-if="book.progress && book.progress.current_page > 0"
-            class="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/80 to-transparent p-3"
-          >
-            <div class="flex items-center gap-2 text-white text-xs mb-1">
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                <path
-                  fill-rule="evenodd"
-                  d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-              <span>
-                {{ book.progress.current_page }} / {{ book.total_pages }}
-              </span>
-            </div>
-            <div class="w-full bg-white/20 rounded-full h-1">
-              <div
-                class="bg-white rounded-full h-1 transition-all duration-300"
-                :style="{
-                  width: `${(book.progress.current_page / book.total_pages) * 100}%`,
-                }"
-              ></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Информация -->
-        <div class="p-4">
-          <h3
-            class="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2 group-hover:text-primary transition-colors"
-          >
-            {{ book.title }}
-          </h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-            {{ book.author || "Автор не указан" }}
-          </p>
-
-          <div
-            class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400"
-          >
-            <div class="flex items-center gap-1">
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-50 dark:bg-meta-4">
+            <tr class="border-b border-stroke dark:border-strokedark">
+              <th
+                class="px-4 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                />
-              </svg>
-              <span>{{ book.total_pages }} стр.</span>
-            </div>
-            <span class="text-xs font-medium">
-              {{ getLanguageLabel(book.language) }}
-            </span>
-          </div>
-        </div>
+                Обложка
+              </th>
+              <th
+                class="px-4 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+              >
+                Название / Автор
+              </th>
+              <th
+                class="px-4 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+              >
+                Язык
+              </th>
+              <th
+                class="px-4 py-4 text-center text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+              >
+                Страницы
+              </th>
+              <th
+                class="px-4 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+              >
+                Прогресс
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-stroke dark:divide-strokedark">
+            <tr
+              v-for="book in books"
+              :key="book.id"
+              class="hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors cursor-pointer"
+              @click="openBook(book)"
+            >
+              <!-- Обложка -->
+              <td class="px-4 py-3">
+                <div
+                  class="h-16 w-12 rounded bg-gray-100 dark:bg-gray-800 overflow-hidden shrink-0"
+                >
+                  <img
+                    v-if="book.cover_url"
+                    :src="book.cover_url"
+                    :alt="book.title"
+                    class="h-full w-full object-cover"
+                  />
+                  <div
+                    v-else
+                    class="h-full w-full flex items-center justify-center bg-primary/10"
+                  >
+                    <svg
+                      class="w-6 h-6 text-primary/40"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Название / Автор -->
+              <td class="px-4 py-3">
+                <div class="max-w-md">
+                  <p
+                    class="font-semibold text-gray-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors"
+                  >
+                    {{ book.title }}
+                  </p>
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {{ book.author || "Автор не указан" }}
+                  </p>
+                </div>
+              </td>
+
+              <!-- Язык -->
+              <td class="px-4 py-3">
+                <span
+                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                >
+                  {{ getLanguageLabel(book.language) }}
+                </span>
+              </td>
+
+              <!-- Страницы -->
+              <td class="px-4 py-3 text-center">
+                <div class="flex items-center justify-center gap-1">
+                  <svg
+                    class="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span class="text-sm text-gray-900 dark:text-white">
+                    {{ book.total_pages }}
+                  </span>
+                </div>
+              </td>
+
+              <!-- Прогресс -->
+              <td class="px-4 py-3">
+                <div v-if="book.progress && book.progress.current_page > 0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <svg
+                      class="w-4 h-4 text-gray-400"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                      <path
+                        fill-rule="evenodd"
+                        d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                      {{ book.progress.current_page }} / {{ book.total_pages }}
+                    </span>
+                  </div>
+                  <div
+                    class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2"
+                  >
+                    <div
+                      class="bg-primary rounded-full h-2 transition-all duration-300"
+                      :style="{
+                        width: `${(book.progress.current_page / book.total_pages) * 100}%`,
+                      }"
+                    ></div>
+                  </div>
+                </div>
+                <span v-else class="text-sm text-gray-500 dark:text-gray-400">
+                  Не начата
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -222,7 +277,7 @@
         :limit="pagination.limit"
         @update:page="handlePageChange"
         @update:limit="
-          (l) => {
+          (l: number) => {
             pagination.limit = l;
             fetchBooks();
           }
@@ -329,6 +384,7 @@ const getLanguageLabel = (lang: string | null) => {
 
   const labels: Record<string, string> = {
     ru: "🇷🇺 RU",
+    uz: "🇺🇿 UZ",
     en: "🇬🇧 EN",
     kk: "🇰🇿 KK",
   };

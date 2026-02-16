@@ -60,130 +60,94 @@ export default defineEventHandler(async (event) => {
       `SELECT 
          COUNT(DISTINCT user_id) as unique_readers,
          COUNT(*) as total_sessions,
-         SUM(CASE WHEN ended_at IS NULL THEN 1 ELSE 0 END) as active_sessions,
-         AVG(CASE WHEN ended_at IS NOT NULL THEN TIMESTAMPDIFF(SECOND, started_at, ended_at) END) as avg_session_duration,
-         MAX(CASE WHEN ended_at IS NOT NULL THEN TIMESTAMPDIFF(SECOND, started_at, ended_at) END) as max_session_duration,
-         MIN(started_at) as first_read_at,
-         MAX(started_at) as last_read_at
+         SUM(CASE WHEN ended_at IS NULL THEN 1 ELSE 0 END) as active_sessions
        FROM book_reading_sessions
        WHERE book_id = ?`,
       [bookId],
     );
     const stats = generalStats[0];
 
-    // Топ читателей (по количеству сессий)
-    const [topReaders] = await db.execute<RowDataPacket[]>(
-      `SELECT 
-         u.id,
-         u.name,
-         u.email,
-         COUNT(*) as sessions_count,
-         SUM(CASE WHEN s.ended_at IS NOT NULL THEN TIMESTAMPDIFF(SECOND, s.started_at, s.ended_at) ELSE 0 END) as total_time,
-         MAX(s.started_at) as last_session_at
-       FROM book_reading_sessions s
-       JOIN users u ON s.user_id = u.id
-       WHERE s.book_id = ?
-       GROUP BY u.id, u.name, u.email
-       ORDER BY sessions_count DESC
-       LIMIT 10`,
-      [bookId],
-    );
-
-    // Прогресс чтения пользователей
-    const [readingProgress] = await db.execute<RowDataPacket[]>(
-      `SELECT 
-         u.name,
-         p.last_page,
-         p.last_read_at as updated_at,
-         ROUND((p.last_page / ?) * 100) as progress_percent
-       FROM book_reading_progress p
-       JOIN users u ON p.user_id = u.id
-       WHERE p.book_id = ?
-       ORDER BY p.last_page DESC
-       LIMIT 10`,
-      [book.total_pages, bookId],
-    );
-
-    // Динамика чтения по дням (последние 30 дней)
-    const [readingDynamics] = await db.execute<RowDataPacket[]>(
-      `SELECT 
-         DATE(started_at) as date,
-         COUNT(DISTINCT user_id) as unique_readers,
-         COUNT(*) as sessions_count
-       FROM book_reading_sessions
-       WHERE book_id = ? AND started_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-       GROUP BY DATE(started_at)
-       ORDER BY date ASC`,
-      [bookId],
-    );
-
     // Статистика завершенности чтения
     const [completionStatsResult] = await db.execute<RowDataPacket[]>(
       `SELECT 
          COUNT(*) as total_readers,
          SUM(CASE WHEN last_page >= ? THEN 1 ELSE 0 END) as completed_readers,
-         SUM(CASE WHEN last_page >= ? * 0.5 THEN 1 ELSE 0 END) as half_completed,
-         AVG(last_page) as avg_page_reached,
          AVG((last_page / ?) * 100) as avg_progress_percent
        FROM book_reading_progress
        WHERE book_id = ?`,
-      [book.total_pages, book.total_pages, book.total_pages, bookId],
+      [book.total_pages, book.total_pages, bookId],
     );
     const completionStats = completionStatsResult[0];
 
-    console.log(`[Library] Analytics generated for book ${bookId}`);
+    // Активные читатели (с прогрессом)
+    const [activeReadersData] = await db.execute<RowDataPacket[]>(
+      `SELECT 
+         u.id as userId,
+         u.name as userName,
+         p.last_page as currentPage,
+         ROUND((p.last_page / ?) * 100) as progress,
+         p.last_read_at as lastActivity
+       FROM book_reading_progress p
+       JOIN users u ON p.user_id = u.id
+       WHERE p.book_id = ?
+       ORDER BY p.last_read_at DESC
+       LIMIT 10`,
+      [book.total_pages, bookId],
+    );
+
+    // Последние сессии чтения
+    const [recentSessionsData] = await db.execute<RowDataPacket[]>(
+      `SELECT 
+         s.id,
+         u.name as userName,
+         s.started_at as startedAt,
+         s.ended_at as endedAt,
+         CASE 
+           WHEN s.ended_at IS NOT NULL 
+           THEN TIMESTAMPDIFF(SECOND, s.started_at, s.ended_at)
+           ELSE TIMESTAMPDIFF(SECOND, s.started_at, NOW())
+         END as duration
+       FROM book_reading_sessions s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.book_id = ?
+       ORDER BY s.started_at DESC
+       LIMIT 20`,
+      [bookId],
+    );
+
+    console.log(
+      `[Library] Analytics generated for book ${bookId} by user ${user.id} (${user.role}):`,
+      {
+        totalViews: Number(stats.total_sessions || 0),
+        uniqueReaders: Number(stats.unique_readers || 0),
+        completedReaders: Number(completionStats?.completed_readers || 0),
+        averageProgress: Math.round(
+          Number(completionStats?.avg_progress_percent || 0),
+        ),
+      },
+    );
 
     return {
-      success: true,
-      data: {
-        book: {
-          id: book.id,
-          title: book.title,
-          author: book.author,
-          pageCount: book.total_pages,
-        },
-        general: {
-          uniqueReaders: Number(stats.unique_readers || 0),
-          totalSessions: Number(stats.total_sessions || 0),
-          activeSessions: Number(stats.active_sessions || 0),
-          avgSessionDuration: Math.round(
-            Number(stats.avg_session_duration || 0),
-          ),
-          maxSessionDuration: Number(stats.max_session_duration || 0),
-          firstReadAt: stats.first_read_at,
-          lastReadAt: stats.last_read_at,
-        },
-        completion: {
-          totalReaders: Number(completionStats?.total_readers || 0),
-          completedReaders: Number(completionStats?.completed_readers || 0),
-          halfCompleted: Number(completionStats?.half_completed || 0),
-          avgPageReached: Math.round(
-            Number(completionStats?.avg_page_reached || 0),
-          ),
-          avgProgressPercent: Math.round(
-            Number(completionStats?.avg_progress_percent || 0),
-          ),
-        },
-        topReaders: topReaders.map((reader) => ({
-          id: reader.id,
-          username: reader.email, // Using email as username for display if username col missing
-          fullName: reader.name,
-          sessionsCount: reader.sessions_count,
-          totalTime: reader.total_time,
-          lastSessionAt: reader.last_session_at,
-        })),
-        readingProgress: readingProgress.map((p) => ({
-          username: p.name,
-          lastPageRead: p.last_page,
-          progressPercent: p.progress_percent,
-          updatedAt: p.updated_at,
-        })),
-        dynamics: readingDynamics.map((d) => ({
-          date: d.date,
-          uniqueReaders: d.unique_readers,
-          sessionsCount: d.sessions_count,
-        })),
-      },
+      totalViews: Number(stats.total_sessions || 0),
+      uniqueReaders: Number(stats.unique_readers || 0),
+      completedReaders: Number(completionStats?.completed_readers || 0),
+      averageProgress: Math.round(
+        Number(completionStats?.avg_progress_percent || 0),
+      ),
+      activeReaders: activeReadersData.map((reader) => ({
+        userId: reader.userId,
+        userName: reader.userName,
+        currentPage: reader.currentPage,
+        progress: reader.progress,
+        lastActivity: reader.lastActivity,
+      })),
+      recentSessions: recentSessionsData.map((session) => ({
+        id: session.id,
+        userName: session.userName,
+        startedAt: session.startedAt,
+        endedAt: session.endedAt,
+        duration: session.duration,
+      })),
     };
   } catch (error: any) {
     console.error(
