@@ -9,10 +9,14 @@
 export type VariableSource =
   | "student.fullName"
   | "student.shortName"
+  | "student.firstLastName"
   | "student.lastName"
   | "student.firstName"
   | "student.middleName"
   | "student.organization"
+  | "student.organizationUz"
+  | "student.organizationEn"
+  | "student.organizationRu"
   | "student.position"
   | "student.department"
   | "student.pinfl"
@@ -61,13 +65,14 @@ export type TemplateLayout =
   | "A4_portrait"
   | "A4_landscape"
   | "letter_portrait"
-  | "letter_landscape";
+  | "letter_landscape"
+  | "custom";
 
 /**
  * Размеры макетов в пикселях (при 96 DPI)
  */
 export const LAYOUT_DIMENSIONS: Record<
-  TemplateLayout,
+  Exclude<TemplateLayout, "custom">,
   { width: number; height: number }
 > = {
   A4_portrait: { width: 794, height: 1123 },

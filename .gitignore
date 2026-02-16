@@ -43,3 +43,10 @@ check-enum.ts
 # Agent and AI assistant files
 .agent/
 .gemini/
+
+# Environment backups
+.env-backups/
+.env.backup.*
+
+# Temporary files
+tmp/restart.txt

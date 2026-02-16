@@ -1,0 +1,94 @@
+# Passenger Node.js Configuration
+PassengerEnabled on
+
+# Node.js version (adjust based on your cPanel available versions)
+# Check available versions in cPanel -> Setup Node.js App
+PassengerNodejs /usr/bin/node
+
+# Application startup file
+PassengerStartupFile .output/server/index.mjs
+
+# Application environment
+PassengerAppEnv production
+
+# Restart directory
+PassengerRestartDir tmp
+
+# Logging level (0-7, where 7 is most verbose)
+PassengerLogLevel 3
+
+# Performance tuning
+PassengerMinInstances 1
+PassengerMaxPoolSize 6
+
+# Restart on changes
+PassengerFriendlyErrorPages on
+
+# Environment variables (optional - can also be set in cPanel UI)
+# Uncomment and set your values if not using cPanel UI
+# SetEnv NODE_ENV production
+# SetEnv DATABASE_HOST localhost
+# SetEnv DATABASE_PORT 3306
+# SetEnv DATABASE_USER your_db_user
+# SetEnv DATABASE_PASSWORD your_db_password
+# SetEnv DATABASE_NAME your_db_name
+# SetEnv JWT_SECRET your_jwt_secret
+# SetEnv REFRESH_TOKEN_SECRET your_refresh_token_secret
+
+# Rewrite rules for SPA routing
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Don't rewrite files or directories
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  
+  # Rewrite everything else to Passenger
+  RewriteRule ^ - [L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+  # Prevent clickjacking
+  Header always set X-Frame-Options "SAMEORIGIN"
+  
+  # XSS protection
+  Header always set X-XSS-Protection "1; mode=block"
+  
+  # Prevent MIME type sniffing
+  Header always set X-Content-Type-Options "nosniff"
+  
+  # Referrer policy
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Browser caching for static assets
+<IfModule mod_expires.c>
+  ExpiresActive On
+  
+  # Images
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/gif "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  
+  # CSS and JavaScript
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  
+  # Fonts
+  ExpiresByType font/woff "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType application/font-woff "access plus 1 year"
+  ExpiresByType application/font-woff2 "access plus 1 year"
+  
+  # Default
+  ExpiresDefault "access plus 1 week"
+</IfModule>

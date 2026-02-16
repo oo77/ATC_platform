@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "nuxt build",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 nuxi build",
     "dev": "nuxt dev --host 0.0.0.0 --port 3000",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -80,6 +80,7 @@
     "@types/node-fetch": "^2.6.13",
     "@types/uuid": "^10.0.0",
     "adm-zip": "^0.5.16",
+    "cross-env": "^10.1.0",
     "node-fetch": "^3.3.2",
     "tsx": "^4.21.0",
     "vitest": "^4.0.18"

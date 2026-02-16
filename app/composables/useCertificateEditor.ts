@@ -35,6 +35,11 @@ export const AVAILABLE_VARIABLES: {
     label: "ФИО сокращённо",
     placeholder: "Иванов И.И.",
   },
+  {
+    key: "student.firstLastName",
+    label: "ФИ (IVANOV IVAN)",
+    placeholder: "IVANOV IVAN",
+  },
   { key: "student.lastName", label: "Фамилия", placeholder: "Иванов" },
   { key: "student.firstName", label: "Имя", placeholder: "Иван" },
   { key: "student.middleName", label: "Отчество", placeholder: "Иванович" },
@@ -318,8 +323,8 @@ export function useCertificateEditor() {
   // Данные шаблона
   const templateData = ref<CertificateTemplateData>(createEmptyTemplate());
 
-  // Выбранный элемент
-  const selectedElementId = ref<string | null>(null);
+  // Множественный выбор элементов
+  const selectedElementIds = ref<Set<string>>(new Set());
 
   // История изменений для Undo/Redo
   const history = ref<CertificateTemplateData[]>([]);
@@ -337,6 +342,19 @@ export function useCertificateEditor() {
   const maxZoom = 2;
 
   // Вычисляемые свойства
+  const selectedElements = computed(() => {
+    if (selectedElementIds.value.size === 0) return [];
+    return templateData.value.elements.filter((el: TemplateElement) =>
+      selectedElementIds.value.has(el.id),
+    );
+  });
+
+  // Для обратной совместимости - первый выбранный элемент
+  const selectedElementId = computed(() => {
+    const ids = Array.from(selectedElementIds.value);
+    return ids.length > 0 ? ids[0] : null;
+  });
+
   const selectedElement = computed(() => {
     if (!selectedElementId.value) return null;
     return (
@@ -402,17 +420,42 @@ export function useCertificateEditor() {
     // Сбрасываем историю
     history.value = [JSON.parse(JSON.stringify(templateData.value))];
     historyIndex.value = 0;
-    selectedElementId.value = null;
+    selectedElementIds.value.clear();
     isDirty.value = false;
   }
 
   // Изменение макета
-  function setLayout(layout: TemplateLayout) {
+  function setLayout(
+    layout: TemplateLayout,
+    customWidth?: number,
+    customHeight?: number,
+  ) {
     saveToHistory();
-    const dimensions = LAYOUT_DIMENSIONS[layout];
-    templateData.value.layout = layout;
-    templateData.value.width = dimensions.width;
-    templateData.value.height = dimensions.height;
+
+    if (layout === "custom") {
+      // Для кастомного макета используем переданные размеры или текущие
+      templateData.value.layout = layout;
+      if (customWidth !== undefined && customHeight !== undefined) {
+        templateData.value.width = customWidth;
+        templateData.value.height = customHeight;
+      }
+    } else {
+      // Для стандартных макетов используем предопределенные размеры
+      const dimensions = LAYOUT_DIMENSIONS[layout];
+      templateData.value.layout = layout;
+      templateData.value.width = dimensions.width;
+      templateData.value.height = dimensions.height;
+    }
+  }
+
+  // Изменение кастомных размеров
+  function setCustomDimensions(width: number, height: number) {
+    saveToHistory();
+    templateData.value.width = Math.max(200, Math.min(5000, width));
+    templateData.value.height = Math.max(200, Math.min(5000, height));
+    if (templateData.value.layout !== "custom") {
+      templateData.value.layout = "custom";
+    }
   }
 
   // Изменение фона
@@ -431,7 +474,9 @@ export function useCertificateEditor() {
     );
     element.zIndex = maxZIndex + 1;
     templateData.value.elements.push(element);
-    selectedElementId.value = element.id;
+    // Выбираем новый элемент
+    selectedElementIds.value.clear();
+    selectedElementIds.value.add(element.id);
   }
 
   // Обновление элемента
@@ -454,8 +499,9 @@ export function useCertificateEditor() {
     templateData.value.elements = templateData.value.elements.filter(
       (el: TemplateElement) => el.id !== id,
     );
-    if (selectedElementId.value === id) {
-      selectedElementId.value = null;
+    // Убираем из выбора, если был выбран
+    if (selectedElementIds.value.has(id)) {
+      selectedElementIds.value.delete(id);
     }
   }
 
@@ -509,9 +555,161 @@ export function useCertificateEditor() {
     }
   }
 
-  // Выбор элемента
-  function selectElement(id: string | null) {
-    selectedElementId.value = id;
+  // Выбор элемента/элементов
+  function selectElement(id: string | null, multiSelect: boolean = false) {
+    if (id === null) {
+      selectedElementIds.value.clear();
+      return;
+    }
+
+    if (multiSelect) {
+      // Множественный выбор с Ctrl/Cmd
+      if (selectedElementIds.value.has(id)) {
+        selectedElementIds.value.delete(id);
+      } else {
+        selectedElementIds.value.add(id);
+      }
+    } else {
+      // Одиночный выбор
+      selectedElementIds.value.clear();
+      selectedElementIds.value.add(id);
+    }
+  }
+
+  // Выбор нескольких элементов (например, при выделении рамкой)
+  function selectMultipleElements(ids: string[]) {
+    selectedElementIds.value.clear();
+    ids.forEach((id) => selectedElementIds.value.add(id));
+  }
+
+  // Добавить элементы к текущему выбору
+  function addToSelection(ids: string[]) {
+    ids.forEach((id) => selectedElementIds.value.add(id));
+  }
+
+  // Снять выделение со всех элементов
+  function clearSelection() {
+    selectedElementIds.value.clear();
+  }
+
+  // Обновление нескольких элементов одновременно
+  function updateMultipleElements(
+    ids: string[],
+    updates: Partial<TemplateElement>,
+  ) {
+    saveToHistory();
+    ids.forEach((id) => {
+      const index = templateData.value.elements.findIndex(
+        (el: TemplateElement) => el.id === id,
+      );
+      if (index !== -1 && !templateData.value.elements[index].locked) {
+        templateData.value.elements[index] = {
+          ...templateData.value.elements[index],
+          ...updates,
+        } as TemplateElement;
+      }
+    });
+  }
+
+  // Выравнивание нескольких элементов относительно друг друга
+  function alignMultipleElements(
+    ids: string[],
+    direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
+  ) {
+    if (ids.length < 2) return;
+
+    const elements = templateData.value.elements.filter(
+      (el: TemplateElement) => ids.includes(el.id) && !el.locked,
+    );
+    if (elements.length < 2) return;
+
+    saveToHistory();
+
+    // Находим опорную точку (первый элемент или крайний)
+    let referenceValue: number;
+
+    switch (direction) {
+      case "left":
+        referenceValue = Math.min(...elements.map((el) => el.x));
+        elements.forEach((el) => {
+          updateElement(el.id, { x: referenceValue });
+        });
+        break;
+      case "center-h":
+        const avgCenterX =
+          elements.reduce((sum, el) => sum + el.x + el.width / 2, 0) /
+          elements.length;
+        elements.forEach((el) => {
+          updateElement(el.id, { x: avgCenterX - el.width / 2 });
+        });
+        break;
+      case "right":
+        referenceValue = Math.max(...elements.map((el) => el.x + el.width));
+        elements.forEach((el) => {
+          updateElement(el.id, { x: referenceValue - el.width });
+        });
+        break;
+      case "top":
+        referenceValue = Math.min(...elements.map((el) => el.y));
+        elements.forEach((el) => {
+          updateElement(el.id, { y: referenceValue });
+        });
+        break;
+      case "center-v":
+        const avgCenterY =
+          elements.reduce((sum, el) => sum + el.y + el.height / 2, 0) /
+          elements.length;
+        elements.forEach((el) => {
+          updateElement(el.id, { y: avgCenterY - el.height / 2 });
+        });
+        break;
+      case "bottom":
+        referenceValue = Math.max(...elements.map((el) => el.y + el.height));
+        elements.forEach((el) => {
+          updateElement(el.id, { y: referenceValue - el.height });
+        });
+        break;
+    }
+  }
+
+  // Распределение элементов с равными интервалами
+  function distributeElements(
+    ids: string[],
+    direction: "horizontal" | "vertical",
+  ) {
+    if (ids.length < 3) return;
+
+    const elements = templateData.value.elements
+      .filter((el: TemplateElement) => ids.includes(el.id) && !el.locked)
+      .sort((a, b) => (direction === "horizontal" ? a.x - b.x : a.y - b.y));
+
+    if (elements.length < 3) return;
+
+    saveToHistory();
+
+    if (direction === "horizontal") {
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      const totalSpace = last.x - (first.x + first.width);
+      const gap = totalSpace / (elements.length - 1);
+
+      let currentX = first.x + first.width + gap;
+      for (let i = 1; i < elements.length - 1; i++) {
+        updateElement(elements[i].id, { x: currentX });
+        currentX += elements[i].width + gap;
+      }
+    } else {
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      const totalSpace = last.y - (first.y + first.height);
+      const gap = totalSpace / (elements.length - 1);
+
+      let currentY = first.y + first.height + gap;
+      for (let i = 1; i < elements.length - 1; i++) {
+        updateElement(elements[i].id, { y: currentY });
+        currentY += elements[i].height + gap;
+      }
+    }
   }
 
   // Изменение масштаба
@@ -640,6 +838,8 @@ export function useCertificateEditor() {
     templateData,
     selectedElementId,
     selectedElement,
+    selectedElementIds,
+    selectedElements,
     zoom,
     isDirty,
     isLoading,
@@ -661,11 +861,13 @@ export function useCertificateEditor() {
 
     // Методы макета и фона
     setLayout,
+    setCustomDimensions,
     setBackground,
 
     // Методы элементов
     addElement,
     updateElement,
+    updateMultipleElements,
     deleteElement,
     deleteSelectedElement,
     duplicateElement,
@@ -673,7 +875,12 @@ export function useCertificateEditor() {
     sendToBack,
     toggleLock,
     selectElement,
+    selectMultipleElements,
+    addToSelection,
+    clearSelection,
     alignElement,
+    alignMultipleElements,
+    distributeElements,
 
     // Методы масштаба
     setZoom,

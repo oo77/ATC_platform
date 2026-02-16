@@ -1,7 +1,7 @@
 <template>
   <div class="editor-sidebar">
-    <!-- Когда элемент не выбран -->
-    <template v-if="!selectedElement">
+    <!-- Когда ничего не выбрано -->
+    <template v-if="selectedElements.length === 0">
       <div class="empty-state">
         <div class="empty-icon">
           <svg
@@ -22,6 +22,322 @@
         <p class="empty-text">
           Кликните на элемент на холсте, чтобы редактировать его свойства
         </p>
+      </div>
+    </template>
+
+    <!-- Когда выбрано несколько элементов -->
+    <template v-else-if="selectedElements.length > 1">
+      <div class="sidebar-header">
+        <span class="element-type-badge multi">
+          Выбрано: {{ selectedElements.length }}
+        </span>
+        <div class="header-actions">
+          <button
+            class="action-btn delete"
+            @click="$emit('delete-multiple')"
+            title="Удалить все"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Выравнивание группы -->
+      <div class="sidebar-section">
+        <h4 class="section-title">Выравнивание</h4>
+
+        <div class="align-section">
+          <p class="align-label">Относительно холста</p>
+          <div class="align-buttons">
+            <button
+              class="align-btn"
+              @click="$emit('align', 'left')"
+              title="По левому краю"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="3" y1="3" x2="3" y2="21" />
+                <rect x="7" y="6" width="14" height="5" rx="1" />
+                <rect x="7" y="13" width="10" height="5" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="align-btn"
+              @click="$emit('align', 'center-h')"
+              title="По центру горизонтально"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="12" y1="3" x2="12" y2="21" />
+                <rect x="5" y="6" width="14" height="5" rx="1" />
+                <rect x="7" y="13" width="10" height="5" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="align-btn"
+              @click="$emit('align', 'right')"
+              title="По правому краю"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="21" y1="3" x2="21" y2="21" />
+                <rect x="3" y="6" width="14" height="5" rx="1" />
+                <rect x="7" y="13" width="10" height="5" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="align-btn"
+              @click="$emit('align', 'top')"
+              title="По верхнему краю"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="3" y1="3" x2="21" y2="3" />
+                <rect x="6" y="7" width="5" height="14" rx="1" />
+                <rect x="13" y="7" width="5" height="10" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="align-btn"
+              @click="$emit('align', 'center-v')"
+              title="По центру вертикально"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <rect x="6" y="5" width="5" height="14" rx="1" />
+                <rect x="13" y="7" width="5" height="10" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="align-btn"
+              @click="$emit('align', 'bottom')"
+              title="По нижнему краю"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="3" y1="21" x2="21" y2="21" />
+                <rect x="6" y="3" width="5" height="14" rx="1" />
+                <rect x="13" y="7" width="5" height="10" rx="1" />
+              </svg>
+            </button>
+          </div>
+
+          <p class="align-label mt-3">Относительно друг друга</p>
+          <div class="align-buttons">
+            <button
+              class="align-btn"
+              @click="$emit('align-group', 'left')"
+              title="Выровнять левые края"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="5" width="8" height="4" rx="1" />
+                <rect x="3" y="11" width="12" height="4" rx="1" />
+                <rect x="3" y="17" width="6" height="4" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="align-btn"
+              @click="$emit('align-group', 'center-h')"
+              title="Выровнять центры"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="8" y="5" width="8" height="4" rx="1" />
+                <rect x="6" y="11" width="12" height="4" rx="1" />
+                <rect x="9" y="17" width="6" height="4" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="align-btn"
+              @click="$emit('align-group', 'right')"
+              title="Выровнять правые края"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="13" y="5" width="8" height="4" rx="1" />
+                <rect x="9" y="11" width="12" height="4" rx="1" />
+                <rect x="15" y="17" width="6" height="4" rx="1" />
+              </svg>
+            </button>
+          </div>
+
+          <p class="align-label mt-3" v-if="selectedElements.length >= 3">
+            Распределение
+          </p>
+          <div class="align-buttons" v-if="selectedElements.length >= 3">
+            <button
+              class="align-btn"
+              @click="$emit('distribute', 'horizontal')"
+              title="Распределить по горизонтали"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="2" y="8" width="4" height="8" rx="1" />
+                <rect x="10" y="8" width="4" height="8" rx="1" />
+                <rect x="18" y="8" width="4" height="8" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="align-btn"
+              @click="$emit('distribute', 'vertical')"
+              title="Распределить по вертикали"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="8" y="2" width="8" height="4" rx="1" />
+                <rect x="8" y="10" width="8" height="4" rx="1" />
+                <rect x="8" y="18" width="8" height="4" rx="1" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Действия для группы -->
+      <div class="sidebar-section actions-section">
+        <h4 class="section-title">Действия</h4>
+        <div class="action-buttons">
+          <button class="action-button" @click="$emit('duplicate-multiple')">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+              <path
+                d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
+              />
+            </svg>
+            Дублировать все
+          </button>
+          <button class="action-button" @click="$emit('bring-to-front')">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect width="8" height="8" x="8" y="8" rx="1" />
+              <path d="M4 16V6a2 2 0 0 1 2-2h10" />
+              <path d="M14 22h4a2 2 0 0 0 2-2v-4" />
+            </svg>
+            На передний план
+          </button>
+          <button class="action-button" @click="$emit('send-to-back')">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect width="8" height="8" x="8" y="8" rx="1" />
+              <path d="M4 8V6a2 2 0 0 1 2-2h2" />
+              <path d="M20 16v2a2 2 0 0 1-2 2h-2" />
+            </svg>
+            На задний план
+          </button>
+        </div>
       </div>
     </template>
 
@@ -834,13 +1150,16 @@ import type {
 
 const props = defineProps<{
   selectedElement: TemplateElement | null;
-  templateId: string; // Добавляем templateId для загрузки изображений
+  selectedElements: TemplateElement[];
+  templateId: string;
 }>();
 
 const emit = defineEmits<{
   (e: "update", id: string, updates: Partial<TemplateElement>): void;
   (e: "delete"): void;
+  (e: "delete-multiple"): void;
   (e: "duplicate"): void;
+  (e: "duplicate-multiple"): void;
   (e: "bring-to-front"): void;
   (e: "send-to-back"): void;
   (e: "toggle-lock"): void;
@@ -848,6 +1167,11 @@ const emit = defineEmits<{
     e: "align",
     direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
   ): void;
+  (
+    e: "align-group",
+    direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
+  ): void;
+  (e: "distribute", direction: "horizontal" | "vertical"): void;
 }>();
 
 const { authFetch } = useAuthFetch();
@@ -1108,6 +1432,11 @@ async function onImageSelected(e: Event) {
 .element-type-badge.shape {
   background: #fef3c7;
   color: #92400e;
+}
+
+.element-type-badge.multi {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
 }
 
 .header-actions {
@@ -1523,5 +1852,9 @@ async function onImageSelected(e: Event) {
 /* Утилитарные классы */
 .mt-1 {
   margin-top: 0.25rem;
+}
+
+.mt-3 {
+  margin-top: 0.75rem;
 }
 </style>

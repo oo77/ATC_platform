@@ -216,9 +216,10 @@
       <div class="canvas-container" ref="canvasContainerRef">
         <EditorCanvas
           :template-data="templateData"
-          :selected-element-id="selectedElementId"
+          :selected-element-ids="selectedElementIds"
           :zoom="zoom"
           @select="selectElement"
+          @select-multiple="selectMultipleElements"
           @update-element="updateElement"
           @delete-element="deleteElement"
         />
@@ -227,14 +228,19 @@
       <!-- Панель свойств справа -->
       <EditorSidebar
         :selected-element="selectedElement"
+        :selected-elements="selectedElements"
         :template-id="templateId"
         @update="handleElementUpdate"
         @delete="deleteSelectedElement"
+        @delete-multiple="handleDeleteMultiple"
         @duplicate="handleDuplicate"
+        @duplicate-multiple="handleDuplicateMultiple"
         @bring-to-front="handleBringToFront"
         @send-to-back="handleSendToBack"
         @toggle-lock="handleToggleLock"
         @align="handleAlign"
+        @align-group="handleAlignGroup"
+        @distribute="handleDistribute"
       />
     </div>
 
@@ -320,6 +326,8 @@ const {
   templateData,
   selectedElementId,
   selectedElement,
+  selectedElementIds,
+  selectedElements,
   zoom,
   isDirty,
   isSaving,
@@ -332,9 +340,11 @@ const {
   undo,
   redo,
   setLayout,
+  setCustomDimensions,
   setBackground,
   addElement,
   updateElement,
+  updateMultipleElements,
   deleteElement,
   deleteSelectedElement,
   duplicateElement,
@@ -342,7 +352,12 @@ const {
   sendToBack,
   toggleLock,
   selectElement,
+  selectMultipleElements,
+  addToSelection,
+  clearSelection,
   alignElement,
+  alignMultipleElements,
+  distributeElements,
   zoomIn,
   zoomOut,
   resetZoom,
@@ -525,24 +540,6 @@ function handleElementUpdate(id: string, updates: Partial<TemplateElement>) {
   updateElement(id, updates);
 }
 
-function handleDuplicate() {
-  if (selectedElementId.value) {
-    duplicateElement(selectedElementId.value);
-  }
-}
-
-function handleBringToFront() {
-  if (selectedElementId.value) {
-    bringToFront(selectedElementId.value);
-  }
-}
-
-function handleSendToBack() {
-  if (selectedElementId.value) {
-    sendToBack(selectedElementId.value);
-  }
-}
-
 function handleToggleLock() {
   if (selectedElementId.value) {
     toggleLock(selectedElementId.value);
@@ -580,6 +577,58 @@ function confirmPreset() {
 function cancelPreset() {
   showPresetConfirm.value = false;
   pendingPresetData.value = null;
+}
+
+// Обработчики для группового редактирования
+function handleDeleteMultiple() {
+  const ids = Array.from(selectedElementIds.value);
+  ids.forEach((id) => deleteElement(id));
+  clearSelection();
+}
+
+function handleDuplicateMultiple() {
+  const ids = Array.from(selectedElementIds.value);
+  ids.forEach((id) => duplicateElement(id));
+}
+
+function handleAlignGroup(
+  direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
+) {
+  const ids = Array.from(selectedElementIds.value);
+  alignMultipleElements(ids, direction);
+}
+
+function handleDistribute(direction: "horizontal" | "vertical") {
+  const ids = Array.from(selectedElementIds.value);
+  distributeElements(ids, direction);
+}
+
+function handleDuplicate() {
+  if (selectedElementId.value) {
+    duplicateElement(selectedElementId.value);
+  }
+}
+
+function handleBringToFront() {
+  const ids =
+    selectedElementIds.value.size > 0
+      ? Array.from(selectedElementIds.value)
+      : selectedElementId.value
+        ? [selectedElementId.value]
+        : [];
+
+  ids.forEach((id) => bringToFront(id));
+}
+
+function handleSendToBack() {
+  const ids =
+    selectedElementIds.value.size > 0
+      ? Array.from(selectedElementIds.value)
+      : selectedElementId.value
+        ? [selectedElementId.value]
+        : [];
+
+  ids.forEach((id) => sendToBack(id));
 }
 </script>
 
