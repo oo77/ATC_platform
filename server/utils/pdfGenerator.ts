@@ -141,6 +141,12 @@ export function resolveVariable(
       return nameParts[1] || "";
     case "student.middleName":
       return nameParts[2] || "";
+    case "student.firstLastName": {
+      // Извлекаем фамилию и имя из full_name в формате "IVANOV IVAN"
+      const lastName = nameParts[0] || "";
+      const firstName = nameParts[1] || "";
+      return `${lastName.toUpperCase()} ${firstName.toUpperCase()}`.trim();
+    }
     case "student.organization":
       return student.organization;
     case "student.organizationUz":

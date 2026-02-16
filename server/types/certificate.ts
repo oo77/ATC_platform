@@ -16,7 +16,11 @@ export type VariableSource =
   | "student.lastName"
   | "student.firstName"
   | "student.middleName"
+  | "student.firstLastName" // Фамилия Имя в верхнем регистре (IVANOV IVAN)
   | "student.organization"
+  | "student.organizationUz"
+  | "student.organizationEn"
+  | "student.organizationRu"
   | "student.position"
   | "student.department"
   | "student.pinfl"
