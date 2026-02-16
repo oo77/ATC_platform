@@ -262,67 +262,49 @@
           <div class="layout-preview portrait"></div>
           <span>Книжная</span>
         </button>
-        <button
-          class="layout-btn"
-          :class="{ active: currentLayout === 'custom' }"
-          @click="toggleCustomSize"
-          title="Кастомный размер"
-        >
-          <div class="layout-preview custom">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M3 3h18v18H3z" />
-              <path d="M9 3v18" />
-              <path d="M15 3v18" />
-              <path d="M3 9h18" />
-              <path d="M3 15h18" />
-            </svg>
-          </div>
-          <span>Свой</span>
-        </button>
       </div>
 
-      <!-- Поля для кастомных размеров -->
-      <div v-if="showCustomSize" class="custom-size-panel">
-        <div class="custom-size-inputs">
-          <div class="size-input-group">
-            <label>Ширина (px)</label>
-            <input
-              type="number"
-              v-model.number="customWidth"
-              @input="validateCustomSize"
-              min="200"
-              max="5000"
-              placeholder="794"
-            />
+      <!-- Чекбокс и поля для кастомных размеров -->
+      <div class="custom-size-section">
+        <label class="custom-checkbox">
+          <input type="checkbox" v-model="useCustomSize" />
+          <span>Своя</span>
+        </label>
+
+        <div v-if="useCustomSize" class="custom-size-panel">
+          <div class="custom-size-inputs">
+            <div class="size-input-group">
+              <label>Ширина (px)</label>
+              <input
+                type="number"
+                v-model.number="customWidth"
+                @input="validateCustomSize"
+                min="200"
+                max="5000"
+                placeholder="794"
+              />
+            </div>
+            <div class="size-input-group">
+              <label>Высота (px)</label>
+              <input
+                type="number"
+                v-model.number="customHeight"
+                @input="validateCustomSize"
+                min="200"
+                max="5000"
+                placeholder="1123"
+              />
+            </div>
           </div>
-          <div class="size-input-group">
-            <label>Высота (px)</label>
-            <input
-              type="number"
-              v-model.number="customHeight"
-              @input="validateCustomSize"
-              min="200"
-              max="5000"
-              placeholder="1123"
-            />
-          </div>
+          <button
+            class="apply-custom-btn"
+            @click="applyCustomSize"
+            :disabled="!isCustomSizeValid"
+          >
+            Сохранить размер
+          </button>
+          <p class="size-hint">Мин: 200px, Макс: 5000px</p>
         </div>
-        <button
-          class="apply-custom-btn"
-          @click="applyCustomSize"
-          :disabled="!isCustomSizeValid"
-        >
-          Применить размер
-        </button>
-        <p class="size-hint">Минимум: 200px, Максимум: 5000px</p>
       </div>
     </div>
 
@@ -459,7 +441,12 @@ const emit = defineEmits<{
   (e: "add-image", src: string): void;
   (e: "add-qr"): void;
   (e: "add-shape", type: ShapeType): void;
-  (e: "set-layout", layout: TemplateLayout): void;
+  (
+    e: "set-layout",
+    layout: TemplateLayout,
+    width?: number,
+    height?: number,
+  ): void;
   (e: "set-background", bg: TemplateBackground): void;
   (e: "apply-preset", data: CertificateTemplateData): void;
 }>();
@@ -473,6 +460,12 @@ const imageInputRef = ref<HTMLInputElement | null>(null);
 const bgInputRef = ref<HTMLInputElement | null>(null);
 const isUploadingImage = ref(false);
 const isUploadingBackground = ref(false);
+
+// Кастомные размеры
+const useCustomSize = ref(false);
+const customWidth = ref(794);
+const customHeight = ref(1123);
+const isCustomSizeValid = ref(false);
 
 // Группировка переменных для удобного отображения
 const variableGroups = computed(() => [
@@ -608,6 +601,25 @@ function setBackgroundColor(color: string) {
 function applyPreset(preset: "classic" | "modern" | "minimal") {
   const presetData = getPreset(preset);
   emit("apply-preset", presetData);
+}
+
+// Кастомные размеры
+function validateCustomSize() {
+  const width = customWidth.value;
+  const height = customHeight.value;
+
+  isCustomSizeValid.value =
+    width >= 200 && width <= 5000 && height >= 200 && height <= 5000;
+}
+
+function applyCustomSize() {
+  if (!isCustomSizeValid.value) return;
+
+  // Применяем ограничения
+  const width = Math.max(200, Math.min(5000, customWidth.value));
+  const height = Math.max(200, Math.min(5000, customHeight.value));
+
+  emit("set-layout", "custom", width, height);
 }
 
 // Закрытие меню при клике вне
@@ -902,6 +914,119 @@ onUnmounted(() => {
 
 :root.dark .layout-btn span {
   color: var(--color-gray-400);
+}
+
+/* Custom size section */
+.custom-size-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-gray-200);
+}
+
+:root.dark .custom-size-section {
+  border-color: var(--color-gray-700);
+}
+
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-gray-700);
+}
+
+:root.dark .custom-checkbox {
+  color: var(--color-gray-300);
+}
+
+.custom-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.custom-size-panel {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--color-gray-50);
+  border-radius: 0.5rem;
+}
+
+:root.dark .custom-size-panel {
+  background: var(--color-gray-700);
+}
+
+.custom-size-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.size-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.size-input-group label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-gray-600);
+}
+
+:root.dark .size-input-group label {
+  color: var(--color-gray-400);
+}
+
+.size-input-group input {
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  background: white;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.375rem;
+  color: var(--color-gray-900);
+}
+
+:root.dark .size-input-group input {
+  background: var(--color-gray-800);
+  border-color: var(--color-gray-600);
+  color: var(--color-gray-200);
+}
+
+.size-input-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.apply-custom-btn {
+  width: 100%;
+  padding: 0.5rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.apply-custom-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.apply-custom-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.size-hint {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.7rem;
+  color: var(--color-gray-500);
+  text-align: center;
 }
 
 /* Background options */
