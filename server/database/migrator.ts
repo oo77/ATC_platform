@@ -443,7 +443,62 @@ export async function runMigrations(): Promise<void> {
       await createMigrationsTable(connection);
 
       // Получение выполненных миграций
-      let executedMigrations = await getExecutedMigrations(connection);
+      let executedMigrations: string[] = [];
+      try {
+        executedMigrations = await getExecutedMigrations(connection);
+      } catch (error: any) {
+        // Check for specific "doesn't exist in engine" error (MySQL/MariaDB)
+        if (
+          error.errno === 1932 ||
+          (error.sqlMessage &&
+            error.sqlMessage.includes("doesn't exist in engine"))
+        ) {
+          console.warn(
+            "⚠️  Migrations table corruption detected. Attempting to repair...",
+          );
+          try {
+            await connection.query("DROP TABLE IF EXISTS migrations");
+            await createMigrationsTable(connection);
+
+            // Check if vital tables exist to decide on backfilling
+            // If 'users' table exists, we assume previous migrations were run
+            const [tables] = await connection.query<any[]>(
+              "SHOW TABLES LIKE 'users'",
+            );
+            if (tables.length > 0) {
+              console.log(
+                "ℹ️  Existing tables detected. Assuming previous migrations were applied.",
+              );
+
+              // We need to mark all migrations as executed EXCEPT the ones that are likely new?
+              // Or actually, due to idempotency of our migrations (IF NOT EXISTS),
+              // it is arguably safer to return [] and let them check themselves.
+              // However, "001_initial_schema" has CREATE TABLE ... IF NOT EXISTS.
+              // So if we return [], it runs 001. 001 sees tables exist. It skips creation.
+              // It runs seed data. Seed data checks if admin exists.
+              // So running 001 again is SAFE.
+
+              // What about 014? ALTER TABLE...
+              // It checks IF column exists. Safe.
+
+              // So, returning [] (empty executed list) is a safe recovery strategy
+              // provided all migrations are idempotent.
+              console.log(
+                "ℹ️  Will attempt to re-verify all migrations (safe mode).",
+              );
+              executedMigrations = [];
+            } else {
+              executedMigrations = [];
+            }
+          } catch (repairError) {
+            console.error("❌ Failed to repair migrations table:", repairError);
+            throw error;
+          }
+        } else {
+          throw error;
+        }
+      }
+
       console.log(`ℹ️  Found ${executedMigrations.length} executed migrations`);
 
       // Проверяем, есть ли старые миграции в БД
