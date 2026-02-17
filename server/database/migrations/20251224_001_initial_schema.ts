@@ -21,6 +21,7 @@ import { randomUUID } from "crypto";
 export const description = "Initial Consolidated Schema";
 
 export const up = async (connection: PoolConnection): Promise<void> => {
+  console.log("!!! DEBUG: I AM RUNNING MODIFIED INITIAL SCHEMA !!!");
   console.log("🔄 Running Initial Schema Migration...");
 
   // ============================================================

@@ -18,38 +18,37 @@ export const up = async (connection: PoolConnection): Promise<void> => {
     {
       name: "original_file_url",
       definition:
-        "VARCHAR(500) NULL COMMENT 'URL оригинального файла шаблона (DOCX)'",
+        "VARCHAR(500) NULL COMMENT 'Original template file URL (DOCX)'",
     },
     {
       name: "variables",
-      definition: "JSON NULL COMMENT 'Переменные для подстановки в шаблон'",
+      definition: "JSON NULL COMMENT 'Variables for template substitution'",
     },
     {
       name: "qr_settings",
-      definition: "JSON NULL COMMENT 'Настройки QR-кода'",
+      definition: "JSON NULL COMMENT 'QR code settings'",
     },
     {
       name: "number_format",
       definition:
-        "VARCHAR(100) NOT NULL DEFAULT 'ATC{YY}_{CODE}_{NUM}' COMMENT 'Формат номера сертификата'",
+        "VARCHAR(100) NOT NULL DEFAULT 'ATC{YY}_{CODE}_{NUM}' COMMENT 'Certificate number format'",
     },
     {
       name: "last_number",
-      definition:
-        "INT NOT NULL DEFAULT 0 COMMENT 'Последний использованный номер'",
+      definition: "INT NOT NULL DEFAULT 0 COMMENT 'Last used number'",
     },
     {
       name: "template_data",
-      definition: "JSON NULL COMMENT 'Данные визуального редактора'",
+      definition: "JSON NULL COMMENT 'Visual editor data'",
     },
     {
       name: "layout",
       definition:
-        "ENUM('A4_portrait', 'A4_landscape', 'letter_portrait', 'letter_landscape') NULL COMMENT 'Формат и ориентация'",
+        "ENUM('A4_portrait', 'A4_landscape', 'letter_portrait', 'letter_landscape') NULL COMMENT 'Layout format and orientation'",
     },
     {
       name: "background_url",
-      definition: "VARCHAR(500) NULL COMMENT 'URL фонового изображения'",
+      definition: "VARCHAR(500) NULL COMMENT 'Background image URL'",
     },
   ];
 

@@ -16,6 +16,7 @@
     "db:seed": "tsx server/database/seed.ts",
     "db:seed:tests": "tsx server/database/seed-tests.ts",
     "db:reset": "tsx server/database/reset.ts",
+    "db:reinit": "tsx server/database/reinit.ts",
     "check:deploy": "node scripts/check-deployment.js",
     "ngrok": "ngrok http 3000",
     "ngrok:config": "ngrok start --config=ngrok.yml nuxt-dev"

@@ -64,7 +64,7 @@ export const up = async (connection: PoolConnection): Promise<void> => {
     if (!existing || existing.length === 0) {
       await connection.query(`
         ALTER TABLE certificate_templates
-        ADD COLUMN ${column.definition}
+        ADD COLUMN ${column.name} ${column.definition}
       `);
       console.log(`✅ Column '${column.name}' added`);
     } else {
