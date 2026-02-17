@@ -1,0 +1,1 @@
+import{$ as u}from"./GLV6bXvn.js";const s=()=>{const e=u("auth_token");return{authFetch:async(r,t={})=>{const a={...t.headers};return e.value&&(a.Authorization=`Bearer ${e.value}`),$fetch(r,{...t,headers:a})}}};export{s as u};

@@ -1,0 +1,1 @@
+import{v as o,c as a,o as t,a0 as s}from"./GLV6bXvn.js";import{_ as n}from"./DlAUqK2U.js";const r={class:"blank-layout"},c=o({__name:"blank",setup(_){return(e,l)=>(t(),a("div",r,[s(e.$slots,"default",{},void 0,!0)]))}}),m=n(c,[["__scopeId","data-v-194ac346"]]);export{m as default};

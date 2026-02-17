@@ -1,0 +1,8 @@
+const Admin_vue_vue_type_style_index_0_scoped_b9f45082_lang = ".rounded-lg[data-v-b9f45082]{animation:fadeInUp-b9f45082 .5s ease-out backwards}.rounded-lg[data-v-b9f45082]:first-child{animation-delay:.05s}.rounded-lg[data-v-b9f45082]:nth-child(2){animation-delay:.1s}.rounded-lg[data-v-b9f45082]:nth-child(3){animation-delay:.15s}.rounded-lg[data-v-b9f45082]:nth-child(4){animation-delay:.2s}@keyframes fadeInUp-b9f45082{0%{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}.hover\\:bg-gray-100[data-v-b9f45082],.hover\\:bg-gray-50[data-v-b9f45082],.hover\\:scale-105[data-v-b9f45082],.hover\\:shadow-lg[data-v-b9f45082],button[data-v-b9f45082]{transition:all .3s cubic-bezier(.4,0,.2,1)}button[data-v-b9f45082]:active{transform:scale(.95)}[data-v-b9f45082] .apexcharts-canvas{animation:chartFadeIn-b9f45082 .8s ease-out}@keyframes chartFadeIn-b9f45082{0%{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}tbody tr[data-v-b9f45082]{animation:slideInLeft-b9f45082 .4s ease-out backwards}tbody tr[data-v-b9f45082]:first-child{animation-delay:.05s}tbody tr[data-v-b9f45082]:nth-child(2){animation-delay:.1s}tbody tr[data-v-b9f45082]:nth-child(3){animation-delay:.15s}tbody tr[data-v-b9f45082]:nth-child(4){animation-delay:.2s}tbody tr[data-v-b9f45082]:nth-child(5){animation-delay:.25s}@keyframes slideInLeft-b9f45082{0%{opacity:0;transform:translate(-20px)}to{opacity:1;transform:translate(0)}}.animate-spin[data-v-b9f45082]{animation:spin-b9f45082 1s linear infinite}@keyframes spin-b9f45082{0%{transform:rotate(0)}to{transform:rotate(1turn)}}";
+
+const AdminStyles_D2kkoWfN = [
+  Admin_vue_vue_type_style_index_0_scoped_b9f45082_lang
+];
+
+export { AdminStyles_D2kkoWfN as default };
+//# sourceMappingURL=Admin-styles.D2kkoWfN.mjs.map

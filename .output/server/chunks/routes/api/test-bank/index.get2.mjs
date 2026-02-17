@@ -1,0 +1,58 @@
+import { g as defineEventHandler, i as getQuery } from '../../../_/nitro.mjs';
+import { f as getQuestions } from '../../../_/questionRepository.mjs';
+import 'grammy';
+import 'uuid';
+import 'node:http';
+import 'node:https';
+import 'node:events';
+import 'node:buffer';
+import 'node:fs';
+import 'node:path';
+import 'node:crypto';
+import 'mysql2/promise';
+import 'bcryptjs';
+import 'crypto';
+import 'node:url';
+import 'jsonwebtoken';
+
+const index_get = defineEventHandler(async (event) => {
+  try {
+    const query = getQuery(event);
+    const filters = {
+      bank_id: query.bank_id,
+      question_type: query.question_type,
+      difficulty: query.difficulty,
+      language: query.language,
+      languages: query.languages ? query.languages.split(",") : void 0,
+      is_active: query.is_active !== void 0 ? query.is_active === "true" : void 0,
+      search: query.search
+    };
+    const pagination = {
+      page: query.page ? parseInt(query.page, 10) : 1,
+      limit: Math.min(query.limit ? parseInt(query.limit, 10) : 20, 100)
+    };
+    const result = await getQuestions(filters, pagination);
+    return {
+      success: true,
+      questions: result.data,
+      total: result.total,
+      page: result.page,
+      limit: result.limit,
+      totalPages: result.totalPages
+    };
+  } catch (error) {
+    console.error("\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u044F \u0432\u043E\u043F\u0440\u043E\u0441\u043E\u0432:", error);
+    return {
+      success: false,
+      message: "\u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0440\u0438 \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u0438 \u0441\u043F\u0438\u0441\u043A\u0430 \u0432\u043E\u043F\u0440\u043E\u0441\u043E\u0432",
+      questions: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 0
+    };
+  }
+});
+
+export { index_get as default };
+//# sourceMappingURL=index.get2.mjs.map
