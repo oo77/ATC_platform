@@ -781,30 +781,71 @@ async function drawElement(
       );
       const fontSize = el.fontSize;
       const c = parseCssColor(el.color);
+      const lineH = (el.lineHeight as number) * fontSize;
+      const textAlign = el.textAlign || "left";
 
-      // Центрирование текста по вертикали внутри элемента
-      const textY = y + (h - fontSize) / 2;
+      // ── Ручной перенос строк ──────────────────────────────────
+      // pdf-lib при maxWidth переносит текст, но дополнительные строки
+      // всегда рисует от исходного x. Поэтому выравнивание (center/right)
+      // для многострочных текстов работает только с ручным разбиением.
+      const words = text.split(" ");
+      const lines: string[] = [];
+      let currentLine = "";
 
-      // Горизонтальное выравнивание
-      let textX = x;
-      try {
-        const textWidth = font.widthOfTextAtSize(text, fontSize);
-        if (el.textAlign === "center") textX = x + (w - textWidth) / 2;
-        else if (el.textAlign === "right") textX = x + w - textWidth;
-      } catch {
-        // Оставляем x
+      for (const word of words) {
+        // Обработка явных переносов строк в тексте
+        const parts = word.split("\n");
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          const testLine = currentLine ? currentLine + " " + part : part;
+          let testWidth = 0;
+          try {
+            testWidth = font.widthOfTextAtSize(testLine, fontSize);
+          } catch {
+            testWidth = w + 1;
+          }
+          if (testWidth > w && currentLine) {
+            lines.push(currentLine);
+            currentLine = part;
+          } else {
+            currentLine = testLine;
+          }
+          // Явный перенос строки (не последняя часть)
+          if (i < parts.length - 1) {
+            lines.push(currentLine);
+            currentLine = "";
+          }
+        }
       }
+      if (currentLine) lines.push(currentLine);
 
-      page.drawText(text, {
-        x: textX,
-        y: textY,
-        size: fontSize,
-        font,
-        color: rgb(c.r, c.g, c.b),
-        maxWidth: w,
-        lineHeight: (el.lineHeight as number) * fontSize,
-        ...(element.rotation ? { rotate: degrees(-element.rotation) } : {}),
-      });
+      // ── Вычисляем стартовую Y с учётом количества строк ───────
+      // Вертикально центрируем весь блок текста внутри элемента
+      const totalTextHeight = lines.length * lineH - (lineH - fontSize);
+      let currentY = y + h / 2 + totalTextHeight / 2 - fontSize;
+
+      // ── Рисуем каждую строку с правильным x ───────────────────
+      for (const line of lines) {
+        let lineX = x;
+        try {
+          const lineWidth = font.widthOfTextAtSize(line, fontSize);
+          if (textAlign === "center") lineX = x + (w - lineWidth) / 2;
+          else if (textAlign === "right") lineX = x + w - lineWidth;
+        } catch {
+          // Оставляем x
+        }
+
+        page.drawText(line, {
+          x: lineX,
+          y: currentY,
+          size: fontSize,
+          font,
+          color: rgb(c.r, c.g, c.b),
+          ...(element.rotation ? { rotate: degrees(-element.rotation) } : {}),
+        });
+
+        currentY -= lineH;
+      }
       break;
     }
 
