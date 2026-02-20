@@ -28,6 +28,7 @@ import * as addUserIdToInstructors from "./migrations/20260212_017_add_user_id_t
 import * as addOrganizationLanguages from "./migrations/20260213_018_add_organization_languages";
 import * as addCertificateValidityToCourses from "./migrations/20260216_019_add_certificate_validity_to_courses";
 import * as faceRecognitionSystem from "./migrations/20260216_020_face_recognition_system";
+import * as addOverrideWarningsToCertificates from "./migrations/20260220_021_add_override_warnings_to_certificates";
 
 /**
  * ============================================================================
@@ -234,6 +235,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: faceRecognitionSystem.up,
     down: faceRecognitionSystem.down,
     description: faceRecognitionSystem.description,
+  },
+  // ============================================================
+  // Миграция 021: Add override_warnings to issued_certificates
+  // ============================================================
+  {
+    name: "20260220_021_add_override_warnings_to_certificates",
+    up: addOverrideWarningsToCertificates.up,
+    down: addOverrideWarningsToCertificates.down,
+    description: addOverrideWarningsToCertificates.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже
