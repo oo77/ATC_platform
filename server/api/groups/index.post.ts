@@ -133,6 +133,12 @@ export default defineEventHandler(async (event) => {
   }
 
   // Проверка конфликтов студентов (если переданы)
+  //
+  // ВНИМАНИЕ: новая группа создаётся БЕЗ расписания, поэтому targetGroupId
+  // не передаётся. Конфликт фиксируется только если у студентов в ДРУГИХ
+  // группах уже есть занятия (schedule_events) в данном диапазоне дат.
+  // Пересечение диапазонов start_date/end_date групп само по себе НЕ является
+  // конфликтом — занятия в двух группах могут приходиться на разные дни.
   if (
     groupData.studentIds &&
     Array.isArray(groupData.studentIds) &&
@@ -141,13 +147,14 @@ export default defineEventHandler(async (event) => {
     const conflicts = await checkStudentConflicts(
       groupData.studentIds,
       groupData.startDate,
-      groupData.endDate
+      groupData.endDate,
+      // targetGroupId не передаётся: новая группа без расписания
     );
     if (conflicts.length > 0) {
-      // Возвращаем 409 с деталями
       throw createError({
         statusCode: 409,
-        message: "Обнаружены конфликты расписания для студентов",
+        message:
+          "Некоторые слушатели уже имеют занятия в другой группе в этом периоде",
         data: conflicts,
       });
     }
@@ -177,7 +184,7 @@ export default defineEventHandler(async (event) => {
             groupData.classroom || null,
             groupData.description || null,
             groupData.isActive !== false ? 1 : 0,
-          ]
+          ],
         );
 
         // 7.2 Добавление студентов
@@ -186,7 +193,7 @@ export default defineEventHandler(async (event) => {
             await connection.execute(
               `INSERT INTO study_group_students (id, group_id, student_id)
              VALUES (?, ?, ?)`,
-              [uuidv4(), newGroupId, studentId]
+              [uuidv4(), newGroupId, studentId],
             );
           }
         }
@@ -225,12 +232,12 @@ export default defineEventHandler(async (event) => {
               user.id,
               user.id,
               new Date(),
-            ]
+            ],
           );
         }
 
         return { newGroupId, uploadedFiles };
-      }
+      },
     );
 
     // 8. Логирование

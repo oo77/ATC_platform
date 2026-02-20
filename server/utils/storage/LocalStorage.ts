@@ -29,7 +29,7 @@ export class LocalStorage implements IStorage {
     category: FileCategory,
     relatedId?: string,
     folderPath?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): Promise<SavedFileInfo> {
     try {
       // Генерация UUID для файла
@@ -64,7 +64,7 @@ export class LocalStorage implements IStorage {
         // Формат: {ПИНФЛ}_{серияНомер}.{расширение}
         const sanitizedNumber = metadata.certificateNumber.replace(
           /[^a-zA-Z0-9]/g,
-          "_"
+          "_",
         );
         storedName = `${metadata.pinfl}_${sanitizedNumber}${
           ext ? "." + ext : ""
@@ -197,28 +197,20 @@ export class LocalStorage implements IStorage {
 
   /**
    * Извлечение метаданных изображения
-   * (базовая реализация, для production можно использовать sharp)
+   * Использует image-size — чистый JS, без нативных зависимостей
    */
   private async extractImageMetadata(
-    buffer: Buffer
+    buffer: Buffer,
   ): Promise<Record<string, any> | undefined> {
     try {
-      // Попытка использовать sharp для извлечения метаданных
-      // Если sharp не установлен, возвращаем undefined
-      // @ts-ignore
-      const sharp = await import("sharp").catch(() => null);
-
-      if (sharp) {
-        const metadata = await sharp.default(buffer).metadata();
-        return {
-          width: metadata.width,
-          height: metadata.height,
-          format: metadata.format,
-          hasAlpha: metadata.hasAlpha,
-        };
-      }
-
-      return undefined;
+      const { imageSize } = await import("image-size");
+      const dimensions = imageSize(buffer);
+      return {
+        width: dimensions.width,
+        height: dimensions.height,
+        format: dimensions.type,
+        hasAlpha: undefined, // image-size не предоставляет эту информацию
+      };
     } catch (error) {
       // Если не удалось извлечь метаданные, это не критично
       console.warn("Не удалось извлечь метаданные изображения:", error);

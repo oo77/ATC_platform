@@ -134,7 +134,9 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 7.4 Конфликты участников
+    // 7.4 Конфликты участников при изменении дат
+    // Конфликт = одна и та же дата занятия в двух разных группах.
+    // Передаём id как targetGroupId: проверяем конкретные даты занятий этой группы.
     if (
       (data.startDate || data.endDate) &&
       existingGroup.students &&
@@ -145,13 +147,15 @@ export default defineEventHandler(async (event) => {
         studentIds,
         newStartDate as string,
         newEndDate as string,
-        id
+        id, // excludeGroupId: исключаем саму группу из «чужих»
+        id, // targetGroupId: проверяем по событиям этой группы
       );
 
       if (conflicts.length > 0) {
         throw createError({
           statusCode: 409,
-          message: "Изменение дат создаст конфликты для некоторых слушателей",
+          message:
+            "Изменение дат создаст конфликты занятий для некоторых слушателей",
           data: conflicts,
         });
       }
@@ -162,19 +166,19 @@ export default defineEventHandler(async (event) => {
     const params: any[] = [];
 
     if (data.code !== undefined)
-      updates.push("code = ?"), params.push(data.code);
+      (updates.push("code = ?"), params.push(data.code));
     if (data.courseId !== undefined)
-      updates.push("course_id = ?"), params.push(data.courseId);
+      (updates.push("course_id = ?"), params.push(data.courseId));
     if (data.startDate !== undefined)
-      updates.push("start_date = ?"), params.push(data.startDate);
+      (updates.push("start_date = ?"), params.push(data.startDate));
     if (data.endDate !== undefined)
-      updates.push("end_date = ?"), params.push(data.endDate);
+      (updates.push("end_date = ?"), params.push(data.endDate));
     if (data.classroom !== undefined)
-      updates.push("classroom = ?"), params.push(data.classroom);
+      (updates.push("classroom = ?"), params.push(data.classroom));
     if (data.description !== undefined)
-      updates.push("description = ?"), params.push(data.description);
+      (updates.push("description = ?"), params.push(data.description));
     if (data.isActive !== undefined)
-      updates.push("is_active = ?"), params.push(data.isActive ? 1 : 0);
+      (updates.push("is_active = ?"), params.push(data.isActive ? 1 : 0));
 
     // Логика архивации
     if (data.isArchived !== undefined) {
@@ -197,7 +201,7 @@ export default defineEventHandler(async (event) => {
       params.push(id);
       await executeQuery(
         `UPDATE study_groups SET ${updates.join(", ")} WHERE id = ?`,
-        params
+        params,
       );
     }
 
@@ -207,15 +211,15 @@ export default defineEventHandler(async (event) => {
       data.isArchived
         ? "ARCHIVE"
         : data.isArchived === false
-        ? "RESTORE"
-        : "UPDATE", // кастомные типы действий, если поддерживаются, или просто UPDATE
+          ? "RESTORE"
+          : "UPDATE", // кастомные типы действий, если поддерживаются, или просто UPDATE
       "GROUP",
       id,
       data.code || existingGroup.code,
       {
         updatedFields: Object.keys(data),
         isArchived: data.isArchived,
-      }
+      },
     );
 
     // 10. Возврат обновленной группы
@@ -226,8 +230,8 @@ export default defineEventHandler(async (event) => {
       message: data.isArchived
         ? "Группа архивирована"
         : data.isArchived === false
-        ? "Группа восстановлена"
-        : "Группа успешно обновлена",
+          ? "Группа восстановлена"
+          : "Группа успешно обновлена",
       group: updatedGroup,
     };
   } catch (error: any) {

@@ -1,11 +1,25 @@
 /**
- * Генератор PDF для сертификатов на основе визуального редактора
+ * Генератор PDF для сертификатов
  *
- * Использует Puppeteer для рендеринга HTML в PDF с высоким качеством.
- * Поддерживает все типы элементов: текст, переменные, изображения, QR-коды, фигуры.
+ * Использует pdf-lib (чистый JS) вместо Puppeteer/Chromium.
+ * Поддерживает: текст, переменные, изображения, QR-коды, фигуры, фоны.
+ *
+ * Система координат:
+ *  - HTML/шаблон: (0,0) — верхний левый угол
+ *  - pdf-lib:     (0,0) — нижний левый угол
+ *  - Конвертация: pdfY = pageHeight - elementY - elementHeight
  */
 
-import puppeteer from "puppeteer";
+import {
+  PDFDocument,
+  PDFFont,
+  PDFPage,
+  StandardFonts,
+  rgb,
+  degrees,
+  PageSizes,
+} from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import QRCode from "qrcode";
 import * as fs from "fs";
 import * as path from "path";
@@ -18,7 +32,6 @@ import type {
   QRElement,
   ShapeElement,
   VariableSource,
-  TemplateLayout,
 } from "../types/certificate";
 
 // ============================================================================
@@ -67,26 +80,18 @@ export interface VariableContext {
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================================
 
-/**
- * Сокращённое ФИО (Иванов И.И.)
- */
-function getShortName(fullName: string): string {
+export function getShortName(fullName: string): string {
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 0) return fullName;
-
   const lastName = parts[0];
   const initials = parts
     .slice(1)
     .map((p) => p.charAt(0).toUpperCase() + ".")
     .join("");
-
   return `${lastName} ${initials}`.trim();
 }
 
-/**
- * Форматировать дату как "26 декабря 2025 года"
- */
-function formatDateFormatted(date: Date | string): string {
+export function formatDateFormatted(date: Date | string): string {
   const d = new Date(date);
   const months = [
     "января",
@@ -102,35 +107,459 @@ function formatDateFormatted(date: Date | string): string {
     "ноября",
     "декабря",
   ];
-
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} года`;
 }
 
-/**
- * Форматировать дату как ДД.ММ.ГГГГ
- */
 function formatDate(date: Date | string): string {
   const d = new Date(date);
-  const day = d.getDate().toString().padStart(2, "0");
-  const month = (d.getMonth() + 1).toString().padStart(2, "0");
-  const year = d.getFullYear();
+  return `${d.getDate().toString().padStart(2, "0")}.${(d.getMonth() + 1).toString().padStart(2, "0")}.${d.getFullYear()}`;
+}
 
-  return `${day}.${month}.${year}`;
+// ============================================================================
+// РАЗБОР CSS-ЦВЕТА → pdf-lib RGB
+// ============================================================================
+
+function parseCssColor(color: string): { r: number; g: number; b: number } {
+  if (!color || color === "transparent") return { r: 0, g: 0, b: 0 };
+
+  // #rrggbb или #rgb
+  if (color.startsWith("#")) {
+    let hex = color.slice(1);
+    if (hex.length === 3)
+      hex = hex
+        .split("")
+        .map((c) => c + c)
+        .join("");
+    const n = parseInt(hex, 16);
+    return {
+      r: ((n >> 16) & 255) / 255,
+      g: ((n >> 8) & 255) / 255,
+      b: (n & 255) / 255,
+    };
+  }
+
+  // rgb(r, g, b) или rgba(r, g, b, a)
+  const m = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (m) {
+    return {
+      r: parseInt(m[1]) / 255,
+      g: parseInt(m[2]) / 255,
+      b: parseInt(m[3]) / 255,
+    };
+  }
+
+  return { r: 0, g: 0, b: 0 };
+}
+
+// ============================================================================
+// КЭШИРОВАНИЕ ШРИФТОВ + ЗАГРУЗКА С GITHUB (google/fonts)
+// ============================================================================
+
+const fontCache = new Map<string, Uint8Array>();
+
+// Папка с локальными TTF шрифтами (заполняется через scripts/download-fonts.mjs)
+const FONT_ASSETS_DIR = path.join(process.cwd(), "server", "assets", "fonts");
+// Дисковый кеш — заполняется автоматически при первой загрузке из сети
+const FONT_DISK_CACHE = path.join(process.cwd(), "storage", ".font-cache");
+
+function readLocalFont(filePath: string): Uint8Array | null {
+  try {
+    const buf = fs.readFileSync(filePath);
+    if (buf.length < 1000) return null;
+    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Получить значение переменной по ключу
+ * Маппинг шрифтов → пути в репозитории google/fonts на GitHub.
+ *
+ * ВАЖНО: jsDelivr CDN возвращает 403 для /static/ поддиректорий google/fonts.
+ * Используем raw.githubusercontent.com напрямую.
  */
+const GITHUB_FONT_MAP: Record<
+  string,
+  { repo: string; staticDir?: string; files: Record<number, string[]> }
+> = {
+  Inter: {
+    repo: "ofl/inter",
+    staticDir: "static",
+    files: {
+      400: ["Inter_18pt-Regular.ttf", "Inter-Regular.ttf"],
+      700: ["Inter_18pt-Bold.ttf", "Inter-Bold.ttf"],
+    },
+  },
+  Roboto: {
+    repo: "apache/roboto",
+    staticDir: "static",
+    files: { 400: ["Roboto-Regular.ttf"], 700: ["Roboto-Bold.ttf"] },
+  },
+  "Open Sans": {
+    repo: "apache/opensans",
+    staticDir: "static",
+    files: { 400: ["OpenSans-Regular.ttf"], 700: ["OpenSans-Bold.ttf"] },
+  },
+  Montserrat: {
+    repo: "ofl/montserrat",
+    staticDir: "static",
+    files: { 400: ["Montserrat-Regular.ttf"], 700: ["Montserrat-Bold.ttf"] },
+  },
+  Lato: {
+    repo: "ofl/lato",
+    files: { 400: ["Lato-Regular.ttf"], 700: ["Lato-Bold.ttf"] },
+  },
+  Poppins: {
+    repo: "ofl/poppins",
+    files: { 400: ["Poppins-Regular.ttf"], 700: ["Poppins-Bold.ttf"] },
+  },
+  "Playfair Display": {
+    repo: "ofl/playfairdisplay",
+    staticDir: "static",
+    files: {
+      400: ["PlayfairDisplay-Regular.ttf"],
+      700: ["PlayfairDisplay-Bold.ttf"],
+    },
+  },
+  Lora: {
+    repo: "ofl/lora",
+    staticDir: "static",
+    files: { 400: ["Lora-Regular.ttf"], 700: ["Lora-Bold.ttf"] },
+  },
+  Merriweather: {
+    repo: "ofl/merriweather",
+    files: {
+      400: ["Merriweather-Regular.ttf"],
+      700: ["Merriweather-Bold.ttf"],
+    },
+  },
+  "PT Sans": {
+    repo: "ofl/ptsans",
+    files: { 400: ["PTSans-Regular.ttf"], 700: ["PTSans-Bold.ttf"] },
+  },
+  "PT Serif": {
+    repo: "ofl/ptserif",
+    files: { 400: ["PTSerif-Regular.ttf"], 700: ["PTSerif-Bold.ttf"] },
+  },
+  "Noto Sans": {
+    repo: "ofl/notosans",
+    files: { 400: ["NotoSans-Regular.ttf"], 700: ["NotoSans-Bold.ttf"] },
+  },
+  Raleway: {
+    repo: "ofl/raleway",
+    staticDir: "static",
+    files: { 400: ["Raleway-Regular.ttf"], 700: ["Raleway-Bold.ttf"] },
+  },
+  Nunito: {
+    repo: "ofl/nunito",
+    staticDir: "static",
+    files: { 400: ["Nunito-Regular.ttf"], 700: ["Nunito-Bold.ttf"] },
+  },
+  Oswald: {
+    repo: "ofl/oswald",
+    staticDir: "static",
+    files: { 400: ["Oswald-Regular.ttf"], 700: ["Oswald-Bold.ttf"] },
+  },
+  "Source Sans Pro": {
+    repo: "ofl/sourcesans3",
+    staticDir: "static",
+    files: {
+      400: ["SourceSans3-Regular.ttf"],
+      700: ["SourceSans3-Bold.ttf"],
+    },
+  },
+  Ubuntu: {
+    repo: "ufl/ubuntu",
+    files: { 400: ["Ubuntu-Regular.ttf"], 700: ["Ubuntu-Bold.ttf"] },
+  },
+  Rubik: {
+    repo: "ofl/rubik",
+    staticDir: "static",
+    files: { 400: ["Rubik-Regular.ttf"], 700: ["Rubik-Bold.ttf"] },
+  },
+  "Work Sans": {
+    repo: "ofl/worksans",
+    staticDir: "static",
+    files: { 400: ["WorkSans-Regular.ttf"], 700: ["WorkSans-Bold.ttf"] },
+  },
+  "Fira Sans": {
+    repo: "ofl/firasans",
+    files: { 400: ["FiraSans-Regular.ttf"], 700: ["FiraSans-Bold.ttf"] },
+  },
+};
+
+/** Строит список URL для загрузки шрифта (от приоритетного к запасным) */
+function buildFontUrls(fontFamily: string, weight: number): string[] {
+  const meta = GITHUB_FONT_MAP[fontFamily];
+  if (!meta) return [];
+
+  const fileNames = meta.files[weight] ?? [];
+  const staticPart = meta.staticDir ? `/${meta.staticDir}` : "";
+  const urls: string[] = [];
+
+  for (const fileName of fileNames) {
+    // raw.githubusercontent.com — прямой доступ без CDN-ограничений (ПРИОРИТЕТ)
+    urls.push(
+      `https://raw.githubusercontent.com/google/fonts/main/${meta.repo}${staticPart}/${fileName}`,
+    );
+    // Запасной: без subdirectory static/
+    if (meta.staticDir) {
+      urls.push(
+        `https://raw.githubusercontent.com/google/fonts/main/${meta.repo}/${fileName}`,
+      );
+    }
+  }
+
+  return urls;
+}
+
+/**
+ * Загружает TTF-шрифт. Порядок поиска:
+ * 1. Память (Map — мгновенно)
+ * 2. server/assets/fonts/ (TTF из download-fonts.mjs, если запускался)
+ * 3. storage/.font-cache/ (дисковый кеш от предыдущих загрузок)
+ * 4. C:\Windows\Fonts\ (системные Windows-шрифты: Georgia, Arial и др.)
+ * 5. raw.githubusercontent.com/google/fonts (загрузка по требованию + кеш)
+ */
+async function fetchFontBytes(
+  fontFamily: string,
+  weight: number = 400,
+): Promise<Uint8Array | null> {
+  const key = `${fontFamily.replace(/\s+/g, "_")}-${weight}`;
+
+  // 1. Память
+  if (fontCache.has(key)) return fontCache.get(key)!;
+
+  // 2. server/assets/fonts/
+  const assetsBytes = readLocalFont(path.join(FONT_ASSETS_DIR, `${key}.ttf`));
+  if (assetsBytes) {
+    fontCache.set(key, assetsBytes);
+    return assetsBytes;
+  }
+
+  // 3. Дисковый кеш
+  const diskPath = path.join(FONT_DISK_CACHE, `${key}.ttf`);
+  const diskBytes = readLocalFont(diskPath);
+  if (diskBytes) {
+    fontCache.set(key, diskBytes);
+    return diskBytes;
+  }
+
+  // 4. Windows системные шрифты (Georgia, Arial, Tahoma и др.)
+  const winBytes = readWindowsFont(fontFamily, weight);
+  if (winBytes) {
+    fontCache.set(key, winBytes);
+    return winBytes;
+  }
+
+  // 5. Загрузка с raw.githubusercontent.com по требованию
+  for (const url of buildFontUrls(fontFamily, weight)) {
+    try {
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(15_000),
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        },
+      });
+      if (!res.ok) continue;
+
+      const buffer = Buffer.from(await res.arrayBuffer());
+      if (buffer.length < 1000) continue;
+
+      // Проверка magic bytes: TTF=0x00010000, OTF=0x4F54544F, true=0x74727565
+      const magic = buffer.readUInt32BE(0);
+      if (
+        magic !== 0x00010000 &&
+        magic !== 0x4f54544f &&
+        magic !== 0x74727565 &&
+        magic !== 0x74797031
+      )
+        continue;
+
+      const bytes = new Uint8Array(
+        buffer.buffer,
+        buffer.byteOffset,
+        buffer.byteLength,
+      );
+
+      // Кешируем на диск для следующих запусков
+      try {
+        fs.mkdirSync(FONT_DISK_CACHE, { recursive: true });
+        fs.writeFileSync(diskPath, buffer);
+      } catch {
+        /* некритично */
+      }
+
+      fontCache.set(key, bytes);
+      console.log(
+        `[pdfGenerator] Font loaded from GitHub: ${key} (${Math.round(buffer.length / 1024)} KB)`,
+      );
+      return bytes;
+    } catch {
+      /* пробуем следующий URL */
+    }
+  }
+
+  console.warn(`[pdfGenerator] Font not available: ${fontFamily} ${weight}`);
+  return null;
+}
+
+/**
+ * Маппинг системных Windows-шрифтов на файлы в C:\Windows\Fonts
+ * Поддерживает кириллицу и другие расширенные наборы символов.
+ */
+const WINDOWS_FONT_MAP: Record<string, Record<number, string>> = {
+  Georgia: { 400: "georgia.ttf", 700: "georgiab.ttf" },
+  Arial: { 400: "arial.ttf", 700: "arialbd.ttf" },
+  "Arial Unicode MS": { 400: "ARIALUNICODEMS.TTF", 700: "ARIALUNICODEMS.TTF" },
+  "Times New Roman": { 400: "times.ttf", 700: "timesbd.ttf" },
+  Calibri: { 400: "calibri.ttf", 700: "calibrib.ttf" },
+  Segoe: { 400: "segoeui.ttf", 700: "segoeuib.ttf" },
+  "Segoe UI": { 400: "segoeui.ttf", 700: "segoeuib.ttf" },
+  Verdana: { 400: "verdana.ttf", 700: "verdanab.ttf" },
+  Tahoma: { 400: "tahoma.ttf", 700: "tahomabd.ttf" },
+};
+
+const WINDOWS_FONTS_DIR = "C:\\Windows\\Fonts";
+
+/** Ищет шрифт в системных папках Windows (C:\Windows\Fonts) */
+function readWindowsFont(
+  fontFamily: string,
+  weight: number,
+): Uint8Array | null {
+  const fileMap = WINDOWS_FONT_MAP[fontFamily];
+  if (!fileMap) return null;
+
+  const fileName = fileMap[weight] ?? fileMap[400];
+  if (!fileName) return null;
+
+  // Пробуем несколько регистров имени файла
+  const attempts = [
+    path.join(WINDOWS_FONTS_DIR, fileName),
+    path.join(WINDOWS_FONTS_DIR, fileName.toLowerCase()),
+    path.join(WINDOWS_FONTS_DIR, fileName.toUpperCase()),
+  ];
+
+  for (const p of attempts) {
+    const bytes = readLocalFont(p);
+    if (bytes) return bytes;
+  }
+  return null;
+}
+
+/**
+ * Загружает Cyrillic-совместимый fallback-шрифт.
+ * Порядок попыток: Roboto → Lato → Poppins → Ubuntu
+ * Все эти шрифты поддерживают кириллицу и уже скачаны
+ * в server/assets/fonts/ при запуске download-fonts.mjs.
+ */
+async function getFallbackFont(
+  pdfDoc: PDFDocument,
+  weight: number,
+): Promise<PDFFont | null> {
+  pdfDoc.registerFontkit(fontkit);
+
+  // Цепочка Cyrillic-совместимых шрифтов (в порядке предпочтения)
+  const fallbackChain = ["Roboto", "Lato", "Poppins", "Ubuntu"];
+
+  for (const family of fallbackChain) {
+    const bytes = await fetchFontBytes(family, weight);
+    if (bytes) {
+      try {
+        return await pdfDoc.embedFont(bytes);
+      } catch {
+        /* пробуем следующий */
+      }
+    }
+  }
+  return null;
+}
+
+async function getEmbeddedFont(
+  pdfDoc: PDFDocument,
+  fontFamily: string,
+  fontWeight: string,
+  fontStyle: string,
+): Promise<PDFFont> {
+  const weight =
+    fontWeight === "bold" || parseInt(fontWeight) >= 700 ? 700 : 400;
+  const isItalic = fontStyle === "italic";
+
+  // Стандартные шрифты только для латиницы (WinAnsi — нет кириллицы)
+  // Times New Roman и Courier используются редко и обычно с латиницей
+  const standardFonts: Record<string, StandardFonts> = {
+    "Times New Roman": isItalic
+      ? weight >= 700
+        ? StandardFonts.TimesRomanBoldItalic
+        : StandardFonts.TimesRomanItalic
+      : weight >= 700
+        ? StandardFonts.TimesRomanBold
+        : StandardFonts.TimesRoman,
+    "Courier New": isItalic
+      ? weight >= 700
+        ? StandardFonts.CourierBoldOblique
+        : StandardFonts.CourierOblique
+      : weight >= 700
+        ? StandardFonts.CourierBold
+        : StandardFonts.Courier,
+    Courier: isItalic
+      ? weight >= 700
+        ? StandardFonts.CourierBoldOblique
+        : StandardFonts.CourierOblique
+      : weight >= 700
+        ? StandardFonts.CourierBold
+        : StandardFonts.Courier,
+  };
+
+  if (standardFonts[fontFamily]) {
+    return pdfDoc.embedFont(standardFonts[fontFamily]);
+  }
+
+  // Загружаем запрошенный шрифт из Google Fonts (TTF)
+  pdfDoc.registerFontkit(fontkit);
+  const fontBytes = await fetchFontBytes(fontFamily, weight);
+  if (fontBytes) {
+    try {
+      return await pdfDoc.embedFont(fontBytes);
+    } catch {
+      console.warn(
+        `[pdfGenerator] Failed to embed font ${fontFamily}, trying Roboto fallback`,
+      );
+    }
+  }
+
+  // Fallback: Roboto — поддерживает кириллицу, латиницу, узбекский
+  const roboto = await getFallbackFont(pdfDoc, weight);
+  if (roboto) return roboto;
+
+  // Последний резерв: Helvetica (только латиница — для PDF без кириллицы)
+  console.warn(
+    `[pdfGenerator] Using Helvetica for "${fontFamily}" — Cyrillic may not render`,
+  );
+  const fallback =
+    weight >= 700
+      ? isItalic
+        ? StandardFonts.HelveticaBoldOblique
+        : StandardFonts.HelveticaBold
+      : isItalic
+        ? StandardFonts.HelveticaOblique
+        : StandardFonts.Helvetica;
+  return pdfDoc.embedFont(fallback);
+}
+
+// ============================================================================
+// РАЗРЕШЕНИЕ ПЕРЕМЕННЫХ
+// ============================================================================
+
 export function resolveVariable(
   key: VariableSource,
   context: VariableContext,
 ): string {
   const { student, course, group, certificate } = context;
-  const fullName = student.fullName;
-  const nameParts = fullName.split(/\s+/);
+  const nameParts = student.fullName.split(/\s+/);
 
   switch (key) {
-    // Студент
     case "student.fullName":
       return student.fullName;
     case "student.shortName":
@@ -141,12 +570,8 @@ export function resolveVariable(
       return nameParts[1] || "";
     case "student.middleName":
       return nameParts[2] || "";
-    case "student.firstLastName": {
-      // Извлекаем фамилию и имя из full_name в формате "IVANOV IVAN"
-      const lastName = nameParts[0] || "";
-      const firstName = nameParts[1] || "";
-      return `${lastName.toUpperCase()} ${firstName.toUpperCase()}`.trim();
-    }
+    case "student.firstLastName":
+      return `${(nameParts[0] || "").toUpperCase()} ${(nameParts[1] || "").toUpperCase()}`.trim();
     case "student.organization":
       return student.organization;
     case "student.organizationUz":
@@ -161,8 +586,6 @@ export function resolveVariable(
       return student.department || "";
     case "student.pinfl":
       return student.pinfl;
-
-    // Курс
     case "course.name":
       return course.name;
     case "course.shortName":
@@ -173,8 +596,6 @@ export function resolveVariable(
       return course.totalHours.toString();
     case "course.description":
       return "";
-
-    // Группа
     case "group.code":
       return group.code;
     case "group.startDate":
@@ -183,16 +604,12 @@ export function resolveVariable(
       return formatDate(group.endDate);
     case "group.classroom":
       return group.classroom || "";
-
-    // Сертификат
     case "certificate.number":
       return certificate.number;
     case "certificate.issueDate":
       return formatDate(certificate.issueDate);
     case "certificate.issueDateFormatted":
       return formatDateFormatted(certificate.issueDate);
-
-    // Инструктор
     case "instructor.fullName":
       return context.instructor?.fullName || "";
     case "instructor.shortName":
@@ -201,11 +618,8 @@ export function resolveVariable(
         : "";
     case "instructor.position":
       return context.instructor?.position || "";
-
-    // Кастомное
     case "custom":
       return "";
-
     default:
       console.warn(`[pdfGenerator] Unknown variable: ${key}`);
       return `[${key}]`;
@@ -213,147 +627,214 @@ export function resolveVariable(
 }
 
 // ============================================================================
-// ГЕНЕРАЦИЯ HTML
+// ЗАГРУЗКА ИЗОБРАЖЕНИЯ
 // ============================================================================
 
-/**
- * Генерировать QR-код как data URL
- */
-async function generateQRDataUrl(
-  data: string,
-  options: { size: number; color: string; backgroundColor: string },
-): Promise<string> {
-  return await QRCode.toDataURL(data, {
-    width: options.size,
-    margin: 1,
-    color: {
-      dark: options.color,
-      light: options.backgroundColor,
-    },
-  });
-}
+async function loadImageBuffer(url: string): Promise<Buffer | null> {
+  try {
+    if (url.startsWith("data:image/")) {
+      const base64 = url.split(",")[1];
+      return Buffer.from(base64, "base64");
+    }
 
-/**
- * Конвертировать URL изображения в base64
- * Если URL относительный (/uploads/...), читаем файл из файловой системы
- * Если URL уже base64 (data:image/...), возвращаем как есть
- */
-async function convertImageUrlToBase64(url: string): Promise<string> {
-  // Если уже base64, возвращаем как есть
-  if (url.startsWith("data:image/")) {
-    return url;
-  }
-
-  // Если относительный путь, конвертируем в base64
-  if (url.startsWith("/uploads/")) {
-    try {
-      // Очищаем URL от query параметров
+    if (url.startsWith("/uploads/") || url.startsWith("/storage/")) {
       const cleanUrl = url.split("?")[0];
       const publicDir = path.join(process.cwd(), "public");
       const filePath = path.join(publicDir, cleanUrl);
-
-      // Проверяем существование файла
-      if (!fs.existsSync(filePath)) {
-        console.error(`[pdfGenerator] Image file not found: ${filePath}`);
-        return url; // Возвращаем оригинальный URL
-      }
-
-      // Читаем файл
-      const imageBuffer = fs.readFileSync(filePath);
-      const ext = path.extname(filePath).toLowerCase();
-
-      // Определяем MIME-тип
-      let mimeType = "image/png";
-      if (ext === ".jpg" || ext === ".jpeg") {
-        mimeType = "image/jpeg";
-      } else if (ext === ".png") {
-        mimeType = "image/png";
-      } else if (ext === ".webp") {
-        mimeType = "image/webp";
-      } else if (ext === ".svg") {
-        mimeType = "image/svg+xml";
-      }
-
-      // Конвертируем в base64
-      const base64 = imageBuffer.toString("base64");
-      return `data:${mimeType};base64,${base64}`;
-    } catch (error) {
-      console.error(`[pdfGenerator] Error converting image to base64:`, error);
-      return url; // Возвращаем оригинальный URL в случае ошибки
+      if (fs.existsSync(filePath)) return fs.readFileSync(filePath);
     }
-  }
 
-  // Для абсолютных URL возвращаем как есть
-  return url;
+    // Абсолютный URL
+    if (url.startsWith("http")) {
+      const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (res.ok) return Buffer.from(await res.arrayBuffer());
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ============================================================================
+// ГЕНЕРАЦИЯ PDF
+// ============================================================================
+
+interface GeneratePdfOptions {
+  templateData: CertificateTemplateData;
+  context: VariableContext;
+  outputPath: string;
 }
 
 /**
- * Конвертировать элемент в HTML
+ * Основная функция: рисует все элементы шаблона на PDF-странице
  */
-async function elementToHtml(
+async function buildPdf(
+  templateData: CertificateTemplateData,
+  context: VariableContext,
+): Promise<Uint8Array> {
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+
+  const pageWidth = templateData.width;
+  const pageHeight = templateData.height;
+
+  const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+  // ── Фон ────────────────────────────────────────────────────
+  if (templateData.background) {
+    if (
+      templateData.background.type === "color" &&
+      templateData.background.value !== "transparent"
+    ) {
+      const c = parseCssColor(templateData.background.value);
+      page.drawRectangle({
+        x: 0,
+        y: 0,
+        width: pageWidth,
+        height: pageHeight,
+        color: rgb(c.r, c.g, c.b),
+      });
+    } else if (templateData.background.type === "image") {
+      const imgBuffer = await loadImageBuffer(templateData.background.value);
+      if (imgBuffer) {
+        try {
+          const ext = templateData.background.value
+            .split("?")[0]
+            .split(".")
+            .pop()
+            ?.toLowerCase();
+          const img =
+            ext === "jpg" || ext === "jpeg"
+              ? await pdfDoc.embedJpg(imgBuffer)
+              : await pdfDoc.embedPng(imgBuffer);
+          page.drawImage(img, {
+            x: 0,
+            y: 0,
+            width: pageWidth,
+            height: pageHeight,
+          });
+        } catch (e) {
+          console.warn("[pdfGenerator] Could not embed background image:", e);
+        }
+      }
+    }
+  }
+
+  // ── Элементы (сортируем по zIndex) ─────────────────────────
+  const sorted = [...templateData.elements].sort((a, b) => a.zIndex - b.zIndex);
+
+  for (const element of sorted) {
+    try {
+      await drawElement(pdfDoc, page, element, context, pageWidth, pageHeight);
+    } catch (e) {
+      console.warn(`[pdfGenerator] Failed to draw element ${element.id}:`, e);
+    }
+  }
+
+  return pdfDoc.save();
+}
+
+/**
+ * Конвертирует Y из системы HTML (top-left) в систему PDF (bottom-left)
+ */
+function toPdfY(
+  htmlY: number,
+  elementHeight: number,
+  pageHeight: number,
+): number {
+  return pageHeight - htmlY - elementHeight;
+}
+
+/**
+ * Рисует один элемент шаблона на странице
+ */
+async function drawElement(
+  pdfDoc: PDFDocument,
+  page: PDFPage,
   element: TemplateElement,
   context: VariableContext,
-): Promise<string> {
-  const baseStyles = `
-    position: absolute;
-    left: ${element.x}px;
-    top: ${element.y}px;
-    width: ${element.width}px;
-    height: ${element.height}px;
-    ${element.rotation ? `transform: rotate(${element.rotation}deg);` : ""}
-  `;
+  pageWidth: number,
+  pageHeight: number,
+): Promise<void> {
+  const x = element.x;
+  const y = toPdfY(element.y, element.height, pageHeight);
+  const w = element.width;
+  const h = element.height;
 
   switch (element.type) {
-    case "text": {
-      const el = element as TextElement;
-      const textStyles = `
-        font-family: '${el.fontFamily}', sans-serif;
-        font-size: ${el.fontSize}px;
-        font-weight: ${el.fontWeight};
-        font-style: ${el.fontStyle};
-        text-align: ${el.textAlign};
-        color: ${el.color};
-        line-height: ${el.lineHeight};
-        display: flex;
-        align-items: center;
-        justify-content: ${el.textAlign === "left" ? "flex-start" : el.textAlign === "right" ? "flex-end" : "center"};
-        white-space: pre-wrap;
-        word-break: break-word;
-      `;
-      return `<div style="${baseStyles}${textStyles}">${escapeHtml(el.content)}</div>`;
-    }
-
+    case "text":
     case "variable": {
-      const el = element as VariableElement;
-      const value = resolveVariable(el.variableKey, context);
-      const textStyles = `
-        font-family: '${el.fontFamily}', sans-serif;
-        font-size: ${el.fontSize}px;
-        font-weight: ${el.fontWeight};
-        font-style: ${el.fontStyle};
-        text-align: ${el.textAlign};
-        color: ${el.color};
-        line-height: ${el.lineHeight};
-        display: flex;
-        align-items: center;
-        justify-content: ${el.textAlign === "left" ? "flex-start" : el.textAlign === "right" ? "flex-end" : "center"};
-        white-space: pre-wrap;
-        word-break: break-word;
-      `;
-      return `<div style="${baseStyles}${textStyles}">${escapeHtml(value)}</div>`;
+      const el = element as TextElement | VariableElement;
+      const text =
+        element.type === "variable"
+          ? resolveVariable((el as VariableElement).variableKey, context)
+          : (el as TextElement).content;
+
+      if (!text) break;
+
+      const font = await getEmbeddedFont(
+        pdfDoc,
+        el.fontFamily,
+        el.fontWeight,
+        el.fontStyle,
+      );
+      const fontSize = el.fontSize;
+      const c = parseCssColor(el.color);
+
+      // Центрирование текста по вертикали внутри элемента
+      const textY = y + (h - fontSize) / 2;
+
+      // Горизонтальное выравнивание
+      let textX = x;
+      try {
+        const textWidth = font.widthOfTextAtSize(text, fontSize);
+        if (el.textAlign === "center") textX = x + (w - textWidth) / 2;
+        else if (el.textAlign === "right") textX = x + w - textWidth;
+      } catch {
+        // Оставляем x
+      }
+
+      page.drawText(text, {
+        x: textX,
+        y: textY,
+        size: fontSize,
+        font,
+        color: rgb(c.r, c.g, c.b),
+        maxWidth: w,
+        lineHeight: (el.lineHeight as number) * fontSize,
+        ...(element.rotation ? { rotate: degrees(-element.rotation) } : {}),
+      });
+      break;
     }
 
     case "image": {
       const el = element as ImageElement;
-      // Конвертируем URL в base64, если это относительный путь
-      const imageSrc = await convertImageUrlToBase64(el.src);
-      const imageStyles = `
-        object-fit: ${el.objectFit};
-        opacity: ${el.opacity};
-        width: 100%;
-        height: 100%;
-      `;
-      return `<div style="${baseStyles}"><img src="${imageSrc}" style="${imageStyles}" /></div>`;
+      const imgBuffer = await loadImageBuffer(el.src);
+      if (!imgBuffer) break;
+
+      try {
+        const srcLower = el.src.split("?")[0].toLowerCase();
+        const isJpeg =
+          srcLower.endsWith(".jpg") ||
+          srcLower.endsWith(".jpeg") ||
+          el.src.startsWith("data:image/jpeg");
+        const img = isJpeg
+          ? await pdfDoc.embedJpg(imgBuffer)
+          : await pdfDoc.embedPng(imgBuffer);
+
+        page.drawImage(img, {
+          x,
+          y,
+          width: w,
+          height: h,
+          opacity: el.opacity ?? 1,
+          ...(element.rotation ? { rotate: degrees(-element.rotation) } : {}),
+        });
+      } catch (e) {
+        console.warn("[pdfGenerator] Image embed failed:", e);
+      }
+      break;
     }
 
     case "qr": {
@@ -373,278 +854,268 @@ async function elementToHtml(
           qrData = el.customData || "";
           break;
         case "custom_url":
-          const baseUrl = (el.customData || "").replace(/\/$/, "");
-          qrData = `${baseUrl}/verify/${context.certificate.number}`;
+          qrData = `${(el.customData || "").replace(/\/$/, "")}/verify/${context.certificate.number}`;
           break;
       }
 
-      const qrDataUrl = await generateQRDataUrl(qrData, {
-        size: el.size,
-        color: el.color,
-        backgroundColor: el.backgroundColor,
-      });
+      try {
+        const qrPngBuffer = await QRCode.toBuffer(qrData, {
+          width: Math.min(w, h),
+          margin: 1,
+          color: {
+            dark: el.color?.replace("#", "") || "000000FF",
+            light: el.backgroundColor?.replace("#", "") || "FFFFFFFF",
+          },
+        });
 
-      return `<div style="${baseStyles}"><img src="${qrDataUrl}" style="width: 100%; height: 100%;" /></div>`;
+        const qrImg = await pdfDoc.embedPng(qrPngBuffer);
+        page.drawImage(qrImg, { x, y, width: w, height: h });
+      } catch (e) {
+        console.warn("[pdfGenerator] QR generation failed:", e);
+      }
+      break;
     }
 
     case "shape": {
       const el = element as ShapeElement;
+      const fillC =
+        el.fillColor && el.fillColor !== "transparent"
+          ? parseCssColor(el.fillColor)
+          : null;
+      const strokeC = parseCssColor(el.strokeColor || "#000000");
 
       if (el.shapeType === "rectangle") {
-        const shapeStyles = `
-          background: ${el.fillColor === "transparent" ? "transparent" : el.fillColor};
-          border: ${el.strokeWidth}px solid ${el.strokeColor};
-          box-sizing: border-box;
-        `;
-        return `<div style="${baseStyles}${shapeStyles}"></div>`;
+        page.drawRectangle({
+          x,
+          y,
+          width: w,
+          height: h,
+          ...(fillC
+            ? { color: rgb(fillC.r, fillC.g, fillC.b) }
+            : { color: undefined }),
+          borderColor: rgb(strokeC.r, strokeC.g, strokeC.b),
+          borderWidth: el.strokeWidth || 1,
+          ...(element.rotation ? { rotate: degrees(-element.rotation) } : {}),
+        });
+      } else if (el.shapeType === "circle") {
+        page.drawEllipse({
+          x: x + w / 2,
+          y: y + h / 2,
+          xScale: w / 2,
+          yScale: h / 2,
+          ...(fillC
+            ? { color: rgb(fillC.r, fillC.g, fillC.b) }
+            : { color: undefined }),
+          borderColor: rgb(strokeC.r, strokeC.g, strokeC.b),
+          borderWidth: el.strokeWidth || 1,
+        });
+      } else if (el.shapeType === "line") {
+        page.drawLine({
+          start: { x, y: y + h },
+          end: { x: x + w, y },
+          color: rgb(strokeC.r, strokeC.g, strokeC.b),
+          thickness: el.strokeWidth || 1,
+        });
       }
-
-      if (el.shapeType === "circle") {
-        const shapeStyles = `
-          background: ${el.fillColor === "transparent" ? "transparent" : el.fillColor};
-          border: ${el.strokeWidth}px solid ${el.strokeColor};
-          border-radius: 50%;
-          box-sizing: border-box;
-        `;
-        return `<div style="${baseStyles}${shapeStyles}"></div>`;
-      }
-
-      if (el.shapeType === "line") {
-        // SVG line
-        return `
-          <svg style="${baseStyles}" viewBox="0 0 ${el.width} ${el.height}">
-            <line x1="0" y1="0" x2="${el.width}" y2="${el.height}" 
-                  stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}" />
-          </svg>
-        `;
-      }
-
-      return "";
-    }
-
-    default:
-      return "";
-  }
-}
-
-/**
- * Escape HTML для предотвращения XSS
- */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;",
-  };
-  return text.replace(/[&<>"']/g, (m) => map[m] || m);
-}
-
-/**
- * Генерировать полный HTML документ для сертификата
- */
-async function generateCertificateHtml(
-  templateData: CertificateTemplateData,
-  context: VariableContext,
-): Promise<string> {
-  // Сортируем элементы по zIndex
-  const sortedElements = [...templateData.elements].sort(
-    (a, b) => a.zIndex - b.zIndex,
-  );
-
-  // Генерируем HTML для каждого элемента
-  const elementsHtml: string[] = [];
-  for (const element of sortedElements) {
-    const html = await elementToHtml(element, context);
-    elementsHtml.push(html);
-  }
-
-  // Фон
-  let backgroundStyle = "";
-  if (templateData.background) {
-    if (templateData.background.type === "color") {
-      backgroundStyle = `background-color: ${templateData.background.value};`;
-    } else if (templateData.background.type === "image") {
-      // Конвертируем URL в base64, если это относительный путь
-      const backgroundImageUrl = await convertImageUrlToBase64(
-        templateData.background.value,
-      );
-      backgroundStyle = `
-        background-image: url(${backgroundImageUrl});
-        background-size: cover;
-        background-position: center;
-      `;
+      break;
     }
   }
-
-  // Google Fonts для использования в PDF
-  const fonts = new Set<string>();
-  for (const el of templateData.elements) {
-    if (el.type === "text" || el.type === "variable") {
-      fonts.add((el as TextElement).fontFamily);
-    }
-  }
-
-  const fontLinks = Array.from(fonts)
-    .filter((f) => !["Arial", "Times New Roman", "Georgia"].includes(f))
-    .map(
-      (f) =>
-        `<link href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(f)}:wght@400;700&display=swap" rel="stylesheet">`,
-    )
-    .join("\n");
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      ${fontLinks}
-      <style>
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        @page {
-          size: ${templateData.width}px ${templateData.height}px;
-          margin: 0;
-        }
-        body {
-          width: ${templateData.width}px;
-          height: ${templateData.height}px;
-          position: relative;
-          ${backgroundStyle}
-          font-family: 'Inter', Arial, sans-serif;
-        }
-      </style>
-    </head>
-    <body>
-      ${elementsHtml.join("\n")}
-    </body>
-    </html>
-  `;
 }
 
 // ============================================================================
-// ГЕНЕРАЦИЯ PDF
+// ПУБЛИЧНОЕ API
 // ============================================================================
 
-interface GeneratePdfOptions {
-  templateData: CertificateTemplateData;
-  context: VariableContext;
-  outputPath: string;
-}
-
 /**
- * Сгенерировать PDF сертификата
+ * Генерировать PDF сертификата и сохранить на диск
  */
 export async function generateCertificatePdf(
   options: GeneratePdfOptions,
 ): Promise<void> {
   const { templateData, context, outputPath } = options;
 
-  console.log("[pdfGenerator] Starting PDF generation...");
+  console.log("[pdfGenerator] Starting PDF generation (pdf-lib)...");
   console.log(
     `[pdfGenerator] Template size: ${templateData.width}x${templateData.height}`,
   );
   console.log(`[pdfGenerator] Elements: ${templateData.elements.length}`);
 
-  // Генерируем HTML
-  const html = await generateCertificateHtml(templateData, context);
+  const pdfBytes = await buildPdf(templateData, context);
 
-  // Запускаем Puppeteer
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const dir = path.dirname(outputPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-  try {
-    const page = await browser.newPage();
-
-    // Устанавливаем размер viewport
-    await page.setViewport({
-      width: templateData.width,
-      height: templateData.height,
-      deviceScaleFactor: 2, // Высокое качество
-    });
-
-    // Загружаем HTML
-    await page.setContent(html, {
-      waitUntil: "networkidle0", // Ждём загрузки шрифтов и изображений
-    });
-
-    // Даём время на загрузку шрифтов
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Создаём директорию, если не существует
-    const dir = path.dirname(outputPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    // Генерируем PDF
-    await page.pdf({
-      path: outputPath,
-      width: templateData.width,
-      height: templateData.height,
-      printBackground: true,
-      pageRanges: "1",
-    });
-
-    console.log(`[pdfGenerator] PDF saved to: ${outputPath}`);
-  } finally {
-    await browser.close();
-  }
+  fs.writeFileSync(outputPath, pdfBytes);
+  console.log(`[pdfGenerator] PDF saved to: ${outputPath}`);
 }
 
 /**
- * Сгенерировать PDF как Buffer (без сохранения файла)
+ * Генерировать PDF сертификата как Buffer
  */
 export async function generateCertificatePdfBuffer(
   templateData: CertificateTemplateData,
   context: VariableContext,
 ): Promise<Buffer> {
-  console.log("[pdfGenerator] Generating PDF buffer...");
-
-  const html = await generateCertificateHtml(templateData, context);
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-
-  try {
-    const page = await browser.newPage();
-
-    await page.setViewport({
-      width: templateData.width,
-      height: templateData.height,
-      deviceScaleFactor: 2,
-    });
-
-    await page.setContent(html, {
-      waitUntil: "networkidle0",
-    });
-
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const pdfBuffer = await page.pdf({
-      width: templateData.width,
-      height: templateData.height,
-      printBackground: true,
-      pageRanges: "1",
-    });
-
-    console.log("[pdfGenerator] PDF buffer generated");
-    return Buffer.from(pdfBuffer);
-  } finally {
-    await browser.close();
-  }
+  console.log("[pdfGenerator] Generating PDF buffer (pdf-lib)...");
+  const pdfBytes = await buildPdf(templateData, context);
+  console.log("[pdfGenerator] PDF buffer generated");
+  return Buffer.from(pdfBytes);
 }
 
 // ============================================================================
-// ЭКСПОРТ
+// HTML ПРЕДПРОСМОТР (для iframe в браузере, без Puppeteer)
 // ============================================================================
 
-export { getShortName, formatDateFormatted, generateCertificateHtml };
+function escapeHtml(text: string): string {
+  return text.replace(
+    /[&<>"']/g,
+    (m) =>
+      (
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;",
+        }) as Record<string, string>
+      )[m] || m,
+  );
+}
+
+async function convertForPreview(url: string): Promise<string> {
+  if (!url || url.startsWith("data:image/")) return url;
+  if (url.startsWith("/uploads/") || url.startsWith("/storage/")) {
+    try {
+      const cleanUrl = url.split("?")[0];
+      const filePath = path.join(process.cwd(), "public", cleanUrl);
+      if (fs.existsSync(filePath)) {
+        const buf = fs.readFileSync(filePath);
+        const ext = path.extname(filePath).toLowerCase();
+        const mime =
+          ext === ".jpg" || ext === ".jpeg"
+            ? "image/jpeg"
+            : ext === ".png"
+              ? "image/png"
+              : ext === ".webp"
+                ? "image/webp"
+                : ext === ".svg"
+                  ? "image/svg+xml"
+                  : "image/png";
+        return `data:${mime};base64,${buf.toString("base64")}`;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return url;
+}
+
+async function elementToHtml(
+  element: TemplateElement,
+  context: VariableContext,
+): Promise<string> {
+  const base = `position:absolute;left:${element.x}px;top:${element.y}px;width:${element.width}px;height:${element.height}px;${element.rotation ? `transform:rotate(${element.rotation}deg);` : ""}`;
+
+  switch (element.type) {
+    case "text":
+    case "variable": {
+      const el = element as TextElement | VariableElement;
+      const text =
+        element.type === "variable"
+          ? resolveVariable((el as VariableElement).variableKey, context)
+          : (el as TextElement).content;
+      const justify =
+        el.textAlign === "left"
+          ? "flex-start"
+          : el.textAlign === "right"
+            ? "flex-end"
+            : "center";
+      const style = `font-family:'${el.fontFamily}',sans-serif;font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-style:${el.fontStyle};text-align:${el.textAlign};color:${el.color};line-height:${el.lineHeight};display:flex;align-items:center;justify-content:${justify};white-space:pre-wrap;word-break:break-word;`;
+      return `<div style="${base}${style}">${escapeHtml(text)}</div>`;
+    }
+    case "image": {
+      const el = element as ImageElement;
+      const src = await convertForPreview(el.src);
+      return `<div style="${base}"><img src="${src}" style="width:100%;height:100%;object-fit:${el.objectFit};opacity:${el.opacity ?? 1};" /></div>`;
+    }
+    case "qr": {
+      const el = element as QRElement;
+      let qrData = "";
+      if (el.dataSource === "certificate_url")
+        qrData =
+          context.certificate.verificationUrl ||
+          `https://example.com/verify/${context.certificate.number}`;
+      else if (el.dataSource === "certificate_number")
+        qrData = context.certificate.number;
+      else if (el.dataSource === "custom") qrData = el.customData || "";
+      else if (el.dataSource === "custom_url")
+        qrData = `${(el.customData || "").replace(/\/$/, "")}/verify/${context.certificate.number}`;
+      const qrDataUrl = await QRCode.toDataURL(qrData, {
+        width: el.size,
+        margin: 1,
+        color: { dark: el.color, light: el.backgroundColor },
+      });
+      return `<div style="${base}"><img src="${qrDataUrl}" style="width:100%;height:100%;" /></div>`;
+    }
+    case "shape": {
+      const el = element as ShapeElement;
+      const fill =
+        el.fillColor === "transparent" ? "transparent" : el.fillColor;
+      if (el.shapeType === "rectangle")
+        return `<div style="${base}background:${fill};border:${el.strokeWidth}px solid ${el.strokeColor};box-sizing:border-box;"></div>`;
+      if (el.shapeType === "circle")
+        return `<div style="${base}background:${fill};border:${el.strokeWidth}px solid ${el.strokeColor};border-radius:50%;box-sizing:border-box;"></div>`;
+      if (el.shapeType === "line")
+        return `<svg style="${base}" viewBox="0 0 ${el.width} ${el.height}"><line x1="0" y1="0" x2="${el.width}" y2="${el.height}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}"/></svg>`;
+      return "";
+    }
+    default:
+      return "";
+  }
+}
+
+/**
+ * Генерирует HTML-представление сертификата для предпросмотра в браузере (iframe srcdoc).
+ * Не требует Puppeteer — рендерит сам браузер.
+ */
+export async function generateCertificateHtml(
+  templateData: CertificateTemplateData,
+  context: VariableContext,
+): Promise<string> {
+  const sorted = [...templateData.elements].sort((a, b) => a.zIndex - b.zIndex);
+  const elementsHtml: string[] = [];
+  for (const el of sorted) {
+    elementsHtml.push(await elementToHtml(el, context));
+  }
+
+  let backgroundStyle = "";
+  if (templateData.background) {
+    if (templateData.background.type === "color") {
+      backgroundStyle = `background-color:${templateData.background.value};`;
+    } else if (templateData.background.type === "image") {
+      const imgUrl = await convertForPreview(templateData.background.value);
+      backgroundStyle = `background-image:url(${imgUrl});background-size:cover;background-position:center;`;
+    }
+  }
+
+  const fonts = new Set<string>();
+  for (const el of templateData.elements) {
+    if (el.type === "text" || el.type === "variable")
+      fonts.add((el as TextElement).fontFamily);
+  }
+  const fontLinks = Array.from(fonts)
+    .filter(
+      (f) =>
+        !["Arial", "Times New Roman", "Georgia", "Courier New"].includes(f),
+    )
+    .map(
+      (f) =>
+        `<link href="https://fonts.googleapis.com/css2?family=${encodeURIComponent(f)}:wght@400;700&display=swap" rel="stylesheet">`,
+    )
+    .join("\n");
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8">${fontLinks}
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{width:${templateData.width}px;height:${templateData.height}px;position:relative;overflow:hidden;${backgroundStyle}font-family:'Inter',Arial,sans-serif;}</style>
+</head><body>${elementsHtml.join("\n")}</body></html>`;
+}

@@ -23,6 +23,19 @@ interface ConflictRow extends RowDataPacket {
   end_date: Date;
 }
 
+/**
+ * Строка результата запроса для конфликтов по событиям расписания
+ */
+interface ConflictEventRow extends RowDataPacket {
+  student_id: string;
+  student_name: string;
+  group_id: string;
+  group_code: string;
+  group_start_date: Date;
+  group_end_date: Date;
+  conflict_date: string; // DATE(start_time) — конкретный день конфликта
+}
+
 interface CountRow extends RowDataPacket {
   total: number;
 }
@@ -88,6 +101,7 @@ export interface StudentConflict {
   conflictGroupCode: string;
   conflictStartDate: Date;
   conflictEndDate: Date;
+  conflictDates?: string[]; // Конкретные даты занятий, которые пересекаются
 }
 
 export interface GroupFilters {
@@ -173,7 +187,7 @@ function mapGroupRow(row: any): StudyGroup {
  * Создать новую группу
  */
 export async function createGroup(
-  input: CreateGroupInput
+  input: CreateGroupInput,
 ): Promise<StudyGroup> {
   const id = uuidv4();
   const {
@@ -202,7 +216,7 @@ export async function createGroup(
         classroom || null,
         description || null,
         isActive,
-      ]
+      ],
     );
 
     // 2. Добавляем студентов, если переданы
@@ -211,7 +225,7 @@ export async function createGroup(
         const linkId = uuidv4();
         await connection.execute(
           `INSERT INTO study_group_students (id, group_id, student_id) VALUES (?, ?, ?)`,
-          [linkId, id, studentId]
+          [linkId, id, studentId],
         );
       }
     }
@@ -241,7 +255,7 @@ export async function getGroupById(id: string): Promise<StudyGroup | null> {
      FROM study_groups g
      LEFT JOIN courses c ON g.course_id = c.id
      WHERE g.id = ?`,
-    [id]
+    [id],
   );
 
   if (!rows || rows.length === 0) {
@@ -265,7 +279,7 @@ export async function getGroupById(id: string): Promise<StudyGroup | null> {
      JOIN students s ON sgs.student_id = s.id
      WHERE sgs.group_id = ?
      ORDER BY s.full_name`,
-    [id]
+    [id],
   );
 
   if (studentRows && studentRows.length > 0) {
@@ -297,7 +311,7 @@ export async function getGroupById(id: string): Promise<StudyGroup | null> {
  */
 export async function updateGroup(
   id: string,
-  data: UpdateGroupInput
+  data: UpdateGroupInput,
 ): Promise<StudyGroup | null> {
   const existing = await getGroupById(id);
   if (!existing) {
@@ -356,7 +370,7 @@ export async function updateGroup(
 
   await executeQuery(
     `UPDATE study_groups SET ${updates.join(", ")} WHERE id = ?`,
-    params
+    params,
   );
 
   return getGroupById(id);
@@ -375,13 +389,13 @@ export async function deleteGroup(id: string): Promise<boolean> {
     // 2. Удаляем связи со слушателями (study_group_students)
     await connection.execute(
       "DELETE FROM study_group_students WHERE group_id = ?",
-      [id]
+      [id],
     );
 
     // 3. Удаляем саму группу
     const [result] = await connection.execute<ResultSetHeader>(
       "DELETE FROM study_groups WHERE id = ?",
-      [id]
+      [id],
     );
 
     return result.affectedRows > 0;
@@ -393,14 +407,31 @@ export async function deleteGroup(id: string): Promise<boolean> {
 // ============================================================================
 
 /**
- * Проверить конфликты дат для слушателей
- * Возвращает список конфликтов (слушатель уже в другой группе с пересекающимися датами)
+ * Проверить конфликты расписания для слушателей.
+ *
+ * ЛОГИКА:
+ * Пересечение диапазонов дат групп (start_date/end_date) НЕ является конфликтом,
+ * потому что курс может длиться с 01.02 по 10.02, а занятий всего 2 дня.
+ * Студент может параллельно быть в другой группе (05.02–15.02), если занятия
+ * в этих группах не приходятся на одни и те же даты.
+ *
+ * Конфликт = одна и та же дата занятия (DATE(start_time)) в ДВУХ разных группах.
+ *
+ * Если у одной из групп ещё нет расписания — конфликт не фиксируется
+ * (нельзя предугадать будущие занятия).
+ *
+ * @param studentIds - список ID слушателей для проверки
+ * @param startDate  - начало периода новой/целевой группы (YYYY-MM-DD)
+ * @param endDate    - конец периода новой/целевой группы (YYYY-MM-DD)
+ * @param targetGroupId - ID группы, в которую добавляем (если уже существует — её события тоже проверяются)
+ * @param excludeGroupId - ID группы, которую исключить из проверки (текущая при обновлении)
  */
 export async function checkStudentConflicts(
   studentIds: string[],
   startDate: string,
   endDate: string,
-  excludeGroupId?: string
+  excludeGroupId?: string,
+  targetGroupId?: string,
 ): Promise<StudentConflict[]> {
   if (studentIds.length === 0) {
     return [];
@@ -408,38 +439,129 @@ export async function checkStudentConflicts(
 
   const placeholders = studentIds.map(() => "?").join(", ");
 
-  let query = `
-    SELECT 
+  // Шаг 1: Находим группы, в которых уже состоят данные студенты,
+  //         и у которых есть хотя бы одно занятие в указанном диапазоне дат.
+  //         Пересечение групп по диапазону start_date/end_date — лишь предварительный фильтр
+  //         для оптимизации: нам не нужны группы, период которых вообще не пересекается.
+  let groupsQuery = `
+    SELECT DISTINCT
       sgs.student_id,
       s.full_name as student_name,
       sg.id as group_id,
       sg.code as group_code,
-      sg.start_date,
-      sg.end_date
+      sg.start_date as group_start_date,
+      sg.end_date as group_end_date,
+      DATE(se.start_time) as conflict_date
     FROM study_group_students sgs
     JOIN study_groups sg ON sgs.group_id = sg.id
     JOIN students s ON sgs.student_id = s.id
+    JOIN schedule_events se ON se.group_id = sg.id
     WHERE sgs.student_id IN (${placeholders})
       AND sg.start_date <= ?
       AND sg.end_date >= ?
+      AND DATE(se.start_time) BETWEEN ? AND ?
   `;
 
-  const params: any[] = [...studentIds, endDate, startDate];
+  const params: any[] = [...studentIds, endDate, startDate, startDate, endDate];
 
   if (excludeGroupId) {
-    query += " AND sg.id != ?";
+    groupsQuery += " AND sg.id != ?";
     params.push(excludeGroupId);
   }
 
-  const rows = await executeQuery<ConflictRow[]>(query, params);
+  // Если целевая группа уже существует — исключаем её из «чужих» групп
+  // (студент ещё не добавлен в неё, но мы не хотим ложный конфликт сам с собой)
+  if (targetGroupId && targetGroupId !== excludeGroupId) {
+    groupsQuery += " AND sg.id != ?";
+    params.push(targetGroupId);
+  }
 
-  return (rows || []).map((row) => ({
-    studentId: row.student_id,
-    studentName: row.student_name,
-    conflictGroupId: row.group_id,
-    conflictGroupCode: row.group_code,
-    conflictStartDate: row.start_date,
-    conflictEndDate: row.end_date,
+  const conflictRows = await executeQuery<ConflictEventRow[]>(
+    groupsQuery,
+    params,
+  );
+
+  if (!conflictRows || conflictRows.length === 0) {
+    // Занятий с пересекающимися днями не найдено — конфликтов нет
+    return [];
+  }
+
+  // Шаг 2: Если целевая группа существует, берём её даты занятий
+  //         для уточнения: конфликт возникает только если даты занятий
+  //         из «чужой» группы совпадают с датами занятий целевой группы.
+  //         Если targetGroupId не указан (новая группа без расписания) —
+  //         любое вхождение даты в диапазон считается потенциальным конфликтом.
+  let targetEventDates: Set<string> | null = null;
+
+  if (targetGroupId) {
+    const targetEventsRows = await executeQuery<RowDataPacket[]>(
+      `SELECT DISTINCT DATE(start_time) as event_date
+       FROM schedule_events
+       WHERE group_id = ?
+         AND DATE(start_time) BETWEEN ? AND ?`,
+      [targetGroupId, startDate, endDate],
+    );
+
+    if (targetEventsRows && targetEventsRows.length > 0) {
+      targetEventDates = new Set(
+        targetEventsRows.map((r) => r.event_date as string),
+      );
+    }
+    // Если у целевой группы вообще нет расписания — конфликтов нет
+    // (не с чем сравнивать)
+    if (!targetEventDates || targetEventDates.size === 0) {
+      return [];
+    }
+  }
+
+  // Шаг 3: Собираем конфликты
+  // Группируем по (studentId, groupId) для агрегации конфликтных дат
+  const conflictMap = new Map<
+    string,
+    {
+      studentId: string;
+      studentName: string;
+      conflictGroupId: string;
+      conflictGroupCode: string;
+      conflictGroupStartDate: Date;
+      conflictGroupEndDate: Date;
+      conflictDates: string[];
+    }
+  >();
+
+  for (const row of conflictRows) {
+    const conflictDate = row.conflict_date as string;
+
+    // Если у целевой группы есть расписание — проверяем точное совпадение дат
+    if (targetEventDates && !targetEventDates.has(conflictDate)) {
+      continue; // дата занятия «чужой» группы не совпадает с занятиями целевой
+    }
+
+    const key = `${row.student_id}::${row.group_id}`;
+
+    if (!conflictMap.has(key)) {
+      conflictMap.set(key, {
+        studentId: row.student_id,
+        studentName: row.student_name,
+        conflictGroupId: row.group_id,
+        conflictGroupCode: row.group_code,
+        conflictGroupStartDate: row.group_start_date,
+        conflictGroupEndDate: row.group_end_date,
+        conflictDates: [],
+      });
+    }
+
+    conflictMap.get(key)!.conflictDates.push(conflictDate);
+  }
+
+  return Array.from(conflictMap.values()).map((c) => ({
+    studentId: c.studentId,
+    studentName: c.studentName,
+    conflictGroupId: c.conflictGroupId,
+    conflictGroupCode: c.conflictGroupCode,
+    conflictStartDate: c.conflictGroupStartDate,
+    conflictEndDate: c.conflictGroupEndDate,
+    conflictDates: c.conflictDates,
   }));
 }
 
@@ -448,7 +570,7 @@ export async function checkStudentConflicts(
  */
 export async function addStudentsToGroup(
   groupId: string,
-  studentIds: string[]
+  studentIds: string[],
 ): Promise<{ added: string[]; alreadyInGroup: string[] }> {
   if (studentIds.length === 0) {
     return { added: [], alreadyInGroup: [] };
@@ -462,7 +584,7 @@ export async function addStudentsToGroup(
       // Проверяем, не добавлен ли уже
       const [existing] = await connection.execute<RowDataPacket[]>(
         "SELECT 1 FROM study_group_students WHERE group_id = ? AND student_id = ? LIMIT 1",
-        [groupId, studentId]
+        [groupId, studentId],
       );
 
       if (existing.length > 0) {
@@ -474,7 +596,7 @@ export async function addStudentsToGroup(
       await connection.execute(
         `INSERT INTO study_group_students (id, group_id, student_id)
          VALUES (?, ?, ?)`,
-        [id, groupId, studentId]
+        [id, groupId, studentId],
       );
       added.push(studentId);
     }
@@ -488,11 +610,11 @@ export async function addStudentsToGroup(
  */
 export async function removeStudentFromGroup(
   groupId: string,
-  studentId: string
+  studentId: string,
 ): Promise<boolean> {
   const result = await executeQuery<ResultSetHeader>(
     "DELETE FROM study_group_students WHERE group_id = ? AND student_id = ?",
-    [groupId, studentId]
+    [groupId, studentId],
   );
 
   return result.affectedRows > 0;
@@ -504,19 +626,19 @@ export async function removeStudentFromGroup(
 export async function transferStudent(
   studentId: string,
   fromGroupId: string,
-  toGroupId: string
+  toGroupId: string,
 ): Promise<boolean> {
   return executeTransaction(async (connection: PoolConnection) => {
     // Удаляем из текущей группы
     await connection.execute(
       "DELETE FROM study_group_students WHERE group_id = ? AND student_id = ?",
-      [fromGroupId, studentId]
+      [fromGroupId, studentId],
     );
 
     // Проверяем, не добавлен ли уже в целевую группу
     const [existing] = await connection.execute<RowDataPacket[]>(
       "SELECT 1 FROM study_group_students WHERE group_id = ? AND student_id = ? LIMIT 1",
-      [toGroupId, studentId]
+      [toGroupId, studentId],
     );
 
     if (existing.length === 0) {
@@ -524,7 +646,7 @@ export async function transferStudent(
       await connection.execute(
         `INSERT INTO study_group_students (id, group_id, student_id)
          VALUES (?, ?, ?)`,
-        [id, toGroupId, studentId]
+        [id, toGroupId, studentId],
       );
     }
 
@@ -536,7 +658,7 @@ export async function transferStudent(
  * Получить все группы для выбора (для перемещения слушателя)
  */
 export async function getGroupsForSelect(
-  excludeGroupId?: string
+  excludeGroupId?: string,
 ): Promise<Array<{ id: string; code: string; courseName: string }>> {
   let query = `
     SELECT sg.id, sg.code, c.name as course_name
@@ -589,17 +711,17 @@ export async function getGroupsStats(groupIds?: string[]): Promise<{
 
   const totalResult = await executeQuery<CountRow[]>(
     `SELECT COUNT(*) as total FROM study_groups WHERE 1=1 ${groupCondition}`,
-    groupParams
+    groupParams,
   );
 
   const activeResult = await executeQuery<CountRow[]>(
     `SELECT COUNT(*) as total FROM study_groups WHERE is_active = true AND end_date >= ? ${groupCondition}`,
-    [today, ...groupParams]
+    [today, ...groupParams],
   );
 
   const completedResult = await executeQuery<CountRow[]>(
     `SELECT COUNT(*) as total FROM study_groups WHERE end_date < ? ${groupCondition}`,
-    [today, ...groupParams]
+    [today, ...groupParams],
   );
 
   // Считаем студентов только в указанных группах
@@ -615,7 +737,7 @@ export async function getGroupsStats(groupIds?: string[]): Promise<{
 
   const studentsResult = await executeQuery<CountRow[]>(
     studentsQuery,
-    studentsParams
+    studentsParams,
   );
 
   return {
@@ -630,7 +752,7 @@ export async function getGroupsStats(groupIds?: string[]): Promise<{
  * Получить список групп с пагинацией и фильтрацией
  */
 export async function getGroups(
-  params: PaginationParams
+  params: PaginationParams,
 ): Promise<PaginatedResult<StudyGroup>> {
   const { page = 1, limit = 10, filters = {} } = params;
   const offset = (page - 1) * limit;
@@ -733,7 +855,7 @@ export async function getGroups(
  */
 export async function groupCodeExists(
   code: string,
-  excludeId?: string
+  excludeId?: string,
 ): Promise<boolean> {
   let query = "SELECT 1 FROM study_groups WHERE code = ?";
   const params: any[] = [code];
@@ -755,7 +877,7 @@ export async function groupCodeExists(
 export async function courseExists(id: string): Promise<boolean> {
   const rows = await executeQuery<RowDataPacket[]>(
     "SELECT 1 FROM courses WHERE id = ? LIMIT 1",
-    [id]
+    [id],
   );
   return rows?.length > 0;
 }

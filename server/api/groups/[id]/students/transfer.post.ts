@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
 
     // Проверяем, что слушатель есть в исходной группе
     const studentInGroup = fromGroup.students?.find(
-      (s) => s.studentId === studentId
+      (s) => s.studentId === studentId,
     );
     if (!studentInGroup) {
       return {
@@ -74,7 +74,10 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-    // Проверяем конфликты с целевой группой
+    // Проверяем конфликты занятий с целевой группой.
+    // Конфликт = одна и та же дата занятия в двух разных группах.
+    // fromGroupId исключается, т.к. студент будет из неё удалён.
+    // toGroupId передаётся как targetGroupId: сравниваем по её событиям.
     const toStartDate = formatDateLocal(toGroup.startDate);
     const toEndDate = formatDateLocal(toGroup.endDate);
 
@@ -82,19 +85,16 @@ export default defineEventHandler(async (event) => {
       [studentId],
       toStartDate,
       toEndDate,
-      fromGroupId // исключаем исходную группу (слушатель будет из неё удалён)
+      fromGroupId, // excludeGroupId: исходную группу исключаем
+      toGroupId, // targetGroupId: проверяем по событиям целевой группы
     );
 
-    // Фильтруем конфликт с целевой группой (если слушатель уже там)
-    const realConflicts = conflicts.filter(
-      (c) => c.conflictGroupId !== toGroupId
-    );
-
-    if (realConflicts.length > 0) {
+    if (conflicts.length > 0) {
       return {
         success: false,
-        message: "Перемещение создаст конфликт с другой группой",
-        conflicts: realConflicts,
+        message:
+          "Перемещение создаст конфликт занятий с другой группой у слушателя",
+        conflicts,
       };
     }
 

@@ -96,7 +96,7 @@ export default defineEventHandler(async (event) => {
       });
 
     // 6. Возврат изображения
-    setResponseHeader(event, "Content-Type", "image/webp");
+    setResponseHeader(event, "Content-Type", "image/png");
     setResponseHeader(
       event,
       "Cache-Control",

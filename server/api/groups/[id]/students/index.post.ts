@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-    // Проверяем конфликты дат
+    // Проверяем конфликты: сравниваем конкретные даты занятий
     const startDate = formatDateLocal(group.startDate);
     const endDate = formatDateLocal(group.endDate);
 
@@ -63,14 +63,15 @@ export default defineEventHandler(async (event) => {
       studentIds,
       startDate,
       endDate,
-      groupId // исключаем текущую группу
+      groupId, // исключаем саму группу из «чужих»
+      groupId, // targetGroupId: проверяем по фактическим событиям этой группы
     );
 
     if (conflicts.length > 0) {
       return {
         success: false,
         message:
-          "Некоторые слушатели уже находятся в группах с пересекающимися датами",
+          "Некоторые слушатели уже имеют занятия в другой группе в те же дни",
         conflicts,
       };
     }
@@ -87,7 +88,7 @@ export default defineEventHandler(async (event) => {
       });
 
       // Инвалидируем кэш Telegram-бота
-      invalidateRelatedCache('student');
+      invalidateRelatedCache("student");
     }
 
     return {

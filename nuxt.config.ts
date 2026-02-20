@@ -14,15 +14,17 @@ export default defineNuxtConfig({
     server: {
       hmr: {
         // Используем WSS (защищенный WebSocket) для ngrok
-        protocol: process.env.NODE_ENV === 'development' ? "wss" : "ws",
+        protocol: process.env.NODE_ENV === "development" ? "wss" : "ws",
         // Используем ngrok домен вместо localhost
-        host: process.env.NGROK_DOMAIN || "charlena-nonarbitrable-eddy.ngrok-free.dev",
+        host:
+          process.env.NGROK_DOMAIN ||
+          "charlena-nonarbitrable-eddy.ngrok-free.dev",
         // Порт не указываем, используется стандартный для HTTPS (443)
       },
       allowedHosts: [
         ".ngrok-free.app", // Позволяет любым ngrok доменам
         ".ngrok-free.dev", // Новый формат ngrok
-        ".ngrok.io",        // Старый формат ngrok
+        ".ngrok.io", // Старый формат ngrok
       ],
     },
   },
@@ -99,9 +101,9 @@ export default defineNuxtConfig({
         format: "esm",
       },
     },
-    // Исключаем xlsx и sharp из бандлинга через rollup external для избежания проблем с ESM на Windows
+    // Исключаем из бандлинга: нативные модули и тяжёлые ESM-пакеты
     externals: {
-      external: ["xlsx", "sharp"],
+      external: ["xlsx", "@napi-rs/canvas", "pdfjs-dist", "@pdf-lib/fontkit"],
     },
     // Cron задачи
     experimental: {
