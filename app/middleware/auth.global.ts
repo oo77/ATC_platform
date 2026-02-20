@@ -17,6 +17,7 @@ const PUBLIC_PAGES = [
   "/auth/forgot-password",
   "/environment",
   "/tg-app", // Telegram Mini App использует свою авторизацию
+  "/verify", // Публичная верификация сертификата по QR-коду
 ];
 
 /**
