@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
       LIMIT 1
     `;
 
-    const [rows] = await executeQuery<CertificateVerifyRow[]>(query, [number]);
+    const rows = await executeQuery<CertificateVerifyRow[]>(query, [number]);
 
     if (!rows || rows.length === 0) {
       throw createError({
