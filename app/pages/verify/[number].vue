@@ -277,6 +277,34 @@
             </div>
           </div>
         </div>
+
+        <!-- Кнопка скачивания PDF -->
+        <div
+          v-if="data.verificationStatus === 'valid' && cert.id"
+          class="verify-download-wrap"
+        >
+          <a
+            :href="`/api/certificates/download/${cert.id}`"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="verify-download-btn"
+            id="verify-download-pdf"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            Скачать сертификат (PDF)
+          </a>
+        </div>
       </template>
     </main>
 
@@ -319,7 +347,36 @@ const { data, pending, error } = await useFetch(
 );
 
 // Алиас для удобства шаблона
-const cert = computed(() => data.value?.certificate);
+const cert = computed(
+  () =>
+    data.value?.certificate as
+      | {
+          id: string;
+          number: string;
+          issueDate: string;
+          expiryDate: string | null;
+          issuedAt: string | null;
+          revokedAt: string | null;
+          revokeReason: string | null;
+          student: {
+            fullName: string;
+            organization: string | null;
+            position: string | null;
+          };
+          group: {
+            code: string | null;
+            startDate: string | null;
+            endDate: string | null;
+          };
+          course: {
+            name: string | null;
+            code: string | null;
+            hours: number | null;
+          };
+          issuer: { organizationName: string | null };
+        }
+      | undefined,
+);
 
 // Форматирование даты
 const formatDate = (dateStr: string | Date | null | undefined): string => {
@@ -630,6 +687,51 @@ const formatDate = (dateStr: string | Date | null | undefined): string => {
 
 .verify-expired-date {
   color: #d97706;
+}
+
+/* =============================================
+   Кнопка скачивания
+   ============================================= */
+.verify-download-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.verify-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  letter-spacing: 0.01em;
+}
+
+.verify-download-btn svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.verify-download-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.verify-download-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 /* =============================================

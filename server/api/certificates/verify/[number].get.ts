@@ -112,6 +112,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       verificationStatus,
       certificate: {
+        id: row.id,
         number: row.certificate_number,
         issueDate: row.issue_date,
         expiryDate: row.expiry_date,
