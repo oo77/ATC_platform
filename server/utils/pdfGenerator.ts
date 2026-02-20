@@ -747,6 +747,32 @@ function toPdfY(
 }
 
 /**
+ * Вычисляет скорректированный origin (drawX, drawY) для pdf-lib при повороте вокруг центра элемента.
+ *
+ * pdf-lib применяет rotate вокруг точки (x, y) — нижнего-левого угла в системе PDF.
+ * В HTML/CSS шаблоне поворот — всегда вокруг центра (transform-origin: center center).
+ *
+ * Формула: смещаем точку рисования обратным поворотом offset (-w/2, -h/2) от центра,
+ * чтобы после применения поворота pdf-lib визуальный центр элемента остался на месте.
+ */
+function rotatedOrigin(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  rotDeg: number,
+): { drawX: number; drawY: number } {
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  const rad = (-rotDeg * Math.PI) / 180;
+  const offX = -w / 2;
+  const offY = -h / 2;
+  const drawX = cx + offX * Math.cos(rad) - offY * Math.sin(rad);
+  const drawY = cy + offX * Math.sin(rad) + offY * Math.cos(rad);
+  return { drawX, drawY };
+}
+
+/**
  * Рисует один элемент шаблона на странице
  */
 async function drawElement(
@@ -864,13 +890,21 @@ async function drawElement(
           ? await pdfDoc.embedJpg(imgBuffer)
           : await pdfDoc.embedPng(imgBuffer);
 
+        const imgRotDeg = element.rotation ?? 0;
+        // pdf-lib поворачивает вокруг (x, y) — нижнего-левого угла.
+        // Компенсируем смещение для поворота вокруг центра элемента.
+        const { drawX: imgDrawX, drawY: imgDrawY } =
+          imgRotDeg !== 0
+            ? rotatedOrigin(x, y, w, h, imgRotDeg)
+            : { drawX: x, drawY: y };
+
         page.drawImage(img, {
-          x,
-          y,
+          x: imgDrawX,
+          y: imgDrawY,
           width: w,
           height: h,
           opacity: el.opacity ?? 1,
-          ...(element.rotation ? { rotate: degrees(-element.rotation) } : {}),
+          ...(imgRotDeg !== 0 ? { rotate: degrees(-imgRotDeg) } : {}),
         });
       } catch (e) {
         console.warn("[pdfGenerator] Image embed failed:", e);
@@ -924,11 +958,18 @@ async function drawElement(
           ? parseCssColor(el.fillColor)
           : null;
       const strokeC = parseCssColor(el.strokeColor || "#000000");
+      const shapeRotDeg = element.rotation ?? 0;
 
       if (el.shapeType === "rectangle") {
+        // Компенсируем pivot: pdf-lib поворачивает вокруг (x,y), а нужно — вокруг центра
+        const { drawX: rectX, drawY: rectY } =
+          shapeRotDeg !== 0
+            ? rotatedOrigin(x, y, w, h, shapeRotDeg)
+            : { drawX: x, drawY: y };
+
         page.drawRectangle({
-          x,
-          y,
+          x: rectX,
+          y: rectY,
           width: w,
           height: h,
           ...(fillC
@@ -936,9 +977,10 @@ async function drawElement(
             : { color: undefined }),
           borderColor: rgb(strokeC.r, strokeC.g, strokeC.b),
           borderWidth: el.strokeWidth || 1,
-          ...(element.rotation ? { rotate: degrees(-element.rotation) } : {}),
+          ...(shapeRotDeg !== 0 ? { rotate: degrees(-shapeRotDeg) } : {}),
         });
       } else if (el.shapeType === "circle") {
+        // Эллипс задаётся центром — поворот уже относительно центра, компенсация не нужна
         page.drawEllipse({
           x: x + w / 2,
           y: y + h / 2,
@@ -949,14 +991,45 @@ async function drawElement(
             : { color: undefined }),
           borderColor: rgb(strokeC.r, strokeC.g, strokeC.b),
           borderWidth: el.strokeWidth || 1,
+          ...(shapeRotDeg !== 0 ? { rotate: degrees(-shapeRotDeg) } : {}),
         });
       } else if (el.shapeType === "line") {
-        page.drawLine({
-          start: { x, y: y + h },
-          end: { x: x + w, y },
-          color: rgb(strokeC.r, strokeC.g, strokeC.b),
-          thickness: el.strokeWidth || 1,
-        });
+        // Для линии не используем rotate pdf-lib (она поворачивает вокруг start-точки).
+        // Вместо этого поворачиваем конечные точки математически вокруг центра bbox.
+        if (shapeRotDeg !== 0) {
+          const cx = x + w / 2;
+          const cy = y + h / 2;
+          const rad = (-shapeRotDeg * Math.PI) / 180;
+
+          // Опорные точки линии (диагональ bbox в системе PDF)
+          const sx0 = x;
+          const sy0 = y + h; // start: левый-нижний
+          const ex0 = x + w;
+          const ey0 = y; // end:   правый-верхний
+
+          const startX =
+            cx + (sx0 - cx) * Math.cos(rad) - (sy0 - cy) * Math.sin(rad);
+          const startY =
+            cy + (sx0 - cx) * Math.sin(rad) + (sy0 - cy) * Math.cos(rad);
+          const endX =
+            cx + (ex0 - cx) * Math.cos(rad) - (ey0 - cy) * Math.sin(rad);
+          const endY =
+            cy + (ex0 - cx) * Math.sin(rad) + (ey0 - cy) * Math.cos(rad);
+
+          page.drawLine({
+            start: { x: startX, y: startY },
+            end: { x: endX, y: endY },
+            color: rgb(strokeC.r, strokeC.g, strokeC.b),
+            thickness: el.strokeWidth || 1,
+          });
+        } else {
+          page.drawLine({
+            start: { x, y: y + h },
+            end: { x: x + w, y },
+            color: rgb(strokeC.r, strokeC.g, strokeC.b),
+            thickness: el.strokeWidth || 1,
+          });
+        }
       }
       break;
     }
