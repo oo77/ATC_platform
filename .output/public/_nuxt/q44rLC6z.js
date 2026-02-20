@@ -1,1 +1,0 @@
-import{v as s,c as a,o as r,a0 as n}from"./GLV6bXvn.js";const o={class:"min-h-screen bg-gray-50 dark:bg-gray-900"},_=s({__name:"fullscreen",setup(t){return(e,c)=>(r(),a("div",o,[n(e.$slots,"default")]))}});export{_ as default};
