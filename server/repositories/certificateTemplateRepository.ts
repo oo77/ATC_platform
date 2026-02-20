@@ -984,6 +984,7 @@ export async function checkStudentEligibility(
     ],
   );
 
+  /*
   console.log(`[Eligibility DEBUG] Student ${studentId}:`);
   console.log(`  Total events in group: ${debugEvents.length}`);
   console.log(
@@ -1005,6 +1006,7 @@ export async function checkStudentEligibility(
     `  Scheduled hours (filtered): ${scheduledStats?.scheduled_hours}`,
   );
   console.log(`  Attended hours: ${attendanceStats?.total_attended_hours}`);
+  */
 
   // DEBUG: Детальная информация о посещаемости
   const attendanceDetails = await executeQuery<RowDataPacket[]>(
@@ -1026,6 +1028,7 @@ export async function checkStudentEligibility(
     [studentId, groupId, JSON.stringify(studentId)],
   );
 
+  /*
   console.log(`  Attendance records (${attendanceDetails.length}):`);
   attendanceDetails.forEach((rec) => {
     console.log(
@@ -1034,6 +1037,7 @@ export async function checkStudentEligibility(
       }h (allowed_ids: ${rec.allowed_student_ids || "NULL"})`,
     );
   });
+  */
 
   // Получаем итоговые оценки студента в группе
   const gradesData = await executeQuery<RowDataPacket[]>(
@@ -1150,6 +1154,7 @@ export async function checkStudentEligibility(
     });
   }
 
+  /*
   console.log(
     `[Eligibility] Student ${studentId}: attendance=${totalAttendancePercent.toFixed(
       1,
@@ -1157,6 +1162,7 @@ export async function checkStudentEligibility(
       averageGrade?.toFixed(1) || "N/A"
     }`,
   );
+  */
 
   return {
     studentId,
