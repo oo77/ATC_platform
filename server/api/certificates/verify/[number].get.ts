@@ -34,7 +34,6 @@ interface CertificateVerifyRow extends RowDataPacket {
   standalone_course_hours: number | null;
   // Организация (кто выдал)
   org_name: string | null;
-  org_logo_url: string | null;
   issued_at: Date | null;
 }
 
@@ -71,7 +70,6 @@ export default defineEventHandler(async (event) => {
         ic.course_code     AS standalone_course_code,
         ic.course_hours    AS standalone_course_hours,
         o.name             AS org_name,
-        o.logo_url         AS org_logo_url,
         ic.issued_at
       FROM issued_certificates ic
       JOIN students s ON ic.student_id = s.id
@@ -137,7 +135,6 @@ export default defineEventHandler(async (event) => {
         },
         issuer: {
           organizationName: row.org_name,
-          organizationLogoUrl: row.org_logo_url,
         },
       },
     };
