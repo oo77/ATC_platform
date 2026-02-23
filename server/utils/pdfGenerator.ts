@@ -173,153 +173,97 @@ function readLocalFont(filePath: string): Uint8Array | null {
 }
 
 /**
- * Маппинг шрифтов → пути в репозитории google/fonts на GitHub.
+ * Загружает шрифт через Google Fonts CSS API.
  *
- * ВАЖНО: jsDelivr CDN возвращает 403 для /static/ поддиректорий google/fonts.
- * Используем raw.githubusercontent.com напрямую.
+ * Хитрость: используем User-Agent старого браузера (IE8/Trident),
+ * чтобы Google Fonts вернул TTF вместо WOFF2 — pdf-lib принимает только TTF/OTF.
+ *
+ * Порядок:
+ * 1. Запрос CSS с перечнем шрифтового файла через fonts.googleapis.com
+ * 2. Парсим URL шрифта из CSS (src: url(https://fonts.gstatic.com/...))
+ * 3. Загружаем сам TTF-файл
  */
-const GITHUB_FONT_MAP: Record<
-  string,
-  { repo: string; staticDir?: string; files: Record<number, string[]> }
-> = {
-  Inter: {
-    repo: "ofl/inter",
-    staticDir: "static",
-    files: {
-      400: ["Inter_18pt-Regular.ttf", "Inter-Regular.ttf"],
-      700: ["Inter_18pt-Bold.ttf", "Inter-Bold.ttf"],
-    },
-  },
-  Roboto: {
-    repo: "apache/roboto",
-    staticDir: "static",
-    files: { 400: ["Roboto-Regular.ttf"], 700: ["Roboto-Bold.ttf"] },
-  },
-  "Open Sans": {
-    repo: "apache/opensans",
-    staticDir: "static",
-    files: { 400: ["OpenSans-Regular.ttf"], 700: ["OpenSans-Bold.ttf"] },
-  },
-  Montserrat: {
-    repo: "ofl/montserrat",
-    staticDir: "static",
-    files: { 400: ["Montserrat-Regular.ttf"], 700: ["Montserrat-Bold.ttf"] },
-  },
-  Lato: {
-    repo: "ofl/lato",
-    files: { 400: ["Lato-Regular.ttf"], 700: ["Lato-Bold.ttf"] },
-  },
-  Poppins: {
-    repo: "ofl/poppins",
-    files: { 400: ["Poppins-Regular.ttf"], 700: ["Poppins-Bold.ttf"] },
-  },
-  "Playfair Display": {
-    repo: "ofl/playfairdisplay",
-    staticDir: "static",
-    files: {
-      400: ["PlayfairDisplay-Regular.ttf"],
-      700: ["PlayfairDisplay-Bold.ttf"],
-    },
-  },
-  Lora: {
-    repo: "ofl/lora",
-    staticDir: "static",
-    files: { 400: ["Lora-Regular.ttf"], 700: ["Lora-Bold.ttf"] },
-  },
-  Merriweather: {
-    repo: "ofl/merriweather",
-    files: {
-      400: ["Merriweather-Regular.ttf"],
-      700: ["Merriweather-Bold.ttf"],
-    },
-  },
-  "PT Sans": {
-    repo: "ofl/ptsans",
-    files: { 400: ["PTSans-Regular.ttf"], 700: ["PTSans-Bold.ttf"] },
-  },
-  "PT Serif": {
-    repo: "ofl/ptserif",
-    files: { 400: ["PTSerif-Regular.ttf"], 700: ["PTSerif-Bold.ttf"] },
-  },
-  "Noto Sans": {
-    repo: "ofl/notosans",
-    files: { 400: ["NotoSans-Regular.ttf"], 700: ["NotoSans-Bold.ttf"] },
-  },
-  Raleway: {
-    repo: "ofl/raleway",
-    staticDir: "static",
-    files: { 400: ["Raleway-Regular.ttf"], 700: ["Raleway-Bold.ttf"] },
-  },
-  Nunito: {
-    repo: "ofl/nunito",
-    staticDir: "static",
-    files: { 400: ["Nunito-Regular.ttf"], 700: ["Nunito-Bold.ttf"] },
-  },
-  Oswald: {
-    repo: "ofl/oswald",
-    staticDir: "static",
-    files: { 400: ["Oswald-Regular.ttf"], 700: ["Oswald-Bold.ttf"] },
-  },
-  "Source Sans Pro": {
-    repo: "ofl/sourcesans3",
-    staticDir: "static",
-    files: {
-      400: ["SourceSans3-Regular.ttf"],
-      700: ["SourceSans3-Bold.ttf"],
-    },
-  },
-  Ubuntu: {
-    repo: "ufl/ubuntu",
-    files: { 400: ["Ubuntu-Regular.ttf"], 700: ["Ubuntu-Bold.ttf"] },
-  },
-  Rubik: {
-    repo: "ofl/rubik",
-    staticDir: "static",
-    files: { 400: ["Rubik-Regular.ttf"], 700: ["Rubik-Bold.ttf"] },
-  },
-  "Work Sans": {
-    repo: "ofl/worksans",
-    staticDir: "static",
-    files: { 400: ["WorkSans-Regular.ttf"], 700: ["WorkSans-Bold.ttf"] },
-  },
-  "Fira Sans": {
-    repo: "ofl/firasans",
-    files: { 400: ["FiraSans-Regular.ttf"], 700: ["FiraSans-Bold.ttf"] },
-  },
-};
+async function fetchFromGoogleFontsApi(
+  fontFamily: string,
+  weight: number,
+): Promise<Uint8Array | null> {
+  try {
+    const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontFamily)}:wght@${weight}&display=swap`;
 
-/** Строит список URL для загрузки шрифта (от приоритетного к запасным) */
-function buildFontUrls(fontFamily: string, weight: number): string[] {
-  const meta = GITHUB_FONT_MAP[fontFamily];
-  if (!meta) return [];
+    const cssRes = await fetch(cssUrl, {
+      signal: AbortSignal.timeout(15_000),
+      headers: {
+        // Старый UA → Google возвращает TTF вместо WOFF2
+        "User-Agent":
+          "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)",
+      },
+    });
 
-  const fileNames = meta.files[weight] ?? [];
-  const staticPart = meta.staticDir ? `/${meta.staticDir}` : "";
-  const urls: string[] = [];
-
-  for (const fileName of fileNames) {
-    // raw.githubusercontent.com — прямой доступ без CDN-ограничений (ПРИОРИТЕТ)
-    urls.push(
-      `https://raw.githubusercontent.com/google/fonts/main/${meta.repo}${staticPart}/${fileName}`,
-    );
-    // Запасной: без subdirectory static/
-    if (meta.staticDir) {
-      urls.push(
-        `https://raw.githubusercontent.com/google/fonts/main/${meta.repo}/${fileName}`,
+    if (!cssRes.ok) {
+      console.warn(
+        `[pdfGenerator] Google Fonts API: HTTP ${cssRes.status} для "${fontFamily}" ${weight}`,
       );
+      return null;
     }
-  }
 
-  return urls;
+    const css = await cssRes.text();
+
+    // Извлекаем прямой URL шрифта из CSS.
+    // Google Fonts при старом UA возвращает обфусцированный URL без расширения:
+    // src: url(https://fonts.gstatic.com/l/font?kit=JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtr6Ew_&skey=...&v=v31)
+    // Поэтому НЕ требуем .ttf/.otf в конце — это обфусцированный endpoint, отдающий TTF-байты
+    const urlMatch = css.match(/url\((https:\/\/fonts\.gstatic\.com[^)]+)\)/i);
+    if (!urlMatch) {
+      console.warn(
+        `[pdfGenerator] Не удалось извлечь URL шрифта из CSS Google Fonts для "${fontFamily}"`,
+      );
+      return null;
+    }
+
+    const fontUrl = urlMatch[1];
+    const fontRes = await fetch(fontUrl, {
+      signal: AbortSignal.timeout(15_000),
+      headers: {
+        "User-Agent":
+          "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)",
+      },
+    });
+
+    if (!fontRes.ok) return null;
+
+    const buffer = Buffer.from(await fontRes.arrayBuffer());
+    if (buffer.length < 1000) return null;
+
+    // Проверка magic bytes: TTF=0x00010000, OTF=0x4F54544F, TrueType=0x74727565
+    const magic = buffer.readUInt32BE(0);
+    if (
+      magic !== 0x00010000 &&
+      magic !== 0x4f54544f &&
+      magic !== 0x74727565 &&
+      magic !== 0x74797031
+    ) {
+      console.warn(
+        `[pdfGenerator] "${fontFamily}" вернул не TTF/OTF файл (magic=0x${magic.toString(16).padStart(8, "0")})`,
+      );
+      return null;
+    }
+
+    return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  } catch (e) {
+    console.warn(
+      `[pdfGenerator] Ошибка Google Fonts API для "${fontFamily}" ${weight}: ${e}`,
+    );
+    return null;
+  }
 }
 
 /**
  * Загружает TTF-шрифт. Порядок поиска:
  * 1. Память (Map — мгновенно)
- * 2. server/assets/fonts/ (TTF из download-fonts.mjs, если запускался)
- * 3. storage/.font-cache/ (дисковый кеш от предыдущих загрузок)
+ * 2. server/assets/fonts/ (TTF скопированные через scripts/copy-system-fonts.ps1)
+ * 3. storage/.font-cache/ (дисковый кеш от предыдущих запусков)
  * 4. C:\Windows\Fonts\ (системные Windows-шрифты: Georgia, Arial и др.)
- * 5. raw.githubusercontent.com/google/fonts (загрузка по требованию + кеш)
+ * 5. Google Fonts CSS API (загрузка по требованию + кеш)
  */
 async function fetchFontBytes(
   fontFamily: string,
@@ -352,53 +296,21 @@ async function fetchFontBytes(
     return winBytes;
   }
 
-  // 5. Загрузка с raw.githubusercontent.com по требованию
-  for (const url of buildFontUrls(fontFamily, weight)) {
+  // 5. Загрузка через Google Fonts CSS API (по требованию + кеш на диск)
+  const googleBytes = await fetchFromGoogleFontsApi(fontFamily, weight);
+  if (googleBytes) {
+    // Кешируем на диск для следующих запусков сервера
     try {
-      const res = await fetch(url, {
-        signal: AbortSignal.timeout(15_000),
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        },
-      });
-      if (!res.ok) continue;
-
-      const buffer = Buffer.from(await res.arrayBuffer());
-      if (buffer.length < 1000) continue;
-
-      // Проверка magic bytes: TTF=0x00010000, OTF=0x4F54544F, true=0x74727565
-      const magic = buffer.readUInt32BE(0);
-      if (
-        magic !== 0x00010000 &&
-        magic !== 0x4f54544f &&
-        magic !== 0x74727565 &&
-        magic !== 0x74797031
-      )
-        continue;
-
-      const bytes = new Uint8Array(
-        buffer.buffer,
-        buffer.byteOffset,
-        buffer.byteLength,
-      );
-
-      // Кешируем на диск для следующих запусков
-      try {
-        fs.mkdirSync(FONT_DISK_CACHE, { recursive: true });
-        fs.writeFileSync(diskPath, buffer);
-      } catch {
-        /* некритично */
-      }
-
-      fontCache.set(key, bytes);
-      console.log(
-        `[pdfGenerator] Font loaded from GitHub: ${key} (${Math.round(buffer.length / 1024)} KB)`,
-      );
-      return bytes;
+      fs.mkdirSync(FONT_DISK_CACHE, { recursive: true });
+      fs.writeFileSync(diskPath, Buffer.from(googleBytes));
     } catch {
-      /* пробуем следующий URL */
+      /* некритично */
     }
+    fontCache.set(key, googleBytes);
+    console.log(
+      `[pdfGenerator] Шрифт загружен с Google Fonts: ${key} (${Math.round(googleBytes.length / 1024)} KB)`,
+    );
+    return googleBytes;
   }
 
   console.warn(`[pdfGenerator] Font not available: ${fontFamily} ${weight}`);
@@ -449,10 +361,8 @@ function readWindowsFont(
 }
 
 /**
- * Загружает Cyrillic-совместимый fallback-шрифт.
- * Порядок попыток: Roboto → Lato → Poppins → Ubuntu
- * Все эти шрифты поддерживают кириллицу и уже скачаны
- * в server/assets/fonts/ при запуске download-fonts.mjs.
+ * Загружает fallback-шрифт (если запрошенный не найден).
+ * Использует только шрифты из server/assets/fonts/.
  */
 async function getFallbackFont(
   pdfDoc: PDFDocument,
@@ -460,8 +370,15 @@ async function getFallbackFont(
 ): Promise<PDFFont | null> {
   pdfDoc.registerFontkit(fontkit);
 
-  // Цепочка Cyrillic-совместимых шрифтов (в порядке предпочтения)
-  const fallbackChain = ["Roboto", "Lato", "Poppins", "Ubuntu"];
+  // Цепочка шрифтов, которые реально есть в server/assets/fonts/
+  // И поддерживают кириллицу, латиницу и узбекский
+  const fallbackChain = [
+    "Montserrat",
+    "Lato",
+    "Poppins",
+    "Ubuntu",
+    "Fira Sans",
+  ];
 
   for (const family of fallbackChain) {
     const bytes = await fetchFontBytes(family, weight);
