@@ -1,6 +1,6 @@
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4"
+    class="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4"
   >
     <div class="max-w-5xl mx-auto">
       <!-- Заголовок -->
@@ -336,7 +336,7 @@
 
         <!-- Кнопка сохранения и перезапуска -->
         <div
-          class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-6"
+          class="bg-linear-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-6"
         >
           <button
             type="submit"
@@ -423,11 +423,11 @@ onMounted(async () => {
 // Проверка статуса БД
 const checkDatabaseStatus = async () => {
   try {
-    const result = await $fetch<{
+    const result = (await $fetch("/api/environment/check-db")) as {
       connected: boolean;
       message: string;
       error?: string;
-    }>("/api/environment/check-db");
+    };
     dbStatus.value = result;
   } catch (error: any) {
     dbStatus.value = {
@@ -477,7 +477,7 @@ const testConnection = async () => {
   connectionTest.value = null;
 
   try {
-    const result = await $fetch("/api/environment/test-connection", {
+    const result = (await $fetch("/api/environment/test-connection", {
       method: "POST",
       body: {
         DATABASE_HOST: form.DATABASE_HOST,
@@ -486,12 +486,15 @@ const testConnection = async () => {
         DATABASE_USER: form.DATABASE_USER,
         DATABASE_PASSWORD: form.DATABASE_PASSWORD,
       },
-    });
+    })) as {
+      message: string;
+      details?: { database: string; version: string };
+    };
 
     connectionTest.value = {
       success: true,
       message: result.message,
-      details: result.details || { database: "", version: "" },
+      details: result.details ?? { database: "", version: "" },
     };
 
     migrationsStatus.value = "✅";

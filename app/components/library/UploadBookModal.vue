@@ -2,15 +2,15 @@
   <UiModal
     :is-open="isOpen"
     title="Загрузить книгу"
-    size="lg"
+    size="xl"
     @close="handleClose"
   >
     <form @submit.prevent="handleSubmit">
-      <div class="space-y-6">
+      <div class="space-y-4">
         <!-- Drag & Drop зона для PDF -->
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
           >
             PDF файл книги <span class="text-red-500">*</span>
           </label>
@@ -19,7 +19,7 @@
             @dragover.prevent="isDragging = true"
             @dragleave.prevent="isDragging = false"
             :class="[
-              'border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer',
+              'border-2 border-dashed rounded-lg px-6 py-4 text-center transition-all cursor-pointer',
               isDragging
                 ? 'border-primary bg-primary/5'
                 : 'border-gray-300 dark:border-gray-600 hover:border-primary',
@@ -35,9 +35,12 @@
               @change="handleFileSelect"
             />
 
-            <div v-if="!form.pdfFile">
+            <div
+              v-if="!form.pdfFile"
+              class="flex items-center justify-center gap-3"
+            >
               <svg
-                class="mx-auto h-12 w-12 text-gray-400 mb-4"
+                class="h-8 w-8 text-gray-400 shrink-0"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -49,15 +52,18 @@
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                 />
               </svg>
-              <p class="text-gray-600 dark:text-gray-400 mb-2">
-                Перетащите PDF файл сюда или нажмите для выбора
-              </p>
-              <p class="text-xs text-gray-500">Максимальный размер: 100 МБ</p>
+              <div class="text-left">
+                <p class="text-gray-600 dark:text-gray-400 font-medium">
+                  Перетащите PDF файл или
+                  <span class="text-primary">выберите</span>
+                </p>
+                <p class="text-xs text-gray-500">Максимальный размер: 100 МБ</p>
+              </div>
             </div>
 
             <div v-else class="flex items-center justify-center gap-3">
               <svg
-                class="w-10 h-10 text-red-500"
+                class="w-8 h-8 text-red-500 shrink-0"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -67,8 +73,8 @@
                   clip-rule="evenodd"
                 />
               </svg>
-              <div class="text-left">
-                <p class="font-medium text-gray-900 dark:text-white">
+              <div class="text-left flex-1 min-w-0">
+                <p class="font-medium text-gray-900 dark:text-white truncate">
                   {{ form.pdfFile.name }}
                 </p>
                 <p class="text-sm text-gray-500">
@@ -78,10 +84,10 @@
               <button
                 type="button"
                 @click.stop="removeFile"
-                class="ml-auto p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                class="ml-auto p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
               >
                 <svg
-                  class="w-5 h-5"
+                  class="w-4 h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -101,17 +107,107 @@
           </p>
         </div>
 
-        <!-- Обложка (опционально) -->
+        <!-- Горизонтальные поля формы -->
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Название -->
+          <div>
+            <label
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+            >
+              Название книги <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.title"
+              type="text"
+              placeholder="Введите название книги"
+              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+              :class="{ 'border-red-500': errors.title }"
+            />
+            <p v-if="errors.title" class="mt-1 text-sm text-red-500">
+              {{ errors.title }}
+            </p>
+          </div>
+
+          <!-- Автор -->
+          <div>
+            <label
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+            >
+              Автор
+            </label>
+            <input
+              v-model="form.author"
+              type="text"
+              placeholder="Введите имя автора"
+              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+            />
+          </div>
+
+          <!-- Язык -->
+          <div>
+            <label
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+            >
+              Язык <span class="text-red-500">*</span>
+            </label>
+            <select
+              v-model="form.language"
+              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none text-sm"
+              :class="{ 'border-red-500': errors.language }"
+            >
+              <option value="">Выберите язык</option>
+              <option value="ru">Русский</option>
+              <option value="uz">O'zbekcha</option>
+              <option value="en">English</option>
+              <option value="kk">Қазақша</option>
+            </select>
+            <p v-if="errors.language" class="mt-1 text-sm text-red-500">
+              {{ errors.language }}
+            </p>
+          </div>
+
+          <!-- Дата выпуска -->
+          <div>
+            <label
+              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+            >
+              Дата выпуска
+            </label>
+            <input
+              v-model="form.publishedAt"
+              type="date"
+              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+            />
+          </div>
+        </div>
+
+        <!-- Описание (полная ширина) -->
         <div>
           <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+          >
+            Описание
+          </label>
+          <textarea
+            v-model="form.description"
+            rows="2"
+            placeholder="Краткое описание книги"
+            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none text-sm"
+          ></textarea>
+        </div>
+
+        <!-- Обложка (горизонтальная) -->
+        <div>
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
           >
             Обложка (опционально)
           </label>
-          <div class="flex items-start gap-4">
+          <div class="flex items-center gap-4">
             <div
               v-if="coverPreview"
-              class="relative w-32 h-44 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0"
+              class="relative w-16 h-22 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0"
+              style="height: 88px"
             >
               <img
                 :src="coverPreview"
@@ -121,10 +217,10 @@
               <button
                 type="button"
                 @click="removeCover"
-                class="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                class="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
               >
                 <svg
-                  class="w-4 h-4"
+                  class="w-3 h-3"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -149,93 +245,21 @@
               <button
                 type="button"
                 @click="triggerCoverInput"
-                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 {{ coverPreview ? "Изменить обложку" : "Выбрать обложку" }}
               </button>
-              <p class="mt-2 text-xs text-gray-500">
+              <p class="mt-1 text-xs text-gray-500">
                 Если не указана, будет использована первая страница PDF
               </p>
             </div>
           </div>
         </div>
 
-        <!-- Название -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Название книги <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.title"
-            type="text"
-            placeholder="Введите название книги"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-            :class="{ 'border-red-500': errors.title }"
-          />
-          <p v-if="errors.title" class="mt-1 text-sm text-red-500">
-            {{ errors.title }}
-          </p>
-        </div>
-
-        <!-- Автор -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Автор
-          </label>
-          <input
-            v-model="form.author"
-            type="text"
-            placeholder="Введите имя автора"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-          />
-        </div>
-
-        <!-- Описание -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Описание
-          </label>
-          <textarea
-            v-model="form.description"
-            rows="3"
-            placeholder="Краткое описание книги"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none"
-          ></textarea>
-        </div>
-
-        <!-- Язык -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Язык <span class="text-red-500">*</span>
-          </label>
-          <select
-            v-model="form.language"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
-            :class="{ 'border-red-500': errors.language }"
-          >
-            <option value="">Выберите язык</option>
-            <option value="ru">Русский</option>
-            <option value="uz">O'zbekcha</option>
-            <option value="en">English</option>
-            <option value="kk">Қазақша</option>
-          </select>
-          <p v-if="errors.language" class="mt-1 text-sm text-red-500">
-            {{ errors.language }}
-          </p>
-        </div>
-
         <!-- Прогресс загрузки -->
         <div
           v-if="uploadProgress > 0 && uploadProgress < 100"
-          class="space-y-2"
+          class="space-y-1.5"
         >
           <div class="flex items-center justify-between text-sm">
             <span class="text-gray-600 dark:text-gray-400">Загрузка...</span>
@@ -327,6 +351,7 @@ const form = ref({
   author: "",
   description: "",
   language: "",
+  publishedAt: "",
 });
 
 const errors = ref({
@@ -446,8 +471,11 @@ const handleSubmit = async () => {
     formData.append("author", form.value.author || "");
     formData.append("description", form.value.description || "");
     formData.append("language", form.value.language);
+    if (form.value.publishedAt) {
+      formData.append("publishedAt", form.value.publishedAt);
+    }
 
-    // Симуляция прогресса (в реальности нужно использовать XMLHttpRequest для отслеживания прогресса)
+    // Симуляция прогресса
     const progressInterval = setInterval(() => {
       if (uploadProgress.value < 90) {
         uploadProgress.value += 10;
@@ -487,6 +515,7 @@ const resetForm = () => {
     author: "",
     description: "",
     language: "",
+    publishedAt: "",
   };
   errors.value = {
     pdfFile: "",

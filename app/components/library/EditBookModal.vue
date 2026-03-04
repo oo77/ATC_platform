@@ -6,72 +6,89 @@
     @close="handleClose"
   >
     <form @submit.prevent="handleSubmit" class="space-y-4">
-      <!-- Название -->
-      <div>
-        <label
-          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-        >
-          Название книги <span class="text-red-500">*</span>
-        </label>
-        <input
-          v-model="form.title"
-          type="text"
-          class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-          :class="{ 'border-red-500': errors.title }"
-        />
-        <p v-if="errors.title" class="mt-1 text-sm text-red-500">
-          {{ errors.title }}
-        </p>
-      </div>
+      <!-- Горизонтальная сетка полей -->
+      <div class="grid grid-cols-2 gap-4">
+        <!-- Название -->
+        <div class="col-span-2">
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+          >
+            Название книги <span class="text-red-500">*</span>
+          </label>
+          <input
+            v-model="form.title"
+            type="text"
+            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+            :class="{ 'border-red-500': errors.title }"
+          />
+          <p v-if="errors.title" class="mt-1 text-sm text-red-500">
+            {{ errors.title }}
+          </p>
+        </div>
 
-      <!-- Автор -->
-      <div>
-        <label
-          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-        >
-          Автор
-        </label>
-        <input
-          v-model="form.author"
-          type="text"
-          class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-        />
-      </div>
+        <!-- Автор -->
+        <div>
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+          >
+            Автор
+          </label>
+          <input
+            v-model="form.author"
+            type="text"
+            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+          />
+        </div>
 
-      <!-- Описание -->
-      <div>
-        <label
-          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-        >
-          Описание
-        </label>
-        <textarea
-          v-model="form.description"
-          rows="3"
-          class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none"
-        ></textarea>
-      </div>
+        <!-- Язык -->
+        <div>
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+          >
+            Язык <span class="text-red-500">*</span>
+          </label>
+          <select
+            v-model="form.language"
+            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none text-sm"
+            :class="{ 'border-red-500': errors.language }"
+          >
+            <option value="ru">Русский</option>
+            <option value="uz">O'zbekcha</option>
+            <option value="en">English</option>
+            <option value="kk">Қазақша</option>
+          </select>
+          <p v-if="errors.language" class="mt-1 text-sm text-red-500">
+            {{ errors.language }}
+          </p>
+        </div>
 
-      <!-- Язык -->
-      <div>
-        <label
-          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-        >
-          Язык <span class="text-red-500">*</span>
-        </label>
-        <select
-          v-model="form.language"
-          class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
-          :class="{ 'border-red-500': errors.language }"
-        >
-          <option value="ru">Русский</option>
-          <option value="uz">O'zbekcha</option>
-          <option value="en">English</option>
-          <option value="kk">Қазақша</option>
-        </select>
-        <p v-if="errors.language" class="mt-1 text-sm text-red-500">
-          {{ errors.language }}
-        </p>
+        <!-- Дата выпуска -->
+        <div>
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+          >
+            Дата выпуска
+          </label>
+          <input
+            v-model="form.publishedAt"
+            type="date"
+            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+          />
+        </div>
+
+        <!-- Описание -->
+        <div class="col-span-2">
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+          >
+            Описание
+          </label>
+          <textarea
+            v-model="form.description"
+            rows="3"
+            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none text-sm"
+          ></textarea>
+        </div>
       </div>
     </form>
 
@@ -116,6 +133,7 @@ interface Book {
   author: string | null;
   description: string | null;
   language: string;
+  published_at?: string | null;
 }
 
 interface Props {
@@ -137,6 +155,7 @@ const form = ref({
   author: "",
   description: "",
   language: "ru",
+  publishedAt: "",
 });
 
 const errors = ref({
@@ -178,6 +197,7 @@ const handleSubmit = async () => {
         author: form.value.author || null,
         description: form.value.description || null,
         language: form.value.language,
+        publishedAt: form.value.publishedAt || null,
       },
     });
 
@@ -196,6 +216,16 @@ const handleClose = () => {
   }
 };
 
+// Форматирование даты из ISO в YYYY-MM-DD для input[type=date]
+const formatDateForInput = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return "";
+  try {
+    return new Date(dateStr).toISOString().split("T")[0];
+  } catch {
+    return "";
+  }
+};
+
 watch(
   () => props.book,
   (book) => {
@@ -205,6 +235,7 @@ watch(
         author: book.author || "",
         description: book.description || "",
         language: book.language,
+        publishedAt: formatDateForInput(book.published_at),
       };
     }
   },

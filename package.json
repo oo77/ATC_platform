@@ -29,7 +29,6 @@
     "@fullcalendar/list": "^6.1.19",
     "@fullcalendar/timegrid": "^6.1.19",
     "@fullcalendar/vue3": "^6.1.19",
-    "@napi-rs/canvas": "^0.1.93",
     "@pdf-lib/fontkit": "^1.1.1",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/postcss": "^4.1.18",

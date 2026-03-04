@@ -727,6 +727,7 @@ interface Book {
   total_pages: number;
   status: "processing" | "ready" | "failed";
   created_at: string;
+  published_at: string | null;
   readers_count?: number;
 }
 

@@ -29,6 +29,7 @@ import * as addOrganizationLanguages from "./migrations/20260213_018_add_organiz
 import * as addCertificateValidityToCourses from "./migrations/20260216_019_add_certificate_validity_to_courses";
 import * as faceRecognitionSystem from "./migrations/20260216_020_face_recognition_system";
 import * as addOverrideWarningsToCertificates from "./migrations/20260220_021_add_override_warnings_to_certificates";
+import * as addPublishedAtToBooks from "./migrations/20260304_022_add_published_at_to_books";
 
 /**
  * ============================================================================
@@ -244,6 +245,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: addOverrideWarningsToCertificates.up,
     down: addOverrideWarningsToCertificates.down,
     description: addOverrideWarningsToCertificates.description,
+  },
+  // ============================================================
+  // Миграция 022: Add published_at to books
+  // ============================================================
+  {
+    name: "20260304_022_add_published_at_to_books",
+    up: addPublishedAtToBooks.up,
+    down: addPublishedAtToBooks.down,
+    description: addPublishedAtToBooks.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

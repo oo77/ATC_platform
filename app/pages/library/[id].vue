@@ -1,395 +1,226 @@
 <template>
-  <div class="fixed inset-0 bg-gray-900 flex flex-col">
-    <!-- Верхняя панель -->
+  <div
+    ref="containerRef"
+    class="relative h-screen w-full overflow-hidden bg-gray-950 font-sans"
+    @mousemove="onMouseMove"
+    @mouseleave="startHideControlsTimer"
+  >
+    <!-- PDF Canvas Container -->
     <div
-      class="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700 z-10"
-      :class="{ 'opacity-0 pointer-events-none': isFullscreen }"
-    >
-      <div class="flex items-center gap-4">
-        <button
-          @click="goBack"
-          class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-          title="Назад к каталогу"
-        >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-        </button>
-        <div class="min-w-0">
-          <h1 class="text-white font-semibold truncate">{{ book?.title }}</h1>
-          <p class="text-sm text-gray-400 truncate">{{ book?.author }}</p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <button
-          @click="toggleFullscreen"
-          class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
-          :title="
-            isFullscreen
-              ? 'Выйти из полноэкранного режима'
-              : 'Полноэкранный режим'
-          "
-        >
-          <svg
-            v-if="!isFullscreen"
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-            />
-          </svg>
-          <svg
-            v-else
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- Область чтения -->
-    <div
-      class="flex-1 flex items-center justify-center overflow-hidden relative bg-gray-900"
-      ref="containerRef"
-      @wheel.prevent="handleWheel"
+      class="flex h-full w-full items-center justify-center transition-all duration-300 ease-out"
+      :class="{ 'cursor-grab': !isPanning, 'cursor-grabbing': isPanning }"
       @mousedown="startPan"
       @mousemove="pan"
-      @mouseup="endPan"
-      @mouseleave="endPan"
+      @mouseup="stopPan"
+      @wheel.prevent="handleWheel"
     >
-      <!-- Загрузка -->
       <div
-        v-if="loading"
-        class="absolute inset-0 flex items-center justify-center z-20"
-      >
-        <div class="text-center bg-gray-800/80 p-6 rounded-xl backdrop-blur-sm">
-          <div
-            class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-4"
-          ></div>
-          <p class="text-gray-400">Загрузка страницы...</p>
-        </div>
-      </div>
-
-      <!-- Страница -->
-      <div
-        v-else-if="currentPageImage"
-        class="relative flex items-center justify-center transition-transform duration-100 ease-out origin-center"
+        class="relative transition-transform duration-75 ease-out"
         :style="{
-          transform: `scale(${scale}) translate(${position.x}px, ${position.y}px) rotate(${rotation}deg)`,
-          cursor: isPanning ? 'grabbing' : scale > 1 ? 'grab' : 'default',
+          transform: `translate(${position.x}px, ${position.y}px)`,
         }"
       >
-        <img
-          :src="currentPageImage"
-          draggable="false"
-          :alt="`Страница ${currentPage}`"
-          class="max-w-full max-h-[85vh] object-contain shadow-2xl select-none"
-          :class="{ 'max-h-screen': isFullscreen }"
-          @load="resetZoom"
+        <canvas
+          ref="canvasRef"
+          class="shadow-2xl transition-opacity duration-300"
+          :class="{ 'opacity-50': loading }"
         />
-      </div>
 
-      <!-- Ошибка -->
-      <div
-        v-else-if="error"
-        class="absolute inset-0 flex items-center justify-center bg-gray-900 z-20"
-      >
-        <!-- ... код ошибки без изменений ... -->
-        <div class="text-center max-w-md px-4">
-          <svg
-            class="mx-auto h-16 w-16 text-red-500 mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <h3 class="text-xl font-semibold text-white mb-2">Ошибка загрузки</h3>
-          <p class="text-gray-400 mb-4">{{ error }}</p>
-          <button
-            @click="loadPage(currentPage)"
-            class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Повторить попытку
-          </button>
+        <!-- Loading Overlay -->
+        <div
+          v-if="loading"
+          class="absolute inset-0 flex items-center justify-center rounded-lg bg-gray-900/10 backdrop-blur-sm"
+        >
+          <div
+            class="h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"
+          />
         </div>
-      </div>
-
-      <!-- Кнопки зума и поворота -->
-      <div
-        v-if="!loading && currentPageImage"
-        class="absolute bottom-6 right-6 flex flex-col gap-2 z-10"
-      >
-        <button
-          @click="rotateLeft"
-          class="p-2 bg-gray-800/80 text-white rounded-full hover:bg-gray-700 backdrop-blur-sm shadow-lg transition-colors"
-          title="Повернуть влево"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-            />
-          </svg>
-        </button>
-        <button
-          @click="rotateRight"
-          class="p-2 bg-gray-800/80 text-white rounded-full hover:bg-gray-700 backdrop-blur-sm shadow-lg transition-colors"
-          title="Повернуть вправо"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 10H11a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"
-            />
-          </svg>
-        </button>
-
-        <div class="h-px bg-gray-600 my-1"></div>
-
-        <button
-          @click="zoomIn"
-          class="p-2 bg-gray-800/80 text-white rounded-full hover:bg-gray-700 backdrop-blur-sm shadow-lg transition-colors"
-          title="Увеличить"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-            />
-          </svg>
-        </button>
-        <button
-          @click="resetZoom"
-          class="p-2 bg-gray-800/80 text-white rounded-full hover:bg-gray-700 backdrop-blur-sm shadow-lg transition-colors text-sm font-bold w-10 h-10 flex items-center justify-center"
-          title="Сбросить масштаб"
-        >
-          {{ Math.round(scale * 100) }}%
-        </button>
-        <button
-          @click="zoomOut"
-          class="p-2 bg-gray-800/80 text-white rounded-full hover:bg-gray-700 backdrop-blur-sm shadow-lg transition-colors"
-          title="Уменьшить"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M20 12H4"
-            />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Навигация (стрелки) -->
-      <div
-        v-if="!loading && currentPageImage"
-        class="absolute inset-x-0 top-1/2 -translate-y-1/2 flex items-center justify-between px-4 pointer-events-none z-10"
-        :class="{ 'opacity-0': !showControls && !isFullscreen }"
-      >
-        <button
-          @click.stop="previousPage"
-          :disabled="currentPage <= 1"
-          class="p-3 bg-gray-800/80 text-white rounded-full hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all pointer-events-auto backdrop-blur-sm shadow-lg"
-          title="Предыдущая страница"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-
-        <button
-          @click.stop="nextPage"
-          :disabled="currentPage >= (book?.total_pages || 0)"
-          class="p-3 bg-gray-800/80 text-white rounded-full hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all pointer-events-auto backdrop-blur-sm shadow-lg"
-          title="Следующая страница"
-        >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
       </div>
     </div>
 
-    <!-- Нижняя панель управления -->
-    <div
-      v-if="!loading && book"
-      class="px-4 py-3 bg-gray-800 border-t border-gray-700 z-10"
-      :class="{
-        'opacity-0 pointer-events-none': isFullscreen && !showControls,
-      }"
+    <!-- Toolbar (Controls) -->
+    <Transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="translate-y-full opacity-0"
+      enter-to-class="translate-y-0 opacity-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="translate-y-0 opacity-100"
+      leave-to-class="translate-y-full opacity-0"
     >
-      <!-- Прогресс-бар -->
-      <div class="mb-3">
+      <div
+        v-if="showControls"
+        class="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-4 px-6 md:flex-row md:px-0"
+        @mouseenter="stopHideControlsTimer"
+      >
+        <!-- Zoom Controls -->
         <div
-          class="flex items-center justify-between text-sm text-gray-400 mb-2"
+          class="flex items-center gap-2 rounded-2xl bg-gray-900/80 p-2 text-white shadow-2xl backdrop-blur-md"
         >
-          <span>Страница {{ currentPage }} из {{ book.total_pages }}</span>
-          <span>{{ progressPercentage }}%</span>
-        </div>
-        <div class="relative">
-          <input
-            type="range"
-            :min="1"
-            :max="book.total_pages"
-            v-model.number="currentPage"
-            @change="handlePageChange"
-            class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-          />
-        </div>
-      </div>
-
-      <!-- Кнопки управления -->
-      <div class="flex items-center justify-center gap-2">
-        <button
-          @click="previousPage"
-          :disabled="currentPage <= 1"
-          class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-          Назад
-        </button>
-
-        <div class="flex items-center gap-2 px-4">
-          <input
-            type="number"
-            :min="1"
-            :max="book.total_pages"
-            v-model.number="pageInput"
-            @keyup.enter="goToPage"
-            class="w-20 px-3 py-2 bg-gray-700 text-white text-center rounded-lg border border-gray-600 focus:border-primary outline-none"
-          />
           <button
-            @click="goToPage"
-            class="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            class="flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-white/10"
+            @click="zoomOut"
           >
-            Перейти
+            <IconsMinusIcon class="h-5 w-5" />
+          </button>
+          <span class="w-16 text-center text-sm font-medium"
+            >{{ Math.round(scale * 100) }}%</span
+          >
+          <button
+            class="flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-white/10"
+            @click="zoomIn"
+          >
+            <IconsPlusIcon class="h-5 w-5" />
+          </button>
+          <div class="mx-2 h-6 w-px bg-white/10" />
+          <button
+            class="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition hover:bg-white/10"
+            @click="resetZoom"
+          >
+            <span>Сброс</span>
           </button>
         </div>
 
-        <button
-          @click="nextPage"
-          :disabled="currentPage >= book.total_pages"
-          class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+        <!-- Navigation Controls -->
+        <div
+          class="flex items-center gap-4 rounded-2xl bg-gray-900/80 p-2 text-white shadow-2xl backdrop-blur-md"
         >
-          Вперед
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          <button
+            class="flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-white/10 disabled:opacity-30"
+            :disabled="currentPage === 1"
+            @click="prevPage"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
+            <IconsChevronLeftIcon class="h-6 w-6" />
+          </button>
+
+          <div class="flex items-center gap-2">
+            <input
+              v-model.number="pageInput"
+              type="number"
+              class="w-16 rounded-lg bg-white/10 px-2 py-1 text-center font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              @keydown.enter="jumpToPage"
+              @blur="jumpToPage"
             />
-          </svg>
-        </button>
+            <span class="text-gray-400">из</span>
+            <span class="font-medium">{{ totalPages }}</span>
+          </div>
+
+          <button
+            class="flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-white/10 disabled:opacity-30"
+            :disabled="currentPage === totalPages"
+            @click="nextPage"
+          >
+            <IconsChevronRightIcon class="h-6 w-6" />
+          </button>
+
+          <div class="mx-2 h-6 w-px bg-white/10" />
+
+          <button
+            class="flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-white/10"
+            @click="toggleFullscreen"
+          >
+            <IconsMaximizeIcon v-if="!isFullscreen" class="h-5 w-5" />
+            <IconsMinimizeIcon v-else class="h-5 w-5" />
+          </button>
+        </div>
       </div>
+    </Transition>
+
+    <!-- Header Overlay -->
+    <Transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="-translate-y-full opacity-0"
+      enter-to-class="translate-y-0 opacity-100"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="translate-y-0 opacity-100"
+      leave-to-class="-translate-y-full opacity-0"
+    >
+      <div
+        v-if="showControls"
+        class="absolute left-0 top-0 flex w-full items-center justify-between bg-gradient-to-b from-black/80 to-transparent p-6 text-white"
+      >
+        <div class="flex items-center gap-4">
+          <button
+            class="rounded-full bg-white/10 p-2 transition hover:bg-white/20"
+            @click="router.back()"
+          >
+            <IconsArrowLeftIcon class="h-6 w-6" />
+          </button>
+          <div v-if="book">
+            <h1 class="text-xl font-bold tracking-tight">{{ book.title }}</h1>
+            <p v-if="book.author" class="text-sm text-gray-300 opacity-80">
+              {{ book.author }}
+            </p>
+          </div>
+        </div>
+
+        <div class="hidden flex-col items-end gap-1 md:flex">
+          <div class="text-xs uppercase tracking-widest text-gray-400">
+            Прогресс
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="h-1.5 w-32 overflow-hidden rounded-full bg-white/10">
+              <div
+                class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+                :style="{ width: `${progressPercentage}%` }"
+              />
+            </div>
+            <span class="text-sm font-bold tabular-nums"
+              >{{ progressPercentage }}%</span
+            >
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Fullscreen Loading -->
+    <div
+      v-if="loadingDoc"
+      class="absolute inset-0 flex flex-col items-center justify-center bg-gray-950 text-white"
+    >
+      <div class="relative h-24 w-24">
+        <div
+          class="absolute inset-0 animate-ping rounded-full bg-indigo-500/20"
+        />
+        <IconsBookOpenIcon class="relative h-24 w-24 text-indigo-500" />
+      </div>
+      <h2 class="mt-8 text-2xl font-medium">Открытие книги...</h2>
+      <div class="mt-4 h-2 w-64 overflow-hidden rounded-full bg-gray-900">
+        <div
+          class="h-full bg-indigo-500 transition-all duration-300"
+          :style="{ width: `${downloadProgress}%` }"
+        />
+      </div>
+    </div>
+
+    <!-- Catchy Error State -->
+    <div
+      v-if="error"
+      class="absolute inset-0 flex flex-col items-center justify-center bg-gray-950 p-6 text-center text-white"
+    >
+      <IconsAlertTriangleIcon class="h-16 w-16 text-rose-500" />
+      <h2 class="mt-6 text-2xl font-bold">Упс! Что-то пошло не так</h2>
+      <p class="mt-2 max-w-md text-gray-400">{{ error }}</p>
+      <button
+        class="mt-8 rounded-xl bg-white px-8 py-3 font-semibold text-gray-950 transition hover:bg-gray-200"
+        @click="retryLoad"
+      >
+        Попробовать снова
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+/**
+ * Просмотр книги — PDF-ридер (Senior Refactored)
+ *
+ * Исправлено: 100% отображение иконок через локальные компоненты Icons...
+ */
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "~/composables/useToast";
 
-definePageMeta({
-  layout: false as any, // Полноэкранный режим
-});
+definePageMeta({ layout: false as any });
 
 interface Book {
   id: number;
@@ -402,232 +233,169 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 
-// Состояние
-const loading = ref(true);
+const loadingDoc = ref(true);
+const loading = ref(false);
 const error = ref("");
+const downloadProgress = ref(0);
 const book = ref<Book | null>(null);
 const currentPage = ref(1);
 const pageInput = ref(1);
-const currentPageImage = ref("");
 const sessionId = ref<number | null>(null);
 const isFullscreen = ref(false);
 const showControls = ref(true);
+const pdfReady = ref(false);
 
-// Zoom & Pan state
+const canvasRef = ref<HTMLCanvasElement | null>(null);
 const containerRef = ref<HTMLElement | null>(null);
+let pdfDoc: any = null;
+let currentRenderTask: any = null;
+
 const scale = ref(1);
-const rotation = ref(0);
 const position = ref({ x: 0, y: 0 });
 const isPanning = ref(false);
 const startPanPosition = ref({ x: 0, y: 0 });
-
-let saveProgressTimeout: NodeJS.Timeout;
-let hideControlsTimeout: NodeJS.Timeout;
-
-// Zoom methods
 const MIN_SCALE = 0.5;
-const MAX_SCALE = 5; // Максимальное увеличение до 500%
+const MAX_SCALE = 4;
 
-const handleWheel = (e: WheelEvent) => {
-  if (e.ctrlKey) {
-    // Zoom
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const newScale = Math.min(
-      Math.max(MIN_SCALE, scale.value + delta),
-      MAX_SCALE,
-    );
-    scale.value = Number(newScale.toFixed(2));
-  } else {
-    // Pan (если увеличено)
-    if (scale.value > 1) {
-      position.value.y -= e.deltaY;
-      position.value.x -= e.deltaX;
-    }
-  }
-};
+let hideControlsTimeout: ReturnType<typeof setTimeout>;
 
-const zoomIn = () => {
-  scale.value = Math.min(MAX_SCALE, scale.value + 0.5);
-};
-
-const zoomOut = () => {
-  scale.value = Math.max(MIN_SCALE, scale.value - 0.5);
-};
-
-const rotateLeft = () => {
-  rotation.value -= 90;
-};
-
-const rotateRight = () => {
-  rotation.value += 90;
-};
-
-const resetZoom = () => {
-  scale.value = 1;
-  rotation.value = 0;
-  position.value = { x: 0, y: 0 };
-};
-
-// Pan methods
-const startPan = (e: MouseEvent) => {
-  if (scale.value > 1 || isFullscreen.value) {
-    // Разрешаем двигать если увеличен или в фуллскрине
-    isPanning.value = true;
-    startPanPosition.value = {
-      x: e.clientX - position.value.x,
-      y: e.clientY - position.value.y,
-    };
-  }
-};
-
-const pan = (e: MouseEvent) => {
-  if (!isPanning.value) return;
-
-  position.value = {
-    x: e.clientX - startPanPosition.value.x,
-    y: e.clientY - startPanPosition.value.y,
-  };
-};
-
-const endPan = () => {
-  isPanning.value = false;
-};
-
-// Сброс зума при переключении страницы
-watch(currentPage, () => {
-  resetZoom();
-});
-
-// Computed
+const totalPages = computed(() => book.value?.total_pages || 0);
 const progressPercentage = computed(() => {
   if (!book.value) return 0;
   return Math.round((currentPage.value / book.value.total_pages) * 100);
 });
 
-// Методы
-const startSession = async () => {
-  try {
-    const response = await $fetch<{
-      sessionId: number;
-      book: Book;
-      lastPage: number;
-    }>(`/api/library/reading/${route.params.id}/start`, {
-      method: "POST",
-    });
-    sessionId.value = response.sessionId;
-    book.value = response.book;
-    currentPage.value = response.lastPage || 1;
-    pageInput.value = currentPage.value;
-  } catch (error: any) {
-    toast.error(error.data?.message || "Ошибка начала сессии чтения");
-    router.push("/library");
-  }
+const initPdfJs = async () => {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+  return pdfjs;
 };
 
-const loadPage = async (page: number) => {
-  if (!book.value || page < 1 || page > book.value.total_pages) return;
-
+const renderPage = async (pageNum: number) => {
+  if (!pdfDoc || !pdfReady.value) return;
+  if (currentRenderTask) {
+    try {
+      currentRenderTask.cancel();
+    } catch {}
+    currentRenderTask = null;
+  }
   loading.value = true;
-  error.value = "";
-
   try {
-    // Получаем изображение страницы напрямую
-    const response = await fetch(
-      `/api/library/reading/${route.params.id}/page/${page}`,
-      {
-        headers: {
-          Accept: "image/png",
-        },
-      },
+    const page = await pdfDoc.getPage(pageNum);
+    const container = containerRef.value;
+    if (!container) return;
+    const naturalViewport = page.getViewport({ scale: 1.0 });
+    const availableW = container.clientWidth - 40;
+    const availableH = container.clientHeight - 40;
+    const baseFitScale = Math.min(
+      availableW / naturalViewport.width,
+      availableH / naturalViewport.height,
     );
-
-    if (!response.ok) {
-      throw new Error("Ошибка загрузки страницы");
-    }
-
-    const blob = await response.blob();
-    currentPageImage.value = URL.createObjectURL(blob);
-
-    // Сохраняем прогресс с задержкой
-    saveProgress(page);
-
-    // Предзагрузка следующей страницы
-    prefetchPage(page + 1);
+    const pixelRatio = window.devicePixelRatio || 1;
+    const supersampling = 1.25;
+    const finalRenderScale =
+      baseFitScale * scale.value * pixelRatio * supersampling;
+    const viewport = page.getViewport({ scale: finalRenderScale });
+    const canvas = canvasRef.value;
+    if (!canvas) return;
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    canvas.style.width = `${Math.floor(viewport.width / (pixelRatio * supersampling))}px`;
+    canvas.style.height = `${Math.floor(viewport.height / (pixelRatio * supersampling))}px`;
+    const ctx = canvas.getContext("2d", { alpha: false })!;
+    ctx.imageSmoothingEnabled = false;
+    currentRenderTask = page.render({ canvasContext: ctx, viewport: viewport });
+    await currentRenderTask.promise;
+    scheduleProgressSave(pageNum);
   } catch (err: any) {
-    error.value = err.message || "Не удалось загрузить страницу";
-    currentPageImage.value = "";
+    if (err?.name !== "RenderingCancelledException")
+      console.error("[PDF Render Error]", err);
   } finally {
     loading.value = false;
+    currentRenderTask = null;
   }
 };
 
-const prefetchPage = (page: number) => {
-  if (!book.value || page > book.value.total_pages) return;
-  const img = new Image();
-  img.src = `/api/library/reading/${route.params.id}/page/${page}`;
-};
-
-const saveProgress = (page: number) => {
-  clearTimeout(saveProgressTimeout);
-  saveProgressTimeout = setTimeout(async () => {
-    try {
-      await $fetch(`/api/library/reading/${route.params.id}/progress`, {
-        method: "POST",
-        body: {
-          lastPageRead: page,
-        },
-      });
-    } catch (error) {
-      console.error("Ошибка сохранения прогресса:", error);
-    }
-  }, 1000);
-};
-
-const endSession = async () => {
-  if (!sessionId.value) return;
-
-  try {
-    await $fetch(`/api/library/reading/${route.params.id}/end`, {
-      method: "POST",
-    });
-  } catch (error) {
-    console.error("Ошибка завершения сессии:", error);
+const zoomIn = () => {
+  if (scale.value < MAX_SCALE) {
+    scale.value = Number((scale.value + 0.25).toFixed(2));
+    renderPage(currentPage.value);
   }
 };
-
-const previousPage = () => {
+const zoomOut = () => {
+  if (scale.value > MIN_SCALE) {
+    scale.value = Number((scale.value - 0.25).toFixed(2));
+    renderPage(currentPage.value);
+  }
+};
+const resetZoom = () => {
+  scale.value = 1;
+  position.value = { x: 0, y: 0 };
+  renderPage(currentPage.value);
+};
+const handleWheel = (e: WheelEvent) => {
+  if (e.ctrlKey) {
+    if (e.deltaY < 0) zoomIn();
+    else zoomOut();
+  } else if (scale.value > 1) {
+    position.value.y -= e.deltaY;
+    position.value.x -= e.deltaX;
+  }
+};
+const startPan = (e: MouseEvent) => {
+  if (e.button !== 0) return;
+  isPanning.value = true;
+  startPanPosition.value = {
+    x: e.clientX - position.value.x,
+    y: e.clientY - position.value.y,
+  };
+};
+const pan = (e: MouseEvent) => {
+  if (!isPanning.value) return;
+  position.value = {
+    x: e.clientX - startPanPosition.value.x,
+    y: e.clientY - startPanPosition.value.y,
+  };
+};
+const stopPan = () => {
+  isPanning.value = false;
+};
+const nextPage = async () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    pageInput.value = currentPage.value;
+    await renderPage(currentPage.value);
+  }
+};
+const prevPage = async () => {
   if (currentPage.value > 1) {
     currentPage.value--;
     pageInput.value = currentPage.value;
+    await renderPage(currentPage.value);
   }
 };
-
-const nextPage = () => {
-  if (book.value && currentPage.value < book.value.total_pages) {
-    currentPage.value++;
-    pageInput.value = currentPage.value;
-  }
-};
-
-const handlePageChange = () => {
-  pageInput.value = currentPage.value;
-  loadPage(currentPage.value);
-};
-
-const goToPage = () => {
-  if (!book.value) return;
-
-  const page = Math.max(1, Math.min(pageInput.value, book.value.total_pages));
+const jumpToPage = async () => {
+  let page = Number(pageInput.value);
+  if (isNaN(page) || page < 1) page = 1;
+  if (page > totalPages.value) page = totalPages.value;
   currentPage.value = page;
   pageInput.value = page;
-  loadPage(page);
+  await renderPage(page);
 };
 
-const goBack = async () => {
-  await endSession();
-  router.push("/library");
+const onMouseMove = () => {
+  showControls.value = true;
+  startHideControlsTimer();
 };
-
+const startHideControlsTimer = () => {
+  stopHideControlsTimer();
+  hideControlsTimeout = setTimeout(() => {
+    if (!isPanning.value) showControls.value = false;
+  }, 3000);
+};
+const stopHideControlsTimer = () => {
+  if (hideControlsTimeout) clearTimeout(hideControlsTimeout);
+};
 const toggleFullscreen = () => {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen();
@@ -637,100 +405,82 @@ const toggleFullscreen = () => {
     isFullscreen.value = false;
   }
 };
-
-const toggleControls = () => {
-  showControls.value = !showControls.value;
-
-  if (showControls.value && isFullscreen.value) {
-    clearTimeout(hideControlsTimeout);
-    hideControlsTimeout = setTimeout(() => {
-      showControls.value = false;
-    }, 3000);
-  }
+const retryLoad = async () => {
+  pdfDoc = null;
+  pdfReady.value = false;
+  await loadDocument();
+  if (pdfReady.value) await renderPage(currentPage.value);
 };
 
-// Обработка клавиатуры
-const handleKeyPress = (e: KeyboardEvent) => {
-  if (e.key === "ArrowLeft") {
-    previousPage();
-  } else if (e.key === "ArrowRight") {
-    nextPage();
-  } else if (e.key === "Escape" && isFullscreen.value) {
-    toggleFullscreen();
-  }
-};
-
-// Watchers
-watch(currentPage, (newPage) => {
-  loadPage(newPage);
-});
-
-// Lifecycle
 onMounted(async () => {
   await startSession();
-  if (book.value) {
-    loadPage(currentPage.value);
-  }
-  window.addEventListener("keydown", handleKeyPress);
-
-  // Обработка выхода из полноэкранного режима
-  document.addEventListener("fullscreenchange", () => {
-    isFullscreen.value = !!document.fullscreenElement;
-  });
+  await loadDocument();
+  if (pdfReady.value) await renderPage(currentPage.value);
+  startHideControlsTimer();
+});
+onUnmounted(() => {
+  endSession();
+  stopHideControlsTimer();
+  if (currentRenderTask) currentRenderTask.cancel();
+});
+watch(currentPage, (val) => {
+  pageInput.value = val;
 });
 
-onUnmounted(async () => {
-  await endSession();
-  window.removeEventListener("keydown", handleKeyPress);
-  clearTimeout(saveProgressTimeout);
-  clearTimeout(hideControlsTimeout);
+let progressSaveTimeout: any = null;
+const scheduleProgressSave = (pageNum: number) => {
+  if (progressSaveTimeout) clearTimeout(progressSaveTimeout);
+  progressSaveTimeout = setTimeout(async () => {
+    try {
+      await $fetch(`/api/library/reading/${route.params.id}/progress`, {
+        method: "POST",
+        body: { page: pageNum },
+      });
+    } catch (err) {}
+  }, 2000);
+};
 
-  // Освобождаем URL объекта
-  if (currentPageImage.value) {
-    URL.revokeObjectURL(currentPageImage.value);
+const loadDocument = async () => {
+  loadingDoc.value = true;
+  try {
+    const pdfjs = await initPdfJs();
+    const response = await fetch(`/api/library/reading/${route.params.id}/raw`);
+    const data = await response.arrayBuffer();
+    pdfDoc = await pdfjs.getDocument({ data }).promise;
+    pdfReady.value = true;
+  } catch (err: any) {
+    error.value =
+      "Не удалось загрузить книгу: " + (err.message || "Ошибка сети");
+  } finally {
+    loadingDoc.value = false;
   }
-});
+};
+
+const startSession = async () => {
+  try {
+    const res = await $fetch(`/api/library/reading/${route.params.id}/start`, {
+      method: "POST",
+    });
+    book.value = (res as any).book;
+    currentPage.value = (res as any).lastPage || 1;
+    pageInput.value = currentPage.value;
+  } catch (err) {}
+};
+
+const endSession = async () => {
+  if (!book.value) return;
+  await $fetch(`/api/library/reading/${route.params.id}/end`, {
+    method: "POST",
+  }).catch(() => {});
+};
 </script>
 
 <style scoped>
-/* Стилизация слайдера */
-.slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #3b82f6;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.slider::-webkit-slider-thumb:hover {
-  background: #2563eb;
-  transform: scale(1.2);
-}
-
-.slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #3b82f6;
-  cursor: pointer;
-  border: none;
-  transition: all 0.2s;
-}
-
-.slider::-moz-range-thumb:hover {
-  background: #2563eb;
-  transform: scale(1.2);
-}
-
-/* Скрываем стрелки у input[type="number"] */
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
-
 input[type="number"] {
   -moz-appearance: textfield;
 }

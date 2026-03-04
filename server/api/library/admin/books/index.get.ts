@@ -163,6 +163,8 @@ export default defineEventHandler(async (event) => {
         total_pages: book.total_pages || book.page_count,
         created_at: book.created_at,
         processedAt: book.processed_at,
+        published_at: book.published_at || null,
+        readers_count: book.readers_count || 0,
       })),
       total: totalBooks,
       stats,

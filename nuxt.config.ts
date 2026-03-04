@@ -9,7 +9,7 @@ export default defineNuxtConfig({
     port: 3000,
   },
 
-  // Vite конфигурация для ngrok
+  // Vite конфигурация для ngrok и pdfjs-dist
   vite: {
     server: {
       hmr: {
@@ -26,6 +26,10 @@ export default defineNuxtConfig({
         ".ngrok-free.dev", // Новый формат ngrok
         ".ngrok.io", // Старый формат ngrok
       ],
+    },
+    // pdfjs-dist используется только на клиенте (браузерный рендеринг PDF)
+    optimizeDeps: {
+      include: ["pdfjs-dist"],
     },
   },
 
@@ -103,7 +107,7 @@ export default defineNuxtConfig({
     },
     // Исключаем из бандлинга: нативные модули и тяжёлые ESM-пакеты
     externals: {
-      external: ["xlsx", "@napi-rs/canvas", "pdfjs-dist", "@pdf-lib/fontkit"],
+      external: ["xlsx", "@pdf-lib/fontkit"],
     },
     // Cron задачи
     experimental: {

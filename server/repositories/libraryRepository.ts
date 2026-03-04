@@ -28,13 +28,14 @@ export interface Book {
   description: string | null;
   category: string | null;
   isbn: string | null;
+  language: string | null;
+  published_at: Date | null;
   original_file_path: string;
   cover_path: string | null;
   total_pages: number;
   file_size_bytes: number;
   status: BookStatus;
   processing_error: string | null;
-  is_published: boolean;
   is_published: boolean;
   uploaded_by: string;
   created_at: Date;
@@ -91,20 +92,23 @@ export interface CreateBookData {
   description?: string;
   category?: string;
   isbn?: string;
+  language?: string;
+  published_at?: string;
   original_file_path: string;
   cover_path?: string;
   total_pages: number;
-  file_size_bytes: number;
   file_size_bytes: number;
   uploaded_by: string;
 }
 
 export interface UpdateBookData {
   title?: string;
-  author?: string;
-  description?: string;
-  category?: string;
-  isbn?: string;
+  author?: string | null;
+  description?: string | null;
+  category?: string | null;
+  isbn?: string | null;
+  language?: string;
+  published_at?: string | null;
   cover_path?: string;
   status?: BookStatus;
   processing_error?: string;
@@ -133,10 +137,10 @@ export async function createBook(data: CreateBookData): Promise<string> {
 
   await db.execute(
     `INSERT INTO books (
-      id, title, author, description, category, isbn,
+      id, title, author, description, category, isbn, language, published_at,
       original_file_path, cover_path, total_pages, file_size_bytes,
       status, uploaded_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'processing', ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'processing', ?)`,
     [
       id,
       data.title,
@@ -144,6 +148,8 @@ export async function createBook(data: CreateBookData): Promise<string> {
       data.description || null,
       data.category || null,
       data.isbn || null,
+      data.language || "ru",
+      data.published_at || null,
       data.original_file_path,
       data.cover_path || null,
       data.total_pages,
@@ -271,6 +277,16 @@ export async function updateBook(
   if (data.is_published !== undefined) {
     fields.push("is_published = ?");
     params.push(data.is_published);
+  }
+
+  if (data.language !== undefined) {
+    fields.push("language = ?");
+    params.push(data.language);
+  }
+
+  if (data.published_at !== undefined) {
+    fields.push("published_at = ?");
+    params.push(data.published_at);
   }
 
   if (fields.length === 0) return;

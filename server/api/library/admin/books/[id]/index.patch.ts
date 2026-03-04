@@ -13,6 +13,7 @@ interface UpdateBookBody {
   isbn?: string;
   publisher?: string;
   publishedYear?: number;
+  publishedAt?: string | null;
   language?: string;
   category?: string;
 }
@@ -129,6 +130,10 @@ export default defineEventHandler(async (event) => {
       updateData.category = body.category ? body.category.trim() : null;
     }
 
+    if (body.publishedAt !== undefined) {
+      updateData.published_at = body.publishedAt || null;
+    }
+
     if (Object.keys(updateData).length === 0) {
       throw createError({
         statusCode: 400,
@@ -137,7 +142,15 @@ export default defineEventHandler(async (event) => {
     }
 
     // Обновление книги
-    await updateBook(String(bookId), updateData);
+    await updateBook(String(bookId), {
+      ...updateData,
+      ...(body.language !== undefined
+        ? { language: body.language || "ru" }
+        : {}),
+      ...(body.publishedAt !== undefined
+        ? { published_at: body.publishedAt || null }
+        : {}),
+    });
     const updatedBook = await getBookById(String(bookId));
 
     if (!updatedBook) {
@@ -160,6 +173,8 @@ export default defineEventHandler(async (event) => {
         description: updatedBook.description,
         isbn: updatedBook.isbn,
         category: updatedBook.category,
+        language: updatedBook.language,
+        published_at: updatedBook.published_at,
         updatedAt: updatedBook.updated_at,
       },
     };

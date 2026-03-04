@@ -11,7 +11,7 @@
     >
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-99999 flex items-center justify-center overflow-y-auto p-4"
+        class="fixed inset-0 z-100000 flex items-center justify-center overflow-y-auto p-4"
         @click.self="handleBackdropClick"
       >
         <!-- Backdrop -->
@@ -90,9 +90,9 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue';
+import { watch } from "vue";
 
-type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
+type ModalSize = "sm" | "md" | "lg" | "xl" | "full";
 
 interface ModalProps {
   isOpen: boolean;
@@ -102,7 +102,7 @@ interface ModalProps {
 }
 
 const props = withDefaults(defineProps<ModalProps>(), {
-  size: 'md',
+  size: "md",
   closeOnBackdrop: false,
 });
 
@@ -111,16 +111,16 @@ const emit = defineEmits<{
 }>();
 
 const sizeClasses = {
-  sm: 'max-w-md',
-  md: 'max-w-2xl',
-  lg: 'max-w-4xl',
-  xl: 'max-w-6xl',
-  full: 'max-w-full mx-4',
+  sm: "max-w-md",
+  md: "max-w-2xl",
+  lg: "max-w-4xl",
+  xl: "max-w-6xl",
+  full: "max-w-full mx-4",
 };
 
 const handleBackdropClick = () => {
   if (props.closeOnBackdrop) {
-    emit('close');
+    emit("close");
   }
 };
 
@@ -129,10 +129,10 @@ watch(
   () => props.isOpen,
   (isOpen) => {
     if (isOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
-  }
+  },
 );
 </script>

@@ -6,7 +6,7 @@ import { executeQuery } from "../../../utils/db";
 
 /**
  * GET /api/library/covers/:bookId
- * Получение обложки книги
+ * Получение обложки книги (первая страница PDF)
  */
 export default defineEventHandler(async (event) => {
   const bookId = getRouterParam(event, "bookId");
@@ -42,18 +42,30 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Формируем полный путь к обложке
-    const coverPath = path.join(
-      process.cwd(),
-      "storage",
-      "library",
-      "covers",
-      `${bookId}.webp`,
-    );
+    // Проверяем все возможные форматы обложек (pdf → png → webp)
+    const coversDir = path.join(process.cwd(), "storage", "library", "covers");
+    const extensions = ["pdf", "png", "webp"];
+    let coverPath = "";
+    let contentType = "";
 
-    // Проверяем существование файла
-    if (!existsSync(coverPath)) {
-      console.error(`[Library] Cover file not found: ${coverPath}`);
+    for (const ext of extensions) {
+      const candidatePath = path.join(coversDir, `${bookId}.${ext}`);
+      if (existsSync(candidatePath)) {
+        coverPath = candidatePath;
+        contentType =
+          ext === "pdf"
+            ? "application/pdf"
+            : ext === "png"
+              ? "image/png"
+              : "image/webp";
+        break;
+      }
+    }
+
+    if (!coverPath) {
+      console.error(
+        `[Library] Cover file not found for book ${bookId} in any format`,
+      );
       throw createError({
         statusCode: 404,
         message: "Cover file not found",
@@ -64,9 +76,13 @@ export default defineEventHandler(async (event) => {
     const coverBuffer = await readFile(coverPath);
 
     // Устанавливаем заголовки
-    event.node.res.setHeader("Content-Type", "image/webp");
-    event.node.res.setHeader("Cache-Control", "public, max-age=31536000"); // Кэш на год
+    event.node.res.setHeader("Content-Type", contentType);
+    event.node.res.setHeader("Cache-Control", "public, max-age=31536000");
     event.node.res.setHeader("Content-Length", coverBuffer.length);
+
+    console.log(
+      `[Library] Served cover for book ${bookId} (${contentType}, ${coverBuffer.length} bytes)`,
+    );
 
     return coverBuffer;
   } catch (error: any) {

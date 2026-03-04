@@ -137,6 +137,8 @@ export default defineEventHandler(async (event) => {
       description: metadata.description || undefined,
       isbn: metadata.isbn || undefined,
       category: metadata.category || undefined,
+      language: metadata.language || "ru",
+      published_at: metadata.publishedAt || undefined,
       total_pages: pageCount,
       original_file_path: originalPath,
       file_size_bytes: pdfFile.data.length,
