@@ -40,6 +40,7 @@
     "bcryptjs": "^3.0.3",
     "docxtemplater": "^3.67.6",
     "dropzone": "^6.0.0-beta.2",
+    "exceljs": "^4.4.0",
     "flatpickr": "^4.6.13",
     "grammy": "^1.38.4",
     "image-size": "^2.0.2",

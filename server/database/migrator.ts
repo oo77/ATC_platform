@@ -30,6 +30,7 @@ import * as addCertificateValidityToCourses from "./migrations/20260216_019_add_
 import * as faceRecognitionSystem from "./migrations/20260216_020_face_recognition_system";
 import * as addOverrideWarningsToCertificates from "./migrations/20260220_021_add_override_warnings_to_certificates";
 import * as addPublishedAtToBooks from "./migrations/20260304_022_add_published_at_to_books";
+import * as reportBuilder from "./migrations/20260305_023_report_builder";
 
 /**
  * ============================================================================
@@ -254,6 +255,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: addPublishedAtToBooks.up,
     down: addPublishedAtToBooks.down,
     description: addPublishedAtToBooks.description,
+  },
+  // ============================================================
+  // Миграция 023: Report Builder System
+  // ============================================================
+  {
+    name: "20260305_023_report_builder",
+    up: reportBuilder.up,
+    down: reportBuilder.down,
+    description: reportBuilder.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

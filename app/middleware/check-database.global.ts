@@ -15,7 +15,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   try {
     // Проверяем подключение к БД
-    const dbStatus = await $fetch("/api/environment/check-db");
+    const dbStatus: any = await ($fetch as any)("/api/environment/check-db");
 
     if (!dbStatus.connected) {
       // БД не настроена → редирект на настройку

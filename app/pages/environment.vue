@@ -423,11 +423,7 @@ onMounted(async () => {
 // Проверка статуса БД
 const checkDatabaseStatus = async () => {
   try {
-    const result = (await $fetch("/api/environment/check-db")) as {
-      connected: boolean;
-      message: string;
-      error?: string;
-    };
+    const result: any = await ($fetch as any)("/api/environment/check-db");
     dbStatus.value = result;
   } catch (error: any) {
     dbStatus.value = {
@@ -440,7 +436,7 @@ const checkDatabaseStatus = async () => {
 // Загрузка текущих настроек
 const loadCurrentSettings = async () => {
   try {
-    const current = await $fetch("/api/environment/current");
+    const current: any = await ($fetch as any)("/api/environment/current");
 
     // Database
     if (current.database.DATABASE_HOST)
@@ -477,7 +473,7 @@ const testConnection = async () => {
   connectionTest.value = null;
 
   try {
-    const result = (await $fetch("/api/environment/test-connection", {
+    const result = await ($fetch as any)("/api/environment/test-connection", {
       method: "POST",
       body: {
         DATABASE_HOST: form.DATABASE_HOST,
@@ -486,10 +482,7 @@ const testConnection = async () => {
         DATABASE_USER: form.DATABASE_USER,
         DATABASE_PASSWORD: form.DATABASE_PASSWORD,
       },
-    })) as {
-      message: string;
-      details?: { database: string; version: string };
-    };
+    });
 
     connectionTest.value = {
       success: true,
@@ -528,7 +521,7 @@ const runMigrations = async () => {
   migrationsText.value = "Выполнение...";
 
   try {
-    await $fetch("/api/environment/migrate", {
+    await ($fetch as any)("/api/environment/migrate", {
       method: "POST",
     });
 
@@ -558,7 +551,7 @@ const handleSaveAndRestart = async () => {
 
   try {
     // Сохраняем настройки
-    await $fetch("/api/environment/save", {
+    await ($fetch as any)("/api/environment/save", {
       method: "POST",
       body: form,
     });
@@ -567,7 +560,7 @@ const handleSaveAndRestart = async () => {
 
     // Перезапускаем приложение
     try {
-      await $fetch("/api/environment/restart", {
+      await ($fetch as any)("/api/environment/restart", {
         method: "POST",
       });
 

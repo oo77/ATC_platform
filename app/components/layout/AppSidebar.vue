@@ -299,6 +299,7 @@ import ClipboardCheckIcon from "~/components/icons/ClipboardCheckIcon.vue";
 import BoxCubeIcon from "~/components/icons/BoxCubeIcon.vue";
 import UserCircleIcon from "~/components/icons/UserCircleIcon.vue";
 import BookIcon from "~/components/icons/BookIcon.vue";
+import BarChartIcon from "~/components/icons/BarChartIcon.vue";
 
 const route = useRoute();
 const { isExpanded, isMobileOpen, isHovered, openSubmenu, setIsHovered } =
@@ -458,6 +459,13 @@ const allMenuGroups: MenuGroup[] = [
             hideForRoles: ["STUDENT"],
           },
         ],
+      },
+      {
+        icon: BarChartIcon,
+        name: "Конструктор отчётов",
+        path: "/reports",
+        hideForRoles: ["STUDENT", "TEACHER"],
+        anyPermissions: [Permission.DASHBOARD_VIEW],
       },
       {
         icon: FolderIcon,
