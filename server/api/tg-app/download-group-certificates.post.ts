@@ -61,17 +61,23 @@ export default defineEventHandler(async (event) => {
     // Скачиваем и добавляем каждый PDF в архив
     for (const cert of certificates) {
       try {
-        // Скачиваем PDF
-        const response = await fetch(cert.pdfFileUrl);
-        if (!response.ok) {
+        // Получаем файл локально через внутренний API
+        let buffer: Buffer;
+        try {
+          const response = await $fetch(
+            `/api/certificates/download/${cert.id}`,
+            {
+              responseType: "arrayBuffer",
+            },
+          );
+          buffer = Buffer.from(response as any);
+        } catch (downloadErr) {
           console.warn(
-            `[TG-App] Не удалось скачать сертификат ${cert.id}: ${response.statusText}`,
+            `[TG-App] Не удалось скачать сертификат ${cert.id} через API:`,
+            downloadErr,
           );
           continue;
         }
-
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
 
         // Формируем имя файла: ФИО_НомерСертификата.pdf
         const fileName = `${cert.studentName.replace(/[^a-zA-Zа-яА-ЯёЁ0-9\s]/g, "_")}_${cert.certificateNumber}.pdf`;
