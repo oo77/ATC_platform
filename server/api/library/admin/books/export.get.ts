@@ -70,15 +70,23 @@ export default defineEventHandler(async (event) => {
       ID: book.id,
       Название: book.title,
       Автор: book.author || "—",
+      Описание: book.description || "—",
       ISBN: book.isbn || "—",
       Категория: book.category || "—",
       Язык: book.language || "—",
+      "Год издания": book.published_at
+        ? new Date(book.published_at).getFullYear()
+        : "—",
       Страниц: book.total_pages || book.page_count || 0,
+      "Размер файла (КБ)": book.file_size_bytes
+        ? Math.round(book.file_size_bytes / 1024)
+        : 0,
       Статус: book.status,
       Загрузил: book.uploaded_by_username || "Неизвестно",
       "Дата загрузки": book.created_at
         ? new Date(book.created_at).toLocaleDateString()
         : "—",
+      Доступов: book.access_count || 0,
       Читателей: book.readers_count || 0,
     }));
 
@@ -91,13 +99,17 @@ export default defineEventHandler(async (event) => {
       { wch: 36 }, // ID
       { wch: 40 }, // Название
       { wch: 20 }, // Автор
+      { wch: 50 }, // Описание
       { wch: 15 }, // ISBN
       { wch: 15 }, // Категория
       { wch: 10 }, // Язык
+      { wch: 12 }, // Год издания
       { wch: 10 }, // Страниц
+      { wch: 18 }, // Размер файла (КБ)
       { wch: 10 }, // Статус
       { wch: 20 }, // Загрузил
       { wch: 15 }, // Дата
+      { wch: 10 }, // Доступов
       { wch: 10 }, // Читателей
     ];
     ws["!cols"] = wscols;
