@@ -116,6 +116,16 @@
 
           <button
             class="flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-white/10"
+            title="Повернуть страницу"
+            @click="rotate"
+          >
+            <IconsRotateCwIcon class="h-5 w-5" />
+          </button>
+
+          <div class="mx-2 h-6 w-px bg-white/10" />
+
+          <button
+            class="flex h-10 w-10 items-center justify-center rounded-xl transition hover:bg-white/10"
             @click="toggleFullscreen"
           >
             <IconsMaximizeIcon v-if="!isFullscreen" class="h-5 w-5" />
@@ -251,6 +261,7 @@ let pdfDoc: any = null;
 let currentRenderTask: any = null;
 
 const scale = ref(1);
+const rotation = ref(0);
 const position = ref({ x: 0, y: 0 });
 const isPanning = ref(false);
 const startPanPosition = ref({ x: 0, y: 0 });
@@ -284,7 +295,10 @@ const renderPage = async (pageNum: number) => {
     const page = await pdfDoc.getPage(pageNum);
     const container = containerRef.value;
     if (!container) return;
-    const naturalViewport = page.getViewport({ scale: 1.0 });
+    const naturalViewport = page.getViewport({
+      scale: 1.0,
+      rotation: rotation.value,
+    });
     const availableW = container.clientWidth - 40;
     const availableH = container.clientHeight - 40;
     const baseFitScale = Math.min(
@@ -295,7 +309,10 @@ const renderPage = async (pageNum: number) => {
     const supersampling = 1.25;
     const finalRenderScale =
       baseFitScale * scale.value * pixelRatio * supersampling;
-    const viewport = page.getViewport({ scale: finalRenderScale });
+    const viewport = page.getViewport({
+      scale: finalRenderScale,
+      rotation: rotation.value,
+    });
     const canvas = canvasRef.value;
     if (!canvas) return;
     canvas.width = Math.floor(viewport.width);
@@ -330,8 +347,13 @@ const zoomOut = () => {
 };
 const resetZoom = () => {
   scale.value = 1;
+  rotation.value = 0;
   position.value = { x: 0, y: 0 };
   renderPage(currentPage.value);
+};
+const rotate = async () => {
+  rotation.value = (rotation.value + 90) % 360;
+  await renderPage(currentPage.value);
 };
 const handleWheel = (e: WheelEvent) => {
   if (e.ctrlKey) {

@@ -34,6 +34,7 @@ import MenuIcon from "./MenuIcon.vue";
 import CheckIcon from "./CheckIcon.vue";
 import MailBox from "./MailBox.vue";
 import SendIcon from "./SendIcon.vue";
+import RotateCwIcon from "./RotateCwIcon.vue";
 import DraftIcon from "./DraftIcon.vue";
 import TrashIcon from "./TrashIcon.vue";
 import ArchiveIcon from "./ArchiveIcon.vue";
@@ -49,6 +50,7 @@ import EyeIcon from "./EyeIcon.vue";
 import EyeOffIcon from "./EyeOffIcon.vue";
 
 export {
+  RotateCwIcon,
   BellIcon,
   BarChartIcon,
   EyeIcon,
