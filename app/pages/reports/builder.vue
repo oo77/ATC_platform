@@ -349,19 +349,52 @@
           </svg>
         </div>
         <p class="text-gray-600 dark:text-gray-300 font-medium text-base mb-1">
-          Таблица отчёта появится здесь
+          {{
+            templateId
+              ? "Отчёт готов к формированию"
+              : "Таблица отчёта появится здесь"
+          }}
         </p>
         <p class="text-sm text-gray-400 dark:text-gray-500 mb-6">
-          Откройте
-          <strong class="text-gray-500 dark:text-gray-400">Конструктор</strong>,
-          выберите поля и нажмите «Сформировать»
+          <template v-if="templateId">
+            Нажмите кнопку ниже, чтобы получить актуальные данные по шаблону
+          </template>
+          <template v-else>
+            Откройте
+            <strong class="text-gray-500 dark:text-gray-400">Конструктор</strong
+            >, выберите поля и нажмите «Сформировать»
+          </template>
         </p>
         <button
-          class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-all shadow-md"
-          @click="drawerOpen = true"
+          :disabled="generating"
+          class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-all shadow-md disabled:opacity-60"
+          @click="templateId ? generate() : (drawerOpen = true)"
         >
           <svg
+            v-if="!generating"
             class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              v-if="templateId"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+            <path
+              v-else
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+            />
+          </svg>
+          <svg
+            v-else
+            class="w-4 h-4 animate-spin"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -370,10 +403,16 @@
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="2"
-              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          Открыть конструктор
+          {{
+            templateId
+              ? generating
+                ? "Формирование..."
+                : "Сформировать"
+              : "Открыть конструктор"
+          }}
         </button>
       </div>
 

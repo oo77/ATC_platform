@@ -1,32 +1,34 @@
 <template>
   <div class="px-4 py-1">
     <!-- Список выбранных группировок -->
-    <div v-if="groupings.length > 0" class="space-y-1.5 mb-3">
+    <div v-if="groupings.length > 0" class="space-y-1.5 mb-4">
       <div
         v-for="(grp, idx) in groupings"
         :key="idx"
-        class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/40"
+        class="flex items-center gap-2.5 px-3 py-2 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 group/item transition-all hover:border-blue-300 dark:hover:border-blue-700"
       >
-        <span
-          class="text-xs font-medium text-blue-700 dark:text-blue-300 flex-1 min-w-0 truncate"
-        >
-          {{ grp.label }}
-        </span>
-        <span
-          class="text-[10px] text-blue-500/70 dark:text-blue-400/70 shrink-0"
-        >
-          {{
-            grp.type === "time_scale"
-              ? TIME_SCALE_LABELS[grp.time_scale as string]
-              : "Поле"
-          }}
-        </span>
+        <div class="flex-1 min-w-0">
+          <p
+            class="text-xs font-bold text-blue-700 dark:text-blue-300 truncate"
+          >
+            {{ grp.label }}
+          </p>
+          <p
+            class="text-[9px] text-blue-500/70 dark:text-blue-400/60 uppercase tracking-widest"
+          >
+            {{
+              grp.type === "time_scale"
+                ? `ШКАЛА: ${TIME_SCALE_LABELS[grp.time_scale as string]}`
+                : "ГРУППИРОВКА ПО ПОЛЮ"
+            }}
+          </p>
+        </div>
         <button
-          class="shrink-0 text-blue-400 hover:text-red-500 transition-colors"
+          class="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-blue-400 hover:text-white hover:bg-red-500 transition-all opacity-0 group-hover/item:opacity-100"
           @click="$emit('remove', idx)"
         >
           <svg
-            class="w-3.5 h-3.5"
+            class="w-4 h-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -45,11 +47,11 @@
     <!-- Кнопка добавить + попап -->
     <div class="relative" ref="wrapperRef">
       <button
-        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary hover:text-primary dark:hover:text-primary transition-all"
+        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl hover:border-primary hover:text-primary dark:hover:text-primary transition-all bg-gray-50/30 dark:bg-gray-800/20"
         @click="showPicker = !showPicker"
       >
         <svg
-          class="w-3.5 h-3.5"
+          class="w-4 h-4"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -57,7 +59,7 @@
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
-            stroke-width="2"
+            stroke-width="2.5"
             d="M12 4v16m8-8H4"
           />
         </svg>
@@ -67,27 +69,29 @@
       <!-- Picker -->
       <div
         v-if="showPicker"
-        class="absolute left-0 top-full mt-1 w-full bg-white dark:bg-gray-800 border border-stroke dark:border-strokedark rounded-xl shadow-xl z-30 overflow-hidden"
+        class="absolute left-0 bottom-full mb-2 w-full min-w-[300px] bg-white dark:bg-boxdark border border-stroke dark:border-strokedark rounded-2xl shadow-2xl z-[100] overflow-hidden"
       >
-        <!-- Tabs: Поля / Временная шкала -->
-        <div class="flex border-b border-stroke dark:border-strokedark">
+        <!-- Tabs -->
+        <div
+          class="flex p-1 bg-gray-50 dark:bg-gray-800/50 border-b border-stroke dark:border-strokedark"
+        >
           <button
-            class="flex-1 py-2 text-xs font-medium transition-colors"
+            class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all"
             :class="
               pickerTab === 'field'
-                ? 'bg-primary/5 text-primary border-b-2 border-primary'
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                ? 'bg-white dark:bg-gray-700 text-primary shadow-sm'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
             "
             @click="pickerTab = 'field'"
           >
-            Поле
+            Поля
           </button>
           <button
-            class="flex-1 py-2 text-xs font-medium transition-colors"
+            class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all"
             :class="
               pickerTab === 'time'
-                ? 'bg-primary/5 text-primary border-b-2 border-primary'
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                ? 'bg-white dark:bg-gray-700 text-primary shadow-sm'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
             "
             @click="pickerTab = 'time'"
           >
@@ -95,76 +99,98 @@
           </button>
         </div>
 
-        <!-- Поле -->
-        <div v-if="pickerTab === 'field'" class="max-h-48 overflow-y-auto">
+        <!-- Контент: Поля -->
+        <div v-if="pickerTab === 'field'" class="max-h-[350px] overflow-y-auto">
           <div
             v-for="group in entityGroups"
             :key="group.key"
-            class="border-b border-gray-100 dark:border-gray-700/50 last:border-b-0"
+            class="border-b border-gray-50 dark:border-gray-800 last:border-b-0"
           >
             <div
-              class="px-3 py-1.5 text-[10px] font-bold uppercase text-gray-400 tracking-wider bg-gray-50 dark:bg-gray-700/50"
+              class="px-4 py-2 text-[9px] font-black uppercase text-gray-400 tracking-[0.15em] bg-gray-50/50 dark:bg-gray-800/30"
             >
               {{ group.label }}
             </div>
             <button
               v-for="field in group.fields"
               :key="field.key"
-              class="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-primary/5 hover:text-primary transition-colors"
+              class="w-full text-left px-4 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-primary/5 hover:text-primary transition-all border-l-4 border-transparent hover:border-primary flex items-center justify-between group/field"
               @click="addField(field)"
             >
-              {{ field.label }}
+              <span>{{ field.label }}</span>
+              <svg
+                class="w-3 h-3 opacity-0 group-hover/field:opacity-100 transition-opacity"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
             </button>
           </div>
         </div>
 
-        <!-- Временная шкала -->
-        <div v-else class="p-3 space-y-2">
-          <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block"
-              >Поле-дата:</label
+        <!-- Контент: Временная шкала -->
+        <div v-else class="p-4 space-y-4">
+          <div class="space-y-1.5">
+            <label
+              class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
+              >Поле-дата</label
             >
             <select
               v-model="timeScaleDateField"
-              class="w-full text-xs border border-stroke dark:border-strokedark rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-1.5 outline-none focus:border-primary"
+              class="w-full text-xs font-medium border border-stroke dark:border-strokedark rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-3 py-2 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all appearance-none"
             >
-              <option value="">Выберите поле</option>
+              <option value="">Выберите поле для анализа...</option>
               <template v-for="group in entityGroups" :key="group.key">
-                <option
-                  v-for="field in group.fields.filter(
-                    (f: any) => f.isDateField,
-                  )"
-                  :key="field.key"
-                  :value="field.key"
-                >
-                  {{ field.label }}
-                </option>
+                <optgroup :label="group.label.toUpperCase()">
+                  <option
+                    v-for="field in group.fields.filter(
+                      (f: any) => f.isDateField,
+                    )"
+                    :key="field.key"
+                    :value="field.key"
+                  >
+                    {{ field.label }}
+                  </option>
+                </optgroup>
               </template>
             </select>
           </div>
-          <div>
-            <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block"
-              >Шкала:</label
+
+          <div class="space-y-1.5">
+            <label
+              class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
+              >Периодичность</label
             >
-            <select
-              v-model="timeScaleValue"
-              class="w-full text-xs border border-stroke dark:border-strokedark rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-1.5 outline-none focus:border-primary"
-            >
-              <option
+            <div class="grid grid-cols-2 gap-1.5">
+              <button
                 v-for="(lbl, key) in TIME_SCALE_LABELS"
                 :key="key"
-                :value="key"
+                class="px-2 py-2 text-[10px] font-bold rounded-lg border transition-all"
+                :class="
+                  timeScaleValue === key
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-stroke dark:border-strokedark text-gray-500 hover:border-gray-400 dark:hover:border-gray-500'
+                "
+                @click="timeScaleValue = key as string"
               >
                 {{ lbl }}
-              </option>
-            </select>
+              </button>
+            </div>
           </div>
+
           <button
             :disabled="!timeScaleDateField"
-            class="w-full py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-opacity-90 disabled:opacity-50 transition-all"
+            class="w-full py-2.5 bg-primary text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-primary/90 disabled:opacity-40 transition-all shadow-lg shadow-primary/20"
             @click="addTimeScale"
           >
-            Добавить
+            Применить
           </button>
         </div>
       </div>
@@ -184,11 +210,11 @@ interface GroupingItem {
 }
 
 const TIME_SCALE_LABELS: Record<string, string> = {
-  year: "По годам",
-  quarter: "По кварталам",
-  month: "По месяцам",
-  week: "По неделям",
-  day: "По дням",
+  day: "Дни",
+  week: "Недели",
+  month: "Месяцы",
+  quarter: "Кварталы",
+  year: "Годы",
 };
 
 const props = defineProps<{
@@ -208,6 +234,13 @@ const timeScaleValue = ref("month");
 const wrapperRef = ref<HTMLElement | null>(null);
 
 const addField = (field: { key: string; label: string }) => {
+  if (
+    props.groupings.some((g) => g.type === "field" && g.field_key === field.key)
+  ) {
+    showPicker.value = false;
+    return;
+  }
+
   emit("add", {
     type: "field",
     field_key: field.key,
@@ -226,6 +259,18 @@ const addTimeScale = () => {
   const scaleLabel =
     TIME_SCALE_LABELS[timeScaleValue.value] || timeScaleValue.value;
 
+  if (
+    props.groupings.some(
+      (g) =>
+        g.type === "time_scale" &&
+        g.date_field_key === timeScaleDateField.value &&
+        g.time_scale === timeScaleValue.value,
+    )
+  ) {
+    showPicker.value = false;
+    return;
+  }
+
   emit("add", {
     type: "time_scale",
     time_scale: timeScaleValue.value,
@@ -236,7 +281,6 @@ const addTimeScale = () => {
   timeScaleDateField.value = "";
 };
 
-// Закрытие при клике вне
 const handleOutsideClick = (e: MouseEvent) => {
   if (wrapperRef.value && !wrapperRef.value.contains(e.target as Node)) {
     showPicker.value = false;

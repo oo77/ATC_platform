@@ -48,81 +48,96 @@
     <!-- Курсы -->
     <div>
       <label
-        class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+        class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5"
         >Курсы</label
       >
-      <select
-        multiple
-        class="w-full text-xs border border-stroke dark:border-strokedark rounded-lg bg-transparent py-1 px-2 outline-none focus:border-primary dark:bg-gray-700 dark:text-gray-200 max-h-24"
-        :value="filters.course_ids || []"
-        @change="updateMulti('course_ids', $event)"
-      >
-        <option v-for="c in lookup.courses" :key="c.id" :value="c.id">
-          {{ c.short_name || c.name }}
-        </option>
-      </select>
+      <UiMultiSelect
+        :model-value="filters.course_ids"
+        :options="
+          lookup.courses.map((c) => ({
+            id: String(c.id),
+            label: c.short_name || c.name,
+          }))
+        "
+        placeholder="Выберите курсы"
+        @update:model-value="(v) => update('course_ids', v)"
+      />
     </div>
 
     <!-- Организации -->
     <div>
       <label
-        class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+        class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5"
         >Организации</label
       >
-      <select
-        multiple
-        class="w-full text-xs border border-stroke dark:border-strokedark rounded-lg bg-transparent py-1 px-2 outline-none focus:border-primary dark:bg-gray-700 dark:text-gray-200 max-h-24"
-        :value="filters.org_ids || []"
-        @change="updateMulti('org_ids', $event)"
-      >
-        <option v-for="o in lookup.organizations" :key="o.id" :value="o.id">
-          {{ o.short_name || o.name }}
-        </option>
-      </select>
+      <UiMultiSelect
+        :model-value="filters.org_ids"
+        :options="
+          lookup.organizations.map((o) => ({
+            id: String(o.id),
+            label: o.short_name || o.name,
+            description: o.code,
+          }))
+        "
+        placeholder="Выберите организации"
+        @update:model-value="(v) => update('org_ids', v)"
+      />
     </div>
 
     <!-- Группы -->
     <div>
       <label
-        class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+        class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5"
         >Учебные группы</label
       >
-      <select
-        multiple
-        class="w-full text-xs border border-stroke dark:border-strokedark rounded-lg bg-transparent py-1 px-2 outline-none focus:border-primary dark:bg-gray-700 dark:text-gray-200 max-h-24"
-        :value="filters.group_ids || []"
-        @change="updateMulti('group_ids', $event)"
-      >
-        <option v-for="g in lookup.groups" :key="g.id" :value="g.id">
-          {{ g.code }}
-        </option>
-      </select>
+      <UiMultiSelect
+        :model-value="filters.group_ids"
+        :options="
+          lookup.groups.map((g) => ({ id: String(g.id), label: g.code }))
+        "
+        placeholder="Выберите группы"
+        @update:model-value="(v) => update('group_ids', v)"
+      />
     </div>
 
     <!-- Инструкторы -->
     <div>
       <label
-        class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+        class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5"
         >Инструкторы</label
       >
-      <select
-        multiple
-        class="w-full text-xs border border-stroke dark:border-strokedark rounded-lg bg-transparent py-1 px-2 outline-none focus:border-primary dark:bg-gray-700 dark:text-gray-200 max-h-24"
-        :value="filters.instructor_ids || []"
-        @change="updateMulti('instructor_ids', $event)"
-      >
-        <option v-for="i in lookup.instructors" :key="i.id" :value="i.id">
-          {{ i.full_name }}
-        </option>
-      </select>
+      <UiMultiSelect
+        :model-value="filters.instructor_ids"
+        :options="
+          lookup.instructors.map((i) => ({
+            id: String(i.id),
+            label: i.full_name,
+          }))
+        "
+        placeholder="Выберите инструкторов"
+        @update:model-value="(v) => update('instructor_ids', v)"
+      />
     </div>
 
     <!-- Сброс -->
     <button
       v-if="hasActiveFilters"
-      class="w-full text-xs text-red-500 hover:text-red-600 py-1.5 border border-red-200 dark:border-red-900/40 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
+      class="w-full flex items-center justify-center gap-2 mt-4 px-4 py-2 text-xs font-bold uppercase tracking-wider text-red-500 hover:text-white border border-red-200 dark:border-red-900/40 rounded-xl hover:bg-red-500 dark:hover:bg-red-600 transition-all"
       @click="$emit('update', {})"
     >
+      <svg
+        class="w-3.5 h-3.5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+        />
+      </svg>
       Сбросить фильтры
     </button>
   </div>
@@ -156,15 +171,12 @@ const hasActiveFilters = computed(
 );
 
 const update = (key: string, value: any) => {
-  emit("update", { ...props.filters, [key]: value || undefined });
-};
-
-const updateMulti = (key: string, event: Event) => {
-  const sel = event.target as HTMLSelectElement;
-  const values = Array.from(sel.selectedOptions).map((o) => o.value);
-  emit("update", {
-    ...props.filters,
-    [key]: values.length > 0 ? values : undefined,
-  });
+  const newFilters = { ...props.filters };
+  if (!value || (Array.isArray(value) && value.length === 0) || value === "") {
+    delete newFilters[key];
+  } else {
+    newFilters[key] = value;
+  }
+  emit("update", newFilters);
 };
 </script>
