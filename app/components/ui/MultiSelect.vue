@@ -11,31 +11,34 @@
     <!-- Поле выбора -->
     <div
       @click="toggleDropdown"
-      class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary cursor-pointer transition-colors"
+      class="w-full rounded-lg border border-stroke bg-transparent py-1.5 px-3 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary cursor-pointer transition-colors"
       :class="{ 'border-primary': isOpen }"
     >
       <div class="flex items-center justify-between">
         <div class="flex-1 min-w-0">
-          <div v-if="selectedItems.length === 0" class="text-gray-400">
+          <div
+            v-if="selectedItems.length === 0"
+            class="text-[11px] text-gray-400"
+          >
             {{ placeholder }}
           </div>
           <div
             v-else
-            class="flex flex-wrap gap-2 max-h-[100px] overflow-y-auto pr-1"
+            class="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto pr-1"
           >
             <span
               v-for="item in selectedItems"
               :key="item.id"
-              class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary"
+              class="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary"
             >
               {{ item.label }}
               <button
                 @click.stop="removeItem(item.id)"
-                class="hover:text-primary/80 transition-colors"
+                class="hover:text-primary transition-colors"
                 type="button"
               >
                 <svg
-                  class="w-3.5 h-3.5"
+                  class="w-3 h-3"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -43,7 +46,7 @@
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    stroke-width="2"
+                    stroke-width="2.5"
                     d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
@@ -52,7 +55,7 @@
           </div>
         </div>
         <svg
-          class="w-5 h-5 text-gray-400 transition-transform ml-2 shrink-0"
+          class="w-4 h-4 text-gray-400 transition-transform ml-1.5 shrink-0"
           :class="{ 'rotate-180': isOpen }"
           fill="none"
           stroke="currentColor"
@@ -215,7 +218,7 @@ const filteredOptions = computed(() => {
   return props.options.filter(
     (option) =>
       option.label.toLowerCase().includes(query) ||
-      option.description?.toLowerCase().includes(query)
+      option.description?.toLowerCase().includes(query),
   );
 });
 

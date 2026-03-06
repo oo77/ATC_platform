@@ -1,20 +1,20 @@
 <template>
   <div class="px-4 py-1">
     <!-- Список выбранных группировок -->
-    <div v-if="groupings.length > 0" class="space-y-1.5 mb-4">
+    <div v-if="groupings.length > 0" class="space-y-1 mb-2">
       <div
         v-for="(grp, idx) in groupings"
         :key="idx"
-        class="flex items-center gap-2.5 px-3 py-2 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 group/item transition-all hover:border-blue-300 dark:hover:border-blue-700"
+        class="flex items-center gap-2 px-2.5 py-1.5 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-900/30 group/item transition-all hover:border-blue-300 dark:hover:border-blue-700"
       >
         <div class="flex-1 min-w-0">
           <p
-            class="text-xs font-bold text-blue-700 dark:text-blue-300 truncate"
+            class="text-[11px] font-bold text-blue-700 dark:text-blue-300 truncate"
           >
             {{ grp.label }}
           </p>
           <p
-            class="text-[9px] text-blue-500/70 dark:text-blue-400/60 uppercase tracking-widest"
+            class="text-[8px] text-blue-500/70 dark:text-blue-400/60 uppercase tracking-widest leading-none"
           >
             {{
               grp.type === "time_scale"
@@ -24,11 +24,11 @@
           </p>
         </div>
         <button
-          class="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-blue-400 hover:text-white hover:bg-red-500 transition-all opacity-0 group-hover/item:opacity-100"
+          class="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg text-blue-400 hover:text-white hover:bg-red-500 transition-all opacity-0 group-hover/item:opacity-100"
           @click="$emit('remove', idx)"
         >
           <svg
-            class="w-4 h-4"
+            class="w-3.5 h-3.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -47,11 +47,11 @@
     <!-- Кнопка добавить + попап -->
     <div class="relative" ref="wrapperRef">
       <button
-        class="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl hover:border-primary hover:text-primary dark:hover:text-primary transition-all bg-gray-50/30 dark:bg-gray-800/20"
+        class="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl hover:border-primary hover:text-primary dark:hover:text-primary transition-all bg-gray-50/30 dark:bg-gray-800/20"
         @click="showPicker = !showPicker"
       >
         <svg
-          class="w-4 h-4"
+          class="w-3.5 h-3.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -63,7 +63,7 @@
             d="M12 4v16m8-8H4"
           />
         </svg>
-        Добавить группировку
+        Добавить уровень
       </button>
 
       <!-- Picker -->

@@ -1,16 +1,16 @@
 <template>
-  <div class="px-4 py-2 space-y-3">
+  <div class="px-4 py-1 space-y-2">
     <!-- Диапазон дат -->
     <div>
       <label
-        class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-        >Диапазон дат</label
+        class="block text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5"
+        >Период</label
       >
-      <div class="grid grid-cols-2 gap-2">
+      <div class="grid grid-cols-2 gap-1.5">
         <input
           type="date"
           :value="filters.date_from"
-          class="w-full text-xs border border-stroke dark:border-strokedark rounded-lg bg-transparent py-1.5 px-2 outline-none focus:border-primary dark:text-gray-200"
+          class="w-full text-[11px] border border-stroke dark:border-strokedark rounded-lg bg-transparent py-1 px-1.5 outline-none focus:border-primary dark:text-gray-200"
           @change="
             update('date_from', ($event.target as HTMLInputElement).value)
           "
@@ -18,7 +18,7 @@
         <input
           type="date"
           :value="filters.date_to"
-          class="w-full text-xs border border-stroke dark:border-strokedark rounded-lg bg-transparent py-1.5 px-2 outline-none focus:border-primary dark:text-gray-200"
+          class="w-full text-[11px] border border-stroke dark:border-strokedark rounded-lg bg-transparent py-1 px-1.5 outline-none focus:border-primary dark:text-gray-200"
           @change="update('date_to', ($event.target as HTMLInputElement).value)"
         />
       </div>
@@ -27,12 +27,12 @@
     <!-- Поле-дата для фильтра -->
     <div>
       <label
-        class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
-        >Применить дату к</label
+        class="block text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5"
+        >Применить к</label
       >
       <select
         :value="filters.date_field || 'group.start_date'"
-        class="w-full text-xs border border-stroke dark:border-strokedark rounded-lg bg-transparent py-1.5 px-2 outline-none focus:border-primary dark:bg-gray-700 dark:text-gray-200"
+        class="w-full text-[11px] border border-stroke dark:border-strokedark rounded-lg bg-transparent py-1 px-1.5 outline-none focus:border-primary dark:bg-gray-700 dark:text-gray-200 font-medium"
         @change="
           update('date_field', ($event.target as HTMLSelectElement).value)
         "
@@ -48,7 +48,7 @@
     <!-- Курсы -->
     <div>
       <label
-        class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5"
+        class="block text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5"
         >Курсы</label
       >
       <UiMultiSelect

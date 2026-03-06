@@ -39,22 +39,22 @@
     <Transition
       enter-active-class="transition-all duration-200 ease-out"
       enter-from-class="opacity-0 max-h-0"
-      enter-to-class="opacity-100 max-h-[600px]"
+      enter-to-class="opacity-100 max-h-[1000px]"
       leave-active-class="transition-all duration-150 ease-in"
-      leave-from-class="opacity-100 max-h-[600px]"
+      leave-from-class="opacity-100 max-h-[1000px]"
       leave-to-class="opacity-0 max-h-0"
     >
       <div v-show="open" class="overflow-hidden">
-        <div class="pb-2 space-y-0.5">
-          <div v-for="field in group.fields" :key="field.key" class="px-4">
+        <div class="pb-1.5 space-y-0">
+          <div v-for="field in group.fields" :key="field.key" class="px-3">
             <!-- Строка поля -->
             <div
-              class="flex items-center gap-2 py-1 rounded-lg cursor-pointer group/field"
+              class="flex items-center gap-2 py-0.5 rounded-lg cursor-pointer group/field"
               @click="toggle(field)"
             >
               <!-- Чекбокс -->
               <div
-                class="w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-all duration-150"
+                class="w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center transition-all duration-150"
                 :class="
                   isSelected(field.key)
                     ? 'bg-primary border-primary'
@@ -76,31 +76,28 @@
                   />
                 </svg>
               </div>
-              <span class="text-sm text-gray-700 dark:text-gray-300 flex-1">{{
-                field.label
-              }}</span>
-              <!-- Тип поля -->
               <span
-                class="text-[10px] text-gray-400 shrink-0 hidden group-hover:inline-block"
-                >{{ field.type }}</span
+                class="text-[13px] text-gray-700 dark:text-gray-300 flex-1 leading-tight"
+                >{{ field.label }}</span
               >
             </div>
 
             <!-- Inline-настройки (если поле выбрано) -->
             <div
               v-if="isSelected(field.key)"
-              class="ml-5 mb-1.5 p-2 bg-gray-50 dark:bg-gray-800/60 rounded-lg border border-gray-100 dark:border-gray-700/50"
+              class="ml-4 mb-1 p-1.5 bg-gray-50 dark:bg-gray-800/40 rounded-lg border border-gray-100 dark:border-gray-700/40"
               @click.stop
             >
               <div class="flex items-center gap-2 flex-wrap">
                 <!-- Агрегация -->
-                <div class="flex items-center gap-1.5">
-                  <span class="text-xs text-gray-500 dark:text-gray-400"
-                    >Агрег.:</span
+                <div class="flex items-center gap-1">
+                  <span
+                    class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold"
+                    >Σ</span
                   >
                   <select
                     :value="getColumn(field.key)?.aggregation"
-                    class="text-xs border border-stroke dark:border-strokedark rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 outline-none focus:border-primary cursor-pointer"
+                    class="text-[10px] font-bold border-none bg-white dark:bg-gray-700 text-primary px-1 py-0.5 outline-none cursor-pointer rounded"
                     @change="
                       onAggregationChange(
                         field.key,
@@ -131,17 +128,17 @@
                       })
                     "
                   />
-                  <span class="text-xs text-gray-500 dark:text-gray-400"
-                    >Итог</span
+                  <span class="text-[10px] text-gray-500 font-bold uppercase"
+                    >Σ Итог</span
                   >
                 </label>
               </div>
 
               <!-- Заголовок (редактируемый) -->
-              <div class="mt-1.5">
+              <div class="mt-1">
                 <input
                   :value="getColumn(field.key)?.label"
-                  class="w-full text-xs border border-stroke dark:border-strokedark rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-2 py-0.5 outline-none focus:border-primary"
+                  class="w-full text-[11px] border border-stroke dark:border-strokedark rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-1.5 py-0.5 outline-none focus:border-primary"
                   placeholder="Заголовок столбца"
                   @blur="
                     updateColumn(field.key, {

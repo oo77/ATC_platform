@@ -458,18 +458,18 @@
     >
       <div
         v-if="drawerOpen"
-        class="fixed top-0 right-0 h-full w-[85%] max-w-[1200px] z-[100001] flex flex-col bg-white dark:bg-boxdark border-l border-stroke dark:border-strokedark shadow-2xl"
+        class="fixed top-0 right-0 h-full w-[85%] max-w-[1100px] z-[100001] flex flex-col bg-white dark:bg-boxdark border-l border-stroke dark:border-strokedark shadow-2xl"
       >
         <!-- Шапка drawer -->
         <div
-          class="flex items-center justify-between px-6 py-4 border-b border-stroke dark:border-strokedark shrink-0 bg-gray-50/50 dark:bg-gray-800/20"
+          class="flex items-center justify-between px-5 py-3 border-b border-stroke dark:border-strokedark shrink-0 bg-gray-50/50 dark:bg-gray-800/20"
         >
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2.5">
             <div
-              class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center"
+              class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center"
             >
               <svg
-                class="w-5 h-5 text-primary"
+                class="w-4.5 h-4.5 text-primary"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -483,25 +483,31 @@
               </svg>
             </div>
             <div>
-              <h2 class="text-base font-bold text-gray-900 dark:text-white">
+              <h2
+                class="text-sm font-bold text-gray-900 dark:text-white leading-none"
+              >
                 Настройка отчёта
               </h2>
-              <p class="text-[11px] text-gray-400">
-                <div class="flex items-center gap-2">
-                  <span class="text-[11px] text-gray-400">Сконструируйте структуру и фильтры</span>
-                  <span v-if="config.columns.length > 0" class="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-md uppercase">
-                    {{ config.columns.length }} {{ pluralFields(config.columns.length) }}
-                  </span>
-                </div>
-              </p>
+              <div class="flex items-center gap-2 mt-0.5">
+                <span class="text-[10px] text-gray-400"
+                  >Сконструируйте структуру и фильтры</span
+                >
+                <span
+                  v-if="config.columns.length > 0"
+                  class="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] font-bold rounded-md uppercase leading-none"
+                >
+                  {{ config.columns.length }}
+                  {{ pluralFields(config.columns.length) }}
+                </span>
+              </div>
             </div>
           </div>
           <button
-            class="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+            class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
             @click="drawerOpen = false"
           >
             <svg
-              class="w-6 h-6"
+              class="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -518,31 +524,66 @@
 
         <!-- Скроллируемое тело конструктора (Горизонтальное) -->
         <div class="flex-1 overflow-y-auto w-full">
-          <div class="p-6">
+          <div class="p-4.5">
             <!-- 1. ВЫБОР БАЗОВОЙ СУЩНОСТИ (Компактный) -->
-            <div class="mb-5">
+            <div class="mb-4">
               <div class="flex items-center gap-2 mb-2">
-                <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">1. Базовая сущность отчёта</span>
+                <span
+                  class="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500"
+                  >1. Базовая сущность</span
+                >
                 <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
               </div>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-1.5">
                 <button
                   v-for="root in [
-                    { key: 'study_groups', label: 'Группы', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-                    { key: 'students', label: 'Слушатели', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197' },
-                    { key: 'courses', label: 'Курсы', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5S19.832 5.477 21 6.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
-                    { key: 'organizations', label: 'Орг.', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-                    { key: 'issued_certificates', label: 'Серт.', icon: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z' },
+                    {
+                      key: 'study_groups',
+                      label: 'Группы',
+                      icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+                    },
+                    {
+                      key: 'students',
+                      label: 'Слушатели',
+                      icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197',
+                    },
+                    {
+                      key: 'courses',
+                      label: 'Курсы',
+                      icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5S19.832 5.477 21 6.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+                    },
+                    {
+                      key: 'organizations',
+                      label: 'Орг.',
+                      icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+                    },
+                    {
+                      key: 'issued_certificates',
+                      label: 'Серт.',
+                      icon: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z',
+                    },
                   ]"
                   :key="root.key"
-                  class="flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all text-xs font-medium"
-                  :class="config.primary_entity === root.key
-                    ? 'border-primary bg-primary text-white shadow-sm'
-                    : 'border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-700'"
+                  class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all text-[11px] font-bold"
+                  :class="
+                    config.primary_entity === root.key
+                      ? 'border-primary bg-primary text-white shadow-sm'
+                      : 'border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-700'
+                  "
                   @click="config.primary_entity = root.key as any"
                 >
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="root.icon" />
+                  <svg
+                    class="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      :d="root.icon"
+                    />
                   </svg>
                   {{ root.label }}
                 </button>
@@ -550,29 +591,29 @@
             </div>
 
             <!-- ГРИД для остальных настроек -->
-            <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
               <!-- Левая колонка: Выбор полей (4/12) -->
-              <div class="xl:col-span-4 space-y-6">
+              <div class="xl:col-span-4 space-y-4">
                 <div>
-                  <div class="flex items-center gap-2 mb-3">
+                  <div class="flex items-center gap-2 mb-2">
                     <span
-                      class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
-                      >2. Выбор полей данных</span
+                      class="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500"
+                      >2. Поля данных</span
                     >
                     <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
                   </div>
 
                   <div
                     v-if="metaLoading"
-                    class="flex justify-center py-12 bg-gray-50/50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700"
+                    class="flex justify-center py-10 bg-gray-50/50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700"
                   >
                     <div
-                      class="h-8 w-8 animate-spin rounded-full border-3 border-primary border-r-transparent"
+                      class="h-7 w-7 animate-spin rounded-full border-3 border-primary border-r-transparent"
                     />
                   </div>
                   <div
                     v-else
-                    class="bg-white dark:bg-boxdark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
+                    class="bg-white dark:bg-boxdark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
                   >
                     <ReportsEntitySection
                       v-for="group in entityGroups"
@@ -587,13 +628,13 @@
               </div>
 
               <!-- Центральная колонка: Столбцы и Группировка (4/12) -->
-              <div class="xl:col-span-4 space-y-8">
+              <div class="xl:col-span-4 space-y-6">
                 <!-- Порядок столбцов -->
                 <div>
-                  <div class="flex items-center gap-2 mb-3">
+                  <div class="flex items-center gap-2 mb-2">
                     <span
-                      class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
-                      >3. Структура таблицы</span
+                      class="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500"
+                      >3. Структура</span
                     >
                     <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
                   </div>
@@ -651,8 +692,12 @@
 
                       <div class="flex items-center gap-2">
                         <!-- Основная агрегация (группировка) -->
-                        <div class="relative group/agg flex items-center bg-gray-50 dark:bg-gray-800/80 rounded-lg p-0.5 border border-gray-100 dark:border-gray-700 hover:border-primary/30 transition-all">
-                          <div class="flex items-center gap-1 px-1.5 py-0.5 text-[9px] text-primary/60 font-black uppercase tracking-tighter border-r border-gray-200 dark:border-gray-700 mr-1">
+                        <div
+                          class="relative group/agg flex items-center bg-gray-50 dark:bg-gray-800/80 rounded-lg p-0.5 border border-gray-100 dark:border-gray-700 hover:border-primary/30 transition-all"
+                        >
+                          <div
+                            class="flex items-center gap-1 px-1.5 py-0.5 text-[9px] text-primary/60 font-black uppercase tracking-tighter border-r border-gray-200 dark:border-gray-700 mr-1"
+                          >
                             Σ
                           </div>
                           <select
@@ -668,22 +713,43 @@
                             <option value="max">MAX</option>
                             <option value="list">LIST</option>
                           </select>
-                          <svg class="w-2.5 h-2.5 absolute right-1.5 pointer-events-none text-primary/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                          <svg
+                            class="w-2.5 h-2.5 absolute right-1.5 pointer-events-none text-primary/40"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="3"
+                              d="M19 9l-7 7-7-7"
+                            />
                           </svg>
                         </div>
 
                         <!-- Настройка ИТОГО -->
-                        <div class="flex items-center bg-orange-50/50 dark:bg-orange-950/20 rounded-lg p-0.5 border border-orange-100 dark:border-orange-900/40">
+                        <div
+                          class="flex items-center bg-orange-50/50 dark:bg-orange-950/20 rounded-lg p-0.5 border border-orange-100 dark:border-orange-900/40"
+                        >
                           <button
                             class="px-1.5 py-0.5 rounded-md transition-all flex items-center gap-1 group/sigma"
-                            :class="col.show_in_total ? 'text-orange-600 bg-orange-100 shadow-sm' : 'text-gray-400 hover:text-orange-500'"
+                            :class="
+                              col.show_in_total
+                                ? 'text-orange-600 bg-orange-100 shadow-sm'
+                                : 'text-gray-400 hover:text-orange-500'
+                            "
                             @click="col.show_in_total = !col.show_in_total"
                             title="Показывать в строке ИТОГО (Σ)"
                           >
-                            <span class="text-[9px] font-black uppercase">Σ</span>
+                            <span class="text-[9px] font-black uppercase"
+                              >Σ</span
+                            >
                           </button>
-                          <div v-if="col.show_in_total" class="flex items-center ml-1 border-l border-orange-200/50 dark:border-orange-800/50 pl-1">
+                          <div
+                            v-if="col.show_in_total"
+                            class="flex items-center ml-1 border-l border-orange-200/50 dark:border-orange-800/50 pl-1"
+                          >
                             <select
                               v-model="col.total_aggregation"
                               class="text-[10px] font-bold text-orange-600 bg-transparent border-none px-1 py-0.5 outline-none cursor-pointer appearance-none pr-3"
@@ -694,15 +760,31 @@
                               <option value="min">MIN</option>
                               <option value="max">MAX</option>
                             </select>
-                            <svg class="w-2 h-2 pointer-events-none text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                            <svg
+                              class="w-2 h-2 pointer-events-none text-orange-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="3"
+                                d="M19 9l-7 7-7-7"
+                              />
                             </svg>
                           </div>
                         </div>
 
                         <button
                           class="p-1 text-gray-300 hover:text-red-500 transition-colors"
-                          @click="toggleField(col.field_key, col.label, col.aggregation)"
+                          @click="
+                            toggleField(
+                              col.field_key,
+                              col.label,
+                              col.aggregation,
+                            )
+                          "
                         >
                           <svg
                             class="w-3.5 h-3.5"
