@@ -191,7 +191,7 @@ const handleSubmit = async () => {
 
   try {
     await $fetch(`/api/library/admin/books/${props.book.id}`, {
-      method: "PATCH",
+      method: "PATCH" as any,
       body: {
         title: form.value.title,
         author: form.value.author || null,
@@ -220,7 +220,7 @@ const handleClose = () => {
 const formatDateForInput = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "";
   try {
-    return new Date(dateStr).toISOString().split("T")[0];
+    return new Date(String(dateStr)).toISOString().split("T")[0];
   } catch {
     return "";
   }

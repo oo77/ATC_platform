@@ -351,9 +351,9 @@ const pagination = ref({ page: 1, limit: 20, total: 0, totalPages: 1 });
 const fetchTemplates = async () => {
   loading.value = true;
   try {
-    const res = await $fetch<any>(
+    const res = (await ($fetch as any)(
       `/api/reports/builder/templates?page=${pagination.value.page}&limit=${pagination.value.limit}`,
-    );
+    ));
     templates.value = res.data;
     pagination.value = { ...pagination.value, ...res.pagination };
   } catch (e: any) {
@@ -372,9 +372,9 @@ const quickExport = async (templateId: string) => {
   exportingId.value = templateId;
   try {
     // Загружаем конфигурацию шаблона
-    const tpl = await $fetch<any>(
+    const tpl = (await ($fetch as any)(
       `/api/reports/builder/templates/${templateId}`,
-    );
+    ));
 
     const blob = await $fetch<Blob>("/api/reports/builder/export/excel", {
       method: "POST",

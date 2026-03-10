@@ -21,6 +21,7 @@ export interface ColumnConfig {
   label: string;
   aggregation: AggregationType;
   show_in_total?: boolean;
+  total_aggregation?: "sum" | "avg" | "min" | "max" | "count";
 }
 
 export interface GroupingItem {
@@ -320,7 +321,7 @@ export function buildReportQuery(config: ReportConfig) {
     .join("\n");
 
   params.push(limit, offset);
-  return { sql, params, columnLabels };
+  return { sql, params, columnLabels, error: undefined as string | undefined };
 }
 
 export function buildCountQuery(config: any) {
@@ -333,6 +334,7 @@ export function buildCountQuery(config: any) {
     sql: `SELECT COUNT(*) AS total FROM (\n${sqlWithoutLimit}\n) AS __cnt`,
     params: res.params.slice(0, -2),
     columnLabels: ["total"],
+    error: res.error as string | undefined,
   };
 }
 

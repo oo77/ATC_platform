@@ -23,12 +23,12 @@ export default defineEventHandler(async (event) => {
 
     try {
       const response = await $fetch(
-        `/api/certificates/download/${certificateId}`,
+        `/api/certificates/download/${certificateId}` as string,
         {
           responseType: "arrayBuffer",
         },
       );
-      documentToSend = Buffer.from(response as ArrayBuffer);
+      documentToSend = Buffer.from(response as any);
       filename = `certificate_${certificateNumber}.pdf`;
     } catch (err: any) {
       console.warn(
