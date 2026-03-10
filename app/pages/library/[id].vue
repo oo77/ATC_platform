@@ -146,7 +146,7 @@
     >
       <div
         v-if="showControls"
-        class="absolute left-0 top-0 flex w-full items-center justify-between bg-gradient-to-b from-black/80 to-transparent p-6 text-white"
+        class="absolute left-0 top-0 flex w-full items-center justify-between bg-linear-to-b from-black/80 to-transparent p-6 text-white"
       >
         <div class="flex items-center gap-4">
           <button
@@ -170,7 +170,7 @@
           <div class="flex items-center gap-3">
             <div class="h-1.5 w-32 overflow-hidden rounded-full bg-white/10">
               <div
-                class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+                class="h-full bg-linear-to-r from-indigo-500 to-purple-500 transition-all duration-500"
                 :style="{ width: `${progressPercentage}%` }"
               />
             </div>

@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
         courseName: item.courseName,
         trainingMonth: item.trainingMonth,
         studentIds: item.studentIds,
-        groupLabel: item.groupLabel || null,
+        groupLabel: item.groupLabel || undefined,
         sortOrder: idx,
       })),
     });

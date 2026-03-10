@@ -217,18 +217,23 @@
             <option value="">Выберите курс</option>
             <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
+          <div v-if="selectedCourse" class="tg-course-hours">
+            ⏱ Продолжительность: {{ selectedCourse.durationHours }} ч.
+          </div>
           <p v-if="itemErrors.courseId" class="tg-field-error">{{ itemErrors.courseId }}</p>
         </div>
 
-        <!-- Шаг 2: Месяц обучения -->
+        <!-- Шаг 2: Период обучения -->
         <div class="tg-form-field">
-          <label class="tg-field-label">Месяц обучения <span class="tg-required">*</span></label>
-          <select v-model="newItem.trainingMonth" class="tg-select">
-            <option value="">Выберите месяц</option>
-            <option v-for="m in availableMonths" :key="m.value" :value="m.value">
-              {{ m.label }}
-            </option>
-          </select>
+          <label class="tg-field-label">Период обучения <span class="tg-required">*</span></label>
+          <div class="tg-period-selects">
+            <select v-model="selectedYear" class="tg-select flex-1">
+              <option v-for="y in availableYears" :key="y" :value="y">{{ y }} год</option>
+            </select>
+            <select v-model="selectedMonth" class="tg-select flex-1">
+              <option v-for="m in MONTHS_LIST" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
+          </div>
           <p v-if="itemErrors.trainingMonth" class="tg-field-error">{{ itemErrors.trainingMonth }}</p>
         </div>
 
@@ -238,68 +243,93 @@
           <input
             v-model="newItem.groupLabel"
             type="text"
-            placeholder="Например: Бухгалтерия, Смена 1, ИТ-отдел"
+            placeholder="Например: Бухгалтерия, Смена 1"
             class="tg-input"
           />
         </div>
 
         <!-- Шаг 4: Выбор сотрудников -->
         <div class="tg-form-field">
-          <label class="tg-field-label">
-            Сотрудники <span class="tg-required">*</span>
-            <span v-if="newItem.studentIds.length > 0" class="tg-selected-count">
-              Выбрано: {{ newItem.studentIds.length }}
-            </span>
-          </label>
-
-          <!-- Поиск по сотрудникам -->
-          <div class="tg-search-wrapper" style="margin-bottom: 0.5rem">
-            <div class="tg-search-icon">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <input
-              v-model="studentSearch"
-              type="text"
-              placeholder="Поиск сотрудника..."
-              class="tg-search-input"
-            />
-          </div>
-
-          <!-- Кнопки выбор/снять всех -->
-          <div class="tg-select-all-row">
-            <button class="tg-select-all-btn" @click="selectAllStudents">Выбрать всех</button>
-            <button class="tg-select-all-btn" @click="deselectAllStudents" v-if="newItem.studentIds.length > 0">
-              Снять выбор
+          <div class="flex justify-between items-center mb-1">
+            <label class="tg-field-label m-0">
+              Сотрудники <span class="tg-required">*</span>
+              <span v-if="newItem.studentIds.length > 0" class="tg-selected-count">
+                {{ newItem.studentIds.length }}
+              </span>
+            </label>
+            <button class="text-blue-600 text-xs font-semibold" @click="showSmartInput = !showSmartInput">
+              {{ showSmartInput ? 'Обычный выбор' : 'Умный ввод' }}
             </button>
           </div>
 
-          <!-- Список сотрудников с чекбоксами -->
-          <div v-if="studentsLoading" class="tg-field-loading">Загрузка сотрудников...</div>
-          <div v-else-if="filteredStudents.length === 0" class="tg-no-students">
-            Сотрудники не найдены
-          </div>
-          <div v-else class="tg-students-checklist">
-            <label
-              v-for="student in filteredStudents"
-              :key="student.id"
-              class="tg-check-item"
-              :class="{ checked: newItem.studentIds.includes(student.id) }"
+          <!-- Умный ввод (Текстовое поле) -->
+          <div v-if="showSmartInput" class="tg-smart-input-block">
+            <p class="text-xs text-gray-500 mb-2">Введите ФИО или ПИНФЛ (по одному в строке):</p>
+            <textarea
+              v-model="smartInputText"
+              class="tg-smart-textarea"
+              placeholder="Иванов Иван Иванович&#10;12345678901234"
+              rows="4"
+            ></textarea>
+            <button 
+              class="tg-smart-apply-btn" 
+              :disabled="smartImporting" 
+              @click="processSmartInput"
             >
-              <input
-                type="checkbox"
-                :value="student.id"
-                v-model="newItem.studentIds"
-                class="tg-checkbox"
-              />
-              <div class="tg-check-avatar">{{ getInitials(student.fullName) }}</div>
-              <div class="tg-check-info">
-                <span class="tg-check-name">{{ student.fullName }}</span>
-                <span v-if="student.position" class="tg-check-position">{{ student.position }}</span>
+              <span v-if="smartImporting">Обработка...</span>
+              <span v-else>Найти и добавить</span>
+            </button>
+          </div>
+
+          <!-- Поиск по сотрудникам -->
+          <div v-else class="tg-standard-selection">
+            <div class="tg-search-wrapper" style="margin-bottom: 0.5rem">
+              <div class="tg-search-icon">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
               </div>
-            </label>
+              <input
+                v-model="studentSearch"
+                type="text"
+                placeholder="Поиск по ФИО или ПИНФЛ..."
+                class="tg-search-input"
+              />
+            </div>
+
+            <div class="tg-select-all-row">
+              <button class="tg-select-all-btn" @click="selectAllStudents">Выбрать из списка</button>
+              <button class="tg-select-all-btn" @click="deselectAllStudents" v-if="newItem.studentIds.length > 0">
+                Снять всё
+              </button>
+            </div>
+
+            <!-- Список сотрудников -->
+            <div v-if="studentsLoading" class="tg-field-loading">Загрузка...</div>
+            <div v-else-if="filteredStudents.length === 0" class="tg-no-students">
+              Никто не найден
+            </div>
+            <div v-else class="tg-students-checklist">
+              <label
+                v-for="student in filteredStudents"
+                :key="student.id"
+                class="tg-check-item"
+                :class="{ checked: newItem.studentIds.includes(student.id) }"
+              >
+                <input
+                  type="checkbox"
+                  :value="student.id"
+                  v-model="newItem.studentIds"
+                  class="tg-checkbox"
+                />
+                <div class="tg-check-avatar">{{ getInitials(student.fullName) }}</div>
+                <div class="tg-check-info">
+                  <span class="tg-check-name">{{ student.fullName }}</span>
+                  <span v-if="student.pinfl" class="tg-check-position">ПИНФЛ: {{ student.pinfl }}</span>
+                </div>
+              </label>
+            </div>
           </div>
           <p v-if="itemErrors.studentIds" class="tg-field-error">{{ itemErrors.studentIds }}</p>
         </div>
@@ -309,7 +339,7 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
-          Добавить позицию
+          Сохранить и добавить ещё
         </button>
       </div>
 
@@ -337,16 +367,85 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed, watch, onMounted } from "vue";
+<script setup lang="ts">
+import { ref, computed, watch } from "vue";
 
-const props = defineProps({
-  organizationId: { type: String, required: true },
-  representative:  { type: Object, required: true },
-});
+// ─── Типы ───
+interface Student {
+  id: string;
+  fullName: string;
+  pinfl: string | null;
+  position?: string;
+}
 
-// ─── Экраны: 'list' | 'form' | 'detail'
+interface Course {
+  id: string;
+  name: string;
+  durationHours: number | null;
+}
+
+interface TrainingItem {
+  id: string;
+  courseId: string;
+  courseName: string;
+  trainingMonth: string;
+  studentsCount: number;
+  groupLabel: string | null;
+}
+
+interface FormTrainingItem {
+  courseId: string;
+  courseName: string;
+  trainingMonth: string;
+  studentIds: string[];
+  groupLabel: string | null;
+}
+
+interface TrainingRequest {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'in_progress' | 'completed';
+  contractStatus: 'not_signed' | 'signed';
+  paymentStatus: 'not_paid' | 'paid';
+  adminComment: string | null;
+  totalItemsCount: number;
+  totalStudentsCount: number;
+  createdAt: string | Date;
+  items: TrainingItem[];
+}
+
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: {
+        showAlert: (message: string) => void;
+        [key: string]: any;
+      };
+    };
+  }
+}
+
+const props = defineProps<{
+  representative: any;
+  organizationId: string | number;
+}>();
+
+// ─── Состояние ───
 const screen = ref("list");
+
+// ─── Навигация по месяцам
+const selectedYear  = ref(new Date().getFullYear());
+const selectedMonth = ref(new Date().getMonth() + 1);
+const availableYears = [new Date().getFullYear(), new Date().getFullYear() + 1];
+const MONTHS_LIST = [
+  { id: 1,  name: "Январь" },   { id: 2,  name: "Февраль" },
+  { id: 3,  name: "Март" },     { id: 4,  name: "Апрель" },
+  { id: 5,  name: "Май" },      { id: 6,  name: "Июнь" },
+  { id: 7,  name: "Июль" },     { id: 8,  name: "Август" },
+  { id: 9,  name: "Сентябрь" }, { id: 10, name: "Октябрь" },
+  { id: 11, name: "Ноябрь" },   { id: 12, name: "Декабрь" }
+];
+
+
 
 // ─── Статусы заявки
 const STATUS_LABELS = {
@@ -357,69 +456,64 @@ const STATUS_LABELS = {
   completed:   "Завершена",
 };
 
-// ─── Список заявок
+// ─── Данные
 const loading  = ref(false);
-const error    = ref(null);
-const requests = ref([]);
-
-// ─── Детали выбранной заявки
-const selectedRequest = ref(null);
-
-// ─── Данные формы
-const formItems   = ref([]);   // уже добавленные позиции
+const error    = ref<string | null>(null);
+const requests = ref<TrainingRequest[]>([]);
+const selectedRequest = ref<TrainingRequest | null>(null);
+const formItems   = ref<FormTrainingItem[]>([]);
 const submitting  = ref(false);
 
-// ─── Новая позиция (поля формы)
-const newItem = ref({
+const newItem = ref<FormTrainingItem>({
   courseId:      "",
   courseName:    "",
   trainingMonth: "",
   groupLabel:    "",
   studentIds:    [],
 });
-const itemErrors = ref({});
+const itemErrors = ref<Record<string, string>>({});
 
-// ─── Данные для формы
-const courses        = ref([]);
+// При изменении года/месяца обновляем newItem.trainingMonth
+watch([selectedYear, selectedMonth], () => {
+  newItem.value.trainingMonth = `${selectedYear.value}-${String(selectedMonth.value).padStart(2, '0')}`;
+}, { immediate: true });
+
+const courses        = ref<Course[]>([]);
 const coursesLoading = ref(false);
-const allStudents    = ref([]);
+const allStudents    = ref<Student[]>([]);
 const studentsLoading = ref(false);
 const studentSearch  = ref("");
 
-// ─── Ближайшие 6 месяцев для выбора
-const availableMonths = computed(() => {
-  const months = [];
-  const now = new Date();
-  const names = ["Январь","Февраль","Март","Апрель","Май","Июнь",
-                  "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    months.push({ value: `${y}-${m}`, label: `${names[d.getMonth()]} ${y}` });
-  }
-  return months;
-});
+// ─── "Умный" ввод (AI-like)
+const smartInputText = ref("");
+const smartImporting = ref(false);
+const showSmartInput = ref(false);
 
-// ─── Фильтрованный список сотрудников
+// Выбранный курс для отображения часов
+const selectedCourse = computed(() => 
+  courses.value.find(c => c.id === newItem.value.courseId)
+);
+
+// ─── Фильтрованный список (если студентов много, ограничиваем показ)
 const filteredStudents = computed(() => {
-  if (!studentSearch.value.trim()) return allStudents.value;
+  if (!studentSearch.value.trim()) {
+    // Если поиск пуст, показываем только первые 5 (или уже выбранных)
+    return allStudents.value.filter(s => 
+      newItem.value.studentIds.includes(s.id)
+    ).concat(allStudents.value.filter(s => !newItem.value.studentIds.includes(s.id)).slice(0, 10));
+  }
   const q = studentSearch.value.toLowerCase();
   return allStudents.value.filter(
     (s) => s.fullName.toLowerCase().includes(q) ||
-           (s.position && s.position.toLowerCase().includes(q))
+           (s.pinfl && s.pinfl.includes(q))
   );
 });
 
-// ─── Итого слушателей по всей форме
 const totalStudentsInForm = computed(() =>
   formItems.value.reduce((sum, item) => sum + item.studentIds.length, 0)
 );
 
-// ─────────────────────────────────────────────
-// Загрузка данных
-// ─────────────────────────────────────────────
-
+// ─── Методы
 watch(() => props.representative?.id, (id) => {
   if (id) loadRequests();
 }, { immediate: true });
@@ -428,11 +522,11 @@ async function loadRequests() {
   loading.value = true;
   error.value   = null;
   try {
-    const res = await $fetch("/api/tg-app/training-requests", {
+    const res = await ($fetch as any)("/api/tg-app/training-requests", {
       params: { representativeId: props.representative.id },
     });
-    requests.value = res.requests || [];
-  } catch (err) {
+    requests.value = (res.requests as TrainingRequest[]) || [];
+  } catch (err: any) {
     error.value = err.data?.message || "Не удалось загрузить заявки";
   } finally {
     loading.value = false;
@@ -442,9 +536,9 @@ async function loadRequests() {
 async function loadCourses() {
   coursesLoading.value = true;
   try {
-    const res = await $fetch("/api/tg-app/courses");
-    courses.value = res.courses || [];
-  } catch (err) {
+    const res = await ($fetch as any)("/api/tg-app/courses");
+    courses.value = (res.courses as Course[]) || [];
+  } catch (err: any) {
     console.error("Ошибка загрузки курсов:", err);
   } finally {
     coursesLoading.value = false;
@@ -454,28 +548,27 @@ async function loadCourses() {
 async function loadStudents() {
   studentsLoading.value = true;
   try {
-    const res = await $fetch("/api/tg-app/students", {
-      params: { organizationId: props.organizationId, mode: "all" },
+    const res = await ($fetch as any)("/api/tg-app/students", {
+      params: { organizationId: props.organizationId as string, mode: "all" },
     });
-    allStudents.value = res.students || [];
-  } catch (err) {
+    allStudents.value = (res.students as Student[]) || [];
+  } catch (err: any) {
     console.error("Ошибка загрузки сотрудников:", err);
   } finally {
     studentsLoading.value = false;
   }
 }
 
-// ─────────────────────────────────────────────
-// Открытие деталей
-// ─────────────────────────────────────────────
-function openDetail(req) {
+function openDetail(req: TrainingRequest) {
   selectedRequest.value = req;
   screen.value = "detail";
 }
 
-// ─────────────────────────────────────────────
-// Форма новой заявки
-// ─────────────────────────────────────────────
+function closeDetail() {
+  selectedRequest.value = null;
+  screen.value = "list";
+}
+
 function startNewRequest() {
   formItems.value = [];
   resetNewItem();
@@ -492,14 +585,20 @@ function cancelForm() {
 }
 
 function resetNewItem() {
-  newItem.value = { courseId: "", courseName: "", trainingMonth: "", groupLabel: "", studentIds: [] };
+  newItem.value = { 
+    courseId: "", 
+    courseName: "", 
+    trainingMonth: `${selectedYear.value}-${String(selectedMonth.value).padStart(2, '0')}`, 
+    groupLabel: "", 
+    studentIds: [] 
+  };
   itemErrors.value = {};
   studentSearch.value = "";
+  smartInputText.value = "";
 }
 
 function onCourseChange() {
-  const course = courses.value.find((c) => c.id === newItem.value.courseId);
-  newItem.value.courseName = course?.name || "";
+  newItem.value.courseName = selectedCourse.value?.name || "";
 }
 
 function selectAllStudents() {
@@ -509,7 +608,32 @@ function deselectAllStudents() {
   newItem.value.studentIds = [];
 }
 
-// Валидация и добавление позиции
+// Умный импорт
+async function processSmartInput() {
+  if (!smartInputText.value.trim()) return;
+  smartImporting.value = true;
+  
+  const lines = smartInputText.value.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+  let foundCount = 0;
+  
+  for (const line of lines) {
+    const q = line.toLowerCase();
+    // Ищем в загруженном списке
+    const student = allStudents.value.find(s => 
+      s.fullName.toLowerCase().includes(q) || (s.pinfl && s.pinfl.includes(q))
+    );
+    
+    if (student && !newItem.value.studentIds.includes(student.id)) {
+      newItem.value.studentIds.push(student.id);
+      foundCount++;
+    }
+  }
+  
+  smartImporting.value = false;
+  showSmartInput.value = false;
+  smartInputText.value = "";
+}
+
 function addItem() {
   itemErrors.value = {};
   let valid = true;
@@ -519,7 +643,7 @@ function addItem() {
     valid = false;
   }
   if (!newItem.value.trainingMonth) {
-    itemErrors.value.trainingMonth = "Выберите месяц обучения";
+    itemErrors.value.trainingMonth = "Выберите период обучения";
     valid = false;
   }
   if (newItem.value.studentIds.length === 0) {
@@ -540,17 +664,16 @@ function addItem() {
   resetNewItem();
 }
 
-function removeItem(idx) {
+function removeItem(idx: number) {
   formItems.value.splice(idx, 1);
 }
 
-// Отправка заявки
 async function submitRequest() {
   if (formItems.value.length === 0) return;
 
   submitting.value = true;
   try {
-    const res = await $fetch("/api/tg-app/training-requests", {
+    const res = await ($fetch as any)("/api/tg-app/training-requests", {
       method: "POST",
       body: {
         representativeId: props.representative.id,
@@ -562,12 +685,11 @@ async function submitRequest() {
     if (res.success) {
       screen.value = "list";
       await loadRequests();
-      // Telegram уведомление
       if (window.Telegram?.WebApp) {
         window.Telegram.WebApp.showAlert("✅ Заявка успешно отправлена!");
       }
     }
-  } catch (err) {
+  } catch (err: any) {
     const msg = err.data?.message || "Ошибка при отправке заявки";
     if (window.Telegram?.WebApp) {
       window.Telegram.WebApp.showAlert(`❌ ${msg}`);
@@ -579,42 +701,49 @@ async function submitRequest() {
   }
 }
 
-// ─────────────────────────────────────────────
-// Утилиты
-// ─────────────────────────────────────────────
-function uniqueCourseNames(items) {
+// ─── Утилиты
+function uniqueCourseNames(items: any[]) {
   if (!items) return [];
-  const set = new Set(items.map((i) => i.courseName));
+  const set = new Set(items.map((i: any) => i.courseName));
   return [...set];
 }
 
-function formatDate(dateStr) {
+function formatDate(dateStr: any) {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleDateString("ru-RU", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-  });
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Tashkent" });
 }
 
-function formatMonth(monthStr) {
-  if (!monthStr) return "";
-  const [year, month] = monthStr.split("-");
+function formatMonth(monthStr: any) {
+  if (!monthStr || typeof monthStr !== 'string' || !monthStr.includes('-')) return monthStr || "";
+  const parts = monthStr.split("-");
+  const year = parts[0];
+  const month = parts[1];
+  if (!year || !month) return monthStr;
   const names = ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
-  return `${names[parseInt(month) - 1]} ${year}`;
+  const mIdx = parseInt(month) - 1;
+  if (isNaN(mIdx) || mIdx < 0 || mIdx > 11) return monthStr;
+  return `${names[mIdx]} ${year}`;
 }
 
-function getInitials(name) {
-  if (!name) return "?";
-  const parts = name.trim().split(" ");
-  return parts.length >= 2 ? parts[0][0] + parts[1][0] : name[0];
+function getInitials(name: string | null | undefined) {
+  if (!name || typeof name !== 'string') return "?";
+  const trimmed = name.trim();
+  if (!trimmed) return "?";
+  const parts = trimmed.split(" ").filter(p => p.length > 0);
+  if (parts.length >= 2 && parts[0] && parts[1]) {
+    return parts[0].charAt(0) + parts[1].charAt(0);
+  }
+  return trimmed.charAt(0) || "?";
 }
 
-function pluralItems(n) {
+function pluralItems(n: number) {
   if (n % 10 === 1 && n % 100 !== 11) return "позиция";
   if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return "позиции";
   return "позиций";
 }
 
-function pluralStudents(n) {
+function pluralStudents(n: number) {
   if (n % 10 === 1 && n % 100 !== 11) return "сотрудник";
   if ([2,3,4].includes(n % 10) && ![12,13,14].includes(n % 100)) return "сотрудника";
   return "сотрудников";
@@ -927,4 +1056,12 @@ function pluralStudents(n) {
 }
 .tg-submit-btn:disabled { background: #93c5fd; cursor: not-allowed; }
 .tg-submit-btn:not(:disabled):active { transform: scale(0.98); }
+
+.tg-course-hours { margin-top: 0.375rem; font-size: 0.75rem; color: #1e40af; font-weight: 500; font-family: monospace; }
+.tg-period-selects { display: flex; gap: 0.5rem; }
+.tg-smart-input-block { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 0.875rem; margin-bottom: 0.75rem; }
+.tg-smart-textarea { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.8125rem; background: white; margin-bottom: 0.5rem; resize: none; font-family: monospace; }
+.tg-smart-apply-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 0.75rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.tg-smart-apply-btn:active { background: #1d4ed8; }
+.tg-smart-apply-btn:disabled { background: #94a3b8; cursor: not-allowed; }
 </style>

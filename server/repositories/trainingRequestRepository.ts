@@ -474,24 +474,31 @@ export async function updateTrainingRequest(
 export async function getStatsByMonth(year?: string): Promise<
   { month: string; totalRequests: number; totalStudents: number }[]
 > {
-  const yearFilter = year ? `AND i.training_month LIKE '${year}-%'` : "";
+  let sql = `
+     SELECT
+       i.training_month        AS month,
+       COUNT(DISTINCT tr.id)   AS totalRequests,
+       SUM(i.students_count)   AS totalStudents
+     FROM training_request_items i
+     JOIN training_requests tr ON i.request_id = tr.id
+     WHERE 1=1 `;
+  
+  const queryParams: any[] = [];
+  if (year) {
+    sql += ` AND i.training_month LIKE ? `;
+    queryParams.push(`${year}-%`);
+  }
+
+  sql += ` GROUP BY i.training_month ORDER BY i.training_month ASC`;
+  
   const rows = await executeQuery<
     (RowDataPacket & {
       month: string;
       totalRequests: number;
       totalStudents: number;
     })[]
-  >(
-    `SELECT
-       i.training_month        AS month,
-       COUNT(DISTINCT tr.id)   AS totalRequests,
-       SUM(i.students_count)   AS totalStudents
-     FROM training_request_items i
-     JOIN training_requests tr ON i.request_id = tr.id
-     WHERE 1=1 ${yearFilter}
-     GROUP BY i.training_month
-     ORDER BY i.training_month ASC`,
-  );
+  >(sql, queryParams);
+  
   return rows.map((r) => ({
     month: r.month,
     totalRequests: Number(r.totalRequests) || 0,

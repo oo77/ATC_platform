@@ -9,7 +9,7 @@ import type { RowDataPacket } from "mysql2/promise";
 interface CourseRow extends RowDataPacket {
   id: string;
   name: string;
-  duration_hours: number | null;
+  total_hours: number | null;
 }
 
 export default defineEventHandler(async (event) => {
@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
     console.log("[TG-App] GET /api/tg-app/courses");
 
     let sql = `
-      SELECT id, name, duration_hours
+      SELECT id, name, total_hours
       FROM courses
       WHERE is_active = 1 AND (is_archived = 0 OR is_archived IS NULL)
     `;
@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
       courses: courses.map((c) => ({
         id: c.id,
         name: c.name,
-        durationHours: c.duration_hours,
+        durationHours: c.total_hours,
       })),
     };
   } catch (error: any) {

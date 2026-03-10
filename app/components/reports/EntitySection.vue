@@ -54,7 +54,7 @@
             >
               <!-- Чекбокс -->
               <div
-                class="w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center transition-all duration-150"
+                class="w-3.5 h-3.5 rounded border shrink-0 flex items-center justify-center transition-all duration-150"
                 :class="
                   isSelected(field.key)
                     ? 'bg-primary border-primary'

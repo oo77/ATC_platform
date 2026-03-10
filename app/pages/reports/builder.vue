@@ -81,7 +81,7 @@
         >
           <span class="truncate max-w-[80px]">{{ chip.label }}</span>
           <button
-            class="flex-shrink-0 hover:text-red-500 transition-colors"
+            class="shrink-0 hover:text-red-500 transition-colors"
             @click="removeFilterChip(chip.key)"
           >
             <svg
@@ -442,7 +442,7 @@
     >
       <div
         v-if="drawerOpen"
-        class="fixed inset-0 bg-black/30 backdrop-blur-[1px] z-[100000]"
+        class="fixed inset-0 bg-black/30 backdrop-blur-[1px] z-100000"
         @click="drawerOpen = false"
       />
     </Transition>
@@ -458,7 +458,7 @@
     >
       <div
         v-if="drawerOpen"
-        class="fixed top-0 right-0 h-full w-[85%] max-w-[1100px] z-[100001] flex flex-col bg-white dark:bg-boxdark border-l border-stroke dark:border-strokedark shadow-2xl"
+        class="fixed top-0 right-0 h-full w-[85%] max-w-[1100px] z-100001 flex flex-col bg-white dark:bg-boxdark border-l border-stroke dark:border-strokedark shadow-2xl"
       >
         <!-- Шапка drawer -->
         <div

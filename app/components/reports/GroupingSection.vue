@@ -69,7 +69,7 @@
       <!-- Picker -->
       <div
         v-if="showPicker"
-        class="absolute left-0 bottom-full mb-2 w-full min-w-[300px] bg-white dark:bg-boxdark border border-stroke dark:border-strokedark rounded-2xl shadow-2xl z-[100] overflow-hidden"
+        class="absolute left-0 bottom-full mb-2 w-full min-w-[300px] bg-white dark:bg-boxdark border border-stroke dark:border-strokedark rounded-2xl shadow-2xl z-100 overflow-hidden"
       >
         <!-- Tabs -->
         <div

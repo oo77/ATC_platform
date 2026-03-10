@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
     try {
       const pendingRepsQuery = `
         SELECT COUNT(*) as count
-        FROM representatives
+        FROM organization_representatives
         WHERE status = 'pending'
       `;
       const repsRows = await executeQuery<any[]>(pendingRepsQuery);

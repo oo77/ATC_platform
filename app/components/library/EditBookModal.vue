@@ -220,7 +220,8 @@ const handleClose = () => {
 const formatDateForInput = (dateStr: string | null | undefined): string => {
   if (!dateStr) return "";
   try {
-    return new Date(String(dateStr)).toISOString().split("T")[0];
+    const isoString = new Date(String(dateStr)).toISOString();
+    return isoString.split("T")[0] || "";
   } catch {
     return "";
   }
