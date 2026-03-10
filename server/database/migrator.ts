@@ -31,6 +31,7 @@ import * as faceRecognitionSystem from "./migrations/20260216_020_face_recogniti
 import * as addOverrideWarningsToCertificates from "./migrations/20260220_021_add_override_warnings_to_certificates";
 import * as addPublishedAtToBooks from "./migrations/20260304_022_add_published_at_to_books";
 import * as reportBuilder from "./migrations/20260305_023_report_builder";
+import * as trainingRequests from "./migrations/20260310_024_training_requests";
 
 /**
  * ============================================================================
@@ -264,6 +265,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: reportBuilder.up,
     down: reportBuilder.down,
     description: reportBuilder.description,
+  },
+  // ============================================================
+  // Миграция 024: Training Requests System
+  // ============================================================
+  {
+    name: "20260310_024_training_requests",
+    up: trainingRequests.up,
+    down: trainingRequests.down,
+    description: trainingRequests.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

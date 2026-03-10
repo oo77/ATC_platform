@@ -535,6 +535,13 @@ const allMenuGroups: MenuGroup[] = [
       },
       {
         icon: ClipboardCheckIcon,
+        name: "Заявки на обучение",
+        path: "/training-requests",
+        permission: Permission.ATTENDANCE_MANAGE,
+        showOnlyForRoles: ["ADMIN", "MANAGER"],
+      },
+      {
+        icon: ClipboardCheckIcon,
         name: "Журнал действий",
         path: "/activity-logs",
         permission: Permission.LOGS_VIEW,

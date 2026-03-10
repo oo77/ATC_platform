@@ -170,6 +170,7 @@ import StudentsTab from "~/components/tg-app/StudentsTab.vue";
 import ScheduleTab from "~/components/tg-app/ScheduleTab.vue";
 import CertificatesTab from "~/components/tg-app/CertificatesTab.vue";
 import CertificateUploadTab from "~/components/tg-app/CertificateUploadTab.vue";
+import RequestsTab from "~/components/tg-app/RequestsTab.vue";
 import SettingsTab from "~/components/tg-app/SettingsTab.vue";
 
 definePageMeta({ layout: false });
@@ -193,6 +194,7 @@ const icons = {
   schedule: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`,
   certificates: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>`,
   upload: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>`,
+  requests: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`,
   settings: `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>`,
 };
 
@@ -440,18 +442,13 @@ function getStatusLabel(status) {
 // Tabs
 const activeTabComponent = computed(() => {
   switch (activeTab.value) {
-    case "students":
-      return StudentsTab;
-    case "schedule":
-      return ScheduleTab;
-    case "certificates":
-      return CertificatesTab;
-    case "upload":
-      return CertificateUploadTab;
-    case "settings":
-      return SettingsTab;
-    default:
-      return StudentsTab;
+    case "students":     return StudentsTab;
+    case "schedule":     return ScheduleTab;
+    case "certificates": return CertificatesTab;
+    case "upload":       return CertificateUploadTab;
+    case "requests":     return RequestsTab;
+    case "settings":     return SettingsTab;
+    default:             return StudentsTab;
   }
 });
 
@@ -476,6 +473,8 @@ const availableTabs = computed(() => {
       label: "Загрузить",
       icon: icons.upload,
     });
+  // Вкладка заявок на обучение (доступна всем одобренным представителям)
+  list.push({ id: "requests", label: "Заявки", icon: icons.requests });
   list.push({ id: "settings", label: "Меню", icon: icons.settings });
   return list;
 });
