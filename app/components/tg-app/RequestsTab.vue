@@ -169,6 +169,33 @@
 
     <!-- ======================== ЭКРАН: ФОРМА НОВОЙ ЗАЯВКИ ======================== -->
     <div v-else-if="screen === 'form'" class="tg-form-screen">
+      <!-- Панель выбора курса (слайдер снизу) -->
+      <div v-if="isCourseDrawerOpen" class="tg-drawer-overlay" @click="closeCourseDrawer">
+        <div class="tg-drawer" @click.stop>
+          <div class="tg-drawer-header">
+            <h4>Выберите курс</h4>
+            <button class="tg-drawer-close" @click="closeCourseDrawer" type="button">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="tg-drawer-body">
+            <div v-if="coursesLoading" class="tg-field-loading" style="text-align: center;">Загрузка курсов...</div>
+            <div v-for="c in courses" :key="c.id" class="tg-drawer-course-item" @click="selectCourse(c)">
+              <div class="tg-course-name">{{ c.name }}</div>
+              <div class="tg-course-meta">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {{ Math.floor((c.durationHours || 0) / 6) }} дн / {{ c.durationHours || 0 }} ч
+              </div>
+            </div>
+            <div v-if="!coursesLoading && courses.length === 0" class="tg-no-courses">Курсы не найдены</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Шапка формы -->
       <div class="tg-form-header">
         <button class="tg-back-btn" @click="cancelForm">
@@ -192,7 +219,7 @@
         >
           <div class="tg-form-item-info">
             <strong>{{ item.courseName }}</strong>
-            <span>📅 {{ formatMonth(item.trainingMonth) }} · {{ item.studentIds.length }} чел.</span>
+            <span>📅 {{ formatMonth(item.trainingMonth) }} · {{ item.fillMode === 'names' ? item.studentIds.length : item.studentsCount }} чел.</span>
             <span v-if="item.groupLabel" class="tg-item-label-small">{{ item.groupLabel }}</span>
           </div>
           <button class="tg-remove-btn" @click="removeItem(idx)">
@@ -213,12 +240,19 @@
         <div class="tg-form-field">
           <label class="tg-field-label">Курс обучения <span class="tg-required">*</span></label>
           <div v-if="coursesLoading" class="tg-field-loading">Загрузка курсов...</div>
-          <select v-else v-model="newItem.courseId" class="tg-select" @change="onCourseChange">
-            <option value="">Выберите курс</option>
-            <option v-for="c in courses" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
+          <div v-else class="tg-select-button" @click="openCourseDrawer">
+            <div class="tg-select-button-text" :class="{ 'tg-placeholder': !selectedCourse }">
+              {{ selectedCourse ? selectedCourse.name : 'Выберите курс' }}
+            </div>
+            <svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
           <div v-if="selectedCourse" class="tg-course-hours">
-            ⏱ Продолжительность: {{ selectedCourse.durationHours }} ч.
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {{ Math.floor((selectedCourse.durationHours || 0) / 6) }} дн / {{ selectedCourse.durationHours || 0 }} ч
           </div>
           <p v-if="itemErrors.courseId" class="tg-field-error">{{ itemErrors.courseId }}</p>
         </div>
@@ -250,17 +284,42 @@
 
         <!-- Шаг 4: Выбор сотрудников -->
         <div class="tg-form-field">
-          <div class="flex justify-between items-center mb-1">
-            <label class="tg-field-label m-0">
-              Сотрудники <span class="tg-required">*</span>
-              <span v-if="newItem.studentIds.length > 0" class="tg-selected-count">
-                {{ newItem.studentIds.length }}
-              </span>
+          <label class="tg-field-label">Слушатели <span class="tg-required">*</span></label>
+
+          <div class="flex gap-4 mb-3">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" v-model="newItem.fillMode" value="names" />
+              <span class="text-sm font-medium">Пофамильно</span>
             </label>
-            <button class="text-blue-600 text-xs font-semibold" @click="showSmartInput = !showSmartInput">
-              {{ showSmartInput ? 'Обычный выбор' : 'Умный ввод' }}
-            </button>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" v-model="newItem.fillMode" value="count" />
+              <span class="text-sm font-medium">По количеству</span>
+            </label>
           </div>
+
+          <div v-if="newItem.fillMode === 'count'" class="mt-2">
+            <input 
+              v-model.number="newItem.studentsCount" 
+              type="number" 
+              min="1" 
+              class="tg-input" 
+              placeholder="Укажите количество..."
+            />
+            <p v-if="itemErrors.students" class="tg-field-error">{{ itemErrors.students }}</p>
+          </div>
+
+          <div v-else class="mt-2 border-t border-gray-100 pt-3">
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-sm font-medium text-gray-700 m-0">
+                Выбрать сотрудников
+                <span v-if="newItem.studentIds.length > 0" class="tg-selected-count">
+                  {{ newItem.studentIds.length }}
+                </span>
+              </label>
+              <button class="text-blue-600 text-xs font-semibold" @click="showSmartInput = !showSmartInput">
+                {{ showSmartInput ? 'Обычный выбор' : 'Умный ввод' }}
+              </button>
+            </div>
 
           <!-- Умный ввод (Текстовое поле) -->
           <div v-if="showSmartInput" class="tg-smart-input-block">
@@ -331,7 +390,8 @@
               </label>
             </div>
           </div>
-          <p v-if="itemErrors.studentIds" class="tg-field-error">{{ itemErrors.studentIds }}</p>
+          </div>
+          <p v-if="newItem.fillMode === 'names' && itemErrors.students" class="tg-field-error">{{ itemErrors.students }}</p>
         </div>
 
         <!-- Кнопка: Добавить позицию -->
@@ -398,6 +458,8 @@ interface FormTrainingItem {
   courseName: string;
   trainingMonth: string;
   studentIds: string[];
+  fillMode: 'names' | 'count';
+  studentsCount: number;
   groupLabel: string | null;
 }
 
@@ -469,6 +531,8 @@ const newItem = ref<FormTrainingItem>({
   courseName:    "",
   trainingMonth: "",
   groupLabel:    "",
+  fillMode:      "names",
+  studentsCount: 1,
   studentIds:    [],
 });
 const itemErrors = ref<Record<string, string>>({});
@@ -488,6 +552,22 @@ const studentSearch  = ref("");
 const smartInputText = ref("");
 const smartImporting = ref(false);
 const showSmartInput = ref(false);
+
+const isCourseDrawerOpen = ref(false);
+
+function openCourseDrawer() {
+  isCourseDrawerOpen.value = true;
+}
+
+function closeCourseDrawer() {
+  isCourseDrawerOpen.value = false;
+}
+
+function selectCourse(c: Course) {
+  newItem.value.courseId = c.id;
+  onCourseChange();
+  closeCourseDrawer();
+}
 
 // Выбранный курс для отображения часов
 const selectedCourse = computed(() => 
@@ -510,7 +590,7 @@ const filteredStudents = computed(() => {
 });
 
 const totalStudentsInForm = computed(() =>
-  formItems.value.reduce((sum, item) => sum + item.studentIds.length, 0)
+  formItems.value.reduce((sum, item) => sum + (item.fillMode === 'names' ? item.studentIds.length : item.studentsCount), 0)
 );
 
 // ─── Методы
@@ -590,6 +670,8 @@ function resetNewItem() {
     courseName: "", 
     trainingMonth: `${selectedYear.value}-${String(selectedMonth.value).padStart(2, '0')}`, 
     groupLabel: "", 
+    fillMode: "names",
+    studentsCount: 1,
     studentIds: [] 
   };
   itemErrors.value = {};
@@ -646,9 +728,17 @@ function addItem() {
     itemErrors.value.trainingMonth = "Выберите период обучения";
     valid = false;
   }
-  if (newItem.value.studentIds.length === 0) {
-    itemErrors.value.studentIds = "Выберите хотя бы одного сотрудника";
-    valid = false;
+  
+  if (newItem.value.fillMode === 'names') {
+    if (newItem.value.studentIds.length === 0) {
+      itemErrors.value.students = "Выберите хотя бы одного сотрудника";
+      valid = false;
+    }
+  } else {
+    if (!newItem.value.studentsCount || newItem.value.studentsCount < 1) {
+      itemErrors.value.students = "Укажите количество слушателей (минимум 1)";
+      valid = false;
+    }
   }
 
   if (!valid) return;
@@ -658,7 +748,9 @@ function addItem() {
     courseName:    newItem.value.courseName,
     trainingMonth: newItem.value.trainingMonth,
     groupLabel:    newItem.value.groupLabel || null,
-    studentIds:    [...newItem.value.studentIds],
+    fillMode:      newItem.value.fillMode,
+    studentsCount: newItem.value.fillMode === 'names' ? newItem.value.studentIds.length : newItem.value.studentsCount,
+    studentIds:    newItem.value.fillMode === 'names' ? [...newItem.value.studentIds] : [],
   });
 
   resetNewItem();
@@ -1057,9 +1149,56 @@ function pluralStudents(n: number) {
 .tg-submit-btn:disabled { background: #93c5fd; cursor: not-allowed; }
 .tg-submit-btn:not(:disabled):active { transform: scale(0.98); }
 
-.tg-course-hours { margin-top: 0.375rem; font-size: 0.75rem; color: #1e40af; font-weight: 500; font-family: monospace; }
+.tg-course-hours { margin-top: 0.375rem; font-size: 0.75rem; color: #1e40af; font-weight: 500; font-family: monospace; display: flex; align-items: center; gap: 0.25rem; }
 .tg-period-selects { display: flex; gap: 0.5rem; }
 .tg-smart-input-block { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 0.875rem; margin-bottom: 0.75rem; }
+
+/* Custom Select Button */
+.tg-select-button {
+  width: 100%; padding: 0.875rem 1rem;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  cursor: pointer; transition: border-color 0.2s;
+}
+.tg-select-button:active { background: #f1f5f9; }
+.tg-select-button-text { color: #1e293b; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; flex: 1; }
+.tg-placeholder { color: #94a3b8; }
+
+/* Course Drawer */
+.tg-drawer-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.4); z-index: 1000;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
+}
+.tg-drawer {
+  background: white; border-radius: 20px 20px 0 0;
+  width: 100%; max-height: 80vh; display: flex; flex-direction: column;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+.tg-drawer-header {
+  padding: 1.25rem 1rem; border-bottom: 1px solid #e2e8f0;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0;
+}
+.tg-drawer-header h4 { margin: 0; font-size: 1.125rem; font-weight: 700; color: #1e293b; }
+.tg-drawer-close { background: #f1f5f9; border: none; color: #64748b; cursor: pointer; padding: 0.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+.tg-drawer-close:active { background: #e2e8f0; }
+.tg-drawer-body {
+  overflow-y: auto; padding: 0.5rem;
+}
+.tg-drawer-course-item {
+  padding: 1rem; border-radius: 12px; cursor: pointer; transition: background 0.2s; margin-bottom: 0.25rem;
+}
+.tg-drawer-course-item:last-child { margin-bottom: 0; }
+.tg-drawer-course-item:active { background: #f1f5f9; }
+.tg-course-name { font-size: 0.9375rem; font-weight: 600; color: #1e293b; margin-bottom: 0.375rem; line-height: 1.3; }
+.tg-course-meta { font-size: 0.8125rem; color: #2563eb; font-weight: 500; display: inline-flex; align-items: center; gap: 0.25rem; background: #eff6ff; padding: 0.25rem 0.625rem; border-radius: 6px; font-family: monospace; }
+.tg-no-courses { padding: 2rem 1rem; text-align: center; color: #64748b; font-size: 0.9375rem; }
+
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .tg-smart-textarea { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.8125rem; background: white; margin-bottom: 0.5rem; resize: none; font-family: monospace; }
 .tg-smart-apply-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 0.75rem; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 .tg-smart-apply-btn:active { background: #1d4ed8; }

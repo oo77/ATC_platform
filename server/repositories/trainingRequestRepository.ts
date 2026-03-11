@@ -36,6 +36,7 @@ export interface TrainingRequestItemInput {
   courseName: string;
   trainingMonth: string;
   studentIds: string[];
+  studentsCount?: number;
   groupLabel?: string;
   sortOrder?: number;
 }
@@ -206,7 +207,7 @@ export async function createTrainingRequest(
 
   // Подсчёт агрегированных данных
   const totalStudents = data.items.reduce(
-    (sum, item) => sum + item.studentIds.length,
+    (sum, item) => sum + (item.studentsCount || item.studentIds.length),
     0,
   );
 
@@ -243,8 +244,8 @@ export async function createTrainingRequest(
         item.courseId,
         item.courseName,
         item.trainingMonth,
-        JSON.stringify(item.studentIds),
-        item.studentIds.length,
+        JSON.stringify(item.studentIds || []),
+        item.studentsCount || (item.studentIds ? item.studentIds.length : 0),
         item.groupLabel || null,
         item.sortOrder ?? i,
         now,

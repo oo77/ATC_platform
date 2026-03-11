@@ -575,13 +575,14 @@ export async function createCourse(data: CreateCourseInput): Promise<Course> {
         const disciplineId = uuidv4();
 
         await connection.execute(
-          `INSERT INTO disciplines (id, course_id, name, description, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO disciplines (id, course_id, name, description, hours, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             disciplineId,
             id,
             discipline.name,
             discipline.description || null,
+            discipline.theoryHours + discipline.practiceHours + discipline.assessmentHours,
             discipline.theoryHours,
             discipline.practiceHours,
             discipline.assessmentHours,
@@ -707,13 +708,14 @@ export async function addDisciplineToCourse(
     const nextOrder = (maxOrderRows[0]?.max_order ?? -1) + 1;
 
     await connection.execute(
-      `INSERT INTO disciplines (id, course_id, name, description, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO disciplines (id, course_id, name, description, hours, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         courseId,
         data.name,
         data.description || null,
+        data.theoryHours + data.practiceHours + data.assessmentHours,
         data.theoryHours,
         data.practiceHours,
         data.assessmentHours,
@@ -737,7 +739,7 @@ export async function addDisciplineToCourse(
 
     // Обновляем total_hours курса
     await connection.execute(
-      `UPDATE courses SET total_hours = (SELECT COALESCE(SUM(hours), 0) FROM disciplines WHERE course_id = ?) WHERE id = ?`,
+      `UPDATE courses SET total_hours = (SELECT COALESCE(SUM(theory_hours + practice_hours + assessment_hours), 0) FROM disciplines WHERE course_id = ?) WHERE id = ?`,
       [courseId, courseId]
     );
   });
@@ -784,6 +786,15 @@ export async function updateDiscipline(
       updates.push("assessment_hours = ?");
       params.push(data.assessmentHours);
     }
+    
+    if (data.theoryHours !== undefined || data.practiceHours !== undefined || data.assessmentHours !== undefined) {
+      const currentTh = data.theoryHours ?? rows[0].theory_hours;
+      const currentPr = data.practiceHours ?? rows[0].practice_hours;
+      const currentAs = data.assessmentHours ?? rows[0].assessment_hours;
+      updates.push("hours = ?");
+      params.push(currentTh + currentPr + currentAs);
+    }
+
     if (data.orderIndex !== undefined) {
       updates.push("order_index = ?");
       params.push(data.orderIndex);
@@ -819,7 +830,7 @@ export async function updateDiscipline(
 
     // Обновляем total_hours курса
     await connection.execute(
-      `UPDATE courses SET total_hours = (SELECT COALESCE(SUM(hours), 0) FROM disciplines WHERE course_id = ?) WHERE id = ?`,
+      `UPDATE courses SET total_hours = (SELECT COALESCE(SUM(theory_hours + practice_hours + assessment_hours), 0) FROM disciplines WHERE course_id = ?) WHERE id = ?`,
       [courseId, courseId]
     );
   });
@@ -846,7 +857,7 @@ export async function deleteDiscipline(disciplineId: string): Promise<boolean> {
 
     // Обновляем total_hours курса
     await connection.execute(
-      `UPDATE courses SET total_hours = (SELECT COALESCE(SUM(hours), 0) FROM disciplines WHERE course_id = ?) WHERE id = ?`,
+      `UPDATE courses SET total_hours = (SELECT COALESCE(SUM(theory_hours + practice_hours + assessment_hours), 0) FROM disciplines WHERE course_id = ?) WHERE id = ?`,
       [courseId, courseId]
     );
   });

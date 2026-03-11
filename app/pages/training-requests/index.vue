@@ -6,6 +6,8 @@ definePageMeta({ layout: "default" });
 
 const { authFetch } = useAuthFetch();
 const { success: notifySuccess, error: notifyError } = useNotification();
+const token = useCookie("auth_token");
+const exporting = ref(false);
 
 // ─── Типы ───
 type RequestStatus = "pending" | "approved" | "rejected" | "in_progress" | "completed";
@@ -105,6 +107,60 @@ async function loadData() {
     notifyError(err.data?.message || "Ошибка загрузки данных");
   } finally {
     loading.value = false;
+  }
+}
+
+// ────────────────────────────────────────────
+// Экспорт в Excel
+// Принцип: передаём те же фильтры что и в списке,
+// сервер сам применяет их при генерации файла  
+// ────────────────────────────────────────────
+async function exportToExcel() {
+  exporting.value = true;
+  try {
+    // Строим query-параметры из текущих фильтров
+    const params = new URLSearchParams();
+    if (filterStatus.value)   params.set("status",         filterStatus.value);
+    if (filterMonth.value)    params.set("month",          filterMonth.value);
+    if (filterOrg.value)      params.set("organizationId", filterOrg.value);
+    if (filterCourseId.value) params.set("courseId",       filterCourseId.value);
+
+    const url = `/api/training-requests/export?${params.toString()}`;
+
+    // Используем нативный fetch с Bearer-токеном — нельзя передать заголовок через <a href>
+    const response = await fetch(url, {
+      headers: {
+        Authorization: token.value ? `Bearer ${token.value}` : "",
+      },
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err?.statusMessage || "Ошибка генерации отчёта");
+    }
+
+    const blob = await response.blob();
+
+    // Получаем имя файла из заголовка или генерируем
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    const filename = match?.[1] || `training-requests-${new Date().toISOString().slice(0,10)}.xlsx`;
+
+    // Инициируем скачивание
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href     = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(blobUrl);
+
+    notifySuccess(`Файл "${filename}" успешно скачан`);
+  } catch (err: any) {
+    notifyError(err?.message || "Не удалось скачать отчёт");
+  } finally {
+    exporting.value = false;
   }
 }
 
@@ -224,19 +280,46 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
           Управление заявками от представителей организаций
         </p>
       </div>
-      <button @click="loadData" :disabled="loading"
-        class="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800
-               border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium
-               hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">
-        <svg class="w-4 h-4" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        Обновить
-      </button>
+      <div class="flex items-center gap-2 self-start sm:self-auto">
+        <!-- Обновить -->
+        <button @click="loadData" :disabled="loading"
+          class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800
+                 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium
+                 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">
+          <svg class="w-4 h-4" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Обновить
+        </button>
+
+        <!-- Excel-экспорт -->
+        <button @click="exportToExcel" :disabled="exporting"
+          :title="hasActiveFilters ? 'Выгрузить по текущим фильтрам' : 'Выгрузить все заявки'"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60
+                 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+          <!-- Спиннер во время генерации -->
+          <svg v-if="exporting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+          </svg>
+          <!-- Иконка Excel -->
+          <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          {{ exporting ? 'Формирование...' : 'Excel' }}
+          <!-- Бейдж "фильтр активен" -->
+          <span v-if="hasActiveFilters && !exporting"
+            class="ml-0.5 bg-emerald-500 text-white text-xs px-1.5 py-0.5 rounded-full font-semibold leading-none">
+            ≈
+          </span>
+        </button>
+      </div>
     </div>
 
     <!-- ═══ ДАШБОРД: СТАТИСТИКА ═══ -->
+
     <div v-if="stats" class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
       <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totals.total }}</p>
@@ -660,12 +743,17 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
                     <div v-if="item.groupLabel" class="mt-1 text-xs text-primary-600 font-medium">Группа: {{ item.groupLabel }}</div>
                   </div>
                 </div>
-                <!-- Toggle слушателей -->
-                <button v-if="item.students && item.students.length > 0"
-                  @click="item._showStudents = !item._showStudents"
-                  class="shrink-0 text-xs px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors font-medium">
-                  {{ item._showStudents ? 'Скрыть список' : 'Список слушателей' }}
-                </button>
+                <div class="flex items-center gap-2">
+                  <span v-if="!item.students || item.students.length === 0" class="shrink-0 text-xs px-2 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 rounded-lg font-medium border border-yellow-200 dark:border-yellow-700/30">
+                    Без персонализации
+                  </span>
+                  <!-- Toggle слушателей -->
+                  <button v-else
+                    @click="item._showStudents = !item._showStudents"
+                    class="shrink-0 text-xs px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium">
+                    {{ item._showStudents ? 'Скрыть список' : 'Список слушателей' }}
+                  </button>
+                </div>
               </div>
               <!-- Раскрывающийся список слушателей -->
               <div v-if="item._showStudents && item.students"

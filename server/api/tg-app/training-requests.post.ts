@@ -11,6 +11,7 @@
  *     courseName: string,
  *     trainingMonth: string,   // 'YYYY-MM'
  *     studentIds: string[],
+ *     studentsCount?: number,
  *     groupLabel?: string
  *   }>
  * }
@@ -55,10 +56,13 @@ export default defineEventHandler(async (event) => {
           message: `${prefix}: неверный формат месяца (ожидается YYYY-MM)`,
         });
       }
-      if (!item.studentIds || !Array.isArray(item.studentIds) || item.studentIds.length === 0) {
+      const hasStudentIds = item.studentIds && Array.isArray(item.studentIds) && item.studentIds.length > 0;
+      const hasStudentsCount = item.studentsCount && item.studentsCount > 0;
+
+      if (!hasStudentIds && !hasStudentsCount) {
         throw createError({
           statusCode: 400,
-          message: `${prefix}: необходимо выбрать хотя бы одного сотрудника`,
+          message: `${prefix}: необходимо выбрать сотрудников или указать их количество`,
         });
       }
     }
@@ -71,7 +75,8 @@ export default defineEventHandler(async (event) => {
         courseId: item.courseId,
         courseName: item.courseName,
         trainingMonth: item.trainingMonth,
-        studentIds: item.studentIds,
+        studentIds: item.studentIds || [],
+        studentsCount: item.studentsCount,
         groupLabel: item.groupLabel || undefined,
         sortOrder: idx,
       })),
