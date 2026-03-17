@@ -32,6 +32,7 @@ import * as addOverrideWarningsToCertificates from "./migrations/20260220_021_ad
 import * as addPublishedAtToBooks from "./migrations/20260304_022_add_published_at_to_books";
 import * as reportBuilder from "./migrations/20260305_023_report_builder";
 import * as trainingRequests from "./migrations/20260310_024_training_requests";
+import * as fixTestingSystemSchema from "./migrations/20260317_025_fix_testing_system_schema";
 
 /**
  * ============================================================================
@@ -274,6 +275,12 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: trainingRequests.up,
     down: trainingRequests.down,
     description: trainingRequests.description,
+  },
+  {
+    name: "20260317_025_fix_testing_system_schema",
+    up: fixTestingSystemSchema.up,
+    down: fixTestingSystemSchema.down,
+    description: fixTestingSystemSchema.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

@@ -613,7 +613,7 @@
                 <td
                   class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400"
                 >
-                  {{ index + 1 }}
+                  {{ (pagination.page - 1) * pagination.limit + index + 1 }}
                 </td>
                 <td class="px-6 py-4">
                   <div class="flex flex-col gap-1">
@@ -765,6 +765,18 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Пагинация -->
+        <UiPagination
+          v-if="pagination.totalPages > 1"
+          :current-page="pagination.page"
+          :total-pages="pagination.totalPages"
+          :total="pagination.total"
+          :limit="pagination.limit"
+          :loading="questionsLoading"
+          @update:page="pagination.page = $event"
+          @update:limit="pagination.limit = $event"
+        />
       </div>
     </template>
 
@@ -1137,6 +1149,14 @@ const questionFilters = ref({
   isActive: undefined,
 });
 
+// Пагинация
+const pagination = ref({
+  page: 1,
+  limit: 20,
+  total: 0,
+  totalPages: 0,
+});
+
 const hasActiveQuestionFilters = computed(() => {
   return (
     questionFilters.value.search !== "" ||
@@ -1147,42 +1167,8 @@ const hasActiveQuestionFilters = computed(() => {
   );
 });
 
-const filteredQuestions = computed(() => {
-  let result = questions.value;
-
-  if (questionFilters.value.search) {
-    const search = questionFilters.value.search.toLowerCase();
-    result = result.filter((q) =>
-      q.question_text.toLowerCase().includes(search),
-    );
-  }
-
-  if (questionFilters.value.type) {
-    result = result.filter(
-      (q) => q.question_type === questionFilters.value.type,
-    );
-  }
-
-  if (questionFilters.value.difficulty) {
-    result = result.filter(
-      (q) => q.difficulty === questionFilters.value.difficulty,
-    );
-  }
-
-  if (questionFilters.value.language) {
-    result = result.filter(
-      (q) => (q.language || "ru") === questionFilters.value.language,
-    );
-  }
-
-  if (questionFilters.value.isActive !== undefined) {
-    result = result.filter(
-      (q) => q.is_active === questionFilters.value.isActive,
-    );
-  }
-
-  return result;
-});
+// Так как теперь фильтрация происходит на сервере, просто возвращаем вопросы
+const filteredQuestions = computed(() => questions.value);
 
 const resetQuestionFilters = () => {
   questionFilters.value = {
@@ -1344,12 +1330,25 @@ const loadBank = async () => {
 const loadQuestions = async () => {
   questionsLoading.value = true;
   try {
-    const response = await authFetch(
-      `/api/test-bank/questions?bank_id=${route.params.id}`,
-    );
+    const query = {
+      bank_id: route.params.id,
+      page: pagination.value.page,
+      limit: pagination.value.limit,
+      search: questionFilters.value.search || undefined,
+      question_type: questionFilters.value.type || undefined,
+      difficulty: questionFilters.value.difficulty || undefined,
+      language: questionFilters.value.language || undefined,
+      is_active: questionFilters.value.isActive,
+    };
+
+    const response = await authFetch("/api/test-bank/questions", {
+      params: query,
+    });
 
     if (response.success) {
       questions.value = response.questions;
+      pagination.value.total = response.total || 0;
+      pagination.value.totalPages = response.totalPages || 0;
     }
   } catch (err) {
     console.error("Ошибка загрузки вопросов:", err);
@@ -1357,6 +1356,24 @@ const loadQuestions = async () => {
     questionsLoading.value = false;
   }
 };
+
+// Следим за фильтрами
+watch(
+  () => questionFilters.value,
+  () => {
+    pagination.value.page = 1;
+    loadQuestions();
+  },
+  { deep: true },
+);
+
+// Следим за страницей и лимитом
+watch(
+  () => [pagination.value.page, pagination.value.limit],
+  () => {
+    loadQuestions();
+  },
+);
 
 // Модальные окна для вопросов
 const openCreateQuestionModal = () => {
