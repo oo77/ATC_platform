@@ -529,8 +529,8 @@ export async function getStudentAssignments(
       ta.allowed_student_ids,
       sg.end_date as group_end_date,
       se.original_event_id,
-      se.start_time as event_start_time,
-      se.end_time as event_end_time,
+      DATE_FORMAT(se.start_time, '%Y-%m-%d %H:%i:%s') as event_start_time,
+      DATE_FORMAT(se.end_time, '%Y-%m-%d %H:%i:%s') as event_end_time,
       tt.name as template_name,
       tt.code as template_code,
       tt.max_attempts,
@@ -562,27 +562,28 @@ export async function getStudentAssignments(
 
   const rows = await executeQuery<RowDataPacket[]>(query, queryParams);
 
-  // Возвращаем Date объекты напрямую
-  // При сериализации в JSON они станут ISO строками с 'Z' (UTC)
-  // Клиент автоматически конвертирует в локальное время браузера
 
   return rows.map((row: any) => {
-    // Используем время начала и окончания ЗАНЯТИЯ (schedule_events)
-    // а не поля start_date/end_date из test_assignments
-    const eventStartTime = row.event_start_time
-      ? new Date(row.event_start_time)
-      : null;
-    const eventEndTime = row.event_end_time
-      ? new Date(row.event_end_time)
-      : null;
-    const groupEndDate = row.group_end_date
-      ? new Date(row.group_end_date)
+    // DATE_FORMAT() в SQL возвращает строки вида '2026-03-18 11:10:00'
+    // MySQL2 НЕ конвертирует STRING колонки в Date объекты — UTC-смещения нет!
+    // parseLocalDateTime на клиенте обработает эти строки как локальное время браузера
+    const eventStartTime: string | null = row.event_start_time || null;
+    const eventEndTime: string | null = row.event_end_time || null;
+
+    // group_end_date — это DATE колонка (только дата, без времени)
+    // Преобразуем в строку в том же формате, что и время окончания занятия
+    const groupEndDate: string | null = row.group_end_date
+      ? (row.group_end_date instanceof Date
+          ? `${row.group_end_date.getFullYear()}-${String(row.group_end_date.getMonth() + 1).padStart(2, '0')}-${String(row.group_end_date.getDate()).padStart(2, '0')} 23:59:59`
+          : String(row.group_end_date).length === 10
+            ? `${row.group_end_date} 23:59:59`  // '2026-03-18' -> '2026-03-18 23:59:59'
+            : String(row.group_end_date))
       : null;
 
     // Определяем финальную дату окончания теста
-    let finalEndDate = eventEndTime;
-
     // Если курс завершен раньше времени окончания занятия, используем дату завершения курса
+    let finalEndDate: string | null = eventEndTime;
+
     if (groupEndDate && eventEndTime && groupEndDate < eventEndTime) {
       finalEndDate = groupEndDate;
     }
@@ -599,7 +600,7 @@ export async function getStudentAssignments(
       event_date: row.event_date || null,
       event_time: row.event_time || null,
       status: row.status,
-      // Используем время ЗАНЯТИЯ для определения доступности теста
+      // Строки без timezone-суффикса — parseLocalDateTime обработает как локальное время
       start_date: eventStartTime,
       end_date: finalEndDate,
       time_limit: row.time_limit || null,
@@ -611,7 +612,6 @@ export async function getStudentAssignments(
       passed: Boolean(row.passed),
       has_active_session: !!row.active_session_id,
       active_session_id: row.active_session_id || null,
-      // Добавляем поля для определения перездачи
       allowed_student_ids: row.allowed_student_ids
         ? JSON.parse(row.allowed_student_ids)
         : null,
