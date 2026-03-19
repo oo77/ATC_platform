@@ -32,8 +32,9 @@
           <div
             v-if="isOpen"
             :class="[
-              'relative bg-white dark:bg-boxdark rounded-lg shadow-xl w-full',
+              'relative bg-white dark:bg-boxdark rounded-lg shadow-xl w-full flex flex-col',
               sizeClasses[size],
+              'max-h-[90vh]',
             ]"
             role="dialog"
             aria-modal="true"
@@ -42,7 +43,7 @@
             <!-- Header -->
             <div
               v-if="title || $slots.header"
-              class="flex items-center justify-between px-6 py-4 border-b border-stroke dark:border-strokedark"
+              class="flex items-center justify-between px-6 py-4 border-b border-stroke dark:border-strokedark shrink-0"
             >
               <slot name="header">
                 <h3 class="text-xl font-semibold text-black dark:text-white">
@@ -70,15 +71,15 @@
               </button>
             </div>
 
-            <!-- Body -->
-            <div class="px-6 py-6">
+            <!-- Body (scrollable) -->
+            <div class="px-6 py-5 overflow-y-auto flex-1">
               <slot></slot>
             </div>
 
             <!-- Footer -->
             <div
               v-if="$slots.footer"
-              class="px-6 py-4 border-t border-stroke dark:border-strokedark"
+              class="px-6 py-4 border-t border-stroke dark:border-strokedark shrink-0"
             >
               <slot name="footer"></slot>
             </div>

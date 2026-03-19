@@ -74,9 +74,30 @@ export class CertificateAIProcessor {
       textModel: config.textModel,
     };
 
+    // Определяем baseURL: используем из настроек, или автоматически по провайдеру
+    let resolvedBaseUrl = config.baseUrl || undefined;
+    if (!resolvedBaseUrl) {
+      if (config.provider === "openrouter") {
+        resolvedBaseUrl = "https://openrouter.ai/api/v1";
+      } else if (config.provider === "anthropic") {
+        resolvedBaseUrl = "https://api.anthropic.com/v1";
+      }
+    }
+
+    // Для OpenRouter обязательны доп. заголовки
+    const defaultHeaders: Record<string, string> | undefined =
+      config.provider === "openrouter"
+        ? {
+            "HTTP-Referer":
+              process.env.SITE_URL || "http://localhost:3000",
+            "X-Title": "ATC Platform - Certificate AI",
+          }
+        : undefined;
+
     this.client = new OpenAI({
       apiKey: config.apiKey,
-      baseURL: config.baseUrl || undefined,
+      baseURL: resolvedBaseUrl,
+      defaultHeaders,
     });
     return this.client;
   }

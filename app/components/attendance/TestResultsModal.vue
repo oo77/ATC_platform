@@ -6,54 +6,50 @@
     @close="$emit('close')"
   >
     <!-- Loading -->
-    <div v-if="loading" class="flex items-center justify-center py-12">
+    <div v-if="loading" class="flex items-center justify-center py-8">
       <div class="text-center">
-        <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-4"></div>
+        <div class="inline-block h-7 w-7 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-3"></div>
         <p class="text-sm text-gray-500">Загрузка результатов...</p>
       </div>
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="text-center py-12">
-      <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-danger/10 mb-4">
-        <svg class="w-8 h-8 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div v-else-if="error" class="text-center py-8">
+      <div class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-danger/10 mb-3">
+        <svg class="w-6 h-6 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       </div>
-      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Ошибка загрузки</h3>
+      <h3 class="text-base font-medium text-gray-900 dark:text-white mb-1">Ошибка загрузки</h3>
       <p class="text-sm text-gray-500">{{ error }}</p>
     </div>
 
     <!-- Content -->
-    <div v-else-if="data" class="space-y-6">
-      <!-- Header info -->
-      <div class="bg-gray-50 dark:bg-meta-4 rounded-lg p-4">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <!-- Студент -->
+    <div v-else-if="data" class="space-y-4">
+      <!-- Header info — компактная строка -->
+      <div class="bg-gray-50 dark:bg-meta-4 rounded-lg p-3">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Студент</p>
-            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ data.session.studentName || 'Н/Д' }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Студент</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white leading-tight">{{ data.session.studentName || 'Н/Д' }}</p>
             <p v-if="data.session.studentPinfl" class="text-xs text-gray-400">{{ data.session.studentPinfl }}</p>
           </div>
-          <!-- Тест -->
           <div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Тест</p>
-            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ data.template.name }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Тест</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white leading-tight">{{ data.template.name }}</p>
             <p v-if="data.context.groupName" class="text-xs text-gray-400">{{ data.context.groupName }}</p>
           </div>
-          <!-- Дата -->
           <div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Дата прохождения</p>
-            <p class="text-sm font-medium text-gray-900 dark:text-white">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Дата</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white leading-tight">
               {{ formatDate(data.session.completedAt || data.session.startedAt) }}
             </p>
             <p class="text-xs text-gray-400">Попытка #{{ data.session.attemptNumber }}</p>
           </div>
-          <!-- Время -->
           <div>
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Затрачено времени</p>
-            <p class="text-sm font-medium text-gray-900 dark:text-white">
-              {{ formatDuration(data.session.timeSpentSeconds) }}
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Время</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white leading-tight">
+              {{ data.session.timeSpentSeconds != null ? formatDuration(data.session.timeSpentSeconds) : '—' }}
             </p>
             <p v-if="data.template.timeLimitMinutes" class="text-xs text-gray-400">
               из {{ data.template.timeLimitMinutes }} мин.
@@ -62,165 +58,160 @@
         </div>
       </div>
 
-      <!-- Score card -->
-      <div 
-        class="rounded-lg p-6 text-center"
+      <!-- Score card — компактная версия -->
+      <div
+        class="rounded-lg px-5 py-4"
         :class="data.session.passed ? 'bg-success/10 border border-success/30' : 'bg-danger/10 border border-danger/30'"
       >
-        <div class="text-4xl font-bold mb-2" :class="data.session.passed ? 'text-success' : 'text-danger'">
-          {{ Math.round(data.session.scorePercent || 0) }}%
-        </div>
-        <p class="text-lg font-medium" :class="data.session.passed ? 'text-success' : 'text-danger'">
-          {{ data.session.passed ? 'Тест сдан' : 'Тест не сдан' }}
-        </p>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-          {{ data.stats.earnedPoints }} из {{ data.stats.totalPoints }} баллов
-          (проходной: {{ data.template.passingScore }}%)
-        </p>
-        <div class="flex justify-center gap-6 mt-4 text-sm">
-          <span class="inline-flex items-center gap-1 text-success">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-            {{ data.stats.correctAnswers }} правильно
-          </span>
-          <span class="inline-flex items-center gap-1 text-danger">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-            {{ data.stats.incorrectAnswers }} неправильно
-          </span>
-          <span v-if="data.stats.unanswered > 0" class="inline-flex items-center gap-1 text-gray-500">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {{ data.stats.unanswered }} без ответа
-          </span>
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-3">
+            <div class="text-3xl font-bold" :class="data.session.passed ? 'text-success' : 'text-danger'">
+              {{ Math.round(data.session.scorePercent || 0) }}%
+            </div>
+            <div>
+              <p class="text-base font-medium" :class="data.session.passed ? 'text-success' : 'text-danger'">
+                {{ data.session.passed ? 'Тест сдан' : 'Тест не сдан' }}
+              </p>
+              <p class="text-xs text-gray-600 dark:text-gray-400">
+                {{ data.stats.earnedPoints }} из {{ data.stats.totalPoints }} баллов
+                · проходной: {{ data.template.passingScore }}%
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 text-sm">
+            <span class="inline-flex items-center gap-1 text-success">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              {{ data.stats.correctAnswers }}
+            </span>
+            <span class="inline-flex items-center gap-1 text-danger">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              {{ data.stats.incorrectAnswers }}
+            </span>
+            <span v-if="data.stats.unanswered > 0" class="inline-flex items-center gap-1 text-gray-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {{ data.stats.unanswered }}
+            </span>
+          </div>
         </div>
       </div>
 
       <!-- Answers list -->
       <div>
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Ответы на вопросы</h3>
-        <div class="space-y-4">
-          <div 
-            v-for="(answer, index) in data.answers" 
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Ответы на вопросы</h3>
+        <div class="space-y-2">
+          <div
+            v-for="(answer, index) in data.answers"
             :key="answer.questionId"
             class="border rounded-lg overflow-hidden"
             :class="getAnswerBorderClass(answer)"
           >
             <!-- Question header -->
-            <div 
-              class="p-4 flex items-start gap-3"
+            <div
+              class="px-3 py-2.5 flex items-start gap-3"
               :class="getAnswerBgClass(answer)"
             >
-              <div 
-                class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium"
+              <div
+                class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium"
                 :class="getAnswerBadgeClass(answer)"
               >
                 {{ index + 1 }}
               </div>
               <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-meta-4 text-gray-600 dark:text-gray-400">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-meta-4 text-gray-600 dark:text-gray-400">
                     {{ getQuestionTypeName(answer.questionType) }}
                   </span>
                   <span class="text-xs text-gray-500">
-                    {{ answer.pointsEarned }}/{{ answer.questionPoints }} баллов
-                  </span>
-                  <span v-if="answer.timeSpentSeconds" class="text-xs text-gray-400">
-                    {{ formatDuration(answer.timeSpentSeconds) }}
+                    {{ answer.pointsEarned }}/{{ answer.questionPoints }} б.
                   </span>
                 </div>
                 <p class="text-sm text-gray-900 dark:text-white whitespace-pre-line">{{ answer.questionText }}</p>
               </div>
               <!-- Status icon -->
-              <div class="flex-shrink-0">
-                <svg v-if="answer.isCorrect === true" class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="shrink-0">
+                <svg v-if="answer.isCorrect === true" class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <svg v-else-if="answer.isCorrect === false" class="w-6 h-6 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-else-if="answer.isCorrect === false" class="w-5 h-5 text-danger" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <svg v-else class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg v-else class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
 
             <!-- Answer details -->
-            <div class="p-4 bg-white dark:bg-boxdark border-t border-stroke dark:border-strokedark">
+            <div class="px-3 py-2.5 bg-white dark:bg-boxdark border-t border-stroke dark:border-strokedark">
               <!-- Single/Multiple choice -->
               <div v-if="answer.questionType === 'single' || answer.questionType === 'multiple'">
-                <div class="space-y-2">
-                  <div 
-                    v-for="option in getOptions(answer.questionOptions)" 
+                <div class="space-y-1.5">
+                  <div
+                    v-for="option in getOptions(answer.questionOptions)"
                     :key="option.id"
-                    class="flex items-center gap-2 p-2 rounded"
+                    class="flex items-center gap-2 px-2 py-1.5 rounded text-sm"
                     :class="getOptionClass(answer, option)"
                   >
-                    <span class="w-5 h-5 rounded-full border-2 flex items-center justify-center text-xs"
+                    <span class="w-4 h-4 rounded-full border-2 flex items-center justify-center text-xs shrink-0"
                       :class="getOptionIconClass(answer, option)"
                     >
-                      <svg v-if="isOptionSelected(answer.studentAnswer, option.id)" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <svg v-if="isOptionSelected(answer.studentAnswer, option.id)" class="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
                         <circle cx="10" cy="10" r="4" />
                       </svg>
                     </span>
-                    <span class="text-sm" :class="option.correct ? 'text-success font-medium' : ''">
-                      {{ option.text }}
-                    </span>
-                    <span v-if="option.correct" class="ml-auto text-xs text-success">✓ Правильный</span>
+                    <span :class="option.correct ? 'text-success font-medium' : ''">{{ option.text }}</span>
+                    <span v-if="option.correct" class="ml-auto text-xs text-success shrink-0">✓</span>
                   </div>
                 </div>
               </div>
 
               <!-- Text answer -->
               <div v-else-if="answer.questionType === 'text'">
-                <div class="space-y-3">
+                <div class="space-y-2 text-sm">
                   <div>
-                    <p class="text-xs text-gray-500 mb-1">Ответ студента:</p>
-                    <p class="text-sm p-2 bg-gray-50 dark:bg-meta-4 rounded" :class="answer.isCorrect ? 'text-success' : 'text-danger'">
+                    <p class="text-xs text-gray-500 mb-0.5">Ответ студента:</p>
+                    <p class="p-1.5 bg-gray-50 dark:bg-meta-4 rounded" :class="answer.isCorrect ? 'text-success' : 'text-danger'">
                       {{ getTextAnswer(answer.studentAnswer) || '(нет ответа)' }}
                     </p>
                   </div>
                   <div>
-                    <p class="text-xs text-gray-500 mb-1">Правильные ответы:</p>
-                    <p class="text-sm text-success">
-                      {{ getCorrectTextAnswers(answer.questionOptions) }}
-                    </p>
+                    <p class="text-xs text-gray-500 mb-0.5">Правильные ответы:</p>
+                    <p class="text-success text-sm">{{ getCorrectTextAnswers(answer.questionOptions) }}</p>
                   </div>
                 </div>
               </div>
 
               <!-- Order answer -->
               <div v-else-if="answer.questionType === 'order'">
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <p class="text-xs text-gray-500 mb-2">Ответ студента:</p>
+                    <p class="text-xs text-gray-500 mb-1.5">Ответ студента:</p>
                     <div class="space-y-1">
-                      <div 
-                        v-for="(itemId, idx) in getOrderAnswer(answer.studentAnswer)" 
+                      <div
+                        v-for="(itemId, idx) in getOrderAnswer(answer.studentAnswer)"
                         :key="idx"
-                        class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-meta-4 rounded text-sm"
+                        class="flex items-center gap-2 p-1.5 bg-gray-50 dark:bg-meta-4 rounded"
                       >
-                        <span class="w-5 h-5 rounded bg-gray-200 dark:bg-strokedark text-xs flex items-center justify-center">
-                          {{ idx + 1 }}
-                        </span>
+                        <span class="w-4 h-4 rounded bg-gray-200 dark:bg-strokedark text-xs flex items-center justify-center shrink-0">{{ idx + 1 }}</span>
                         {{ getOrderOptionText(answer.questionOptions, itemId) }}
                       </div>
                     </div>
                   </div>
                   <div>
-                    <p class="text-xs text-gray-500 mb-2">Правильный порядок:</p>
+                    <p class="text-xs text-gray-500 mb-1.5">Правильный порядок:</p>
                     <div class="space-y-1">
-                      <div 
-                        v-for="option in getCorrectOrder(answer.questionOptions)" 
+                      <div
+                        v-for="option in getCorrectOrder(answer.questionOptions)"
                         :key="option.id"
-                        class="flex items-center gap-2 p-2 bg-success/10 rounded text-sm text-success"
+                        class="flex items-center gap-2 p-1.5 bg-success/10 rounded text-success"
                       >
-                        <span class="w-5 h-5 rounded bg-success/20 text-xs flex items-center justify-center">
-                          {{ option.correctOrder }}
-                        </span>
+                        <span class="w-4 h-4 rounded bg-success/20 text-xs flex items-center justify-center shrink-0">{{ option.correctOrder }}</span>
                         {{ option.text }}
                       </div>
                     </div>
@@ -230,30 +221,30 @@
 
               <!-- Match answer -->
               <div v-else-if="answer.questionType === 'match'">
-                <div class="space-y-2">
-                  <div 
-                    v-for="pair in getMatchPairs(answer.questionOptions)" 
+                <div class="space-y-1.5 text-sm">
+                  <div
+                    v-for="pair in getMatchPairs(answer.questionOptions)"
                     :key="pair.id"
-                    class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-meta-4 rounded text-sm"
+                    class="flex items-center gap-2 p-1.5 bg-gray-50 dark:bg-meta-4 rounded"
                   >
                     <span class="font-medium">{{ pair.left }}</span>
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                     </svg>
                     <span :class="isMatchCorrect(answer.studentAnswer, pair) ? 'text-success' : 'text-danger'">
                       {{ getMatchedRight(answer.studentAnswer, pair.left) || '(не выбрано)' }}
                     </span>
                     <span v-if="!isMatchCorrect(answer.studentAnswer, pair)" class="text-xs text-success ml-auto">
-                      Правильно: {{ pair.right }}
+                      → {{ pair.right }}
                     </span>
                   </div>
                 </div>
               </div>
 
               <!-- Explanation -->
-              <div v-if="answer.questionExplanation" class="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                <p class="text-xs text-primary font-medium mb-1">Пояснение:</p>
-                <p class="text-sm text-gray-700 dark:text-gray-300">{{ answer.questionExplanation }}</p>
+              <div v-if="answer.questionExplanation" class="mt-2.5 p-2 bg-primary/5 rounded border border-primary/20">
+                <p class="text-xs text-primary font-medium mb-0.5">Пояснение:</p>
+                <p class="text-xs text-gray-700 dark:text-gray-300">{{ answer.questionExplanation }}</p>
               </div>
             </div>
           </div>

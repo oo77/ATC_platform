@@ -393,7 +393,7 @@
       <div
         v-if="isModalOpen"
         @click="closeModal"
-        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4"
+        class="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 p-4"
       >
         <div
           @click.stop
@@ -815,8 +815,8 @@ const loadSettings = async () => {
   loading.value = true;
   try {
     const [settingsRes, statsRes] = await Promise.all([
-      $fetch("/api/admin/ai-settings"),
-      $fetch("/api/admin/ai-settings/stats"),
+      $fetch<any>("/api/admin/ai-settings"),
+      $fetch<any>("/api/admin/ai-settings/stats"),
     ]);
 
     settings.value = (settingsRes as any).data || [];
@@ -949,10 +949,20 @@ const saveSettings = async () => {
   errorMessage.value = null; // Сброс предыдущих ошибок
 
   try {
+    // Автоматически разрешаем baseUrl по провайдеру, если не задан вручную
+    const providerBaseUrls: Record<string, string> = {
+      openrouter: "https://openrouter.ai/api/v1",
+      anthropic: "https://api.anthropic.com/v1",
+    };
+    const resolvedBaseUrl =
+      form.value.baseUrl ||
+      providerBaseUrls[form.value.provider] ||
+      undefined;
+
     const payload: any = {
       provider: form.value.provider,
       apiKeyName: form.value.apiKeyName || undefined,
-      baseUrl: form.value.baseUrl || undefined,
+      baseUrl: resolvedBaseUrl,
       visionModel: form.value.visionModel,
       textModel: form.value.textModel,
       maxTokens: form.value.maxTokens,

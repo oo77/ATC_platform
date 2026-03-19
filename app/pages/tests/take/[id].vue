@@ -178,7 +178,7 @@
             </div>
             <div class="bg-white dark:bg-boxdark rounded-lg p-3">
               <div class="text-lg font-bold text-gray-900 dark:text-white">
-                {{ formatTime(session?.time_spent_seconds || 0) }}
+                {{ session?.time_spent_seconds != null ? formatTime(session.time_spent_seconds) : '—' }}
               </div>
               <div class="text-xs text-gray-500 dark:text-gray-400">
                 Время прохождения

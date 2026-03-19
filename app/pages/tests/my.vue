@@ -246,7 +246,7 @@
               <div class="flex items-start gap-4">
                 <div
                   :class="[
-                    'flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-xl',
+                    'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl',
                     getStatusBgClass(assignment),
                   ]"
                 >
@@ -908,12 +908,7 @@ const canTakeTest = (assignment) => {
 
 // Просмотр результатов
 const viewResults = (assignment) => {
-  // TODO: Страница результатов
-  showNotification(
-    "info",
-    "В разработке",
-    "Страница результатов находится в разработке"
-  );
+  navigateTo(`/tests/results/${assignment.id}`);
 };
 
 // Получение статуса

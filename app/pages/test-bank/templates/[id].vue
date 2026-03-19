@@ -1023,9 +1023,42 @@
 
           <!-- Sessions table -->
           <div v-else>
-            <h4 class="text-md font-medium text-black dark:text-white mb-4">
-              Последние прохождения
-            </h4>
+            <!-- Поиск и фильтр -->
+            <div class="flex flex-wrap items-center gap-3 mb-4">
+              <div class="relative flex-1 min-w-[200px]">
+                <svg
+                  class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  v-model="analyticsSearch"
+                  type="text"
+                  placeholder="Поиск по имени студента..."
+                  class="w-full pl-9 pr-4 py-2 rounded-lg border border-stroke dark:border-strokedark bg-transparent text-sm focus:outline-none focus:border-primary dark:text-white"
+                />
+              </div>
+              <select
+                v-model="analyticsFilter"
+                class="px-3 py-2 rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary"
+              >
+                <option value="all">Все</option>
+                <option value="passed">Сдали</option>
+                <option value="failed">Не сдали</option>
+              </select>
+              <span class="text-sm text-gray-500 dark:text-gray-400">
+                {{ filteredSessions.length }} из {{ analytics.sessions.length }}
+              </span>
+            </div>
+
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
@@ -1069,7 +1102,7 @@
                 </thead>
                 <tbody>
                   <tr
-                    v-for="session in analytics.sessions.slice(0, 20)"
+                    v-for="session in paginatedSessions"
                     :key="session.sessionId"
                     class="border-b border-stroke/50 dark:border-strokedark/50 hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
                   >
@@ -1148,8 +1181,74 @@
                       </button>
                     </td>
                   </tr>
+                  <tr v-if="filteredSessions.length === 0">
+                    <td colspan="7" class="py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+                      Нет записей, соответствующих фильтру
+                    </td>
+                  </tr>
                 </tbody>
               </table>
+            </div>
+
+            <!-- Пагинация -->
+            <div
+              v-if="analyticsTotalPages > 1"
+              class="flex items-center justify-between mt-4 pt-4 border-t border-stroke dark:border-strokedark"
+            >
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                Страница {{ analyticsPage }} из {{ analyticsTotalPages }}
+              </p>
+              <div class="flex items-center gap-2">
+                <button
+                  @click="analyticsPage = Math.max(1, analyticsPage - 1)"
+                  :disabled="analyticsPage === 1"
+                  class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                  :class="
+                    analyticsPage === 1
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4'
+                  "
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Пред.
+                </button>
+
+                <div class="flex items-center gap-1">
+                  <button
+                    v-for="page in paginationRange"
+                    :key="page"
+                    @click="typeof page === 'number' && (analyticsPage = page)"
+                    :class="[
+                      'w-8 h-8 rounded-lg text-sm font-medium transition-colors',
+                      typeof page !== 'number'
+                        ? 'cursor-default text-gray-400'
+                        : analyticsPage === page
+                        ? 'bg-primary text-white'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4',
+                    ]"
+                  >
+                    {{ page }}
+                  </button>
+                </div>
+
+                <button
+                  @click="analyticsPage = Math.min(analyticsTotalPages, analyticsPage + 1)"
+                  :disabled="analyticsPage === analyticsTotalPages"
+                  class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                  :class="
+                    analyticsPage === analyticsTotalPages
+                      ? 'text-gray-400 cursor-not-allowed'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4'
+                  "
+                >
+                  След.
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <!-- Question stats -->
@@ -1167,7 +1266,7 @@
               </h4>
               <div class="space-y-2">
                 <div
-                  v-for="(q, idx) in analytics.questionStats.slice(0, 10)"
+                  v-for="(q, idx) in analytics.questionStats"
                   :key="q.questionId"
                   class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-meta-4 rounded-lg"
                 >
@@ -1233,7 +1332,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 
 const route = useRoute();
 
@@ -1505,6 +1604,65 @@ const analytics = ref(null);
 const showSessionDetails = ref(false);
 const selectedSessionId = ref(null);
 
+// Поиск и пагинация в аналитике
+const analyticsSearch = ref('');
+const analyticsFilter = ref('all'); // 'all' | 'passed' | 'failed'
+const analyticsPage = ref(1);
+const analyticsPerPage = 15;
+
+// Фильтрованный список сессий
+const filteredSessions = computed(() => {
+  if (!analytics.value?.sessions) return [];
+  return analytics.value.sessions.filter((s) => {
+    const matchSearch = !analyticsSearch.value ||
+      s.studentName.toLowerCase().includes(analyticsSearch.value.toLowerCase()) ||
+      s.studentPinfl?.toLowerCase().includes(analyticsSearch.value.toLowerCase()) ||
+      s.groupCode?.toLowerCase().includes(analyticsSearch.value.toLowerCase());
+    const matchFilter =
+      analyticsFilter.value === 'all' ||
+      (analyticsFilter.value === 'passed' && s.passed) ||
+      (analyticsFilter.value === 'failed' && !s.passed);
+    return matchSearch && matchFilter;
+  });
+});
+
+// Сброс страницы при изменении фильтров
+watch([analyticsSearch, analyticsFilter], () => {
+  analyticsPage.value = 1;
+});
+
+// Пагинированный список
+const paginatedSessions = computed(() => {
+  const start = (analyticsPage.value - 1) * analyticsPerPage;
+  return filteredSessions.value.slice(start, start + analyticsPerPage);
+});
+
+// Общее количество страниц
+const analyticsTotalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredSessions.value.length / analyticsPerPage))
+);
+
+// Диапазон страниц для пагинации
+const paginationRange = computed(() => {
+  const total = analyticsTotalPages.value;
+  const current = analyticsPage.value;
+  const range = [];
+
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  range.push(1);
+  if (current > 3) range.push('...');
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+    range.push(i);
+  }
+  if (current < total - 2) range.push('...');
+  range.push(total);
+
+  return range;
+});
+
 // Загрузка аналитики
 const loadAnalytics = async () => {
   analyticsLoading.value = true;
@@ -1514,6 +1672,7 @@ const loadAnalytics = async () => {
     );
     if (response.success) {
       analytics.value = response;
+      analyticsPage.value = 1;
     } else {
       console.error("Ошибка загрузки аналитики:", response.message);
     }
