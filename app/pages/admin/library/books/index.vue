@@ -368,6 +368,27 @@
             </svg>
             Выдать доступ
           </UiButton>
+          <UiButton
+            @click="openBulkRevokeModal"
+            variant="danger"
+            class="flex items-center gap-2"
+            size="sm"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+              />
+            </svg>
+            Отозвать доступы
+          </UiButton>
           <button
             @click="clearSelection"
             class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
@@ -936,6 +957,104 @@
       @confirm="handleDelete"
       @cancel="closeDeleteModal"
     />
+
+    <!-- Модал подтверждения массового отзыва доступов -->
+    <UiModal
+      :is-open="isBulkRevokeModalOpen"
+      title="Отозвать все доступы"
+      size="md"
+      @close="closeBulkRevokeModal"
+    >
+      <div class="space-y-5">
+        <!-- Предупреждение -->
+        <div class="flex items-start gap-3 p-4 bg-danger/5 dark:bg-danger/10 rounded-lg border border-danger/20">
+          <svg
+            class="w-5 h-5 text-danger shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          <div>
+            <p class="font-medium text-danger">
+              Внимание! Необратимое действие
+            </p>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Будут удалены <strong>все записи доступа</strong> (пользователи, группы, роли) для
+              <strong>{{ selectedBookIds.size }}</strong>
+              {{ selectedBookIds.size === 1 ? 'выбранной книги' : 'выбранных книг' }}.
+              Пользователи сразу потеряют доступ к этим книгам.
+            </p>
+          </div>
+        </div>
+
+        <!-- Опция force -->
+        <label class="flex items-start gap-3 cursor-pointer group">
+          <input
+            v-model="bulkRevokeForce"
+            type="checkbox"
+            class="mt-0.5 rounded border-stroke text-danger focus:ring-danger"
+          />
+          <div>
+            <p class="text-sm font-medium text-gray-900 dark:text-white group-hover:text-danger transition-colors">
+              Принудительно закрыть активные сессии чтения
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Если не отмечено — книги с активными читателями будут пропущены
+            </p>
+          </div>
+        </label>
+
+        <!-- Кнопки -->
+        <div class="flex gap-3 pt-2">
+          <UiButton
+            @click="revokeBulkAccess"
+            variant="danger"
+            :disabled="bulkRevoking"
+            class="flex-1 flex items-center justify-center gap-2"
+          >
+            <span v-if="bulkRevoking" class="flex items-center gap-2">
+              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Отзыв доступов...
+            </span>
+            <span v-else class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+              Отозвать все доступы
+            </span>
+          </UiButton>
+          <UiButton
+            variant="secondary"
+            @click="closeBulkRevokeModal"
+            :disabled="bulkRevoking"
+          >
+            Отмена
+          </UiButton>
+        </div>
+      </div>
+    </UiModal>
   </div>
 </template>
 
@@ -1054,6 +1173,49 @@ const bulkRoles = [
   { id: "MANAGER", name: "Менеджер" },
   { id: "ADMIN", name: "Администратор" },
 ];
+
+// --- Массовый отзыв доступов ---
+const isBulkRevokeModalOpen = ref(false);
+const bulkRevoking = ref(false);
+const bulkRevokeForce = ref(false);
+
+const openBulkRevokeModal = () => {
+  isBulkRevokeModalOpen.value = true;
+  bulkRevokeForce.value = false;
+};
+
+const closeBulkRevokeModal = () => {
+  isBulkRevokeModalOpen.value = false;
+};
+
+const revokeBulkAccess = async () => {
+  bulkRevoking.value = true;
+  try {
+    const response = await $fetch("/api/library/admin/books/bulk-revoke", {
+      method: "DELETE",
+      body: {
+        bookIds: Array.from(selectedBookIds.value),
+        force: bulkRevokeForce.value,
+      },
+    }) as any;
+
+    toast.success(response.message || "Доступы успешно отозваны");
+
+    // Предупреждаем о пропущенных книгах (активные сессии без force)
+    const skipped = response.results?.filter((r: any) => !r.success) ?? [];
+    if (skipped.length > 0) {
+      skipped.forEach((r: any) => toast.error(`«${r.bookTitle}»: ${r.message}`));
+    }
+
+    closeBulkRevokeModal();
+    clearSelection();
+    fetchBooks();
+  } catch (error: any) {
+    toast.error(error.data?.message || "Ошибка при отзыве доступов");
+  } finally {
+    bulkRevoking.value = false;
+  }
+};
 
 const bulkAccessForm = ref({
   type: "role" as "user" | "group" | "role",
