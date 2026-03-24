@@ -288,6 +288,137 @@
         </div>
       </div>
 
+      <!-- Блок инструкторов -->
+      <div
+        v-if="groupInstructors.length > 0"
+        class="mb-6 rounded-xl bg-white dark:bg-boxdark shadow-md p-6"
+      >
+        <div class="flex items-center justify-between mb-5">
+          <div class="flex items-center gap-3">
+            <div
+              class="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center"
+            >
+              <svg
+                class="w-5 h-5 text-warning"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-black dark:text-white">
+                Инструкторы группы
+              </h3>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                {{ groupInstructors.length }}
+                {{
+                  groupInstructors.length === 1
+                    ? "инструктор"
+                    : groupInstructors.length < 5
+                      ? "инструктора"
+                      : "инструкторов"
+                }}
+                ведут занятия
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        >
+          <NuxtLink
+            v-for="instructor in groupInstructors"
+            :key="instructor.id"
+            :to="`/instructors/${instructor.id}`"
+            class="group flex flex-col gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-warning dark:hover:border-warning hover:shadow-md transition-all duration-200 bg-gray-50 dark:bg-gray-800/50"
+          >
+            <!-- Аватар + имя -->
+            <div class="flex items-center gap-3">
+              <div
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning/10 text-warning font-bold text-sm group-hover:bg-warning group-hover:text-white transition-colors"
+              >
+                {{ getInitials(instructor.fullName) }}
+              </div>
+              <div class="min-w-0">
+                <p
+                  class="font-semibold text-gray-900 dark:text-white text-sm truncate"
+                >
+                  {{ instructor.fullName }}
+                </p>
+                <p
+                  v-if="instructor.specialization"
+                  class="text-xs text-gray-500 dark:text-gray-400 truncate"
+                >
+                  {{ instructor.specialization }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Счётчик часов -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-gray-500 dark:text-gray-400"
+                  >Пройдено / Распределено</span
+                >
+                <span
+                  class="font-medium"
+                  :class="
+                    instructor.completedHours >= instructor.totalHours
+                      ? 'text-success'
+                      : 'text-warning'
+                  "
+                >
+                  {{ instructor.completedHours }} /
+                  {{ instructor.totalHours }} а-ч
+                </span>
+              </div>
+              <div
+                class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden"
+              >
+                <div
+                  class="h-full rounded-full transition-all duration-500"
+                  :class="
+                    instructor.hoursPercent >= 100
+                      ? 'bg-success'
+                      : instructor.hoursPercent >= 75
+                        ? 'bg-info'
+                        : instructor.hoursPercent >= 50
+                          ? 'bg-warning'
+                          : 'bg-danger'
+                  "
+                  :style="{
+                    width: `${Math.min(instructor.hoursPercent, 100)}%`,
+                  }"
+                ></div>
+              </div>
+              <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>{{ instructor.lessonsCount }} занятий</span>
+                <span
+                  class="px-1.5 py-0.5 rounded-full text-xs font-medium"
+                  :class="
+                    instructor.hoursPercent >= 100
+                      ? 'bg-success/10 text-success'
+                      : instructor.hoursPercent >= 50
+                        ? 'bg-warning/10 text-warning'
+                        : 'bg-danger/10 text-danger'
+                  "
+                >
+                  {{ instructor.hoursPercent }}%
+                </span>
+              </div>
+            </div>
+          </NuxtLink>
+        </div>
+      </div>
+
       <!-- Информация о группе, Курс и Отчеты -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <!-- Левая колонка: Информация + Учебная программа -->
@@ -1581,12 +1712,85 @@ const hoursProgressColor = computed(() => {
   return "bg-danger";
 });
 
+// Вычисление уникальных инструкторов с их статистикой часов
+const groupInstructors = computed(() => {
+  const now = new Date();
+  const academicHourMinutes = parseInt(
+    scheduleSettings.value.academic_hour_minutes || "40",
+    10,
+  );
+
+  const instructorMap = new Map<
+    string,
+    {
+      id: string;
+      fullName: string;
+      specialization?: string;
+      totalHours: number;
+      completedHours: number;
+      lessonsCount: number;
+    }
+  >();
+
+  for (const event of scheduleEvents.value) {
+    const instr = event.instructor;
+    if (!instr) continue;
+
+    const instrId = instr.id || instr.instructorId || String(instr.fullName || instr.name);
+    if (!instrId) continue;
+
+    // Академические часы занятия
+    let hours = 0;
+    if (event.academicHours) {
+      hours = event.academicHours;
+    } else if (event.durationMinutes) {
+      hours = Math.ceil(event.durationMinutes / academicHourMinutes);
+    } else if (event.startTime && event.endTime) {
+      const diff =
+        (new Date(event.endTime).getTime() -
+          new Date(event.startTime).getTime()) /
+        60000;
+      hours = Math.ceil(diff / academicHourMinutes);
+    }
+
+    const isCompleted = event.startTime && new Date(event.startTime) < now;
+
+    const existing = instructorMap.get(instrId) || {
+      id: instrId,
+      fullName: instr.fullName || instr.name || "Не указан",
+      specialization: instr.specialization || instr.position || undefined,
+      totalHours: 0,
+      completedHours: 0,
+      lessonsCount: 0,
+    };
+
+    existing.totalHours += hours;
+    if (isCompleted) existing.completedHours += hours;
+    existing.lessonsCount += 1;
+
+    instructorMap.set(instrId, existing);
+  }
+
+  return Array.from(instructorMap.values()).map((instr) => ({
+    ...instr,
+    completedHours: Math.round(instr.completedHours * 10) / 10,
+    totalHours: Math.round(instr.totalHours * 10) / 10,
+    hoursPercent:
+      instr.totalHours > 0
+        ? Math.min(
+            Math.round((instr.completedHours / instr.totalHours) * 100),
+            100,
+          )
+        : 0,
+  }));
+});
+
 // Load actions
 const loadSchedule = async (groupId: string) => {
   loadingSchedule.value = true;
   try {
     const response = await authFetch<{ success: boolean; events: any[] }>(
-      `/api/schedule?groupId=${groupId}&limit=100`,
+      `/api/schedule?groupId=${groupId}&limit=500`,
     );
     if (response.success && response.events) {
       scheduleEvents.value = response.events;

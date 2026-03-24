@@ -251,7 +251,7 @@
               Популярные курсы
             </h3>
           </div>
-          <NuxtLink to="/groups" class="text-sm text-primary hover:underline">
+          <NuxtLink to="/programs" class="text-sm text-primary hover:underline">
             Все курсы
           </NuxtLink>
         </div>
@@ -542,6 +542,45 @@
         </div>
       </div>
     </div>
+
+    <!-- Быстрые переходы -->
+    <div class="mt-6">
+      <h3 class="text-base font-semibold text-black dark:text-white mb-3">
+        Быстрые переходы
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <NuxtLink
+          v-for="action in quickActions"
+          :key="action.to"
+          :to="action.to"
+          class="flex items-center gap-3 p-4 rounded-lg bg-white dark:bg-boxdark border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary hover:shadow-md transition-all duration-200 group"
+        >
+          <div
+            class="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors"
+          >
+            <IconsUserGroupIcon
+              v-if="action.icon === 'usergroup'"
+              class="w-5 h-5 text-primary group-hover:text-white transition-colors"
+            />
+            <IconsArchiveIcon
+              v-else-if="action.icon === 'archive'"
+              class="w-5 h-5 text-primary group-hover:text-white transition-colors"
+            />
+            <IconsCertificateIcon
+              v-else-if="action.icon === 'certificate'"
+              class="w-5 h-5 text-primary group-hover:text-white transition-colors"
+            />
+            <IconsCalenderIcon
+              v-else
+              class="w-5 h-5 text-primary group-hover:text-white transition-colors"
+            />
+          </div>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary dark:group-hover:text-primary transition-colors">
+            {{ action.label }}
+          </span>
+        </NuxtLink>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -572,7 +611,7 @@ const currentDate = new Date().toLocaleDateString("ru-RU", {
 });
 
 const quickActions = [
-  { to: "/groups/create", label: "Создать группу", icon: "plus" },
+  { to: "/groups", label: "Все группы", icon: "usergroup" },
   { to: "/database/import", label: "Импорт студентов", icon: "archive" },
   { to: "/certificates", label: "Сертификаты", icon: "certificate" },
   { to: "/schedule", label: "Расписание", icon: "calendar" },

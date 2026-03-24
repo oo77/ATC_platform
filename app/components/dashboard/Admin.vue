@@ -259,7 +259,7 @@
               Топ инструкторов по часам
             </h3>
           </div>
-          <NuxtLink to="/programs" class="text-sm text-primary hover:underline">
+          <NuxtLink to="/users?tab=instructors" class="text-sm text-primary hover:underline">
             Все инструкторы
           </NuxtLink>
         </div>
@@ -596,6 +596,45 @@
       </div>
     </div>
 
+    <!-- Быстрые переходы -->
+    <div class="mb-6">
+      <h3 class="text-base font-semibold text-black dark:text-white mb-3">
+        Быстрые переходы
+      </h3>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <NuxtLink
+          v-for="action in quickActions"
+          :key="action.to"
+          :to="action.to"
+          class="flex items-center gap-3 p-4 rounded-lg bg-white dark:bg-boxdark border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary hover:shadow-md transition-all duration-200 group"
+        >
+          <div
+            class="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors"
+          >
+            <IconsUserGroupIcon
+              v-if="action.icon === 'usergroup'"
+              class="w-5 h-5 text-primary group-hover:text-white transition-colors"
+            />
+            <IconsAcademicCapIcon
+              v-else-if="action.icon === 'academic'"
+              class="w-5 h-5 text-primary group-hover:text-white transition-colors"
+            />
+            <IconsSettingsIcon
+              v-else-if="action.icon === 'settings'"
+              class="w-5 h-5 text-primary group-hover:text-white transition-colors"
+            />
+            <IconsListIcon
+              v-else
+              class="w-5 h-5 text-primary group-hover:text-white transition-colors"
+            />
+          </div>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary dark:group-hover:text-primary transition-colors">
+            {{ action.label }}
+          </span>
+        </NuxtLink>
+      </div>
+    </div>
+
     <!-- Последние действия -->
     <div
       class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden mb-6"
@@ -680,7 +719,7 @@ const currentDate = new Date().toLocaleDateString("ru-RU", {
 });
 
 const quickActions = [
-  { to: "/users/create", label: "Создать пользователя", icon: "plus" },
+  { to: "/users", label: "Пользователи", icon: "usergroup" },
   { to: "/programs/create", label: "Создать курс", icon: "academic" },
   { to: "/settings", label: "Настройки", icon: "settings" },
   { to: "/activity-logs", label: "Логи", icon: "list" },
