@@ -323,6 +323,61 @@
       </div>
     </div>
 
+    <!-- Панель массовых действий -->
+    <Transition name="slide-down">
+      <div
+        v-if="selectedBookIds.size > 0"
+        class="bg-primary/10 dark:bg-primary/20 border border-primary/30 rounded-xl px-6 py-4 mb-4 flex items-center gap-4 flex-wrap"
+      >
+        <div class="flex items-center gap-2">
+          <svg
+            class="w-5 h-5 text-primary"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span class="font-medium text-primary">
+            Выбрано книг: {{ selectedBookIds.size }}
+          </span>
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <UiButton
+            @click="openBulkAccessModal"
+            class="flex items-center gap-2"
+            size="sm"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+            Выдать доступ
+          </UiButton>
+          <button
+            @click="clearSelection"
+            class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+          >
+            Отменить выбор
+          </button>
+        </div>
+      </div>
+    </Transition>
+
     <!-- Список книг -->
     <div class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden">
       <div v-if="loading" class="p-12 text-center">
@@ -358,6 +413,16 @@
         <table class="w-full">
           <thead class="bg-gray-50 dark:bg-meta-4">
             <tr class="border-b border-stroke dark:border-strokedark">
+              <!-- Чекбокс "Выбрать все" -->
+              <th class="px-4 py-4 w-10">
+                <input
+                  type="checkbox"
+                  :checked="isAllSelected"
+                  :indeterminate="isSomeSelected"
+                  @change="toggleSelectAll"
+                  class="rounded border-stroke text-primary focus:ring-primary cursor-pointer"
+                />
+              </th>
               <th
                 class="px-4 py-4 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
               >
@@ -404,8 +469,21 @@
             <tr
               v-for="book in books"
               :key="book.id"
-              class="hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
+              :class="[
+                'hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors',
+                selectedBookIds.has(book.id) ? 'bg-primary/5 dark:bg-primary/10' : '',
+              ]"
             >
+              <!-- Чекбокс -->
+              <td class="px-4 py-3">
+                <input
+                  type="checkbox"
+                  :checked="selectedBookIds.has(book.id)"
+                  @change="toggleBookSelection(book.id)"
+                  class="rounded border-stroke text-primary focus:ring-primary cursor-pointer"
+                />
+              </td>
+
               <!-- Обложка -->
               <td class="px-4 py-3">
                 <div
@@ -687,6 +765,167 @@
       @close="closeAnalyticsModal"
     />
 
+    <!-- Модал массовой выдачи доступа -->
+    <UiModal
+      :is-open="isBulkAccessModalOpen"
+      title="Массовая выдача доступа"
+      size="md"
+      @close="closeBulkAccessModal"
+    >
+      <div class="space-y-5">
+        <!-- Информация о выбранных книгах -->
+        <div class="flex items-center gap-3 p-4 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20">
+          <svg
+            class="w-5 h-5 text-primary shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+            />
+          </svg>
+          <div>
+            <p class="font-medium text-gray-900 dark:text-white">
+              Выбрано книг: {{ selectedBookIds.size }}
+            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              Доступ будет выдан ко всем выбранным книгам
+            </p>
+          </div>
+        </div>
+
+        <!-- Тип доступа -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Тип доступа
+          </label>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                v-model="bulkAccessForm.type"
+                type="radio"
+                value="user"
+                class="text-primary focus:ring-primary"
+              />
+              <span class="text-sm text-gray-700 dark:text-gray-300">
+                Пользователь
+              </span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                v-model="bulkAccessForm.type"
+                type="radio"
+                value="group"
+                class="text-primary focus:ring-primary"
+              />
+              <span class="text-sm text-gray-700 dark:text-gray-300">
+                Группа
+              </span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                v-model="bulkAccessForm.type"
+                type="radio"
+                value="role"
+                class="text-primary focus:ring-primary"
+              />
+              <span class="text-sm text-gray-700 dark:text-gray-300">
+                Роль
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Выбор значения -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {{
+              bulkAccessForm.type === "user"
+                ? "Пользователь"
+                : bulkAccessForm.type === "group"
+                  ? "Группа"
+                  : "Роль"
+            }}
+          </label>
+          <select
+            v-model="bulkAccessForm.targetId"
+            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
+          >
+            <option value="">
+              {{
+                bulkAccessForm.type === "user"
+                  ? "Выберите пользователя"
+                  : bulkAccessForm.type === "group"
+                    ? "Выберите группу"
+                    : "Выберите роль"
+              }}
+            </option>
+            <template v-if="bulkAccessForm.type === 'user'">
+              <option v-for="u in bulkUsers" :key="u.id" :value="u.id">
+                {{ u.name }}
+              </option>
+            </template>
+            <template v-else-if="bulkAccessForm.type === 'group'">
+              <option v-for="g in bulkGroups" :key="g.id" :value="g.id">
+                {{ g.name }}
+              </option>
+            </template>
+            <template v-else-if="bulkAccessForm.type === 'role'">
+              <option v-for="r in bulkRoles" :key="r.id" :value="r.id">
+                {{ r.name }}
+              </option>
+            </template>
+          </select>
+          <p
+            v-if="!bulkAccessForm.targetId && bulkSubmitAttempted"
+            class="mt-1 text-xs text-danger"
+          >
+            Необходимо выбрать {{ bulkAccessForm.type === "user" ? "пользователя" : bulkAccessForm.type === "group" ? "группу" : "роль" }}
+          </p>
+        </div>
+
+        <!-- Кнопки -->
+        <div class="flex gap-3 pt-2">
+          <UiButton
+            @click="grantBulkAccess"
+            :disabled="!bulkAccessForm.targetId || bulkGranting"
+            class="flex-1 flex items-center justify-center gap-2"
+          >
+            <span v-if="bulkGranting" class="flex items-center gap-2">
+              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Назначение...
+            </span>
+            <span v-else>Выдать доступ</span>
+          </UiButton>
+          <UiButton
+            variant="secondary"
+            @click="closeBulkAccessModal"
+            :disabled="bulkGranting"
+          >
+            Отмена
+          </UiButton>
+        </div>
+      </div>
+    </UiModal>
+
     <UiConfirmModal
       :is-open="isDeleteModalOpen"
       title="Подтверждение удаления"
@@ -770,6 +1009,127 @@ const isDeleteModalOpen = ref(false);
 const isDeleting = ref(false);
 const selectedBook = ref<Book | null>(null);
 
+// --- Массовое выделение ---
+const selectedBookIds = ref<Set<string>>(new Set());
+
+const isAllSelected = computed(
+  () => books.value.length > 0 && selectedBookIds.value.size === books.value.length,
+);
+
+const isSomeSelected = computed(
+  () => selectedBookIds.value.size > 0 && selectedBookIds.value.size < books.value.length,
+);
+
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedBookIds.value = new Set();
+  } else {
+    selectedBookIds.value = new Set(books.value.map((b) => b.id));
+  }
+};
+
+const toggleBookSelection = (bookId: string) => {
+  const newSet = new Set(selectedBookIds.value);
+  if (newSet.has(bookId)) {
+    newSet.delete(bookId);
+  } else {
+    newSet.add(bookId);
+  }
+  selectedBookIds.value = newSet;
+};
+
+const clearSelection = () => {
+  selectedBookIds.value = new Set();
+};
+
+// --- Массовая выдача доступа ---
+const isBulkAccessModalOpen = ref(false);
+const bulkGranting = ref(false);
+const bulkSubmitAttempted = ref(false);
+const bulkUsers = ref<{ id: string; name: string }[]>([]);
+const bulkGroups = ref<{ id: number; name: string }[]>([]);
+const bulkRoles = [
+  { id: "STUDENT", name: "Слушатель" },
+  { id: "TEACHER", name: "Преподаватель" },
+  { id: "MANAGER", name: "Менеджер" },
+  { id: "ADMIN", name: "Администратор" },
+];
+
+const bulkAccessForm = ref({
+  type: "role" as "user" | "group" | "role",
+  targetId: "",
+});
+
+const openBulkAccessModal = async () => {
+  isBulkAccessModalOpen.value = true;
+  bulkSubmitAttempted.value = false;
+  bulkAccessForm.value = { type: "role", targetId: "" };
+  await fetchBulkUsersAndGroups();
+};
+
+const closeBulkAccessModal = () => {
+  isBulkAccessModalOpen.value = false;
+  bulkSubmitAttempted.value = false;
+};
+
+const fetchBulkUsersAndGroups = async () => {
+  try {
+    const [usersRes, groupsRes] = await Promise.all([
+      $fetch("/api/users"),
+      $fetch("/api/groups"),
+    ]);
+    bulkUsers.value = (usersRes as any).users.map((u: any) => ({
+      id: u.id,
+      name: `${u.name} (${u.email})`,
+    }));
+    bulkGroups.value = (groupsRes as any).groups.map((g: any) => ({
+      id: g.id,
+      name: g.name,
+    }));
+  } catch (error) {
+    console.error("Ошибка загрузки пользователей/групп:", error);
+  }
+};
+
+const grantBulkAccess = async () => {
+  bulkSubmitAttempted.value = true;
+
+  if (!bulkAccessForm.value.targetId) {
+    toast.error("Необходимо выбрать получателя доступа");
+    return;
+  }
+
+  bulkGranting.value = true;
+  try {
+    const body: Record<string, any> = {
+      bookIds: Array.from(selectedBookIds.value),
+      type: bulkAccessForm.value.type,
+    };
+
+    if (bulkAccessForm.value.type === "user") {
+      body.userId = bulkAccessForm.value.targetId;
+    } else if (bulkAccessForm.value.type === "group") {
+      body.groupId = Number(bulkAccessForm.value.targetId);
+    } else if (bulkAccessForm.value.type === "role") {
+      body.roleName = bulkAccessForm.value.targetId;
+    }
+
+    const response = await $fetch("/api/library/admin/books/bulk-access", {
+      method: "POST",
+      body,
+    }) as any;
+
+    toast.success(response.message || "Доступ успешно назначен");
+    closeBulkAccessModal();
+    clearSelection();
+    fetchBooks();
+  } catch (error: any) {
+    toast.error(error.data?.message || "Ошибка при массовом назначении доступа");
+  } finally {
+    bulkGranting.value = false;
+  }
+};
+
 // Computed
 const hasActiveFilters = computed(() => {
   return filters.value.search || filters.value.status || filters.value.language;
@@ -795,6 +1155,13 @@ const fetchBooks = async () => {
     books.value = response.books;
     pagination.value.total = response.total;
     stats.value = response.stats;
+
+    // Снимаем выделение с книг, которые больше не в списке
+    const currentIds = new Set(response.books.map((b) => b.id));
+    const newSelected = new Set(
+      Array.from(selectedBookIds.value).filter((id) => currentIds.has(id)),
+    );
+    selectedBookIds.value = newSelected;
   } catch (error: any) {
     toast.error(error.data?.message || "Ошибка загрузки книг");
   } finally {
@@ -945,3 +1312,26 @@ onMounted(() => {
   fetchBooks();
 });
 </script>
+
+<style scoped>
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+  opacity: 1;
+  max-height: 100px;
+}
+</style>

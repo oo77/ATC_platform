@@ -1,4 +1,4 @@
-﻿import { defineEventHandler, createError } from "h3";
+import { defineEventHandler, createError } from "h3";
 import { requireAuth } from "../../../utils/auth";
 import { executeQuery } from "../../../utils/db";
 import * as libraryRepository from "../../../repositories/libraryRepository";
@@ -74,10 +74,13 @@ export default defineEventHandler(async (event) => {
     );
     const progress = progressResult[0] || null;
 
-    // Получение информации о доступе
+    // Получение информации о доступе (персональный приоритетнее ролевого)
     const accessInfoResult = await executeQuery<any[]>(
-      "SELECT granted_at, expires_at FROM book_access WHERE book_id = ? AND user_id = ? LIMIT 1",
-      [bookId, user.id],
+      `SELECT granted_at, expires_at FROM book_access 
+       WHERE book_id = ? AND (user_id = ? OR role_name = ?)
+       ORDER BY CASE WHEN user_id = ? THEN 0 ELSE 1 END
+       LIMIT 1`,
+      [bookId, user.id, user.role, user.id],
     );
     const accessInfo = accessInfoResult[0] || null;
 

@@ -81,9 +81,9 @@ export default defineEventHandler(async (event) => {
                         `INSERT INTO grades (id, student_id, schedule_event_id, grade, is_from_test, test_session_id, created_at, updated_at)
            VALUES (?, ?, ?, ?, TRUE, ?, ?, ?)
            ON DUPLICATE KEY UPDATE 
-             grade = IF(is_modified = FALSE, VALUES(grade), grade),
+             grade = IF(is_modified = FALSE AND VALUES(grade) > grade, VALUES(grade), grade),
              is_from_test = TRUE,
-             test_session_id = IF(test_session_id IS NULL, VALUES(test_session_id), test_session_id),
+             test_session_id = IF(is_modified = FALSE AND VALUES(grade) > grade, VALUES(test_session_id), test_session_id),
              updated_at = VALUES(updated_at)`,
                         [
                             gradeId,

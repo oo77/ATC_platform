@@ -33,6 +33,7 @@ import * as addPublishedAtToBooks from "./migrations/20260304_022_add_published_
 import * as reportBuilder from "./migrations/20260305_023_report_builder";
 import * as trainingRequests from "./migrations/20260310_024_training_requests";
 import * as fixTestingSystemSchema from "./migrations/20260317_025_fix_testing_system_schema";
+import * as gradesTestColumns from "./migrations/20260319_026_grades_test_columns";
 
 /**
  * ============================================================================
@@ -281,6 +282,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: fixTestingSystemSchema.up,
     down: fixTestingSystemSchema.down,
     description: fixTestingSystemSchema.description,
+  },
+  // ============================================================
+  // Миграция 026: Add test-related columns to grades table
+  // ============================================================
+  {
+    name: "20260319_026_grades_test_columns",
+    up: gradesTestColumns.up,
+    down: gradesTestColumns.down,
+    description: gradesTestColumns.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже
