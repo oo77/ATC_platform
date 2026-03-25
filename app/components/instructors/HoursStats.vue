@@ -356,6 +356,96 @@
           </p>
         </div>
       </div>
+
+      <!-- Program and Discipline Breakdown Table -->
+      <div
+        class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 overflow-hidden mt-8"
+      >
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h4 class="font-semibold text-gray-900 dark:text-white">
+            Вовлеченность по программам и дисциплинам
+          </h4>
+        </div>
+
+        <div
+          v-if="hoursStats && hoursStats.byDiscipline.length > 0"
+          class="overflow-x-auto"
+        >
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 dark:bg-gray-700/50">
+                <th
+                  class="py-3 px-6 text-left font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Программа (Курс)
+                </th>
+                <th
+                  class="py-3 px-6 text-left font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Дисциплина
+                </th>
+                <th
+                  class="py-3 px-6 text-right font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Всего занятий
+                </th>
+                <th
+                  class="py-3 px-6 text-right font-medium text-gray-600 dark:text-gray-400"
+                >
+                  Академ. часы
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+              <tr
+                v-for="(item, index) in hoursStats.byDiscipline"
+                :key="index"
+                class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              >
+                <td class="py-4 px-6 font-medium text-gray-900 dark:text-white">
+                  {{ item.courseName || "—" }}
+                </td>
+                <td class="py-4 px-6 text-gray-600 dark:text-gray-400">
+                  {{ item.disciplineName || "—" }}
+                </td>
+                <td
+                  class="py-4 px-6 text-right text-gray-600 dark:text-gray-400"
+                >
+                  {{ item.eventCount }}
+                </td>
+                <td
+                  class="py-4 px-6 text-right font-bold text-gray-900 dark:text-white"
+                >
+                  {{ item.totalHours.toFixed(1) }} ч.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div v-else class="p-8 text-center bg-gray-50 dark:bg-gray-800/50">
+          <div
+            class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 mb-3"
+          >
+            <svg
+              class="w-6 h-6 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              />
+            </svg>
+          </div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            Нет данных по дисциплинам
+          </p>
+        </div>
+      </div>
     </div>
 
     <!-- Initial State (Click to load) -->
@@ -434,6 +524,14 @@ interface HoursStats {
     scheduledHours: number;
     eventCount: number;
   }[];
+  byDiscipline: {
+    courseId: string | null;
+    courseName: string | null;
+    disciplineId: string | null;
+    disciplineName: string | null;
+    totalHours: number;
+    eventCount: number;
+  }[];
 }
 
 const hoursStats = ref<HoursStats | null>(null);
@@ -449,7 +547,7 @@ const loadHoursStats = async () => {
 
   try {
     const response = await authFetch<{ success: boolean; stats: HoursStats }>(
-      `/api/instructors/${props.instructorId}/hours`
+      `/api/instructors/${props.instructorId}/hours`,
     );
 
     if (response.success) {
@@ -491,7 +589,7 @@ const filteredSummary = computed(() => {
   const usedHours = months.reduce((acc, curr) => acc + curr.usedHours, 0);
   const scheduledHours = months.reduce(
     (acc, curr) => acc + curr.scheduledHours,
-    0
+    0,
   );
   return {
     usedHours: Number(usedHours.toFixed(1)),

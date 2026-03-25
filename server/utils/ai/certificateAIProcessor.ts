@@ -229,7 +229,16 @@ export class CertificateAIProcessor {
   }
 
   private static parseAIResponse(completion: any) {
+    if (!completion || !completion.choices || completion.choices.length === 0) {
+      console.error("❌ Неожиданный ответ от API:", JSON.stringify(completion));
+      throw new Error("Неверный формат ответа от AI провайдера: отсутствует свойство choices");
+    }
+
     const responseText = completion.choices[0]?.message?.content?.trim();
+    if (!responseText) {
+      throw new Error("Пустой ответ от AI провайдера");
+    }
+
     const tokensUsed: TokenUsage = {
       prompt: completion.usage?.prompt_tokens || 0,
       completion: completion.usage?.completion_tokens || 0,
@@ -255,6 +264,7 @@ export class CertificateAIProcessor {
         tokensUsed,
       };
     } catch (e) {
+      console.error("❌ Ошибка парсинга JSON:", responseText);
       throw new Error("Не удалось распознать JSON от AI");
     }
   }

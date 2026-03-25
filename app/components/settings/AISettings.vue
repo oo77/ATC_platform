@@ -317,36 +317,23 @@
         <!-- Recent Errors -->
         <div
           v-if="stats?.recentErrors && stats.recentErrors.length > 0"
-          class="rounded-lg border border-danger/30 bg-danger/5 p-4 dark:border-danger/30"
+          class="rounded-lg border border-danger/30 bg-danger/5 p-4 flex items-center justify-between dark:border-danger/30"
         >
-          <h4 class="flex items-center gap-2 font-medium text-danger mb-3">
-            <AlertTriangle class="h-5 w-5" />
-            Недавние ошибки API
-          </h4>
-          <div class="space-y-2">
-            <div
-              v-for="error in stats.recentErrors.slice(0, 5)"
-              :key="error.id"
-              class="rounded-lg bg-white p-3 dark:bg-gray-800 border border-danger/20"
-            >
-              <div class="flex items-start justify-between">
-                <div>
-                  <p class="font-medium text-gray-900 dark:text-white">
-                    {{ getErrorTypeLabel(error.errorType) }}
-                    <span class="text-xs text-gray-500 ml-2">{{
-                      error.errorCode
-                    }}</span>
-                  </p>
-                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {{ error.errorMessage }}
-                  </p>
-                </div>
-                <span class="text-xs text-gray-500">{{
-                  formatDate(error.createdAt)
-                }}</span>
-              </div>
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-danger/20">
+              <AlertTriangle class="h-5 w-5 text-danger" />
+            </div>
+            <div>
+              <h4 class="font-medium text-gray-900 dark:text-white">Лог ошибок API</h4>
+              <p class="text-sm text-danger">Зафиксировано {{ stats.recentErrors.length }} недавних ошибок</p>
             </div>
           </div>
+          <button
+            @click="showErrorsModal = true"
+            class="inline-flex items-center gap-2 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white transition hover:bg-danger/90"
+          >
+            Открыть журнал
+          </button>
         </div>
 
         <!-- Usage by Model Chart -->
@@ -391,7 +378,7 @@
     <!-- Add/Edit Modal -->
     <Teleport to="body">
       <div
-        v-if="isModalOpen"
+        v-if="showAddModal || !!editingSettings"
         @click="closeModal"
         class="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 p-4"
       >
@@ -650,6 +637,56 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Errors Log Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showErrorsModal"
+        @click="closeModal"
+        class="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 p-4"
+      >
+        <div
+          @click.stop
+          class="w-full max-w-3xl rounded-xl bg-white p-6 shadow-2xl dark:bg-boxdark mx-auto max-h-[90vh] flex flex-col"
+        >
+          <div class="flex items-center justify-between mb-6 shrink-0 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <h3 class="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <AlertTriangle class="h-6 w-6 text-danger" />
+              Журнал ошибок API
+            </h3>
+            <button
+              @click="closeModal"
+              class="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <X class="h-5 w-5" />
+            </button>
+          </div>
+
+          <div class="overflow-y-auto pr-2 space-y-3">
+            <div
+              v-for="error in stats?.recentErrors"
+              :key="error.id"
+              class="rounded-lg border border-danger/20 bg-danger/5 p-4 dark:bg-danger/10"
+            >
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                    {{ getErrorTypeLabel(error.errorType) }}
+                    <span class="rounded bg-white border border-gray-200 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400 font-mono">{{ error.errorCode }}</span>
+                  </p>
+                  <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 wrap-break-word whitespace-pre-wrap">
+                    {{ error.errorMessage }}
+                  </p>
+                </div>
+                <span class="text-xs font-medium text-gray-500 whitespace-nowrap ml-4 mt-0.5">
+                  {{ formatDate(error.createdAt) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -725,6 +762,7 @@ const testingId = ref<string | null>(null);
 const settings = ref<AISetting[]>([]);
 const stats = ref<AIStats | null>(null);
 const showAddModal = ref(false);
+const showErrorsModal = ref(false);
 const editingSettings = ref<AISetting | null>(null);
 const errorMessage = ref<string | null>(null);
 
@@ -735,7 +773,7 @@ const form = ref({
   apiKey: "",
   baseUrl: "",
   visionModel: "openai/gpt-4o",
-  textModel: "openai/gpt-3.5-turbo",
+  textModel: "openai/gpt-4o-mini",
   maxTokens: 1500,
   temperature: 0.1,
   dailyBudgetUsd: null as number | null,
@@ -746,7 +784,7 @@ const form = ref({
 
 // Computed
 const isModalOpen = computed(
-  () => showAddModal.value || !!editingSettings.value,
+  () => showAddModal.value || !!editingSettings.value || showErrorsModal.value,
 );
 
 const maxTokensUsage = computed(() => {
@@ -815,8 +853,8 @@ const loadSettings = async () => {
   loading.value = true;
   try {
     const [settingsRes, statsRes] = await Promise.all([
-      $fetch<any>("/api/admin/ai-settings"),
-      $fetch<any>("/api/admin/ai-settings/stats"),
+      ($fetch as any)("/api/admin/ai-settings"),
+      ($fetch as any)("/api/admin/ai-settings/stats"),
     ]);
 
     settings.value = (settingsRes as any).data || [];
@@ -835,7 +873,7 @@ const loadSettings = async () => {
 const testConnection = async (setting: AISetting) => {
   testingId.value = setting.id;
   try {
-    const res = await $fetch("/api/admin/ai-settings/test", {
+    const res = await ($fetch as any)("/api/admin/ai-settings/test", {
       method: "POST",
       body: { settingId: setting.id },
     });
@@ -883,7 +921,7 @@ const editSetting = (setting: AISetting) => {
 
 const setDefault = async (setting: AISetting) => {
   try {
-    await $fetch(`/api/admin/ai-settings/${setting.id}`, {
+    await ($fetch as any)(`/api/admin/ai-settings/${setting.id}`, {
       method: "PUT",
       body: { isDefault: true },
     });
@@ -904,7 +942,7 @@ const deleteSetting = async (setting: AISetting) => {
   if (!confirm("Вы уверены, что хотите удалить эту настройку?")) return;
 
   try {
-    await $fetch(`/api/admin/ai-settings/${setting.id}`, {
+    await ($fetch as any)(`/api/admin/ai-settings/${setting.id}`, {
       method: "DELETE",
     });
     showNotification({
@@ -922,6 +960,7 @@ const deleteSetting = async (setting: AISetting) => {
 
 const closeModal = () => {
   showAddModal.value = false;
+  showErrorsModal.value = false;
   editingSettings.value = null;
   errorMessage.value = null;
   resetForm();
@@ -934,7 +973,7 @@ const resetForm = () => {
     apiKey: "",
     baseUrl: "",
     visionModel: "openai/gpt-4o",
-    textModel: "openai/gpt-3.5-turbo",
+    textModel: "openai/gpt-4o-mini",
     maxTokens: 1500,
     temperature: 0.1,
     dailyBudgetUsd: null,
@@ -978,7 +1017,7 @@ const saveSettings = async () => {
     }
 
     if (editingSettings.value) {
-      await $fetch(`/api/admin/ai-settings/${editingSettings.value.id}`, {
+      await ($fetch as any)(`/api/admin/ai-settings/${editingSettings.value.id}`, {
         method: "PUT",
         body: payload,
       });
@@ -992,7 +1031,7 @@ const saveSettings = async () => {
         saving.value = false;
         return;
       }
-      await $fetch("/api/admin/ai-settings", {
+      await ($fetch as any)("/api/admin/ai-settings", {
         method: "POST",
         body: { ...payload, apiKey: form.value.apiKey },
       });

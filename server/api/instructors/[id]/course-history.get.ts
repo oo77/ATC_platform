@@ -55,6 +55,11 @@ interface CourseHistoryEvent {
 export default defineEventHandler(async (event) => {
   try {
     const instructorId = getRouterParam(event, "id");
+    const query = getQuery(event);
+
+    const page = parseInt(query.page as string) || 1;
+    const limit = parseInt(query.limit as string) || 10;
+    const offset = (page - 1) * limit;
 
     if (!instructorId) {
       throw createError({
@@ -79,7 +84,34 @@ export default defineEventHandler(async (event) => {
     // Получаем длительность академического часа из настроек
     const academicHourMinutes = await getAcademicHourMinutes();
 
-    // Получаем историю занятий инструктора с агрегированной статистикой
+    // 1. Получаем глобальную статистику и общее количество (для пагинации)
+    const statsSql = `
+      SELECT 
+        COUNT(se.id) as total_events,
+        SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / ?))) as total_hours,
+        SUM(IF(se.event_type = 'theory', 1, 0)) as theory_events,
+        SUM(IF(se.event_type = 'practice', 1, 0)) as practice_events,
+        SUM(IF(se.event_type = 'assessment', 1, 0)) as assessment_events
+      FROM schedule_events se
+      WHERE se.instructor_id = ?
+        AND se.end_time < NOW()
+    `;
+    const [statsResult] = await executeQuery<RowDataPacket[]>(statsSql, [
+      academicHourMinutes,
+      instructorId,
+    ]);
+    const globalStats = statsResult || {
+      total_events: 0,
+      total_hours: 0,
+      theory_events: 0,
+      practice_events: 0,
+      assessment_events: 0
+    };
+    
+    const totalItems = Number(globalStats.total_events || 0);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // 2. Получаем историю занятий на текущей странице с агрегированной статистикой
     const sql = `
       SELECT 
         se.id as event_id,
@@ -111,12 +143,14 @@ export default defineEventHandler(async (event) => {
         se.id, se.title, se.start_time, se.end_time, se.event_type,
         sg.id, sg.code, c.name, d.name
       ORDER BY se.start_time DESC
-      LIMIT 100
+      LIMIT ? OFFSET ?
     `;
 
     const rows = await executeQuery<CourseHistoryRow[]>(sql, [
       academicHourMinutes,
       instructorId,
+      limit,
+      offset,
     ]);
 
     // Форматируем результаты
@@ -168,14 +202,16 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       history,
+      total: totalItems,
+      page,
+      limit,
+      totalPages,
       summary: {
-        totalEvents: history.length,
-        totalHours: history.reduce((sum, e) => sum + e.academicHours, 0),
-        theoryEvents: history.filter((e) => e.eventType === "theory").length,
-        practiceEvents: history.filter((e) => e.eventType === "practice")
-          .length,
-        assessmentEvents: history.filter((e) => e.eventType === "assessment")
-          .length,
+        totalEvents: Number(globalStats.total_events || 0),
+        totalHours: Math.round(Number(globalStats.total_hours || 0) * 10) / 10,
+        theoryEvents: Number(globalStats.theory_events || 0),
+        practiceEvents: Number(globalStats.practice_events || 0),
+        assessmentEvents: Number(globalStats.assessment_events || 0),
       },
     };
   } catch (error: any) {

@@ -666,7 +666,7 @@ export const aiSettingsRepository = {
 
     const errorCount24h = await this.getErrorCount24h();
     const errorsByType = await this.getErrorsByType();
-    const recentErrors = await this.getRecentErrors(5);
+    const recentErrors = await this.getRecentErrors(50);
 
     return {
       totalSettings: stats.total_settings || 0,

@@ -4,7 +4,7 @@
   >
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-        История курсов
+        История проведенных занятий
       </h3>
       <button
         v-if="courseHistory.length === 0 && !loading && !error"
@@ -40,67 +40,101 @@
           <thead>
             <tr class="border-b border-gray-200 dark:border-gray-700">
               <th
-                class="py-2 px-3 text-left font-medium text-gray-600 dark:text-gray-400"
+                class="py-3 px-3 text-left font-medium text-gray-900 dark:text-gray-300"
               >
-                Курс
+                Занятие / Дисциплина
               </th>
               <th
-                class="py-2 px-3 text-left font-medium text-gray-600 dark:text-gray-400"
+                class="py-3 px-3 text-left font-medium text-gray-900 dark:text-gray-300"
               >
-                Группа
+                Группа / Курс
               </th>
               <th
-                class="py-2 px-3 text-left font-medium text-gray-600 dark:text-gray-400"
+                class="py-3 px-3 text-left font-medium text-gray-900 dark:text-gray-300"
               >
-                Период
+                Дата и время
               </th>
               <th
-                class="py-2 px-3 text-right font-medium text-gray-600 dark:text-gray-400"
+                class="py-3 px-3 text-center font-medium text-gray-900 dark:text-gray-300"
               >
-                Отработано
+                Тип
               </th>
               <th
-                class="py-2 px-3 text-center font-medium text-gray-600 dark:text-gray-400"
+                class="py-3 px-3 text-right font-medium text-gray-900 dark:text-gray-300"
               >
-                Статус
+                Часы
+              </th>
+              <th
+                class="py-3 px-3 text-center font-medium text-gray-900 dark:text-gray-300"
+              >
+                Прогресс / Посещаемость
               </th>
             </tr>
           </thead>
           <tbody>
             <tr
-              v-for="course in courseHistory"
-              :key="course.id"
+              v-for="event in courseHistory"
+              :key="event.id"
               class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
             >
-              <td class="py-2 px-3 font-medium text-gray-900 dark:text-white">
-                {{ course.name }}
+              <td class="py-3 px-3">
+                <p class="font-medium text-black dark:text-white">{{ event.title || event.discipline?.name }}</p>
+                <p class="text-xs text-gray-500" v-if="event.title && event.discipline?.name">{{ event.discipline.name }}</p>
               </td>
-              <td class="py-2 px-3 text-gray-600 dark:text-gray-400">
-                {{ course.groupName }}
+              <td class="py-3 px-3">
+                <p class="font-medium text-black dark:text-white">{{ event.group?.code || '—' }}</p>
+                <p class="text-xs text-gray-500 line-clamp-1" :title="event.group?.courseName">{{ event.group?.courseName || '—' }}</p>
               </td>
-              <td class="py-2 px-3 text-gray-600 dark:text-gray-400">
-                {{ formatDate(course.startDate) }} -
-                {{ formatDate(course.endDate) }}
+              <td class="py-3 px-3 text-gray-600 dark:text-gray-400">
+                <div class="flex flex-col">
+                  <span class="font-medium">{{ formatDate(event.date) }}</span>
+                  <span class="text-xs">{{ formatTime(event.startTime) }} - {{ formatTime(event.endTime) }}</span>
+                </div>
               </td>
-              <td class="py-2 px-3 text-right">
-                <span class="font-medium">{{ course.hoursWorked }} ч.</span>
-              </td>
-              <td class="py-2 px-3 text-center">
+              <td class="py-3 px-3 text-center">
                 <span
                   class="inline-flex rounded-full px-2 py-1 text-xs font-semibold"
                   :class="{
-                    'bg-success/10 text-success': course.status === 'completed',
-                    'bg-primary/10 text-primary': course.status === 'active',
-                    'bg-warning/10 text-warning': course.status === 'upcoming',
+                    'bg-primary/10 text-primary': event.eventType === 'theory',
+                    'bg-warning/10 text-warning': event.eventType === 'practice',
+                    'bg-danger/10 text-danger': event.eventType === 'assessment',
+                    'bg-gray-100 text-gray-600': event.eventType === 'other'
                   }"
                 >
-                  {{ formatStatus(course.status) }}
+                  {{ formatEventType(event.eventType) }}
                 </span>
+              </td>
+              <td class="py-3 px-3 text-right">
+                <span class="font-bold text-black dark:text-white">{{ event.academicHours }} ч.</span>
+              </td>
+              <td class="py-3 px-3 text-center">
+                <div class="flex items-center justify-center gap-2">
+                  <div class="h-2 w-16 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
+                    <div 
+                      class="h-full rounded-full" 
+                      :class="event.statistics?.completionPercent === 100 ? 'bg-success' : 'bg-primary'"
+                      :style="{ width: `${event.statistics?.completionPercent || 0}%` }"
+                    ></div>
+                  </div>
+                  <span class="text-xs font-medium">{{ event.statistics?.completionPercent || 0 }}%</span>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+      
+      <!-- Пагинация -->
+      <UiPagination
+        v-if="pagination.totalPages > 0"
+        :current-page="pagination.page"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        :loading="loading"
+        @update:page="handlePageChange"
+        @update:limit="handleLimitChange"
+      />
     </div>
 
     <!-- Initial / Empty State -->
@@ -123,7 +157,7 @@
         </svg>
       </div>
       <p class="text-gray-600 dark:text-gray-400 mb-3">
-        История курсов пуста или не загружена
+        История занятий пуста или не загружена
       </p>
       <button
         @click="loadCourseHistory"
@@ -145,19 +179,43 @@ const props = defineProps<{
 
 const { authFetch } = useAuthFetch();
 
-interface CourseHistoryItem {
+interface CourseHistoryEvent {
   id: string;
-  name: string;
-  groupName: string;
-  startDate: string;
-  endDate: string;
-  hoursWorked: number;
-  status: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  eventType: "theory" | "practice" | "assessment" | "other";
+  academicHours: number;
+  group: {
+    id: string;
+    code: string;
+    courseName: string;
+  };
+  discipline: {
+    name: string;
+  };
+  statistics: {
+    totalStudents: number;
+    studentsMarked: number;
+    studentsGraded: number;
+    avgAttendanceHours: number;
+    avgGrade: number | null;
+    completionPercent: number;
+  };
 }
 
-const courseHistory = ref<CourseHistoryItem[]>([]);
+const courseHistory = ref<CourseHistoryEvent[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
+
+// Пагинация
+const pagination = ref({
+  page: 1,
+  limit: 10,
+  total: 0,
+  totalPages: 0,
+});
 
 const loadCourseHistory = async () => {
   if (!props.instructorId) return;
@@ -166,13 +224,25 @@ const loadCourseHistory = async () => {
   error.value = null;
 
   try {
+    const params = new URLSearchParams();
+    params.append('page', pagination.value.page.toString());
+    params.append('limit', pagination.value.limit.toString());
+
     const response = await authFetch<{
       success: boolean;
-      history: CourseHistoryItem[];
-    }>(`/api/instructors/${props.instructorId}/course-history`);
+      history: CourseHistoryEvent[];
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    }>(`/api/instructors/${props.instructorId}/course-history?${params.toString()}`);
 
     if (response.success) {
       courseHistory.value = response.history;
+      pagination.value.total = response.total || 0;
+      pagination.value.totalPages = response.totalPages || 0;
+      pagination.value.page = response.page || 1;
+      pagination.value.limit = response.limit || 10;
     }
   } catch (err: any) {
     console.error("Error loading course history:", err);
@@ -182,19 +252,38 @@ const loadCourseHistory = async () => {
   }
 };
 
+const handlePageChange = (page: number) => {
+  pagination.value.page = page;
+  loadCourseHistory();
+};
+
+const handleLimitChange = (limit: number) => {
+  pagination.value.limit = limit;
+  pagination.value.page = 1;
+  loadCourseHistory();
+};
+
 const formatDate = (dateStr: string) => {
   if (!dateStr) return "-";
   return new Date(dateStr).toLocaleDateString("ru-RU");
 };
 
-const formatStatus = (status: string) => {
+const formatTime = (timeStr: string) => {
+  if (!timeStr) return "";
+  return new Date(timeStr).toLocaleTimeString("ru-RU", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+};
+
+const formatEventType = (type: string) => {
   const map: Record<string, string> = {
-    active: "Активен",
-    completed: "Завершен",
-    upcoming: "Скоро",
-    archived: "В архиве",
+    theory: "Теория",
+    practice: "Практика",
+    assessment: "Проверка знаний",
+    other: "Другое",
   };
-  return map[status] || status;
+  return map[type] || type;
 };
 
 onMounted(() => {

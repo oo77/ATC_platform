@@ -29,8 +29,7 @@
       <!-- Профиль Header -->
       <div class="mb-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white shadow-md dark:bg-boxdark">
         <!-- Cover Image -->
-        <div class="relative h-48 overflow-hidden rounded-t-lg bg-linear-to-r from-primary to-primary-600">
-          <div class="absolute inset-0 bg-black/10"></div>
+        <div class="relative h-48 overflow-hidden rounded-t-lg bg-primary/10 dark:bg-boxdark-2">
         </div>
 
         <!-- Profile Info -->

@@ -42,12 +42,14 @@
           type="text"
           placeholder="Поиск по ФИО, email, телефону..."
           class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+          @input="debouncedFetch"
         />
       </div>
       <div class="sm:w-48">
         <select
           v-model="statusFilter"
           class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+          @change="handleFilterChange"
         >
           <option value="all">Все статусы</option>
           <option value="active">Активные</option>
@@ -57,10 +59,21 @@
     </div>
 
     <!-- Таблица инструкторов -->
-    <div class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark">
+    <div class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark overflow-hidden">
       <UsersInstructorTable
-        :instructors="filteredInstructors"
+        :instructors="instructors"
         :loading="loading"
+      />
+      <!-- Пагинация -->
+      <UiPagination
+        v-if="pagination.totalPages > 0"
+        :current-page="pagination.page"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        :loading="loading"
+        @update:page="handlePageChange"
+        @update:limit="handleLimitChange"
       />
     </div>
 
@@ -75,8 +88,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import type { Instructor } from '~/types/instructor';
+
+const { authFetch } = useAuthFetch();
+
+// Тип ответа
+interface InstructorsResponse {
+  success: boolean;
+  instructors: Instructor[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 // Состояние
 const loading = ref(false);
@@ -86,53 +111,77 @@ const statusFilter = ref('all');
 const showModal = ref(false);
 const selectedInstructor = ref<Instructor | null>(null);
 
-// Вычисляемые свойства
-const filteredInstructors = computed(() => {
-  let result = instructors.value;
-
-  // Фильтр по поиску
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    result = result.filter(
-      (instructor) =>
-        instructor.fullName.toLowerCase().includes(query) ||
-        instructor.email?.toLowerCase().includes(query) ||
-        instructor.phone?.toLowerCase().includes(query)
-    );
-  }
-
-  // Фильтр по статусу
-  if (statusFilter.value !== 'all') {
-    const isActive = statusFilter.value === 'active';
-    result = result.filter(instructor => instructor.isActive === isActive);
-  }
-
-  return result;
+// Пагинация
+const pagination = ref({
+  page: 1,
+  limit: 10,
+  total: 0,
+  totalPages: 0,
 });
+
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Методы
 const fetchInstructors = async () => {
   loading.value = true;
   try {
-    const { token } = useAuth();
+    const params = new URLSearchParams();
+    params.append('page', pagination.value.page.toString());
+    params.append('limit', pagination.value.limit.toString());
     
-    const response = await $fetch<{ success: boolean; instructors: Instructor[] }>(
-      '/api/instructors',
+    if (searchQuery.value) {
+      params.append('search', searchQuery.value);
+    }
+    
+    if (statusFilter.value !== 'all') {
+      params.append('isActive', statusFilter.value === 'active' ? 'true' : 'false');
+    }
+
+    const response = await authFetch<InstructorsResponse>(
+      `/api/instructors?${params.toString()}`,
       {
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-        },
+        method: 'GET',
       }
     );
+    
     if (response.success) {
       instructors.value = response.instructors;
+      pagination.value.total = response.total || 0;
+      pagination.value.totalPages = response.totalPages || 0;
+      pagination.value.page = response.page || 1;
+      pagination.value.limit = response.limit || 10;
     }
   } catch (error) {
     console.error('Error fetching instructors:', error);
-    // TODO: Показать уведомление об ошибке
   } finally {
     loading.value = false;
   }
+};
+
+const debouncedFetch = () => {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+  }
+  debounceTimer = setTimeout(() => {
+    pagination.value.page = 1;
+    fetchInstructors();
+  }, 300);
+};
+
+const handleFilterChange = () => {
+  pagination.value.page = 1;
+  fetchInstructors();
+};
+
+const handlePageChange = (page: number) => {
+  pagination.value.page = page;
+  fetchInstructors();
+};
+
+const handleLimitChange = (limit: number) => {
+  pagination.value.limit = limit;
+  pagination.value.page = 1;
+  fetchInstructors();
 };
 
 const openCreateModal = () => {

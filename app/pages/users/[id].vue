@@ -37,15 +37,14 @@
         </NuxtLink>
       </div>
 
-      <!-- Header с градиентом -->
+      <!-- Profile Header -->
       <div
         class="bg-white dark:bg-boxdark rounded-2xl shadow-lg overflow-hidden mb-6"
       >
-        <!-- Фоновый градиент -->
+        <!-- Фоновый цвет -->
         <div
-          class="h-32 bg-linear-to-r from-primary via-purple-500 to-pink-500 relative"
+          class="h-32 bg-primary/10 dark:bg-boxdark-2 relative"
         >
-          <div class="absolute inset-0 bg-black/10"></div>
         </div>
 
         <!-- Основная информация -->

@@ -53,7 +53,7 @@
 
       <div
         class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-        @click="navigateTo('/programs')"
+        @click="navigateTo('/users?tab=instructors')"
       >
         <div class="flex items-center gap-4">
           <div
@@ -95,7 +95,7 @@
 
       <div
         class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-        @click="navigateTo('/certificates')"
+        @click="navigateTo('/database?tab=certificates')"
       >
         <div class="flex items-center gap-4">
           <div
@@ -200,7 +200,7 @@
               </button>
             </div>
             <NuxtLink
-              to="/certificates"
+              to="/database?tab=certificates"
               class="text-sm text-primary hover:underline whitespace-nowrap"
             >
               Все сертификаты

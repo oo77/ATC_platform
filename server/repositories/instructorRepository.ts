@@ -402,6 +402,14 @@ export interface InstructorHoursStats {
     scheduledHours: number;
     eventCount: number;
   }>;
+  byDiscipline: Array<{
+    courseId: string | null;
+    courseName: string | null;
+    disciplineId: string | null;
+    disciplineName: string | null;
+    totalHours: number;
+    eventCount: number;
+  }>;
 }
 
 /**
@@ -596,6 +604,34 @@ export async function getInstructorHoursStats(
       ? Math.round((totalHoursPlanned / instructor.maxHours) * 100)
       : 0;
 
+  // ============================================================
+  // РАЗБИВКА ПО ПРОГРАММАМ И ДИСЦИПЛИНАМ
+  // ============================================================
+  const disciplinesRows = await executeQuery<RowDataPacket[]>(
+    `SELECT 
+      c.id as course_id, c.name as course_name,
+      d.id as discipline_id, d.name as discipline_name,
+      COALESCE(SUM(COALESCE(se.academic_hours, CEIL(COALESCE(se.duration_minutes, TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time)) / ?))), 0) as total_hours,
+      COUNT(DISTINCT se.id) as event_count
+     FROM schedule_events se
+     LEFT JOIN study_groups sg ON se.group_id = sg.id
+     LEFT JOIN courses c ON sg.course_id = c.id
+     LEFT JOIN disciplines d ON se.discipline_id = d.id
+     WHERE se.instructor_id = ?
+     GROUP BY c.id, c.name, d.id, d.name
+     ORDER BY total_hours DESC, c.name, d.name`,
+    [academicHourMinutes, instructorId]
+  );
+  
+  const byDiscipline = disciplinesRows.map((r) => ({
+    courseId: r.course_id,
+    courseName: r.course_name,
+    disciplineId: r.discipline_id,
+    disciplineName: r.discipline_name,
+    totalHours: Math.round(Number(r.total_hours) * 10) / 10,
+    eventCount: Number(r.event_count)
+  }));
+
   console.log("[InstructorHours] Результат:", {
     maxHours: instructor.maxHours,
     totalUsedHours,
@@ -604,6 +640,7 @@ export async function getInstructorHoursStats(
     remainingHours,
     usagePercentage,
     monthCount: byMonth.length,
+    disciplinesCount: byDiscipline.length,
   });
 
   return {
@@ -613,6 +650,7 @@ export async function getInstructorHoursStats(
     remainingHours,
     usagePercentage,
     byMonth,
+    byDiscipline,
   };
 }
 

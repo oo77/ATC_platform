@@ -165,16 +165,9 @@
           <h2 class="tg-step-title">🤖 AI Анализ</h2>
           <p class="tg-step-subtitle">Распознавание данных с сертификатов</p>
 
-          <div class="tg-analysis-progress">
-            <div class="tg-progress-bar">
-              <div
-                class="tg-progress-fill"
-                :style="{ width: analysisProgress + '%' }"
-              ></div>
-            </div>
-            <p class="tg-progress-text">
-              {{ analysisProgress }}% — Обработка...
-            </p>
+          <div class="tg-analysis-loader" v-if="analyzing">
+            <div class="tg-spinner"></div>
+            <p class="tg-loader-text">Обработка сертификатов...</p>
           </div>
 
           <div class="tg-analysis-items">
@@ -608,20 +601,8 @@ async function runAnalysis() {
   if (uploadedFileIds.value.length === 0) return;
 
   analyzing.value = true;
-  analysisProgress.value = 10;
 
   try {
-    // Имитация прогресса (ограничиваем до 90%)
-    const progressInterval = setInterval(() => {
-      if (analysisProgress.value < 90) {
-        const increment = Math.random() * 8; // Случайное увеличение от 0 до 8
-        analysisProgress.value = Math.min(
-          90,
-          Math.round(analysisProgress.value + increment),
-        );
-      }
-    }, 500);
-
     const response = await $fetch("/api/tg-app/certificates/ai-batch/analyze", {
       method: "POST",
       body: {
@@ -629,9 +610,6 @@ async function runAnalysis() {
         organizationId: props.organizationId,
       },
     });
-
-    clearInterval(progressInterval);
-    analysisProgress.value = 100;
 
     if (response.success) {
       analysisResults.value = response.results;
@@ -1038,28 +1016,31 @@ function resetAll() {
   flex: 1;
 }
 
-/* Analysis Progress */
-.tg-analysis-progress {
+/* Analysis Loader */
+.tg-analysis-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 0;
   margin-bottom: 1.5rem;
 }
 
-.tg-progress-bar {
-  height: 8px;
-  background: #e2e8f0;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
+.tg-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: tg-spin 0.8s linear infinite;
 }
 
-.tg-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #2563eb 0%, #7c3aed 100%);
-  border-radius: 4px;
-  transition: width 0.3s ease;
+@keyframes tg-spin {
+  to { transform: rotate(360deg); }
 }
 
-.tg-progress-text {
-  font-size: 0.8125rem;
+.tg-loader-text {
+  font-size: 0.875rem;
   color: #64748b;
   text-align: center;
   margin: 0;
