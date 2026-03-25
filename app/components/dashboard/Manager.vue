@@ -276,7 +276,7 @@
               @click="navigateTo(`/groups?course=${course.id}`)"
             >
               <span
-                class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold flex-shrink-0"
+                class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shrink-0"
                 :class="getRankClass(index)"
               >
                 {{ index + 1 }}
@@ -287,7 +287,7 @@
                 </p>
                 <p class="text-xs text-gray-500">{{ course.code }}</p>
               </div>
-              <div class="text-right flex-shrink-0">
+              <div class="text-right shrink-0">
                 <p class="text-lg font-bold text-info">
                   {{ course.students_count }}
                 </p>
@@ -534,7 +534,7 @@
               class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300"
             >
               <span
-                class="mt-1 h-1.5 w-1.5 rounded-full bg-danger flex-shrink-0"
+                class="mt-1 h-1.5 w-1.5 rounded-full bg-danger shrink-0"
               ></span>
               {{ alert }}
             </li>

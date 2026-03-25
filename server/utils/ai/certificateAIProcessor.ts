@@ -155,21 +155,87 @@ export class CertificateAIProcessor {
 
     const systemPrompt = this.getSystemPrompt();
 
-    const completion = await client.chat.completions.create({
-      model: model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `Ниже представлен текст извлеченный из файла сертификата. Твое задание - распознать данные:\n\n${text}`,
-        },
-      ],
-      response_format: { type: "json_object" },
-      max_tokens: this.currentConfig?.maxTokens,
-      temperature: this.currentConfig?.temperature,
-    });
+    try {
+      const completion = await client.chat.completions.create({
+        model: model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Ниже представлен текст извлеченный из файла сертификата. Твое задание - распознать данные:\n\n${text}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: this.currentConfig?.maxTokens,
+        temperature: this.currentConfig?.temperature,
+      });
 
-    return this.parseAIResponse(completion);
+      return this.parseAIResponse(completion);
+    } catch (error: any) {
+      this.handleAIError(error, model, "text");
+      throw error;
+    }
+  }
+
+  /**
+   * Централизованная обработка ошибок AI
+   */
+  private static handleAIError(
+    error: any,
+    model: string,
+    type: "vision" | "text",
+  ) {
+    let message = error.message || String(error);
+
+    // Специфическая ошибка OpenRouter про Guardrails
+    if (
+      message.includes("No endpoints available matching your guardrail restrictions")
+    ) {
+      console.error(
+        "⚠️ ОШИБКА OPENROUTER (ПРИВАТНОСТЬ): Используемая модель (бесплатная) требует разрешения на хранение данных (Data Retention).",
+      );
+      console.error(
+        "👉 РЕШЕНИЕ: Измените настройки приватности на https://openrouter.ai/settings/privacy (включите Data Retention) или выберите платную модель (например, openai/gpt-4o-mini).",
+      );
+      error.message = `OpenRouter Guardrail Error: Модель ${model} недоступна с текущими настройками приватности. Включите 'Data Retention' в профиле OpenRouter или смените модель на платную.`;
+    } else if (error.status === 429 || message.includes("429")) {
+      console.error(
+        "⚠️ ОШИБКА 429 (RATE LIMIT): Превышен лимит запросов к AI или провайдер перегружен.",
+      );
+      if (model.includes("free")) {
+        console.error(
+          "👉 РЕШЕНИЕ: Бесплатные модели имеют жесткие лимиты. Загружайте меньше файлов за раз или используйте платную, но дешевую модель (например, openai/gpt-4o-mini).",
+        );
+      }
+      error.message = `Ошибка 429: Слишком много запросов или сервер ${model} перегружен. Подождите пару минут или смените модель.`;
+    }
+
+    // Логируем ошибку в БД через репозиторий, если он доступен
+    this.logErrorToDb(error, model, type).catch((e) =>
+      console.error("Не удалось записать ошибку AI в БД:", e.message),
+    );
+  }
+
+  private static async logErrorToDb(
+    error: any,
+    model: string,
+    type: "vision" | "text",
+  ) {
+    try {
+      const { aiSettingsRepository } = await import(
+        "../../repositories/aiSettingsRepository"
+      );
+      await aiSettingsRepository.logApiError({
+        settingId: this.currentSettingId || undefined,
+        errorCode: error.status ? String(error.status) : "AI_ERROR",
+        errorType: "model_error",
+        errorMessage: error.message,
+        model: model,
+        requestPayload: { type },
+      });
+    } catch (e) {
+      // Игнорируем ошибки логирования
+    }
   }
 
   /**
@@ -187,29 +253,34 @@ export class CertificateAIProcessor {
 
     const systemPrompt = this.getSystemPrompt();
 
-    const completion = await client.chat.completions.create({
-      model: model,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: systemPrompt },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:${imageType};base64,${base64Image}`,
-                detail: "high",
+    try {
+      const completion = await client.chat.completions.create({
+        model: model,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: systemPrompt },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${imageType};base64,${base64Image}`,
+                  detail: "high",
+                },
               },
-            },
-          ],
-        },
-      ],
-      response_format: { type: "json_object" },
-      max_tokens: this.currentConfig?.maxTokens,
-      temperature: this.currentConfig?.temperature,
-    });
+            ],
+          },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: this.currentConfig?.maxTokens,
+        temperature: this.currentConfig?.temperature,
+      });
 
-    return this.parseAIResponse(completion);
+      return this.parseAIResponse(completion);
+    } catch (error: any) {
+      this.handleAIError(error, model, "vision");
+      throw error;
+    }
   }
 
   private static getSystemPrompt() {
@@ -234,10 +305,20 @@ export class CertificateAIProcessor {
       throw new Error("Неверный формат ответа от AI провайдера: отсутствует свойство choices");
     }
 
-    const responseText = completion.choices[0]?.message?.content?.trim();
+    let responseText = completion.choices[0]?.message?.content?.trim();
     if (!responseText) {
       throw new Error("Пустой ответ от AI провайдера");
     }
+
+    // Удаляем markdown обертку, если модель (например, Puter) вернула текст с ```json ... ```
+    if (responseText.startsWith("```json")) {
+      responseText = responseText.replace(/^```json\s*/, "").replace(/\s*```$/, "");
+    } else if (responseText.startsWith("```")) {
+      responseText = responseText.replace(/^```\s*/, "").replace(/\s*```$/, "");
+    }
+    
+    // Доп. очистка: уберут лишние пустые строки с концов
+    responseText = responseText.trim();
 
     const tokensUsed: TokenUsage = {
       prompt: completion.usage?.prompt_tokens || 0,
@@ -270,45 +351,74 @@ export class CertificateAIProcessor {
   }
 
   static async processBatch(files: any[]) {
-    // В реал тайме этот метод уже вызывается в других местах,
-    // поэтому оставлю его сигнатуру совместимой, но добавлю поддержку rawText
-    await this.initAPIAsync();
-    const results = [];
-    for (const file of files) {
-      try {
-        const result = await this.processCertificate(
-          file.buffer,
-          file.mimeType,
-          file.filename,
-          file.rawTextFromPdf,
-        );
-        results.push({
-          ...result,
-          fileId: file.fileId,
-          filename: file.filename,
-          success: true,
-        });
-      } catch (error: any) {
-        results.push({
-          fileId: file.fileId,
-          filename: file.filename,
-          success: false,
-          error: error.message,
-          processingTime: 0,
-          extractedData: null,
-          tokensUsed: null,
-        });
-      }
+    if (files.length === 0) {
+      return { results: [], successCount: 0, errorCount: 0, totalTokens: 0, totalCost: "0.00", totalTime: 0 };
     }
-    // Вернем статистику
+
+    // Инициализируем AI клиент ОДИН РАЗ для всего батча
+    // Это сохраняет 1 DB-запрос на каждый файл
+    await this.initAPIAsync();
+
+    const results: any[] = [];
+    const totalStart = Date.now();
+
+    // Для бесплатных моделей (OpenRouter) снижаем параллельность до 1, чтобы не ловить 429 ошибку
+    const isFreeModel = 
+      this.currentConfig?.visionModel?.includes("free") || 
+      this.currentConfig?.textModel?.includes("free");
+    
+    const CONCURRENCY = isFreeModel ? 1 : 3;
+    
+    if (isFreeModel) {
+      console.log("⚠️ Используется бесплатная модель. Параллельность обработки снижена до 1 (предотвращение 429 Rate Limit).");
+    }
+
+    for (let i = 0; i < files.length; i += CONCURRENCY) {
+      const chunk = files.slice(i, i + CONCURRENCY);
+      const chunkResults = await Promise.all(
+        chunk.map(async (file: any) => {
+          try {
+            const result = await this.processCertificate(
+              file.buffer,
+              file.mimeType,
+              file.filename,
+              file.rawTextFromPdf,
+            );
+            return {
+              ...result,
+              fileId: file.fileId,
+              filename: file.filename,
+              success: true,
+            };
+          } catch (error: any) {
+            console.error(`❌ Ошибка обработки ${file.filename}:`, error.message);
+            return {
+              fileId: file.fileId,
+              filename: file.filename,
+              success: false,
+              error: error.message,
+              processingTime: 0,
+              extractedData: null,
+              tokensUsed: null,
+            };
+          }
+        }),
+      );
+      results.push(...chunkResults);
+    }
+
     const successCount = results.filter((r) => r.success).length;
+    const totalTokens = results
+      .filter((r) => r.success && r.tokensUsed)
+      .reduce((sum: number, r: any) => sum + (r.tokensUsed?.total || 0), 0);
+
     return {
       results,
       successCount,
       errorCount: files.length - successCount,
-      totalTokens: 0,
-      totalCost: "0.00",
-      totalTime: 0,
+      totalTokens,
+      totalCost: this.estimateCost(totalTokens).toFixed(6),
+      totalTime: Date.now() - totalStart,
     };
   }
 

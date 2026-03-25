@@ -1,10 +1,11 @@
 import { aiCertificateRepository } from "../../../repositories/aiCertificateRepository";
 import { CertificateAIProcessor } from "../../../utils/ai/certificateAIProcessor";
 import { StudentMatcher } from "../../../utils/ai/studentMatcher";
-import { getAllStudents } from "../../../repositories/studentRepository";
+import { getStudentsForMatching } from "../../../repositories/studentRepository";
 import { pdfConverter } from "../../../utils/ai/pdfConverter";
 import { requirePermission } from "../../../utils/permissions";
 import { Permission } from "../../../types/permissions";
+import { logActivityDirect } from "../../../utils/activityLogger";
 import fs from "fs/promises";
 import type {
   ProcessingLogStatus,
@@ -16,24 +17,24 @@ import type {
 import type { Student } from "../../../types/student";
 
 /**
- * Batch Analyze API (Senior Refactored)
- * - Убрана зависимость от серверного рендеринга PDF в изображение
- * - PDF обрабатываются через текстовый анализ
- * - Изображения обрабатываются через Vision
+ * Batch Analyze API
+ * - Принимает опциональный organizationId для сужения радиуса поиска
+ * - Использует облегчённый запрос студентов (без JOIN сертификатов)
+ * - Параллельная обработка файлов через AI
  */
 export default defineEventHandler(
   async (event): Promise<BatchAnalysisResult> => {
     await requirePermission(event, Permission.CERTIFICATES_ISSUE);
 
     const body = await readBody(event);
-    const { fileIds } = body;
+    const { fileIds, organizationId } = body;
 
     if (!fileIds || !Array.isArray(fileIds) || fileIds.length === 0) {
       throw createError({ statusCode: 400, message: "File IDs required" });
     }
 
     console.log(
-      `[Batch Analyze] Starting analysis for ${fileIds.length} files`,
+      `[Batch Analyze] Starting analysis for ${fileIds.length} files${organizationId ? ` (org: ${organizationId})` : " (all orgs)"}`,
     );
 
     const filesToProcess: any[] = [];
@@ -58,13 +59,11 @@ export default defineEventHandler(
         let rawText: string | undefined;
 
         if (mimeType === "application/pdf") {
-          // Для PDF извлекаем только текст (без тяжелого рендеринга)
           rawText = await pdfConverter.extractText(filePath);
           console.log(
             `[Batch Analyze] Extracted ${rawText?.length || 0} chars from PDF: ${log.originalFilename}`,
           );
         } else {
-          // Для изображений читаем буфер для Vision
           buffer = await fs.readFile(filePath);
         }
 
@@ -80,7 +79,7 @@ export default defineEventHandler(
       }
     }
 
-    // AI-обработка
+    // AI-обработка (параллельная, concurrency=3)
     const aiProcessingResult =
       await CertificateAIProcessor.processBatch(filesToProcess);
 
@@ -124,17 +123,38 @@ export default defineEventHandler(
       }
     }
 
-    // Сопоставление студентов (batch)
-    const allStudents = await getAllStudents();
+    // Загружаем студентов ОДИН РАЗ облегчённым запросом (без сертификатов)
+    // Если задана организация — берём только её студентов (сужаем радиус поиска)
+    const studentsForMatching = await getStudentsForMatching(organizationId || null);
+    console.log(
+      `[Batch Analyze] Loaded ${studentsForMatching.length} students for matching${organizationId ? " (filtered by org)" : " (all)"}`,
+    );
+
+    // Параллельное сопоставление студентов для всех успешных файлов
     const finalResults = await Promise.all(
       processedResults.map(async (res) => {
         if (!res.success || !res.extractedData) return res;
         const match = await StudentMatcher.findMatchingStudent(
           res.extractedData,
-          allStudents,
+          studentsForMatching,
         );
         return { ...res, matchResult: match };
       }),
+    );
+
+    const userId = event.context.user?.id || "system";
+    await logActivityDirect(
+      userId,
+      "IMPORT",
+      "CERTIFICATE",
+      "batch",
+      `AI анализ ${fileIds.length} сертификатов`,
+      {
+        fileCount: fileIds.length,
+        successCount: finalResults.filter((r) => r.success).length,
+        organizationId: organizationId || null,
+        studentsSearched: studentsForMatching.length,
+      },
     );
 
     return {
@@ -147,3 +167,4 @@ export default defineEventHandler(
     };
   },
 );
+

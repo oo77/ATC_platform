@@ -115,8 +115,9 @@ export const useAICertificateImport = () => {
 
   /**
    * Batch Шаг 2: AI-анализ всех файлов
+   * @param organizationId - ID организации для сужения радиуса поиска (необязательно)
    */
-  const analyzeBatch = async () => {
+  const analyzeBatch = async (organizationId?: string | null) => {
     if (batchItems.value.length === 0) {
       error.value = "Нет файлов для анализа";
       return;
@@ -136,7 +137,7 @@ export const useAICertificateImport = () => {
         "/api/ai-certificates/batch/analyze",
         {
           method: "POST",
-          body: { fileIds },
+          body: { fileIds, organizationId: organizationId || null },
         },
       );
 

@@ -144,6 +144,11 @@ export default defineEventHandler(async (event) => {
       errorType = "rate_limit";
       errorMessage = "Превышен лимит запросов";
     } else if (
+      error.message?.includes("guardrail restrictions")
+    ) {
+      errorType = "model_error";
+      errorMessage = "Настройки приватности OpenRouter блокируют эту модель (отключен Data Retention)";
+    } else if (
       error.message?.includes("network") ||
       error.message?.includes("ECONNREFUSED")
     ) {
