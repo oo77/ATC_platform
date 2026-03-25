@@ -259,7 +259,10 @@
               Топ инструкторов по часам
             </h3>
           </div>
-          <NuxtLink to="/users?tab=instructors" class="text-sm text-primary hover:underline">
+          <NuxtLink
+            to="/users?tab=instructors"
+            class="text-sm text-primary hover:underline"
+          >
             Все инструкторы
           </NuxtLink>
         </div>
@@ -628,7 +631,9 @@
               class="w-5 h-5 text-primary group-hover:text-white transition-colors"
             />
           </div>
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary dark:group-hover:text-primary transition-colors">
+          <span
+            class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-primary dark:group-hover:text-primary transition-colors"
+          >
             {{ action.label }}
           </span>
         </NuxtLink>

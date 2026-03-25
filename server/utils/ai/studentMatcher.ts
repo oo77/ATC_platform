@@ -108,26 +108,28 @@ export class StudentMatcher {
       temperature: config.temperature,
     };
 
-    // Создаём клиент в зависимости от провайдера
-    if (
-      config.provider === "openrouter" ||
-      config.baseUrl?.includes("openrouter")
-    ) {
-      this.client = new OpenAI({
-        apiKey: config.apiKey,
-        baseURL: config.baseUrl || "https://openrouter.ai/api/v1",
-        defaultHeaders: {
-          "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
-          "X-Title": "ATC Platform - Student Matcher",
-        },
-      });
-      console.log("✅ StudentMatcher: OpenRouter API инициализирован");
-    } else {
-      this.client = new OpenAI({
-        apiKey: config.apiKey,
-      });
-      console.log("✅ StudentMatcher: OpenAI API инициализирован");
+    // Определение baseURL для клиента (если пустой, openai sdk использует дефолтный api.openai.com)
+    let clientBaseUrl = config.baseUrl || undefined;
+    if (!clientBaseUrl && config.provider === "openrouter") {
+      clientBaseUrl = "https://openrouter.ai/api/v1";
     }
+
+    // Заголовки для OpenRouter
+    const defaultHeaders =
+      config.provider === "openrouter" || clientBaseUrl?.includes("openrouter")
+        ? {
+            "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
+            "X-Title": "ATC Platform - Student Matcher",
+          }
+        : undefined;
+
+    this.client = new OpenAI({
+      apiKey: config.apiKey,
+      baseURL: clientBaseUrl,
+      defaultHeaders,
+    });
+    
+    console.log(`✅ StudentMatcher: API инициализирован (provider: ${config.provider}${clientBaseUrl ? `, baseUrl: ${clientBaseUrl}` : ""})`);
 
     return this.client;
   }

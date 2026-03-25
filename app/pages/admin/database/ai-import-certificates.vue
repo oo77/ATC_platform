@@ -162,6 +162,109 @@
                   </p>
                 </div>
               </div>
+
+              <!-- Фильтр по организации -->
+              <div
+                class="rounded-xl border border-stroke dark:border-strokedark bg-gray-50 dark:bg-meta-4 p-4"
+              >
+                <div class="flex items-start gap-3">
+                  <div
+                    class="h-9 w-9 rounded-lg bg-warning/10 flex items-center justify-center shrink-0 mt-0.5"
+                  >
+                    <svg
+                      class="h-5 w-5 text-warning"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <label
+                      class="block text-sm font-semibold text-black dark:text-white mb-1"
+                    >
+                      Организация
+                      <span class="text-gray-400 font-normal ml-1"
+                        >(необязательно)</span
+                      >
+                    </label>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      Укажите организацию, чтобы сузить радиус поиска и
+                      ускорить матчинг слушателей в несколько раз
+                    </p>
+                    <div class="relative">
+                      <select
+                        id="organization-select"
+                        v-model="selectedOrgId"
+                        class="w-full rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark px-4 py-2.5 text-sm text-black dark:text-white focus:border-primary focus:outline-none transition-colors appearance-none pr-10"
+                        :disabled="orgsLoading"
+                      >
+                        <option value="">
+                          {{orgsLoading ? 'Загрузка...' : '— Все организации (поиск по всей базе)'}}
+                        </option>
+                        <option
+                          v-for="org in organizations"
+                          :key="org.id"
+                          :value="org.id"
+                        >
+                          {{ org.name }}
+                          <template v-if="org.studentsCount > 0">
+                            ({{ org.studentsCount }} сл.)
+                          </template>
+                        </option>
+                      </select>
+                      <div
+                        class="pointer-events-none absolute inset-y-0 right-3 flex items-center"
+                      >
+                        <svg
+                          class="h-4 w-4 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    <!-- Подсказка при выборе орг -->
+                    <div
+                      v-if="selectedOrgId"
+                      class="mt-2 flex items-center gap-1.5 text-xs text-success"
+                    >
+                      <svg
+                        class="h-3.5 w-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                        />
+                      </svg>
+                      <span
+                        >Поиск сужен до
+                        {{selectedOrg?.studentsCount ?? '?'}} слушателей —
+                        матчинг будет значительно быстрее</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <BatchFileUploader
                 :loading="isProcessing"
                 @upload="handleBatchUpload"
@@ -212,7 +315,7 @@
               <div v-else class="text-center py-8">
                 <!-- Fallback if analysis finishes but step doesn't change automatically (should typically not happen) -->
                 <button
-                  @click="analyzeBatch"
+                  @click="() => analyzeBatch(selectedOrgId || null)"
                   class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
                 >
                   Запустить анализ
@@ -393,7 +496,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useAICertificateImport } from "~/composables/useAICertificateImport";
 import type {
   AIImportStats,
@@ -448,12 +551,37 @@ const logs = ref<AIProcessingLog[]>([]);
 const logsPage = ref(1);
 const totalPages = ref(1);
 
+// Организация для сужения радиуса поиска
+const selectedOrgId = ref<string>("");
+const organizations = ref<Array<{ id: string; name: string; studentsCount: number }>>([]);
+const orgsLoading = ref(false);
+
+const selectedOrg = computed(() =>
+  organizations.value.find((o) => o.id === selectedOrgId.value) ?? null
+);
+
+const loadOrganizations = async () => {
+  orgsLoading.value = true;
+  try {
+    const result: any = await ($fetch as any)("/api/organizations?limit=200&isActive=true");
+    organizations.value = (result.data || []).map((o: any) => ({
+      id: o.id,
+      name: o.name,
+      studentsCount: o.studentsCount ?? 0,
+    }));
+  } catch (e) {
+    console.error("Ошибка загрузки организаций:", e);
+  } finally {
+    orgsLoading.value = false;
+  }
+};
+
 // --- Batch Mode Handlers ---
 const handleBatchUpload = async (files: File[]) => {
   try {
     await uploadBatch(files);
-    // Auto start analysis
-    await analyzeBatch();
+    // Auto start analysis — передаём ID выбранной организации
+    await analyzeBatch(selectedOrgId.value || null);
   } catch (e) {
     console.error(e);
   }
@@ -526,6 +654,7 @@ const handlePageChange = (page: number) => {
 onMounted(() => {
   loadStats();
   loadLogs();
+  loadOrganizations();
 });
 </script>
 
