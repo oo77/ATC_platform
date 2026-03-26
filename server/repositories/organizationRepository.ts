@@ -30,6 +30,11 @@ export interface Organization {
   studentsCount: number;
   createdAt: Date;
   updatedAt: Date;
+  // Статистика сертификатов
+  totalCertificates?: number;
+  issuedCertificates?: number;
+  revokedCertificates?: number;
+  latestCertificateDate?: Date | null;
 }
 
 export interface CreateOrganizationInput {
@@ -96,6 +101,11 @@ interface OrganizationRow extends RowDataPacket {
   students_count: number;
   created_at: Date;
   updated_at: Date;
+  // Статистика сертификатов (из JOIN)
+  total_certs?: number;
+  issued_certs?: number;
+  revoked_certs?: number;
+  latest_cert_date?: Date | null;
 }
 
 interface CountRow extends RowDataPacket {
@@ -122,6 +132,10 @@ function mapRowToOrganization(row: OrganizationRow): Organization {
     studentsCount: row.students_count || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    totalCertificates: row.total_certs !== undefined ? Number(row.total_certs) : undefined,
+    issuedCertificates: row.issued_certs !== undefined ? Number(row.issued_certs) : undefined,
+    revokedCertificates: row.revoked_certs !== undefined ? Number(row.revoked_certs) : undefined,
+    latestCertificateDate: row.latest_cert_date || null,
   };
 }
 
@@ -146,9 +160,19 @@ function generateCodeFromName(name: string): string {
  * Получить все организации
  */
 export async function getAllOrganizations(): Promise<Organization[]> {
-  const rows = await executeQuery<OrganizationRow[]>(
-    "SELECT * FROM organizations ORDER BY name ASC",
-  );
+  const rows = await executeQuery<OrganizationRow[]>(`
+    SELECT 
+      o.*,
+      COUNT(DISTINCT ic.id) as total_certs,
+      SUM(CASE WHEN ic.status = 'issued' THEN 1 ELSE 0 END) as issued_certs,
+      SUM(CASE WHEN ic.status = 'revoked' THEN 1 ELSE 0 END) as revoked_certs,
+      MAX(ic.issue_date) as latest_cert_date
+    FROM organizations o
+    LEFT JOIN students s ON s.organization_id = o.id
+    LEFT JOIN issued_certificates ic ON ic.student_id = s.id
+    GROUP BY o.id
+    ORDER BY o.name ASC
+  `);
   return rows.map(mapRowToOrganization);
 }
 
@@ -168,7 +192,7 @@ export async function getOrganizationsPaginated(
 
   if (search) {
     conditions.push(
-      "(name LIKE ? OR name_uz LIKE ? OR name_en LIKE ? OR name_ru LIKE ? OR code LIKE ?)",
+      "(o.name LIKE ? OR o.name_uz LIKE ? OR o.name_en LIKE ? OR o.name_ru LIKE ? OR o.code LIKE ?)",
     );
     const searchPattern = `%${search}%`;
     queryParams.push(
@@ -181,7 +205,7 @@ export async function getOrganizationsPaginated(
   }
 
   if (isActive !== undefined) {
-    conditions.push("is_active = ?");
+    conditions.push("o.is_active = ?");
     queryParams.push(isActive);
   }
 
@@ -189,15 +213,24 @@ export async function getOrganizationsPaginated(
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // Получаем общее количество
-  const countQuery = `SELECT COUNT(*) as total FROM organizations ${whereClause}`;
+  const countQuery = `SELECT COUNT(*) as total FROM organizations o ${whereClause}`;
   const countResult = await executeQuery<CountRow[]>(countQuery, queryParams);
   const total = countResult[0]?.total || 0;
 
   // Получаем данные с пагинацией
   const dataQuery = `
-    SELECT * FROM organizations 
+    SELECT 
+      o.*,
+      COUNT(DISTINCT ic.id) as total_certs,
+      SUM(CASE WHEN ic.status = 'issued' THEN 1 ELSE 0 END) as issued_certs,
+      SUM(CASE WHEN ic.status = 'revoked' THEN 1 ELSE 0 END) as revoked_certs,
+      MAX(ic.issue_date) as latest_cert_date
+    FROM organizations o
+    LEFT JOIN students s ON s.organization_id = o.id
+    LEFT JOIN issued_certificates ic ON ic.student_id = s.id
     ${whereClause}
-    ORDER BY name ASC
+    GROUP BY o.id
+    ORDER BY o.name ASC
     LIMIT ? OFFSET ?
   `;
   const rows = await executeQuery<OrganizationRow[]>(dataQuery, [

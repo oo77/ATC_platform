@@ -1,6 +1,8 @@
 import { defineEventHandler, getQuery, createError } from 'h3';
 import { getOrganizationsPaginated, type PaginationParams } from '../../repositories/organizationRepository';
 import { createActivityLog } from '../../repositories/activityLogRepository';
+import { executeQuery } from '../../utils/db';
+import type { RowDataPacket } from 'mysql2/promise';
 
 /**
  * GET /api/organizations
@@ -34,9 +36,20 @@ export default defineEventHandler(async (event) => {
       },
     });
 
+    // Получаем общую статистику для карточек
+    const [summaryResult] = await executeQuery<RowDataPacket[]>(`
+      SELECT COUNT(*) as totalIssued
+      FROM issued_certificates
+      WHERE status = 'issued'
+    `);
+    const totalIssued = (summaryResult as any)?.[0]?.totalIssued || 0;
+
     return {
       success: true,
       ...result,
+      stats: {
+        totalIssued,
+      }
     };
   } catch (error) {
     console.error('Error fetching organizations:', error);

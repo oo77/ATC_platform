@@ -21,21 +21,45 @@
           @click="openCreateModal"
           class="flex items-center gap-2"
         >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
+          <Plus class="w-5 h-5" />
           Добавить организацию
         </UiButton>
+      </div>
+    </div>
+
+    <!-- Общая статистика (из OrgStats.vue) -->
+    <div v-if="globalStats" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-boxdark p-6 shadow-md border border-stroke dark:border-strokedark group transition-all hover:shadow-xl">
+        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+          <Award class="h-16 w-16 text-primary" />
+        </div>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Всего выданных</p>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-3xl font-bold text-black dark:text-white">{{ globalStats.totalIssued }}</span>
+          <span class="text-xs font-medium text-success text-nowrap">сертификатов</span>
+        </div>
+      </div>
+
+      <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-boxdark p-6 shadow-md border border-stroke dark:border-strokedark group transition-all hover:shadow-xl">
+        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+          <Users class="h-16 w-16 text-warning" />
+        </div>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Управляемых организаций</p>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-3xl font-bold text-black dark:text-white">{{ pagination.total }}</span>
+          <span class="text-xs font-medium text-warning text-nowrap">юр. лиц</span>
+        </div>
+      </div>
+
+      <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-boxdark p-6 shadow-md border border-stroke dark:border-strokedark group transition-all hover:shadow-xl">
+        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+          <FileCheck class="h-16 w-16 text-success" />
+        </div>
+        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Среднее на орг.</p>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-3xl font-bold text-black dark:text-white">{{ averagePerOrg }}</span>
+          <span class="text-xs font-medium text-info text-nowrap">серт./орг.</span>
+        </div>
       </div>
     </div>
 
@@ -202,6 +226,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
+import { Plus, Award, Users, FileCheck } from "lucide-vue-next";
 
 // Используем authFetch для авторизованных запросов
 const { authFetch } = useAuthFetch();
@@ -221,6 +246,11 @@ interface Organization {
   studentsCount: number;
   createdAt: Date | string;
   updatedAt: Date | string;
+  // Статистика сертификатов
+  totalCertificates?: number;
+  issuedCertificates?: number;
+  revokedCertificates?: number;
+  latestCertificateDate?: string | null;
 }
 
 // Тип ответа от API
@@ -231,6 +261,9 @@ interface OrganizationsResponse {
   page: number;
   limit: number;
   totalPages: number;
+  stats?: {
+    totalIssued: number;
+  };
 }
 
 // Состояние
@@ -252,6 +285,8 @@ const pagination = ref({
   totalPages: 0,
 });
 
+const globalStats = ref<{ totalIssued: number } | null>(null);
+
 // Фильтры
 const filters = ref({
   search: "",
@@ -264,6 +299,12 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 // Вычисляемые свойства
 const hasActiveFilters = computed(() => {
   return filters.value.search !== "" || filters.value.isActive !== "";
+});
+
+const averagePerOrg = computed(() => {
+  if (!pagination.value.total) return 0;
+  const avg = (globalStats.value?.totalIssued || 0) / pagination.value.total;
+  return isNaN(avg) ? 0 : avg.toFixed(1);
 });
 
 // Debounced fetch для фильтров
@@ -330,8 +371,12 @@ const fetchOrganizations = async () => {
       organizations.value = response.data;
       pagination.value.total = response.total;
       pagination.value.totalPages = response.totalPages;
-      pagination.value.page = response.page;
-      pagination.value.limit = response.limit;
+      pagination.value.page = response.page || 1;
+      pagination.value.limit = response.limit || 20;
+      
+      if (response.stats) {
+        globalStats.value = response.stats;
+      }
     }
   } catch (error) {
     console.error("Ошибка загрузки организаций:", error);

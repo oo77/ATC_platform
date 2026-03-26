@@ -1,217 +1,128 @@
 <template>
   <aside
     :class="[
-      'fixed mt-16 flex flex-col lg:mt-0 top-0 left-0 h-screen z-50 transition-all duration-300 ease-in-out',
-      sidebarColorClass,
-      'backdrop-blur-xl border-r shadow-xl dark:shadow-none',
+      'fixed top-4 left-4 h-[calc(100vh-2rem)] z-50 transform-gpu translate-z-0 transition-all duration-200 ease-out',
+      'bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-white/20 dark:border-gray-800/20 shadow-2xl rounded-4xl overflow-hidden',
       {
-        'lg:w-[280px]': isExpanded || isMobileOpen || isHovered,
-        'lg:w-[80px]': !isExpanded && !isHovered,
-        'translate-x-0 w-[280px]': isMobileOpen,
-        '-translate-x-full': !isMobileOpen,
-        'lg:translate-x-0': true,
+        'w-[280px]': isExpanded || isMobileOpen || isHovered,
+        'w-[85px]': !isExpanded && !isHovered && !isMobileOpen,
+        'translate-x-0': isMobileOpen,
+        '-translate-x-full lg:translate-x-0': !isMobileOpen,
       },
     ]"
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
-    <!-- Logo Section -->
+    <!-- Logo Section with Toggle Button -->
     <div
       :class="[
-        'flex items-center justify-center relative border-b border-gray-100/50 dark:border-gray-800/50 mb-2 transition-all duration-300',
-        isExpanded || isHovered || isMobileOpen ? 'h-32 py-4' : 'h-20',
-        !isExpanded && !isHovered ? 'lg:px-0' : 'px-6',
+        'flex items-center justify-between relative mb-2 px-4 transition-all duration-200',
+        isExpanded || isHovered || isMobileOpen ? 'h-24 py-4 pr-2' : 'h-20 flex-col py-6',
       ]"
     >
-      <NuxtLink to="/" class="block w-full text-center relative z-10 group">
-        <!-- Logo Display Logic -->
-        <div class="flex items-center justify-center h-full">
-          <Transition
-            enter-active-class="transition-all duration-300 ease-out"
-            enter-from-class="opacity-0 scale-90"
-            enter-to-class="opacity-100 scale-100"
-            leave-active-class="transition-all duration-200 ease-in"
-            leave-from-class="opacity-100 scale-100"
-            leave-to-class="opacity-0 scale-90"
-            mode="out-in"
-          >
-            <img
-              v-if="isExpanded || isHovered || isMobileOpen"
-              key="full-logo"
-              src="/logo.png"
-              alt="Logo"
-              class="h-24 object-contain mx-auto transition-all duration-300 group-hover:scale-105"
-            />
-            <img
-              v-else
-              key="mini-logo"
-              src="/android-chrome-192x192.png"
-              alt="Logo"
-              class="h-10 w-10 object-contain mx-auto rounded-xl shadow-md transition-all duration-300 hover:rotate-6"
-            />
+      <NuxtLink to="/" class="block text-center flex-1">
+        <div class="flex items-center justify-center h-full transform-gpu">
+          <Transition name="fade" mode="out-in">
+            <div v-if="isExpanded || isHovered || isMobileOpen" class="flex flex-col items-center">
+              <img src="/logo.png" alt="Logo" class="h-10 object-contain" />
+              <span class="text-[8px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 mt-1">ATC Platform</span>
+            </div>
+            <img v-else src="/android-chrome-192x192.png" alt="Logo" class="h-10 w-10 object-contain rounded-xl shadow-sm" />
           </Transition>
         </div>
       </NuxtLink>
+
+      <!-- Internal Sidebar Toggle (Chevron icon) -->
+      <button
+        v-if="isExpanded || isHovered || isMobileOpen"
+        @click="toggleSidebar"
+        class="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-blue-600 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all duration-150 animate-in fade-in"
+      >
+        <component :is="ChevronLeft" :size="18" :class="['transition-transform duration-300', isExpanded ? '' : 'rotate-180']" />
+      </button>
     </div>
 
     <!-- Navigation -->
-    <div
-      class="flex flex-col flex-1 overflow-y-auto overflow-x-hidden no-scrollbar py-4 px-3 space-y-6"
-    >
+    <div class="flex flex-col flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-4">
       <nav v-for="(menuGroup, groupIndex) in menuGroups" :key="groupIndex">
-        <!-- Group Title -->
-        <h3
-          v-if="menuGroup.title"
-          :class="[
-            'px-4 mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 transition-opacity duration-300',
-            !isExpanded && !isHovered ? 'opacity-0 lg:hidden' : 'opacity-100',
-          ]"
+        <h3 
+          v-if="menuGroup.title && (isExpanded || isHovered || isMobileOpen)"
+          class="px-4 mb-2 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 opacity-50"
         >
           {{ menuGroup.title }}
         </h3>
 
-        <!-- Divider for collapsed state instead of title -->
-        <div
-          v-if="!isExpanded && !isHovered && menuGroup.title && groupIndex > 0"
-          class="h-px bg-gray-100 dark:bg-gray-800 mx-4 mb-4 mt-2"
-        ></div>
-
-        <ul class="space-y-1.5">
-          <li v-for="(item, index) in menuGroup.items" :key="item.name">
-            <!-- Dropdown Menu Item -->
+        <ul class="space-y-1">
+          <li v-for="(item, index) in menuGroup.items" :key="item.name" class="relative">
             <div v-if="item.subItems && item.subItems.length > 0">
               <button
                 @click="toggleSubmenu(groupIndex, index)"
                 :class="[
-                  'group flex items-center justify-between w-full px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200',
-                  'hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                  'group flex items-center justify-between w-full px-4 py-2.5 rounded-2xl cursor-pointer transition-all duration-150',
                   isSubmenuOpen(groupIndex, index)
-                    ? 'text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-800/30'
-                    : 'text-gray-600 dark:text-gray-400',
+                    ? 'bg-blue-50/70 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800/40',
                   !isExpanded && !isHovered ? 'justify-center px-0' : '',
                 ]"
               >
-                <div class="flex items-center gap-3 min-w-0">
-                  <div
-                    :class="[
-                      'relative flex items-center justify-center w-6 h-6 rounded-lg transition-all duration-300',
-                      isSubmenuOpen(groupIndex, index)
-                        ? 'text-blue-600 dark:text-blue-400'
-                        : 'text-gray-500 dark:text-gray-400 group-hover:text-blue-500 dark:group-hover:text-blue-400',
-                    ]"
-                  >
-                    <component :is="item.icon" class="w-5 h-5" />
-                    <span
-                      v-if="isSubmenuOpen(groupIndex, index)"
-                      class="absolute inset-0 bg-blue-500/10 dark:bg-blue-400/10 rounded-lg blur-sm scale-150 opacity-50"
-                    ></span>
-                  </div>
-
-                  <span
-                    v-show="isExpanded || isHovered || isMobileOpen"
-                    class="truncate font-medium text-sm transition-all duration-300"
-                  >
+                <div class="flex items-center gap-3.5 min-w-0 z-10 transition-transform duration-150">
+                   <div :class="['flex items-center justify-center w-5 h-5 transition-transform duration-150', isSubmenuOpen(groupIndex, index) ? 'scale-110' : '']">
+                      <component :is="item.icon" :size="19" :stroke-width="isSubmenuOpen(groupIndex, index) ? 2.5 : 2" />
+                   </div>
+                  <span v-show="isExpanded || isHovered || isMobileOpen" class="truncate font-bold text-[13px] tracking-tight">
                     {{ item.name }}
                   </span>
                 </div>
-
-                <ChevronDownIcon
-                  v-show="isExpanded || isHovered || isMobileOpen"
-                  :class="[
-                    'w-4 h-4 transition-transform duration-300 opacity-50 group-hover:opacity-100',
-                    isSubmenuOpen(groupIndex, index)
-                      ? 'rotate-180 text-blue-500 opacity-100'
-                      : 'text-gray-400',
-                  ]"
-                />
+                <component :is="ChevronDown" v-show="isExpanded || isHovered || isMobileOpen" :size="14" :class="['transition-transform duration-150', isSubmenuOpen(groupIndex, index) ? 'rotate-180' : '']" />
               </button>
 
-              <!-- Dropdown Content -->
               <transition
-                enter-active-class="transition-all duration-300 ease-in-out"
-                enter-from-class="max-h-0 opacity-0"
-                enter-to-class="max-h-[400px] opacity-100"
-                leave-active-class="transition-all duration-200 ease-in-out"
-                leave-from-class="max-h-[400px] opacity-100"
-                leave-to-class="max-h-0 opacity-0"
+                enter-active-class="transition-all duration-200 ease-out"
+                enter-from-class="max-h-0 opacity-0 scale-95"
+                enter-to-class="max-h-[300px] opacity-100 scale-100"
+                leave-active-class="transition-all duration-150 ease-in"
+                leave-from-class="max-h-[300px] opacity-100 scale-100"
+                leave-to-class="max-h-0 opacity-0 scale-95"
               >
-                <div
-                  v-show="
-                    isSubmenuOpen(groupIndex, index) &&
-                    (isExpanded || isHovered || isMobileOpen)
-                  "
-                  class="overflow-hidden"
-                >
-                  <ul
-                    class="pt-1 pb-2 pl-[1.15rem] ml-3 border-l-[1.5px] border-gray-100 dark:border-gray-800 space-y-1"
-                  >
+                <div v-show="isSubmenuOpen(groupIndex, index) && (isExpanded || isHovered || isMobileOpen)" class="overflow-hidden mt-0.5">
+                  <ul class="pl-10 pr-2 space-y-1 relative">
+                    <div class="absolute left-6 top-0 bottom-2 w-px bg-gray-100 dark:bg-gray-800 opacity-50"></div>
                     <li v-for="subItem in item.subItems" :key="subItem.name">
                       <NuxtLink
                         :to="subItem.path"
                         :class="[
-                          'flex items-center px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 relative overflow-hidden',
+                          'block px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-all duration-150',
                           isActive(subItem.path, subItem.excludePaths)
-                            ? 'text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-500/10 translate-x-1'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800/50',
+                            ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 shadow-sm translate-x-1'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:translate-x-1',
                         ]"
-                      >
-                        <span
-                          v-if="isActive(subItem.path, subItem.excludePaths)"
-                          class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-blue-500 rounded-r-full"
-                        ></span>
-                        {{ subItem.name }}
-                      </NuxtLink>
+                      >{{ subItem.name }}</NuxtLink>
                     </li>
                   </ul>
                 </div>
               </transition>
             </div>
 
-            <!-- Single Link Item -->
             <NuxtLink
               v-else
               :to="item.path ?? ''"
               :class="[
-                'group flex items-center px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 relative overflow-hidden',
+                'group flex items-center px-4 py-2.5 rounded-2xl cursor-pointer transition-all duration-150 transform-gpu translate-z-0',
                 isActive(item.path ?? '', item.excludePaths)
-                  ? 'bg-linear-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white',
-                !isExpanded && !isHovered ? 'justify-center' : '',
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800/40 hover:text-gray-900 dark:hover:text-white',
+                !isExpanded && !isHovered ? 'justify-center px-0' : '',
               ]"
             >
-              <!-- Hover Gradient Effect for inactive items -->
-              <div
-                v-if="!isActive(item.path ?? '', item.excludePaths)"
-                class="absolute inset-0 bg-linear-to-r from-blue-500/0 via-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-              ></div>
-
-              <div
-                :class="[
-                  'relative z-10 w-6 h-6 flex items-center justify-center transition-transform duration-300 group-hover:scale-110',
-                  isActive(item.path ?? '', item.excludePaths)
-                    ? 'text-white'
-                    : 'text-gray-500 dark:text-gray-400 group-hover:text-blue-500 dark:group-hover:text-blue-400',
-                ]"
-              >
-                <component :is="item.icon" class="w-5 h-5" />
+              <div class="relative z-10 flex items-center justify-center w-5 h-5">
+                <component :is="item.icon" :size="19" />
               </div>
-
-              <span
-                v-show="isExpanded || isHovered || isMobileOpen"
-                class="ml-3 truncate font-medium text-sm transition-opacity duration-300 relative z-10"
-              >
+              <span v-show="isExpanded || isHovered || isMobileOpen" class="ml-3.5 truncate font-bold text-[13px] tracking-tight relative z-10">
                 {{ item.name }}
               </span>
-
-              <!-- Clean Tooltip for collapsed state -->
-              <div
-                v-if="!isExpanded && !isHovered && !isMobileOpen"
-                class="absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-60 shadow-xl whitespace-nowrap translate-x--2 group-hover:translate-x-0"
-              >
+              <div v-if="isActive(item.path || '') && !(!isExpanded && !isHovered)" class="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-full transition-all duration-150"></div>
+              <div v-if="!isExpanded && !isHovered && !isMobileOpen" class="absolute left-20 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[11px] font-black rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-100 z-60 shadow-xl">
                 {{ item.name }}
-                <div
-                  class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-[4px] w-2 h-2 bg-gray-900 rotate-45"
-                ></div>
               </div>
             </NuxtLink>
           </li>
@@ -220,32 +131,14 @@
     </div>
 
     <!-- Sidebar Footer -->
-    <div
-      v-if="isExpanded || isHovered || isMobileOpen"
-      :class="[
-        'px-4 py-4 border-t border-gray-100/50 dark:border-gray-800/50 transition-all duration-300',
-        'bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm',
-      ]"
-    >
-      <div
-        class="flex flex-col items-center justify-center space-y-2 text-center"
-      >
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-semibold text-gray-900 dark:text-white"
-            >АТЦ Платформа</span
-          >
-          <span
-            class="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-100 dark:border-blue-800"
-          >
-            v1.0
-          </span>
-        </div>
-
-        <p class="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
-          &copy; {{ new Date().getFullYear() }} АТЦ Платформа.<br />
-          Все права защищены.
-        </p>
-      </div>
+    <div v-if="isExpanded || isHovered || isMobileOpen" class="p-3 bg-white/40 dark:bg-gray-900/40 border-t border-gray-100 dark:border-gray-800">
+       <div class="flex items-center gap-2.5 p-2 bg-white/60 dark:bg-gray-800/60 rounded-xl border border-white/50 dark:border-gray-700/50 shadow-xs transition-all duration-150">
+          <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-sm">{{ userInitial }}</div>
+          <div class="flex-1 min-w-0">
+            <p class="text-[11px] font-bold text-gray-900 dark:text-white truncate">{{ userName }}</p>
+            <p class="text-[8px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-tight">{{ userRoleLabel }}</p>
+          </div>
+       </div>
     </div>
   </aside>
 </template>
@@ -255,508 +148,128 @@ import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useSidebar } from "~/composables/useSidebar";
 import { usePermissions } from "~/composables/usePermissions";
+import { useAuth } from "~/composables/useAuth";
 import { Permission } from "~/types/permissions";
-import type { DefineComponent } from "vue";
+import { 
+  LayoutDashboard, 
+  CalendarRange, 
+  Users, 
+  GraduationCap, 
+  FileCheck, 
+  Database, 
+  Library, 
+  BarChart3, 
+  FolderTree, 
+  ShieldCheck, 
+  Clock, 
+  ChevronDown,
+  ChevronLeft,
+  HelpCircle,
+  Trophy,
+  Award,
+  History,
+  Settings,
+  UserCheck
+} from "lucide-vue-next";
+import type { Component } from "vue";
 
-// Интерфейсы для типизации меню
-interface SubMenuItem {
-  name: string;
-  path: string;
-  permission?: Permission;
-  anyPermissions?: Permission[];
-  excludePaths?: string[];
-  hideForRoles?: string[];
-}
-
-interface MenuItem {
-  icon: DefineComponent<any, any, any>;
-  name: string;
-  path?: string;
-  permission?: Permission;
-  anyPermissions?: Permission[];
-  subItems?: SubMenuItem[];
-  showOnlyForRoles?: string[];
-  hideForRoles?: string[];
-  excludePaths?: string[];
-}
-
-interface MenuGroup {
-  title: string;
-  items: MenuItem[];
-}
-
-// Importing icons
-import GridIcon from "~/components/icons/GridIcon.vue";
-import CalenderIcon from "~/components/icons/CalenderIcon.vue";
-import UserGroupIcon from "~/components/icons/UserGroupIcon.vue";
-import DocsIcon from "~/components/icons/DocsIcon.vue";
-import ChevronDownIcon from "~/components/icons/ChevronDownIcon.vue";
-import DatabaseIcon from "~/components/icons/DatabaseIcon.vue";
-import AcademicCapIcon from "~/components/icons/AcademicCapIcon.vue";
-import FolderIcon from "~/components/icons/FolderIcon.vue";
-import CertificateIcon from "~/components/icons/CertificateIcon.vue";
-import ClipboardCheckIcon from "~/components/icons/ClipboardCheckIcon.vue";
-import BoxCubeIcon from "~/components/icons/BoxCubeIcon.vue";
-import UserCircleIcon from "~/components/icons/UserCircleIcon.vue";
-import BookIcon from "~/components/icons/BookIcon.vue";
-import BarChartIcon from "~/components/icons/BarChartIcon.vue";
+// Интерфейсы
+interface SubMenuItem { name: string; path: string; permission?: Permission; anyPermissions?: Permission[]; excludePaths?: string[]; hideForRoles?: string[]; }
+interface MenuItem { icon: Component; name: string; path?: string; permission?: Permission; anyPermissions?: Permission[]; subItems?: SubMenuItem[]; showOnlyForRoles?: string[]; hideForRoles?: string[]; excludePaths?: string[]; }
+interface MenuGroup { title: string; items: MenuItem[]; }
 
 const route = useRoute();
-const { isExpanded, isMobileOpen, isHovered, openSubmenu, setIsHovered } =
-  useSidebar();
-const {
-  hasPermission,
-  hasAnyPermission,
-  isStudent,
-  isTeacher,
-  isAdmin,
-  isManager,
-} = usePermissions();
+const auth = useAuth();
+const { isExpanded, isMobileOpen, isHovered, openSubmenu, setIsHovered, toggleSidebar } = useSidebar();
+const { hasPermission, hasAnyPermission, isStudent, isTeacher, isAdmin, isManager } = usePermissions();
 
-// Hover Handlers
-const handleMouseEnter = () => {
-  if (!isExpanded.value) {
-    setIsHovered(true);
-  }
-};
+const userName = computed(() => auth.user.value?.name || "Пользователь");
+const userInitial = computed(() => userName.value.charAt(0).toUpperCase());
+const userRoleLabel = computed(() => isAdmin.value ? "Админ" : isManager.value ? "Менеджер" : isTeacher.value ? "Преподаватель" : "Студент");
 
-const handleMouseLeave = () => {
-  setIsHovered(false);
-};
+const handleMouseEnter = () => !isExpanded.value && setIsHovered(true);
+const handleMouseLeave = () => setIsHovered(false);
 
-// Sidebar Color based on user settings
-const userSettings = useState<{ sidebar_color?: string } | null>(
-  "user-settings",
-);
-
-const sidebarColorClass = computed(() => {
-  const color = userSettings.value?.sidebar_color || "default";
-
-  switch (color) {
-    case "primary":
-      return "bg-blue-600/95 dark:bg-blue-700/95 border-blue-500/50 dark:border-blue-600/50 shadow-blue-500/20 text-white sidebar-primary";
-    case "success":
-      return "bg-emerald-600/95 dark:bg-emerald-700/95 border-emerald-500/50 dark:border-emerald-600/50 shadow-emerald-500/20 text-white sidebar-success";
-    case "purple":
-      return "bg-purple-600/95 dark:bg-purple-700/95 border-purple-500/50 dark:border-purple-600/50 shadow-purple-500/20 text-white sidebar-purple";
-    default:
-      return "bg-white/95 dark:bg-gray-900/95 border-gray-200/50 dark:border-gray-800/50 shadow-gray-200/50";
-  }
-});
-
-// Menu Configuration
+// Меню
 const allMenuGroups: MenuGroup[] = [
-  {
-    title: "Главная",
-    items: [
-      {
-        icon: GridIcon,
-        name: "Обзор",
-        path: "/",
-        permission: Permission.DASHBOARD_VIEW,
-      },
-      {
-        icon: CalenderIcon,
-        name:
-          isStudent.value || isTeacher.value ? "Моё расписание" : "Расписание",
-        path: "/schedule",
-        anyPermissions: [
-          Permission.SCHEDULE_VIEW_ALL,
-          Permission.SCHEDULE_VIEW_OWN,
-        ],
-      },
-    ],
-  },
-  {
-    title: "Учебный процесс",
-    items: [
-      {
-        icon: AcademicCapIcon,
-        name: "Учебные программы",
-        permission: Permission.COURSES_VIEW,
-        path: "/programs",
-        excludePaths: ["/programs/create"],
-      },
-      {
-        icon: UserGroupIcon,
-        name: isTeacher.value ? "Мои группы" : "Учебные группы",
-        path: "/groups",
-        anyPermissions: [
-          Permission.GROUPS_VIEW_ALL,
-          Permission.GROUPS_VIEW_OWN,
-        ],
-      },
-      {
-        icon: CalenderIcon,
-        name: "Отметка посещаемости",
-        path: "/attendance/pending",
-        permission: Permission.ATTENDANCE_MARK,
-        showOnlyForRoles: ["TEACHER"],
-      },
-      {
-        icon: ClipboardCheckIcon,
-        name: "Банк тестирования",
-        permission: Permission.TEST_BANKS_VIEW,
-        hideForRoles: ["STUDENT"],
-        subItems: [
-          {
-            name: "Банки вопросов",
-            path: "/test-bank",
-            excludePaths: ["/test-bank/templates"],
-          },
-          {
-            name: "Шаблоны тестов",
-            path: "/test-bank/templates",
-            permission: Permission.TEST_TEMPLATES_VIEW,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: "База данных",
-    items: [
-      {
-        icon: DatabaseIcon,
-        name: "База данных",
-        anyPermissions: [
-          Permission.ORGANIZATIONS_VIEW,
-          Permission.CERTIFICATES_VIEW,
-        ],
-        hideForRoles: ["STUDENT"],
-        subItems: [
-          {
-            name: "База организаций",
-            path: "/database?tab=organizations",
-            permission: Permission.ORGANIZATIONS_VIEW,
-          },
-          {
-            name: "База сертификатов",
-            path: "/database?tab=certificates",
-            permission: Permission.CERTIFICATES_VIEW,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Ресурсы",
-    items: [
-      {
-        icon: BookIcon,
-        name: "Библиотека",
-        anyPermissions: [Permission.LIBRARY_VIEW, Permission.LIBRARY_MANAGE],
-        subItems: [
-          {
-            name: "Каталог книг",
-            path: "/library",
-            permission: Permission.LIBRARY_VIEW,
-          },
-          {
-            name: "Управление книгами",
-            path: "/admin/library/books",
-            permission: Permission.LIBRARY_MANAGE,
-            hideForRoles: ["STUDENT"],
-          },
-        ],
-      },
-      {
-        icon: BarChartIcon,
-        name: "Конструктор отчётов",
-        path: "/reports",
-        hideForRoles: ["STUDENT", "TEACHER"],
-        anyPermissions: [Permission.DASHBOARD_VIEW],
-      },
-      {
-        icon: FolderIcon,
-        name: "Файловый менеджер",
-        path: "/files",
-        permission: Permission.FILES_VIEW,
-        hideForRoles: ["STUDENT"],
-      },
-      {
-        icon: DocsIcon,
-        name: "Документация",
-        path: "/docs",
-      },
-    ],
-  },
-  {
-    title: "Личный кабинет",
-    items: [
-      {
-        icon: CertificateIcon,
-        name: "Мои сертификаты",
-        path: "/my-certificates",
-        permission: Permission.CERTIFICATES_VIEW_OWN,
-        showOnlyForRoles: ["STUDENT"],
-      },
-      {
-        icon: ClipboardCheckIcon,
-        name: "Мои тесты",
-        path: "/tests/my",
-        showOnlyForRoles: ["STUDENT"],
-      },
-      {
-        icon: AcademicCapIcon,
-        name: "Мои курсы",
-        path: "/my-courses",
-        showOnlyForRoles: ["STUDENT"],
-      },
-      {
-        icon: DocsIcon,
-        name: "Поддержка",
-        path: "/support",
-        showOnlyForRoles: ["STUDENT"],
-      },
-    ],
-  },
-  {
-    title: "Администрирование",
-    items: [
-      {
-        icon: UserGroupIcon,
-        name: "Пользователи",
-        path: "/users?tab=admin",
-        permission: Permission.USERS_MANAGE_ROLES,
-      },
-      {
-        icon: DocsIcon,
-        name: "Шаблоны сертификатов",
-        path: "/certificates/templates",
-        permission: Permission.TEMPLATES_VIEW,
-      },
-      {
-        icon: CalenderIcon,
-        name: "Запросы на отметку",
-        path: "/admin/attendance-requests",
-        permission: Permission.ATTENDANCE_MANAGE,
-        showOnlyForRoles: ["ADMIN", "MANAGER"],
-      },
-      {
-        icon: ClipboardCheckIcon,
-        name: "Заявки на обучение",
-        path: "/training-requests",
-        permission: Permission.ATTENDANCE_MANAGE,
-        showOnlyForRoles: ["ADMIN", "MANAGER"],
-      },
-      {
-        icon: ClipboardCheckIcon,
-        name: "Журнал действий",
-        path: "/activity-logs",
-        permission: Permission.LOGS_VIEW,
-      },
-    ],
-  },
+  { title: "Панель", items: [
+    { icon: LayoutDashboard, name: "Обзор", path: "/", permission: Permission.DASHBOARD_VIEW },
+    { icon: CalendarRange, name: isStudent.value || isTeacher.value ? "Мои занятия" : "Расписание", path: "/schedule", anyPermissions: [Permission.SCHEDULE_VIEW_ALL, Permission.SCHEDULE_VIEW_OWN] }
+  ]},
+  { title: "Обучение", items: [
+    { icon: GraduationCap, name: "Программы", permission: Permission.COURSES_VIEW, path: "/programs" },
+    { icon: Users, name: "Учебные группы", path: "/groups", anyPermissions: [Permission.GROUPS_VIEW_ALL, Permission.GROUPS_VIEW_OWN] },
+    { icon: Trophy, name: "Мои успехи", path: "/my-certificates", showOnlyForRoles: ["STUDENT"] },
+    { icon: FileCheck, name: "Тесты", showOnlyForRoles: ["STUDENT"], path: "/tests/my" },
+    { icon: FileCheck, name: "База тестов", hideForRoles: ["STUDENT"], subItems: [ 
+        { name: "Вопросы", path: "/test-bank" }, 
+        { name: "Шаблоны", path: "/test-bank/templates" } 
+    ] }
+  ]},
+  { title: "Контент", items: [
+    { icon: Award, name: "Сертификаты", hideForRoles: ["STUDENT"], subItems: [
+      { name: "База сертификатов", path: "/certificates", excludePaths: ["/certificates/templates"] },
+      { name: "Организации", path: "/certificates?tab=orgs" },
+      { name: "Шаблоны", path: "/certificates/templates" }
+    ]},
+    { icon: Library, name: "Библиотека", hideForRoles: ["STUDENT", "TEACHER"], subItems: [
+      { name: "Каталог", path: "/library" },
+      { name: "Управление", path: "/admin/library/books", permission: Permission.LIBRARY_MANAGE }
+    ]},
+    { icon: Library, name: "Библиотека", showOnlyForRoles: ["STUDENT", "TEACHER"], path: "/library" },
+    { icon: FolderTree, name: "Файлы", path: "/files", hideForRoles: ["STUDENT"] }
+  ]},
+  { title: "Управление", items: [
+    { icon: Users, name: "Пользователи", path: "/users", anyPermissions: [Permission.USERS_VIEW_ALL] },
+    { icon: UserCheck, name: "Представители", path: "/representatives", anyPermissions: [Permission.REPRESENTATIVES_VIEW] },
+    { icon: BarChart3, name: "Аналитика", path: "/reports", hideForRoles: ["STUDENT", "TEACHER"] }
+  ]},
+  { title: "Администрирование", items: [
+    { icon: History, name: "Логи системы", path: "/activity-logs", permission: Permission.LOGS_VIEW },
+    { icon: Settings, name: "Настройки", path: "/settings", permission: Permission.SETTINGS_MANAGE },
+    { icon: ShieldCheck, name: "Безопасность", path: "/users?tab=admin", permission: Permission.USERS_MANAGE_ROLES }
+  ]},
+  { title: "Сервис", items: [
+    { icon: HelpCircle, name: "Поддержка", path: "/support" }
+  ]}
 ];
 
-// Computed Filtered Menu
-const menuGroups = computed((): MenuGroup[] => {
-  return allMenuGroups
-    .map((group) => {
-      const filteredItems = group.items
-        .map((item): MenuItem | null => {
-          // 1. Role-based visibility
-          if (item.showOnlyForRoles) {
-            const currentRole = isAdmin.value
-              ? "ADMIN"
-              : isManager.value
-                ? "MANAGER"
-                : isTeacher.value
-                  ? "TEACHER"
-                  : isStudent.value
-                    ? "STUDENT"
-                    : null;
-            if (!currentRole || !item.showOnlyForRoles.includes(currentRole)) {
-              return null;
-            }
-          }
-
-          if (item.hideForRoles) {
-            const currentRole = isAdmin.value
-              ? "ADMIN"
-              : isManager.value
-                ? "MANAGER"
-                : isTeacher.value
-                  ? "TEACHER"
-                  : isStudent.value
-                    ? "STUDENT"
-                    : null;
-            if (currentRole && item.hideForRoles.includes(currentRole)) {
-              return null;
-            }
-          }
-
-          // 2. Permission based visibility
-          if (item.permission && !hasPermission(item.permission)) {
-            return null;
-          }
-
-          if (item.anyPermissions && !hasAnyPermission(item.anyPermissions)) {
-            return null;
-          }
-
-          // 3. Handle Subitems
-          if (item.subItems) {
-            const filteredSubItems = item.subItems.filter((subItem) => {
-              // Check hideForRoles
-              if (subItem.hideForRoles) {
-                const currentRole = isAdmin.value
-                  ? "ADMIN"
-                  : isManager.value
-                    ? "MANAGER"
-                    : isTeacher.value
-                      ? "TEACHER"
-                      : isStudent.value
-                        ? "STUDENT"
-                        : null;
-                if (currentRole && subItem.hideForRoles.includes(currentRole)) {
-                  return false;
-                }
-              }
-
-              // Check permissions
-              if (subItem.permission && !hasPermission(subItem.permission)) {
-                return false;
-              }
-
-              if (
-                subItem.anyPermissions &&
-                !hasAnyPermission(subItem.anyPermissions)
-              ) {
-                return false;
-              }
-
-              return true;
-            });
-
-            if (filteredSubItems.length === 0) return null;
-
-            // If we have subitems, we update the item to contain them
-            return { ...item, subItems: filteredSubItems };
-          }
-
-          return item;
-        })
-        .filter((item): item is MenuItem => item !== null);
-
-      return {
-        ...group,
-        items: filteredItems,
-      };
-    })
-    .filter((group) => group.items.length > 0);
+const menuGroups = computed(() => {
+  return allMenuGroups.map(group => {
+    const items = group.items.filter(item => {
+      const role = isAdmin.value ? "ADMIN" : isManager.value ? "MANAGER" : isTeacher.value ? "TEACHER" : "STUDENT";
+      if (item.showOnlyForRoles && !item.showOnlyForRoles.includes(role)) return false;
+      if (item.hideForRoles && item.hideForRoles.includes(role)) return false;
+      if (item.permission && !hasPermission(item.permission)) return false;
+      if (item.anyPermissions && !hasAnyPermission(item.anyPermissions)) return false;
+      return true;
+    });
+    return { ...group, items };
+  }).filter(g => g.items.length > 0);
 });
 
-// Helper functions for state
-const isActive = (path: string, excludePaths?: string[]) => {
+const isActive = (path: string, exclude?: string[]) => {
   if (path === "/") return route.path === "/";
-
-  // Check exclusions
-  if (
-    excludePaths &&
-    excludePaths.some((excluded) => route.path.startsWith(excluded))
-  ) {
-    return false;
-  }
-
-  // Check if active path includes query param if present
+  if (exclude?.some(ex => route.path.startsWith(ex))) return false;
   if (path.includes("?")) {
-    const [pathBase, queryString] = path.split("?");
-    const params = new URLSearchParams(queryString);
-    const tab = params.get("tab");
-
-    return route.path === pathBase && route.query.tab === tab;
+    const [b, q] = path.split("?");
+    const p = new URLSearchParams(q);
+    return route.path === b && route.query.tab === p.get("tab");
   }
-
-  // Strict match for determining if the LINK itself is highlighted (base case)
   return route.path === path || route.path.startsWith(path + "/");
 };
 
-const isParentActive = (path: string) => {
-  if (path === "/") return route.path === "/";
-  // Loose match for determining if a group should be open based on one of its children
-  const pathBase = path.split("?")[0] || "";
-  return route.path.startsWith(pathBase);
-};
-
-const toggleSubmenu = (groupIndex: number, itemIndex: number) => {
-  const key = `${groupIndex}-${itemIndex}`;
-  openSubmenu.value = openSubmenu.value === key ? null : key;
-};
-
-const isSubmenuOpen = (groupIndex: number, itemIndex: number) => {
-  const key = `${groupIndex}-${itemIndex}`;
-  if (openSubmenu.value === key) return true;
-
-  // Auto-expand if child is active (using loose match)
-  const item = menuGroups.value[groupIndex]?.items[itemIndex];
-  if (item?.subItems) {
-    return item.subItems.some((sub) => isActive(sub.path, sub.excludePaths));
-  }
-  return false;
+const toggleSubmenu = (g: number, i: number) => { const k = `${g}-${i}`; openSubmenu.value = openSubmenu.value === k ? null : k; };
+const isSubmenuOpen = (g: number, i: number) => {
+  const k = `${g}-${i}`;
+  if (openSubmenu.value === k) return true;
+  const item = menuGroups.value[g]?.items[i];
+  return item?.subItems?.some(s => isActive(s.path)) || false;
 };
 </script>
 
 <style scoped>
-/* Стили для цветных вариантов sidebar */
-.sidebar-primary :deep(.text-gray-400),
-.sidebar-primary :deep(.text-gray-500),
-.sidebar-primary :deep(.text-gray-600),
-.sidebar-success :deep(.text-gray-400),
-.sidebar-success :deep(.text-gray-500),
-.sidebar-success :deep(.text-gray-600),
-.sidebar-purple :deep(.text-gray-400),
-.sidebar-purple :deep(.text-gray-500),
-.sidebar-purple :deep(.text-gray-600) {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-.sidebar-primary :deep(.text-gray-900),
-.sidebar-primary :deep(.dark\:text-white),
-.sidebar-success :deep(.text-gray-900),
-.sidebar-success :deep(.dark\:text-white),
-.sidebar-purple :deep(.text-gray-900),
-.sidebar-purple :deep(.dark\:text-white) {
-  color: white !important;
-}
-
-.sidebar-primary :deep(.border-gray-100),
-.sidebar-primary :deep(.border-gray-200),
-.sidebar-primary :deep(.dark\:border-gray-800),
-.sidebar-success :deep(.border-gray-100),
-.sidebar-success :deep(.border-gray-200),
-.sidebar-success :deep(.dark\:border-gray-800),
-.sidebar-purple :deep(.border-gray-100),
-.sidebar-purple :deep(.border-gray-200),
-.sidebar-purple :deep(.dark\:border-gray-800) {
-  border-color: rgba(255, 255, 255, 0.15) !important;
-}
-
-.sidebar-primary :deep(.bg-gray-50),
-.sidebar-primary :deep(.hover\:bg-gray-50:hover),
-.sidebar-primary :deep(.dark\:hover\:bg-gray-800\/50:hover),
-.sidebar-success :deep(.bg-gray-50),
-.sidebar-success :deep(.hover\:bg-gray-50:hover),
-.sidebar-success :deep(.dark\:hover\:bg-gray-800\/50:hover),
-.sidebar-purple :deep(.bg-gray-50),
-.sidebar-purple :deep(.hover\:bg-gray-50:hover),
-.sidebar-purple :deep(.dark\:hover\:bg-gray-800\/50:hover) {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-}
-
-.sidebar-primary :deep(.bg-blue-50\/80),
-.sidebar-success :deep(.bg-blue-50\/80),
-.sidebar-purple :deep(.bg-blue-50\/80) {
-  background-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.sidebar-primary :deep(.group-hover\:text-blue-500),
-.sidebar-primary :deep(.group-hover\:text-blue-400),
-.sidebar-success :deep(.group-hover\:text-blue-500),
-.sidebar-success :deep(.group-hover\:text-blue-400),
-.sidebar-purple :deep(.group-hover\:text-blue-500),
-.sidebar-purple :deep(.group-hover\:text-blue-400) {
-  color: white !important;
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

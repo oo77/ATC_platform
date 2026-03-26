@@ -24,6 +24,11 @@
           <th
             class="py-4 px-4 font-medium text-black dark:text-white text-center"
           >
+            Сертификаты
+          </th>
+          <th
+            class="py-4 px-4 font-medium text-black dark:text-white text-center"
+          >
             Действия
           </th>
         </tr>
@@ -187,6 +192,25 @@
             </span>
           </td>
 
+          <!-- Статистика сертификатов -->
+          <td class="py-4 px-4">
+            <div class="flex flex-col gap-2 min-w-[150px]">
+              <div class="flex items-center justify-between text-xs font-medium">
+                <span class="text-gray-500 dark:text-gray-400">Выдано:</span>
+                <span class="text-black dark:text-white font-bold">{{ organization.issuedCertificates || 0 }} / {{ organization.totalCertificates || 0 }}</span>
+              </div>
+              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                <div 
+                  class="h-full bg-primary transition-all duration-500"
+                  :style="{ width: `${getPercent(organization)}%` }"
+                ></div>
+              </div>
+              <div v-if="organization.latestCertificateDate" class="text-[10px] text-gray-400 dark:text-gray-500 text-right italic">
+                {{ formatDate(organization.latestCertificateDate) }}
+              </div>
+            </div>
+          </td>
+
           <!-- Действия -->
           <td class="py-4 px-4" @click.stop>
             <div class="flex items-center justify-center gap-2">
@@ -285,6 +309,11 @@ interface Organization {
   studentsCount: number;
   createdAt: Date | string;
   updatedAt: Date | string;
+  // Статистика сертификатов
+  totalCertificates?: number;
+  issuedCertificates?: number;
+  revokedCertificates?: number;
+  latestCertificateDate?: string | null;
 }
 
 defineProps<{
@@ -298,4 +327,18 @@ const emit = defineEmits<{
   (e: "view", organization: Organization): void;
   (e: "download", organization: Organization): void;
 }>();
+
+const getPercent = (org: Organization) => {
+  if (!org.totalCertificates || org.totalCertificates === 0) return 0;
+  return Math.round((org.issuedCertificates || 0) / org.totalCertificates * 100);
+};
+
+const formatDate = (date: string | Date | null): string => {
+  if (!date) return "—";
+  return new Date(date).toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
 </script>

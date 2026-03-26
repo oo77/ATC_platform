@@ -1,13 +1,23 @@
 <template>
   <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
     <!-- Заголовок страницы -->
-    <div class="mb-6">
-      <h2 class="text-title-md2 font-bold text-black dark:text-white">
-        Библиотека
-      </h2>
-      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-        Доступные вам книги для чтения
-      </p>
+    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 class="text-title-md2 font-bold text-black dark:text-white">
+          Библиотека
+        </h2>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          Доступные вам книги для чтения
+        </p>
+      </div>
+      <div v-if="isStaff" class="flex items-center gap-3">
+        <NuxtLink to="/admin/library/books">
+          <UiButton variant="primary" class="flex items-center gap-2">
+            <Library class="w-5 h-5 text-white" />
+            <span>Управление библиотекой</span>
+          </UiButton>
+        </NuxtLink>
+      </div>
     </div>
 
     <!-- Поиск и фильтры -->
@@ -290,7 +300,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { Library } from "lucide-vue-next";
 import { useToast } from "~/composables/useToast";
+import { usePermissions } from "~/composables/usePermissions";
+
+const { isStaff } = usePermissions();
 
 definePageMeta({
   layout: "default" as any,

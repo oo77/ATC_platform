@@ -194,6 +194,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import type { UserPublic } from "~/types/auth";
+import { useAuth } from "~/composables/useAuth";
+import { useAuthFetch } from "~/composables/useAuthFetch";
 
 // Composables
 const { user } = useAuth();
