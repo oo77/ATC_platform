@@ -163,8 +163,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import { useHead } from "#imports";
+import { ref, computed, onMounted } from "vue";
 import RegistrationForm from "~/components/tg-app/RegistrationForm.vue";
 import StudentsTab from "~/components/tg-app/StudentsTab.vue";
 import ScheduleTab from "~/components/tg-app/ScheduleTab.vue";
@@ -174,19 +173,6 @@ import RequestsTab from "~/components/tg-app/RequestsTab.vue";
 import SettingsTab from "~/components/tg-app/SettingsTab.vue";
 
 definePageMeta({ layout: false });
-
-useHead({
-  script: [
-    {
-      src: "https://telegram.org/js/telegram-web-app.js",
-      onload: () => {
-        console.log("TG SDK Loaded");
-        setTimeout(initialize, 100);
-      },
-      defer: true,
-    },
-  ],
-});
 
 // SVG иконки для навигации
 const icons = {
@@ -209,66 +195,9 @@ const representative = ref(null);
 const activeTab = ref("students");
 const debugInfo = ref("");
 
-/**
- * Парсинг initData из URL hash (для веб-версии Telegram)
- */
-function parseInitDataFromHash(hash) {
-  try {
-    console.log("[TG] Parsing hash, length:", hash.length);
-
-    const cleanHash = hash.startsWith("#") ? hash.substring(1) : hash;
-    console.log("[TG] Clean hash (first 300):", cleanHash.substring(0, 300));
-
-    const tgWebAppDataMatch = cleanHash.match(
-      /tgWebAppData=([^&]*(?:&(?!tgWebApp)[^&]*)*)/,
-    );
-
-    if (!tgWebAppDataMatch) {
-      console.warn("[TG] No tgWebAppData found in hash");
-      return null;
-    }
-
-    let initData = tgWebAppDataMatch[1];
-    console.log("[TG] Extracted tgWebAppData length:", initData.length);
-    console.log(
-      "[TG] Extracted tgWebAppData (first 300):",
-      initData.substring(0, 300),
-    );
-
-    const hashParams = new URLSearchParams(cleanHash);
-
-    const importantParams = ["auth_date", "hash", "signature"];
-    importantParams.forEach((param) => {
-      const value = hashParams.get(param);
-      if (value && !initData.includes(`${param}=`)) {
-        console.log(
-          `[TG] Adding ${param} from hash:`,
-          value.substring(0, 20) + "...",
-        );
-        initData += `&${param}=${value}`;
-      }
-    });
-
-    console.log("[TG] Final initData length:", initData.length);
-    console.log("[TG] Final initData (first 300):", initData.substring(0, 300));
-
-    const hasUser = initData.includes("user=");
-    const hasHash = initData.includes("hash=");
-    const hasAuthDate = initData.includes("auth_date=");
-
-    console.log("[TG] Validation:", { hasUser, hasHash, hasAuthDate });
-
-    if (!hasUser || !hasHash) {
-      console.error("[TG] Missing required parameters in initData");
-      return null;
-    }
-
-    return initData;
-  } catch (error) {
-    console.error("[TG] Error parsing hash:", error);
-    return null;
-  }
-}
+onMounted(() => {
+  initialize();
+});
 
 // Initialize
 async function initialize() {
@@ -276,7 +205,7 @@ async function initialize() {
   statusMessage.value = "Подключение к Telegram...";
 
   try {
-    const tg = window.Telegram?.WebApp;
+    const tg = window?.Telegram?.WebApp;
     if (!tg) {
       throw new Error("Telegram WebApp не найден. Откройте через Telegram.");
     }
@@ -290,28 +219,12 @@ async function initialize() {
       rawInitData ? `length ${rawInitData.length}` : "empty",
     );
 
-    if ((!rawInitData || rawInitData.length < 50) && window.location.hash) {
-      console.warn(
-        "[TG] SDK initData пуст или слишком короткий, парсим из hash...",
-      );
-      const parsedData = parseInitDataFromHash(window.location.hash);
-
-      if (parsedData && parsedData.length > 50) {
-        rawInitData = parsedData;
-        console.log("[TG] ✅ initData успешно извлечен из hash");
-        console.log("[TG] initData length:", rawInitData.length);
-        console.log("[TG] initData sample:", rawInitData.substring(0, 150));
-      } else {
-        console.error("[TG] ❌ Не удалось извлечь initData из hash");
-      }
-    }
-
     const platform = tg.platform || "unknown";
 
     updateDebugInfo(tg, rawInitData);
 
     if (!rawInitData) {
-      throw new Error("Отсутствуют данные авторизации (initData пуст).");
+      throw new Error("Отсутствуют данные авторизации. Пожалуйста, откройте приложение через Telegram.");
     }
 
     let userData = tg.initDataUnsafe?.user || null;

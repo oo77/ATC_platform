@@ -72,6 +72,9 @@ export default defineNuxtConfig({
         },
         { rel: "manifest", href: "/site.webmanifest" },
       ],
+      script: [
+        { src: "https://telegram.org/js/telegram-web-app.js" }
+      ]
     },
   },
 

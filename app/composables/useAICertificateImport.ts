@@ -55,13 +55,13 @@ export const useAICertificateImport = () => {
   /**
    * Batch Шаг 1: Загрузка нескольких файлов
    */
-  const uploadBatch = async (files: File[]) => {
-    if (files.length === 0) {
+  const uploadBatch = async (filesData: any[]) => {
+    if (filesData.length === 0) {
       toast.error("Выберите файлы для загрузки");
       return;
     }
 
-    if (files.length > 20) {
+    if (filesData.length > 20) {
       toast.error("Максимум 20 файлов за раз");
       return;
     }
@@ -71,8 +71,14 @@ export const useAICertificateImport = () => {
 
     try {
       const formData = new FormData();
-      files.forEach((file) => {
+      filesData.forEach((item, index) => {
+        const file = item.file || item;
         formData.append("files", file);
+
+        // Для PDF отправляем сгенерированное браузером изображение в скрытом поле
+        if (file.type === 'application/pdf' && item.base64Data) {
+          formData.append(`preview_${index}`, item.base64Data);
+        }
       });
 
       const result = await authFetch<BatchUploadResult>(
@@ -95,7 +101,7 @@ export const useAICertificateImport = () => {
 
       if (result.errorCount > 0) {
         toast.warning(
-          `Загружено ${result.successCount} из ${files.length} файлов`,
+          `Загружено ${result.successCount} из ${filesData.length} файлов`,
         );
       } else {
         toast.success(`Успешно загружено ${result.successCount} файлов`);

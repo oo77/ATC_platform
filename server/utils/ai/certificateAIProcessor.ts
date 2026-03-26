@@ -110,6 +110,7 @@ export class CertificateAIProcessor {
     mimeType: string,
     filename: string,
     rawText?: string,
+    base64Preview?: string | null,
   ): Promise<{
     extractedData: ExtractedCertificateData;
     tokensUsed: TokenUsage;
@@ -119,24 +120,37 @@ export class CertificateAIProcessor {
     console.log(`🔍 Обработка ${filename} (${mimeType})...`);
 
     try {
+      // ИСПОЛЬЗУЕМ VISION если это картинка ИЛИ если это PDF с картинкой-превью
+      if (mimeType.includes("image/") || (mimeType === "application/pdf" && base64Preview)) {
+        console.log("🖼️ Обработка через Vision (скан)...");
+        
+        let base64Image = "";
+        let imageType = "image/jpeg";
+        
+        if (mimeType === "application/pdf" && base64Preview) {
+           // base64Preview приходит в формате `data:image/jpeg;base64,....`
+           const parts = base64Preview.split(',');
+           base64Image = parts.length > 1 ? parts[1] : base64Preview;
+           imageType = "image/jpeg";
+        } else if (fileBuffer) {
+           base64Image = fileBuffer.toString("base64");
+           imageType = mimeType.includes("png") ? "image/png" : "image/jpeg";
+        } else {
+           throw new Error("Пустой буфер файла (невозможно обработать через Vision)");
+        }
+        
+        const result = await this.analyzeImageWithVision(base64Image, imageType);
+        return { ...result, processingTime: Date.now() - startTime };
+      }
+
+      // ТРАДИЦИОННАЯ ТЕКСТОВАЯ ОБРАБОТКА PDF
       if (mimeType === "application/pdf" && rawText) {
         console.log("📄 Обработка PDF через текстовое извлечение...");
         const result = await this.analyzeTextContent(rawText);
         return { ...result, processingTime: Date.now() - startTime };
       }
 
-      if (!fileBuffer || fileBuffer.length === 0) {
-        throw new Error(
-          "Пустой буфер файла (невозможно обработать через Vision)",
-        );
-      }
-
-      console.log("🖼️ Обработка через Vision...");
-      const base64Image = fileBuffer.toString("base64");
-      const imageType = mimeType.includes("png") ? "image/png" : "image/jpeg";
-      const result = await this.analyzeImageWithVision(base64Image, imageType);
-
-      return { ...result, processingTime: Date.now() - startTime };
+      throw new Error("Неподдерживаемый формат или пустые данные (скан PDF без превью?)");
     } catch (error: any) {
       console.error("❌ Ошибка в CertificateAIProcessor:", error);
       throw error;
@@ -383,6 +397,7 @@ export class CertificateAIProcessor {
               file.mimeType,
               file.filename,
               file.rawTextFromPdf,
+              file.base64Preview,
             );
             return {
               ...result,

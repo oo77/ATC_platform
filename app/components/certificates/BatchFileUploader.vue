@@ -267,6 +267,44 @@ const selectedFiles = ref([])
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
 
+// Загрузка pdfjs
+const loadPdfJs = async () => {
+  if (window.pdfjsLib) return window.pdfjsLib;
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
+    script.onload = () => {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+      resolve(window.pdfjsLib);
+    };
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+};
+
+const generatePdfPreview = async (file) => {
+  try {
+    const pdfjsLib = await loadPdfJs();
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+    const page = await pdf.getPage(1);
+    
+    // Ограничиваем масштаб для приемлемого размера картинки
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    return canvas.toDataURL('image/jpeg', 0.85); // Качество 85%
+  } catch (error) {
+    console.error("Ошибка при генерации превью PDF:", error);
+    throw error;
+  }
+};
+
 // Computed
 const validFilesCount = computed(() => {
   return selectedFiles.value.filter((f) => !f.error).length
@@ -326,8 +364,20 @@ const processFiles = (files) => {
       const reader = new FileReader()
       reader.onload = (e) => {
         fileData.preview = e.target.result
+        fileData.base64Data = e.target.result // Сохраняем для отправки
       }
       reader.readAsDataURL(file)
+    }
+    // Создание превью для PDF
+    else if (file.type === 'application/pdf') {
+      fileData.preview = null // Покажем спиннер вместо превью (пока генерируется)
+      generatePdfPreview(file).then(dataUrl => {
+         fileData.preview = dataUrl
+         fileData.base64Data = dataUrl // Важно! Сохраняем картинку для отправки на бэк
+      }).catch(e => {
+         console.warn("Не удалось сгенерировать превью PDF", e)
+         // Оставляем без превью, но файл загрузится
+      })
     }
 
     selectedFiles.value.push(fileData)
@@ -349,7 +399,8 @@ const clearAll = () => {
 const uploadFiles = () => {
   const validFiles = selectedFiles.value
     .filter((f) => !f.error)
-    .map((f) => f.file)
+    // Отправляем объект целиком, чтобы в useAICertificateImport 
+    // получить доступ к сгенерированному base64Data превью
 
   if (validFiles.length > 0) {
     emit('upload', validFiles)

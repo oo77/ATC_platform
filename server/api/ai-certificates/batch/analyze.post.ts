@@ -73,6 +73,7 @@ export default defineEventHandler(
           buffer,
           mimeType,
           rawTextFromPdf: rawText,
+          base64Preview: internalData.base64Data, // Передаем картинку-превью (если есть)
         });
       } catch (error: any) {
         console.error(`[Batch Analyze] Error preparing file ${fileId}:`, error);

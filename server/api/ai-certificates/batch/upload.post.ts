@@ -49,7 +49,9 @@ export default defineEventHandler(async (event): Promise<BatchUploadResult> => {
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
   // 5. Обработка каждого файла через Promise.allSettled для graceful degradation
-  const uploadPromises = files.map(async (file, index) => {
+  const uploadedFiles = files.filter((f) => f.name === "files");
+
+  const uploadPromises = uploadedFiles.map(async (file, index) => {
     try {
       // 5.1 Валидация типа файла
       if (!ALLOWED_TYPES.includes(file.type || "")) {
@@ -78,6 +80,10 @@ export default defineEventHandler(async (event): Promise<BatchUploadResult> => {
         "/Certificates/Imports/Temp",
       );
 
+      // Ищем превью картинку, отправленную браузером (для PDF)
+      const previewField = files.find(f => f.name === `preview_${index}`);
+      const base64Preview = previewField ? previewField.data.toString() : null;
+
       // 5.4 Создание лога обработки
       const log = await aiCertificateRepository.createLog({
         originalFilename: file.filename || `unknown_${index}`,
@@ -93,39 +99,39 @@ export default defineEventHandler(async (event): Promise<BatchUploadResult> => {
             tempFilePath: savedFile.fullPath,
             fileUuid: savedFile.uuid,
             mimeType: savedFile.mimeType,
+            base64Data: base64Preview, // сохраняем картинку для Vision Model
           },
         } as any,
       });
 
       // 5.5 Логирование успешной загрузки
       console.log(
-        `[Batch Upload] File ${index + 1}/${files.length} uploaded: ${file.filename} (ID: ${log.id})`,
+        `[Batch Upload] File ${index + 1}/${uploadedFiles.length} uploaded: ${file.filename} (ID: ${log.id})${base64Preview ? ' [with Image Preview]' : ''}`,
       );
 
       // 5.6 Формирование результата загрузки
       const result: UploadFileResult = {
-        success: true,
         fileId: log.id,
         filename: savedFile.filename,
-        size: savedFile.sizeBytes,
+        fileSize: savedFile.sizeBytes,
+        mimeType: savedFile.mimeType,
       };
 
-      return result;
+      return { success: true, value: result };
     } catch (error: any) {
       // Обработка ошибки для конкретного файла
       console.error(
-        `[Batch Upload] Error processing file ${index + 1}/${files.length}:`,
+        `[Batch Upload] Error processing file ${index + 1}/${uploadedFiles.length}:`,
         error,
       );
 
-      const result: UploadFileResult = {
-        success: false,
-        filename: file.filename || `unknown_${index}`,
-        size: file.data.length,
-        error: error.message || "Неизвестная ошибка при загрузке файла",
+      return { 
+        success: false, 
+        value: {
+          filename: file.filename || `unknown_${index}`,
+          error: error.message || "Неизвестная ошибка при загрузке файла",
+        } 
       };
-
-      return result;
     }
   });
 
@@ -134,46 +140,38 @@ export default defineEventHandler(async (event): Promise<BatchUploadResult> => {
 
   // 7. Разделение на успешные и неудачные
   const uploadResults: UploadFileResult[] = [];
-  const errors: string[] = [];
+  const errors: Array<{filename: string, error: string}> = [];
 
   results.forEach((result, index) => {
     if (result.status === "fulfilled") {
-      uploadResults.push(result.value);
-      if (!result.value.success) {
-        errors.push(
-          `Файл ${index + 1} (${result.value.filename}): ${result.value.error}`,
-        );
+      if (result.value.success) {
+        uploadResults.push(result.value.value as UploadFileResult);
+      } else {
+        errors.push(result.value.value as {filename: string, error: string});
       }
     } else {
-      // Promise был отклонён (не должно происходить, так как мы обрабатываем ошибки внутри)
-      errors.push(
-        `Файл ${index + 1}: Критическая ошибка - ${result.reason?.message || "Unknown error"}`,
-      );
-      uploadResults.push({
-        success: false,
-        filename: files[index]?.filename || `unknown_${index}`,
-        size: files[index]?.data.length || 0,
+      // Promise был отклонён
+      errors.push({
+        filename: uploadedFiles[index]?.filename || `unknown_${index}`,
         error: result.reason?.message || "Критическая ошибка обработки",
       });
     }
   });
 
   // 8. Подсчёт статистики
-  const successCount = uploadResults.filter((r) => r.success).length;
-  const failedCount = uploadResults.filter((r) => !r.success).length;
+  const successCount = uploadResults.length;
+  const errorCount = errors.length;
 
   // 9. Логирование итогов batch-операции
   console.log(
-    `[Batch Upload] Completed: ${successCount} success, ${failedCount} failed out of ${files.length} files`,
+    `[Batch Upload] Completed: ${successCount} success, ${errorCount} failed out of ${uploadedFiles.length} files`,
   );
 
   // 10. Формирование финального результата
   const batchResult: BatchUploadResult = {
-    success: successCount > 0, // Успех если хотя бы один файл загружен
-    totalFiles: files.length,
-    successCount,
-    failedCount,
     files: uploadResults,
+    successCount,
+    errorCount,
     errors: errors.length > 0 ? errors : undefined,
   };
 
