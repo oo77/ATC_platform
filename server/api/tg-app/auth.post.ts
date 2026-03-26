@@ -3,8 +3,9 @@
  * Проверяет initData и возвращает данные представителя
  */
 
-import { getRepresentativeByTelegramChatId } from "../../repositories/representativeRepository";
+import { getRepresentativeByTelegramChatId, updateLastActivity } from "../../repositories/representativeRepository";
 import { validateWebAppData } from "../../utils/telegramAuth";
+import { logActivityDirect } from "../../utils/activityLogger";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -94,6 +95,19 @@ export default defineEventHandler(async (event) => {
       fullName: representative.fullName,
       status: representative.status,
     });
+
+    // Обновляем активность
+    await updateLastActivity(representative.id);
+
+    // Логируем вход
+    await logActivityDirect(
+      representative.id,
+      "LOGIN",
+      "REPRESENTATIVE",
+      representative.id,
+      representative.fullName,
+      { platform: "telegram_mini_app" }
+    );
 
     // Возвращаем данные представителя
     return {

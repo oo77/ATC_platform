@@ -16,6 +16,7 @@ import {
   normalizePhone,
 } from "../../utils/telegramBot";
 import { validateWebAppData } from "../../utils/telegramAuth";
+import { logActivityDirect } from "../../utils/activityLogger";
 
 export default defineEventHandler(async (event) => {
   console.log("[TG-App Register] ====== Request received ======");
@@ -161,6 +162,19 @@ export default defineEventHandler(async (event) => {
     console.log(
       "[TG-App Register] ✅ Представитель успешно создан:",
       representative.id,
+    );
+
+    // Логируем создание
+    await logActivityDirect(
+      representative.id,
+      "CREATE",
+      "REPRESENTATIVE",
+      representative.id,
+      representative.fullName,
+      { 
+        organizationId: orgId,
+        platform: "telegram_mini_app"
+      }
     );
 
     return {

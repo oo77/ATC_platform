@@ -10,6 +10,11 @@ export function validateWebAppData(
   initData: string,
   botToken: string = process.env.TELEGRAM_BOT_TOKEN || "",
 ) {
+  // Логируем наличие токена (без самого токена)
+  if (!botToken) {
+    console.error("[TelegramAuth] ❌ TELEGRAM_BOT_TOKEN is missing in environment");
+  }
+
   if (!initData || !botToken) {
     console.error(
       "[TelegramAuth] Validation Failed: Missing initData or botToken",
@@ -51,9 +56,14 @@ export function validateWebAppData(
     urlParams.delete("hash");
 
     // Сортируем ключи и создаем data-check-string
-    const dataCheckString = Array.from(urlParams.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => `${key}=${value}`)
+    // ВАЖНО: Telegram требует, чтобы мы использовали НЕЗАКОДИРОВАННЫЕ значения для проверки подписи
+    const params: string[] = [];
+    urlParams.forEach((value, key) => {
+      params.push(`${key}=${value}`);
+    });
+
+    const dataCheckString = params
+      .sort()
       .join("\n");
 
     console.log(
