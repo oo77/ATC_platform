@@ -1,8 +1,8 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+  <div class="mx-auto max-w-screen-2xl space-y-6">
     <!-- Заголовок страницы -->
     <div
-      class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      class="dashboard-hero flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between"
     >
       <div>
         <h2 class="text-title-md2 font-bold text-black dark:text-white">
@@ -24,7 +24,7 @@
     </div>
 
     <!-- Статистика -->
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-4 mb-6">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
       <div
         class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
         @click="navigateTo('/groups')"
@@ -111,7 +111,7 @@
     </div>
 
     <!-- Чарты: Студенты по курсам и Сертификаты -->
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2 mb-6">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
       <!-- Распределение студентов по курсам (Круговая диаграмма) -->
       <div
         class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
@@ -233,7 +233,7 @@
     </div>
 
     <!-- Топ курсов и Группы в работе -->
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2 mb-6">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
       <!-- Популярные курсы -->
       <div
         class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
@@ -380,7 +380,7 @@
     </div>
 
     <!-- Расписание и алерты -->
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3 mb-6">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
       <!-- Расписание на сегодня -->
       <div
         class="xl:col-span-2 rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
@@ -544,7 +544,7 @@
     </div>
 
     <!-- Быстрые переходы -->
-    <div class="mt-6">
+    <div>
       <h3 class="text-base font-semibold text-black dark:text-white mb-3">
         Быстрые переходы
       </h3>
@@ -844,79 +844,24 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Плавная анимация появления карточек */
-.rounded-lg {
-  animation: fadeInUp 0.5s ease-out backwards;
+.dashboard-hero {
+  background-image: radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.1), transparent 45%);
 }
 
-.rounded-lg:nth-child(1) {
-  animation-delay: 0.05s;
-}
-.rounded-lg:nth-child(2) {
-  animation-delay: 0.1s;
-}
-.rounded-lg:nth-child(3) {
-  animation-delay: 0.15s;
-}
-.rounded-lg:nth-child(4) {
-  animation-delay: 0.2s;
+@media (prefers-reduced-motion: no-preference) {
+  :deep(.apexcharts-canvas) {
+    animation: chart-fade-in 0.28s ease-out;
+  }
 }
 
-@keyframes fadeInUp {
+@keyframes chart-fade-in {
   from {
-    opacity: 0;
-    transform: translateY(20px);
+    opacity: 0.75;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-/* Плавные переходы для hover-эффектов */
-.hover\:shadow-lg,
-.hover\:bg-gray-100,
-.hover\:bg-gray-50,
-.hover\:scale-105 {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Анимация для кнопок переключения периодов */
-button {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-button:active {
-  transform: scale(0.95);
-}
-
-/* Плавное появление чартов */
-:deep(.apexcharts-canvas) {
-  animation: chartFadeIn 0.8s ease-out;
-}
-
-@keyframes chartFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Индикаторы загрузки */
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
   }
 }
 </style>

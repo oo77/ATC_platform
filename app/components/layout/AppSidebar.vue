@@ -1,11 +1,13 @@
 <template>
   <aside
     :class="[
-      'fixed top-4 left-4 h-[calc(100vh-2rem)] z-50 transform-gpu translate-z-0 transition-all duration-200 ease-out',
-      'bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-white/20 dark:border-gray-800/20 shadow-2xl rounded-4xl overflow-hidden',
+      'fixed top-4 left-4 h-[calc(100vh-2rem)] z-50 flex flex-col',
+      'transform-gpu transition-all duration-200 ease-out',
+      'bg-white/80 dark:bg-gray-900/80 backdrop-blur-md',
+      'border border-white/20 dark:border-gray-800/20 shadow-2xl rounded-3xl',
       {
-        'w-[280px]': isExpanded || isMobileOpen || isHovered,
-        'w-[85px]': !isExpanded && !isHovered && !isMobileOpen,
+        'w-[272px]': isExpanded || isMobileOpen || isHovered,
+        'w-[72px]': !isExpanded && !isHovered && !isMobileOpen,
         'translate-x-0': isMobileOpen,
         '-translate-x-full lg:translate-x-0': !isMobileOpen,
       },
@@ -13,88 +15,144 @@
     @mouseenter="handleMouseEnter"
     @mouseleave="handleMouseLeave"
   >
-    <!-- Logo Section with Toggle Button -->
+    <!-- Logo Section -->
     <div
       :class="[
-        'flex items-center justify-between relative mb-2 px-4 transition-all duration-200',
-        isExpanded || isHovered || isMobileOpen ? 'h-24 py-4 pr-2' : 'h-20 flex-col py-6',
+        'flex items-center justify-between shrink-0 px-4 transition-all duration-200',
+        isExpanded || isHovered || isMobileOpen ? 'h-20 py-4 pr-3' : 'h-16 justify-center py-4',
       ]"
     >
-      <NuxtLink to="/" class="block text-center flex-1">
-        <div class="flex items-center justify-center h-full transform-gpu">
-          <Transition name="fade" mode="out-in">
-            <div v-if="isExpanded || isHovered || isMobileOpen" class="flex flex-col items-center">
-              <img src="/logo.png" alt="Logo" class="h-10 object-contain" />
-              <span class="text-[8px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 mt-1">ATC Platform</span>
-            </div>
-            <img v-else src="/android-chrome-192x192.png" alt="Logo" class="h-10 w-10 object-contain rounded-xl shadow-sm" />
-          </Transition>
+      <NuxtLink to="/" class="flex items-center gap-3 min-w-0 flex-1">
+        <div class="shrink-0 flex items-center justify-center">
+          <img
+            src="/android-chrome-192x192.png"
+            alt="Logo"
+            class="h-9 w-9 object-contain rounded-xl shadow-sm"
+          />
         </div>
+        <Transition name="label-fade">
+          <div
+            v-show="isExpanded || isHovered || isMobileOpen"
+            class="flex flex-col min-w-0 overflow-hidden"
+          >
+            <span class="text-[13px] font-black tracking-tight text-gray-900 dark:text-white leading-tight truncate">ATC Platform</span>
+            <span class="text-[9px] font-semibold uppercase tracking-[0.15em] text-blue-600 dark:text-blue-400 leading-tight">Управление</span>
+          </div>
+        </Transition>
       </NuxtLink>
 
-      <!-- Internal Sidebar Toggle (Chevron icon) -->
-      <button
-        v-if="isExpanded || isHovered || isMobileOpen"
-        @click="toggleSidebar"
-        class="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-blue-600 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all duration-150 animate-in fade-in"
-      >
-        <component :is="ChevronLeft" :size="18" :class="['transition-transform duration-300', isExpanded ? '' : 'rotate-180']" />
-      </button>
+      <!-- Toggle chevron -->
+      <Transition name="label-fade">
+        <button
+          v-show="isExpanded || isHovered || isMobileOpen"
+          @click.stop="toggleSidebar"
+          class="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-150"
+        >
+          <component
+            :is="ChevronLeft"
+            :size="16"
+            :class="['transition-transform duration-300', isExpanded ? '' : 'rotate-180']"
+          />
+        </button>
+      </Transition>
     </div>
 
-    <!-- Navigation -->
-    <div class="flex flex-col flex-1 overflow-y-auto no-scrollbar py-2 px-3 space-y-4">
-      <nav v-for="(menuGroup, groupIndex) in menuGroups" :key="groupIndex">
-        <h3 
-          v-if="menuGroup.title && (isExpanded || isHovered || isMobileOpen)"
-          class="px-4 mb-2 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 opacity-50"
-        >
-          {{ menuGroup.title }}
-        </h3>
+    <!-- Divider -->
+    <div class="shrink-0 mx-4 h-px bg-gray-100 dark:bg-gray-800" />
 
-        <ul class="space-y-1">
-          <li v-for="(item, index) in menuGroup.items" :key="item.name" class="relative">
+    <!-- Navigation — flex-1 + min-h-0 чтобы скролл работал внутри flex-col -->
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-visible py-3 px-2.5 no-scrollbar">
+      <nav
+        v-for="(menuGroup, groupIndex) in menuGroups"
+        :key="groupIndex"
+        class="mb-2"
+      >
+        <!-- Group label -->
+        <Transition name="label-fade">
+          <h3
+            v-show="menuGroup.title && (isExpanded || isHovered || isMobileOpen)"
+            class="px-3 mb-1 mt-2 text-[9px] font-black uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500"
+          >
+            {{ menuGroup.title }}
+          </h3>
+        </Transition>
+
+        <ul class="space-y-0.5">
+          <li
+            v-for="(item, index) in menuGroup.items"
+            :key="item.name"
+            class="relative"
+          >
+            <!-- Item with sub-items -->
             <div v-if="item.subItems && item.subItems.length > 0">
               <button
-                @click="toggleSubmenu(groupIndex, index)"
+                @click.stop="toggleSubmenu(groupIndex, index)"
                 :class="[
-                  'group flex items-center justify-between w-full px-4 py-2.5 rounded-2xl cursor-pointer transition-all duration-150',
+                  'group relative flex items-center gap-3 w-full rounded-xl transition-all duration-150 cursor-pointer',
+                  isExpanded || isHovered || isMobileOpen
+                    ? 'px-3 py-2.5 justify-between'
+                    : 'px-0 py-2.5 justify-center',
                   isSubmenuOpen(groupIndex, index)
-                    ? 'bg-blue-50/70 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800/40',
-                  !isExpanded && !isHovered ? 'justify-center px-0' : '',
+                    ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white',
                 ]"
               >
-                <div class="flex items-center gap-3.5 min-w-0 z-10 transition-transform duration-150">
-                   <div :class="['flex items-center justify-center w-5 h-5 transition-transform duration-150', isSubmenuOpen(groupIndex, index) ? 'scale-110' : '']">
-                      <component :is="item.icon" :size="19" :stroke-width="isSubmenuOpen(groupIndex, index) ? 2.5 : 2" />
-                   </div>
-                  <span v-show="isExpanded || isHovered || isMobileOpen" class="truncate font-bold text-[13px] tracking-tight">
-                    {{ item.name }}
-                  </span>
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="shrink-0 flex items-center justify-center w-[22px] h-[22px]">
+                    <component
+                      :is="item.icon"
+                      :size="18"
+                      :stroke-width="isSubmenuOpen(groupIndex, index) ? 2.5 : 2"
+                    />
+                  </div>
+                  <Transition name="label-fade">
+                    <span
+                      v-show="isExpanded || isHovered || isMobileOpen"
+                      class="truncate text-[13px] font-semibold"
+                    >
+                      {{ item.name }}
+                    </span>
+                  </Transition>
                 </div>
-                <component :is="ChevronDown" v-show="isExpanded || isHovered || isMobileOpen" :size="14" :class="['transition-transform duration-150', isSubmenuOpen(groupIndex, index) ? 'rotate-180' : '']" />
+                <Transition name="label-fade">
+                  <component
+                    v-show="isExpanded || isHovered || isMobileOpen"
+                    :is="ChevronDown"
+                    :size="13"
+                    :class="['shrink-0 transition-transform duration-200', isSubmenuOpen(groupIndex, index) ? 'rotate-180' : '']"
+                  />
+                </Transition>
+
+                <!-- Tooltip when collapsed -->
+                <div
+                  v-if="!isExpanded && !isHovered && !isMobileOpen"
+                  class="sidebar-tooltip"
+                >
+                  {{ item.name }}
+                </div>
               </button>
 
+              <!-- Submenu -->
               <transition
-                enter-active-class="transition-all duration-200 ease-out"
-                enter-from-class="max-h-0 opacity-0 scale-95"
-                enter-to-class="max-h-[300px] opacity-100 scale-100"
-                leave-active-class="transition-all duration-150 ease-in"
-                leave-from-class="max-h-[300px] opacity-100 scale-100"
-                leave-to-class="max-h-0 opacity-0 scale-95"
+                enter-active-class="transition-all duration-200 ease-out overflow-hidden"
+                enter-from-class="max-h-0 opacity-0"
+                enter-to-class="max-h-[400px] opacity-100"
+                leave-active-class="transition-all duration-150 ease-in overflow-hidden"
+                leave-from-class="max-h-[400px] opacity-100"
+                leave-to-class="max-h-0 opacity-0"
               >
-                <div v-show="isSubmenuOpen(groupIndex, index) && (isExpanded || isHovered || isMobileOpen)" class="overflow-hidden mt-0.5">
-                  <ul class="pl-10 pr-2 space-y-1 relative">
-                    <div class="absolute left-6 top-0 bottom-2 w-px bg-gray-100 dark:bg-gray-800 opacity-50"></div>
+                <div
+                  v-show="isSubmenuOpen(groupIndex, index) && (isExpanded || isHovered || isMobileOpen)"
+                >
+                  <ul class="mt-0.5 ml-4 pl-5 pr-1 space-y-0.5 border-l border-gray-100 dark:border-gray-800">
                     <li v-for="subItem in item.subItems" :key="subItem.name">
                       <NuxtLink
                         :to="subItem.path"
                         :class="[
-                          'block px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-all duration-150',
+                          'block px-3 py-2 rounded-lg text-[12px] font-semibold transition-all duration-150',
                           isActive(subItem.path, subItem.excludePaths)
-                            ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 shadow-sm translate-x-1'
-                            : 'text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:translate-x-1',
+                            ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800/60',
                         ]"
                       >{{ subItem.name }}</NuxtLink>
                     </li>
@@ -103,25 +161,37 @@
               </transition>
             </div>
 
+            <!-- Regular nav item -->
             <NuxtLink
               v-else
               :to="item.path ?? ''"
               :class="[
-                'group flex items-center px-4 py-2.5 rounded-2xl cursor-pointer transition-all duration-150 transform-gpu translate-z-0',
+                'group relative flex items-center gap-3 rounded-xl transition-all duration-150',
+                isExpanded || isHovered || isMobileOpen
+                  ? 'px-3 py-2.5'
+                  : 'px-0 py-2.5 justify-center',
                 isActive(item.path ?? '', item.excludePaths)
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800/40 hover:text-gray-900 dark:hover:text-white',
-                !isExpanded && !isHovered ? 'justify-center px-0' : '',
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white',
               ]"
             >
-              <div class="relative z-10 flex items-center justify-center w-5 h-5">
-                <component :is="item.icon" :size="19" />
+              <div class="shrink-0 flex items-center justify-center w-[22px] h-[22px]">
+                <component :is="item.icon" :size="18" :stroke-width="isActive(item.path ?? '') ? 2.5 : 2" />
               </div>
-              <span v-show="isExpanded || isHovered || isMobileOpen" class="ml-3.5 truncate font-bold text-[13px] tracking-tight relative z-10">
-                {{ item.name }}
-              </span>
-              <div v-if="isActive(item.path || '') && !(!isExpanded && !isHovered)" class="absolute left-1 top-1/2 -translate-y-1/2 w-1 h-5 bg-white rounded-full transition-all duration-150"></div>
-              <div v-if="!isExpanded && !isHovered && !isMobileOpen" class="absolute left-20 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-[11px] font-black rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-100 z-60 shadow-xl">
+              <Transition name="label-fade">
+                <span
+                  v-show="isExpanded || isHovered || isMobileOpen"
+                  class="truncate text-[13px] font-semibold"
+                >
+                  {{ item.name }}
+                </span>
+              </Transition>
+
+              <!-- Tooltip when collapsed -->
+              <div
+                v-if="!isExpanded && !isHovered && !isMobileOpen"
+                class="sidebar-tooltip"
+              >
                 {{ item.name }}
               </div>
             </NuxtLink>
@@ -130,15 +200,28 @@
       </nav>
     </div>
 
-    <!-- Sidebar Footer -->
-    <div v-if="isExpanded || isHovered || isMobileOpen" class="p-3 bg-white/40 dark:bg-gray-900/40 border-t border-gray-100 dark:border-gray-800">
-       <div class="flex items-center gap-2.5 p-2 bg-white/60 dark:bg-gray-800/60 rounded-xl border border-white/50 dark:border-gray-700/50 shadow-xs transition-all duration-150">
-          <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-sm">{{ userInitial }}</div>
-          <div class="flex-1 min-w-0">
+    <!-- Divider -->
+    <div class="shrink-0 mx-4 h-px bg-gray-100 dark:bg-gray-800" />
+
+    <!-- Footer -->
+    <div class="shrink-0 p-2.5">
+      <div
+        :class="[
+          'flex items-center gap-2.5 p-2 rounded-xl border transition-all duration-150',
+          'bg-white/60 dark:bg-gray-800/60 border-gray-100 dark:border-gray-700/50 shadow-xs',
+          isExpanded || isHovered || isMobileOpen ? '' : 'justify-center',
+        ]"
+      >
+        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-sm">
+          {{ userInitial }}
+        </div>
+        <Transition name="label-fade">
+          <div v-show="isExpanded || isHovered || isMobileOpen" class="flex-1 min-w-0 overflow-hidden">
             <p class="text-[11px] font-bold text-gray-900 dark:text-white truncate">{{ userName }}</p>
-            <p class="text-[8px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-tight">{{ userRoleLabel }}</p>
+            <p class="text-[9px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-tight">{{ userRoleLabel }}</p>
           </div>
-       </div>
+        </Transition>
+      </div>
     </div>
   </aside>
 </template>
@@ -150,26 +233,23 @@ import { useSidebar } from "~/composables/useSidebar";
 import { usePermissions } from "~/composables/usePermissions";
 import { useAuth } from "~/composables/useAuth";
 import { Permission } from "~/types/permissions";
-import { 
-  LayoutDashboard, 
-  CalendarRange, 
-  Users, 
-  GraduationCap, 
-  FileCheck, 
-  Database, 
-  Library, 
-  BarChart3, 
-  FolderTree, 
-  ShieldCheck, 
-  Clock, 
+import {
+  LayoutDashboard,
+  CalendarRange,
+  Users,
+  GraduationCap,
+  FileCheck,
+  Library,
+  BarChart3,
+  FolderTree,
+  ShieldCheck,
   ChevronDown,
   ChevronLeft,
   HelpCircle,
   Trophy,
   Award,
   History,
-  Settings,
-  UserCheck
+  Settings
 } from "lucide-vue-next";
 import type { Component } from "vue";
 
@@ -201,9 +281,9 @@ const allMenuGroups: MenuGroup[] = [
     { icon: Users, name: "Учебные группы", path: "/groups", anyPermissions: [Permission.GROUPS_VIEW_ALL, Permission.GROUPS_VIEW_OWN] },
     { icon: Trophy, name: "Мои успехи", path: "/my-certificates", showOnlyForRoles: ["STUDENT"] },
     { icon: FileCheck, name: "Тесты", showOnlyForRoles: ["STUDENT"], path: "/tests/my" },
-    { icon: FileCheck, name: "База тестов", hideForRoles: ["STUDENT"], subItems: [ 
-        { name: "Вопросы", path: "/test-bank" }, 
-        { name: "Шаблоны", path: "/test-bank/templates" } 
+    { icon: FileCheck, name: "База тестов", hideForRoles: ["STUDENT"], subItems: [
+        { name: "Вопросы", path: "/test-bank" },
+        { name: "Шаблоны", path: "/test-bank/templates" }
     ] }
   ]},
   { title: "Контент", items: [
@@ -220,8 +300,7 @@ const allMenuGroups: MenuGroup[] = [
     { icon: FolderTree, name: "Файлы", path: "/files", hideForRoles: ["STUDENT"] }
   ]},
   { title: "Управление", items: [
-    { icon: Users, name: "Пользователи", path: "/users", anyPermissions: [Permission.USERS_VIEW_ALL] },
-    { icon: UserCheck, name: "Представители", path: "/representatives", anyPermissions: [Permission.REPRESENTATIVES_VIEW] },
+    { icon: Users, name: "Пользователи", path: "/users", permission: Permission.USERS_VIEW },
     { icon: BarChart3, name: "Аналитика", path: "/reports", hideForRoles: ["STUDENT", "TEACHER"] }
   ]},
   { title: "Администрирование", items: [
@@ -269,7 +348,51 @@ const isSubmenuOpen = (g: number, i: number) => {
 </script>
 
 <style scoped>
+/* Скрыть скроллбар */
 .no-scrollbar::-webkit-scrollbar { display: none; }
-.fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Плавное появление/скрытие текстовых лейблов */
+.label-fade-enter-active,
+.label-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.label-fade-enter-from,
+.label-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-4px);
+}
+
+/* Tooltip для свёрнутого состояния */
+.sidebar-tooltip {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 5px 10px;
+  background: #1e293b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  z-index: 999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+/* Показываем tooltip только при hover на родительский li/button/a */
+li:hover .sidebar-tooltip,
+a:hover .sidebar-tooltip,
+button:hover .sidebar-tooltip {
+  opacity: 1;
+}
+
+/* Dark mode tooltip */
+:global(.dark) .sidebar-tooltip {
+  background: #f8fafc;
+  color: #0f172a;
+}
 </style>

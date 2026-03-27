@@ -1,52 +1,25 @@
 <template>
-  <div>
-    <!-- Student Dashboard -->
-    <DashboardStudent v-if="isStudent" />
-
-    <!-- Teacher Dashboard -->
-    <DashboardTeacher v-else-if="isTeacher" />
-
-    <!-- Manager Dashboard -->
-    <DashboardManager v-else-if="isManager" />
-
-    <!-- Admin Dashboard -->
-    <DashboardAdmin v-else-if="isAdmin" />
-
-    <!-- Default Dashboard (fallback) -->
-    <div v-else class="grid grid-cols-12 gap-4 md:gap-6">
-      <div class="col-span-12">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-          <h1 class="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-            Панель управления
-          </h1>
-          <p class="text-gray-600 dark:text-gray-400">
-            Welcome to TailAdmin Nuxt 4 Dashboard!
-          </p>
+  <div class="mx-auto max-w-screen-2xl space-y-6">
+    <Suspense>
+      <component :is="activeDashboardComponent" />
+      <template #fallback>
+        <div class="space-y-4">
+          <div class="h-24 rounded-2xl bg-white/80 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/70 dark:ring-slate-800 skeleton" />
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div
+              v-for="i in 4"
+              :key="`dashboard-skeleton-card-${i}`"
+              class="h-28 rounded-2xl bg-white/80 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/70 dark:ring-slate-800 skeleton"
+            />
+          </div>
         </div>
-      </div>
-      
-      <div class="col-span-12 lg:col-span-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-          <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-2">
-            Monthly Revenue
-          </h2>
-          <p class="text-3xl font-bold text-brand-500">$24,780</p>
-        </div>
-      </div>
-      
-      <div class="col-span-12 lg:col-span-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm">
-          <h2 class="text-lg font-semibold text-gray-800 dark:text-white mb-2">
-            Total Orders
-          </h2>
-          <p class="text-3xl font-bold text-success-500">1,234</p>
-        </div>
-      </div>
-    </div>
+      </template>
+    </Suspense>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed, defineAsyncComponent, defineComponent, h } from "vue";
 import { usePermissions } from '~/composables/usePermissions';
 
 definePageMeta({
@@ -59,5 +32,50 @@ useHead({
 })
 
 const { isStudent, isTeacher, isManager, isAdmin } = usePermissions();
+
+const DashboardStudentAsync = defineAsyncComponent(() => import("~/components/dashboard/Student.vue"));
+const DashboardTeacherAsync = defineAsyncComponent(() => import("~/components/dashboard/Teacher.vue"));
+const DashboardManagerAsync = defineAsyncComponent(() => import("~/components/dashboard/Manager.vue"));
+const DashboardAdminAsync = defineAsyncComponent(() => import("~/components/dashboard/Admin.vue"));
+const DashboardFallback = defineComponent({
+  name: "DashboardFallback",
+  setup() {
+    return () =>
+      h("div", { class: "rounded-2xl border border-slate-200/70 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/70" }, [
+        h("h1", { class: "text-xl font-bold text-slate-900 dark:text-white" }, "Панель управления"),
+        h("p", { class: "mt-2 text-sm text-slate-600 dark:text-slate-300" }, "Для вашей роли пока не настроен отдельный дашборд."),
+      ]);
+  },
+});
+
+const activeDashboardComponent = computed(() => {
+  if (isStudent.value) return DashboardStudentAsync;
+  if (isTeacher.value) return DashboardTeacherAsync;
+  if (isManager.value) return DashboardManagerAsync;
+  if (isAdmin.value) return DashboardAdminAsync;
+  return DashboardFallback;
+});
 </script>
+
+<style scoped>
+.skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.18), transparent);
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+</style>
 

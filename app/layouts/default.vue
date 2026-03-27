@@ -12,8 +12,8 @@
       :class="[
         'relative flex flex-1 flex-col transition-all duration-300 ease-out min-w-0',
         {
-          'lg:ml-[290px]': isExpanded || isHovered,
-          'lg:ml-[105px]': !isExpanded && !isHovered,
+          'lg:ml-[288px]': isExpanded || isHovered,
+          'lg:ml-[88px]': !isExpanded && !isHovered,
         }
       ]"
     >

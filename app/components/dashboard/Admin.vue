@@ -1,8 +1,8 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+  <div class="mx-auto max-w-screen-2xl space-y-6">
     <!-- Заголовок страницы -->
     <div
-      class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      class="dashboard-hero flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between"
     >
       <div>
         <h2 class="text-title-md2 font-bold text-black dark:text-white">
@@ -21,7 +21,7 @@
     </div>
 
     <!-- Статистика -->
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-4 mb-6">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
       <div
         class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
         @click="navigateTo('/users?tab=students')"
@@ -116,7 +116,7 @@
     </div>
 
     <!-- Чарты: Круговая диаграмма и Сертификаты по месяцам -->
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2 mb-6">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
       <!-- Распределение студентов по организациям (Круговая диаграмма) -->
       <div
         class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
@@ -241,7 +241,7 @@
     </div>
 
     <!-- Топ инструкторов и Топ курсов -->
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2 mb-6">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
       <!-- Топ инструкторов по проведённым часам -->
       <div
         class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
@@ -425,7 +425,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3 mb-6">
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
       <!-- Системная статистика -->
       <div
         class="xl:col-span-2 rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
@@ -600,7 +600,7 @@
     </div>
 
     <!-- Быстрые переходы -->
-    <div class="mb-6">
+    <div>
       <h3 class="text-base font-semibold text-black dark:text-white mb-3">
         Быстрые переходы
       </h3>
@@ -642,7 +642,7 @@
 
     <!-- Последние действия -->
     <div
-      class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden mb-6"
+      class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
     >
       <div
         class="border-b border-gray-200 dark:border-gray-700 py-4 px-6 flex justify-between items-center"
@@ -963,111 +963,24 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Плавная анимация появления карточек */
-.rounded-lg {
-  animation: fadeInUp 0.5s ease-out backwards;
+.dashboard-hero {
+  background-image: radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.08), transparent 42%);
 }
 
-.rounded-lg:nth-child(1) {
-  animation-delay: 0.05s;
-}
-.rounded-lg:nth-child(2) {
-  animation-delay: 0.1s;
-}
-.rounded-lg:nth-child(3) {
-  animation-delay: 0.15s;
-}
-.rounded-lg:nth-child(4) {
-  animation-delay: 0.2s;
+@media (prefers-reduced-motion: no-preference) {
+  :deep(.apexcharts-canvas) {
+    animation: chart-fade-in 0.28s ease-out;
+  }
 }
 
-@keyframes fadeInUp {
+@keyframes chart-fade-in {
   from {
-    opacity: 0;
-    transform: translateY(20px);
+    opacity: 0.75;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-/* Плавные переходы для hover-эффектов */
-.hover\:shadow-lg,
-.hover\:bg-gray-100,
-.hover\:bg-gray-50,
-.hover\:scale-105 {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Анимация для кнопок переключения периодов */
-button {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-button:active {
-  transform: scale(0.95);
-}
-
-/* Плавное появление чартов */
-:deep(.apexcharts-canvas) {
-  animation: chartFadeIn 0.8s ease-out;
-}
-
-@keyframes chartFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Анимация для таблицы инструкторов */
-tbody tr {
-  animation: slideInLeft 0.4s ease-out backwards;
-}
-
-tbody tr:nth-child(1) {
-  animation-delay: 0.05s;
-}
-tbody tr:nth-child(2) {
-  animation-delay: 0.1s;
-}
-tbody tr:nth-child(3) {
-  animation-delay: 0.15s;
-}
-tbody tr:nth-child(4) {
-  animation-delay: 0.2s;
-}
-tbody tr:nth-child(5) {
-  animation-delay: 0.25s;
-}
-
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Пульсация для индикаторов загрузки */
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
   }
 }
 </style>
