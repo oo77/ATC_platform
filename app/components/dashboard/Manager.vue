@@ -1,190 +1,189 @@
 <template>
   <div class="mx-auto max-w-screen-2xl space-y-6">
-    <!-- Заголовок страницы -->
+    <!-- Заголовок страницы (Hero) -->
     <div
-      class="dashboard-hero flex flex-col gap-4 rounded-2xl border border-slate-200/70 bg-white/85 p-5 shadow-sm backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/70 sm:flex-row sm:items-center sm:justify-between"
+      class="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-indigo-600 via-indigo-700 to-primary p-8 shadow-2xl shadow-indigo-200 dark:shadow-none sm:p-10"
     >
-      <div>
-        <h2 class="text-title-md2 font-bold text-black dark:text-white">
-          Добрый день, {{ user?.name || "Менеджер" }}!
-        </h2>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1">
-          {{ currentDate }}
-          <span v-if="stats?.activeGroups > 0">
-            • В работе {{ stats.activeGroups }} групп(ы)
-          </span>
-        </p>
+      <!-- Декоративные элементы фона -->
+      <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
+      <div class="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-indigo-400/20 blur-3xl"></div>
+
+      <div class="relative flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+        <div class="space-y-2">
+          <div class="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1.5 backdrop-blur-md">
+            <span class="flex h-2 w-2 animate-pulse rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-black uppercase tracking-widest text-white/90">Панель управления</span>
+          </div>
+          <h1 class="text-4xl font-black tracking-tight text-white sm:text-5xl">
+            Добрый день, <span class="text-emerald-300">{{ user?.name?.split(' ')[0] || "Менеджер" }}</span>!
+          </h1>
+          <p class="text-lg font-bold text-indigo-100/90">
+            {{ currentDate }}
+            <span v-if="stats?.activeGroups > 0" class="mx-2 opacity-50">•</span>
+            <span v-if="stats?.activeGroups > 0" class="text-white">
+              В работе {{ stats.activeGroups }} активных групп
+            </span>
+          </p>
+        </div>
+        <NuxtLink to="/groups" class="group shrink-0">
+          <button
+            class="flex items-center gap-3 rounded-2xl bg-white px-8 py-4 font-black text-indigo-600 shadow-xl transition-all hover:scale-105 hover:bg-emerald-50 hover:text-emerald-600"
+          >
+            <IconsUserGroupIcon class="h-6 w-6 transition-transform group-hover:rotate-12" />
+            Все группы
+          </button>
+        </NuxtLink>
       </div>
-      <NuxtLink to="/groups">
-        <UiButton class="flex items-center gap-2">
-          <IconsUserGroupIcon class="w-5 h-5" />
-          Все группы
-        </UiButton>
-      </NuxtLink>
     </div>
 
-    <!-- Статистика -->
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+    <!-- Статистика (Bento Grid) -->
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <!-- Активные группы -->
       <div
-        class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+        class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl shadow-slate-200/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/40 dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-none"
         @click="navigateTo('/groups')"
       >
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10"
-          >
-            <IconsUserGroupIcon class="w-6 h-6 text-primary" />
+        <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-primary/5 transition-transform group-hover:scale-150"></div>
+        <div class="relative flex flex-col gap-4">
+          <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-white">
+            <IconsUserGroupIcon class="h-7 w-7" />
           </div>
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Активные группы
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats?.activeGroups || 0 }}
-            </p>
+            <p class="text-xs font-black uppercase tracking-widest text-slate-400">Активные группы</p>
+            <h3 class="mt-1 text-3xl font-black text-slate-900 dark:text-white">{{ stats?.activeGroups || 0 }}</h3>
           </div>
         </div>
       </div>
 
-<div
-        class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+      <!-- Контингент на курсах -->
+      <div
+        class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl shadow-slate-200/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/40 dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-none"
         @click="navigateTo('/users?tab=students')"
       >
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-success/10"
-          >
-            <IconsUserCircleIcon class="w-6 h-6 text-success" />
+        <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-emerald-500/5 transition-transform group-hover:scale-150"></div>
+        <div class="relative flex flex-col gap-4">
+          <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-500 group-hover:text-white dark:bg-emerald-500/10 dark:text-emerald-400">
+            <IconsUserCircleIcon class="h-7 w-7" />
           </div>
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Студенты на курсах
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats?.studentsOnCourses || 0 }}
-            </p>
+            <p class="text-xs font-black uppercase tracking-widest text-slate-400">Контингент на курсах</p>
+            <h3 class="mt-1 text-3xl font-black text-slate-900 dark:text-white">{{ stats?.studentsOnCourses || 0 }}</h3>
           </div>
         </div>
       </div>
 
+      <!-- Тесты сегодня -->
       <div
-        class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+        class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl shadow-slate-200/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/40 dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-none"
         @click="navigateTo('/schedule')"
       >
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10"
-          >
-            <IconsClipboardCheckIcon class="w-6 h-6 text-warning" />
+        <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-amber-500/5 transition-transform group-hover:scale-150"></div>
+        <div class="relative flex flex-col gap-4">
+          <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 transition-colors group-hover:bg-amber-500 group-hover:text-white dark:bg-amber-500/10 dark:text-amber-400">
+            <IconsClipboardCheckIcon class="h-7 w-7" />
           </div>
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Тесты сегодня
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats?.testsToday || 0 }}
-            </p>
+            <p class="text-xs font-black uppercase tracking-widest text-slate-400">Экзамены сегодня</p>
+            <h3 class="mt-1 text-3xl font-black text-slate-900 dark:text-white">{{ stats?.testsToday || 0 }}</h3>
           </div>
         </div>
       </div>
 
+      <!-- К выдаче сертификатов -->
       <div
-        class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+        class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl shadow-slate-200/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/40 dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-none"
         @click="navigateTo('/certificates')"
       >
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-info/10"
-          >
-            <IconsCertificateIcon class="w-6 h-6 text-info" />
+        <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-sky-500/5 transition-transform group-hover:scale-150"></div>
+        <div class="relative flex flex-col gap-4">
+          <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 transition-colors group-hover:bg-sky-500 group-hover:text-white dark:bg-sky-500/10 dark:text-sky-400">
+            <IconsCertificateIcon class="h-7 w-7" />
           </div>
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              К выдаче сертификатов
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats?.certificatesPending || 0 }}
-            </p>
+            <p class="text-xs font-black uppercase tracking-widest text-slate-400">К выдаче дипломов</p>
+            <h3 class="mt-1 text-3xl font-black text-slate-900 dark:text-white">{{ stats?.certificatesPending || 0 }}</h3>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Чарты: Студенты по курсам и Сертификаты -->
+    <!-- Чарты: Контингент по курсам и Динамика сертификации -->
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-      <!-- Распределение студентов по курсам (Круговая диаграмма) -->
+      <!-- Распределение контингента по программам (Круговая диаграмма) -->
       <div
-        class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
+        class="group overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-xl shadow-slate-200/20 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/40 dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-none"
       >
         <div
-          class="border-b border-gray-200 dark:border-gray-700 py-4 px-6 flex items-center justify-between"
+          class="flex items-center justify-between border-b border-slate-100/60 px-6 py-5 dark:border-slate-800/60"
         >
           <div class="flex items-center gap-3">
             <div
-              class="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"
+              class="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
             >
-              <IconsPieChartIcon class="w-5 h-5 text-primary" />
+              <IconsPieChartIcon class="h-6 w-6" />
             </div>
-            <h3 class="text-lg font-semibold text-black dark:text-white">
-              Студенты по курсам
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+              Контингент по программам
             </h3>
           </div>
-          <NuxtLink to="/groups" class="text-sm text-primary hover:underline">
-            Все курсы
+          <NuxtLink to="/groups" class="group/link flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary/80">
+            Все программы
+            <IconsArrowRightIcon class="h-4 w-4 transition-transform group-hover/link:translate-x-1" />
           </NuxtLink>
         </div>
         <div class="p-6">
           <div v-if="loading" class="flex justify-center py-16">
-            <div
-              class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-            ></div>
+            <div class="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
           </div>
           <div
             v-else-if="!coursesChartData.series.length"
             class="flex flex-col items-center justify-center py-16 text-center"
           >
-            <IconsUserGroupIcon class="h-12 w-12 text-gray-300 mb-3" />
-            <p class="text-sm text-gray-500">Нет данных о студентах</p>
+            <div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800">
+              <IconsUserGroupIcon class="h-10 w-10 text-slate-300" />
+            </div>
+            <p class="text-sm font-medium text-slate-500">Нет данных о контингенте</p>
           </div>
           <ChartsDonutChart
             v-else
             chart-id="students-by-course"
             :series="coursesChartData.series"
             :labels="coursesChartData.labels"
-            :height="350"
+            :height="360"
             legend-position="bottom"
+            :colors="['#6366F1', '#8B5CF6', '#10B981', '#F59E0B', '#F43F5E', '#0EA5E9']"
             @click="handleCourseChartClick"
           />
         </div>
       </div>
 
-      <!-- Сертификаты по месяцам (Bar Chart) -->
+      <!-- Динамика сертификации (Bar Chart) -->
       <div
-        class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
+        class="group overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-xl shadow-slate-200/20 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/40 dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-none"
       >
         <div
-          class="border-b border-gray-200 dark:border-gray-700 py-4 px-6 flex items-center justify-between flex-wrap gap-3"
+          class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100/60 px-6 py-5 dark:border-slate-800/60"
         >
           <div class="flex items-center gap-3">
             <div
-              class="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center"
+              class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
             >
-              <IconsBarChartIcon class="w-5 h-5 text-success" />
+              <IconsBarChartIcon class="h-6 w-6" />
             </div>
-            <h3 class="text-lg font-semibold text-black dark:text-white">
-              Сертификаты
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+              Динамика выдачи
             </h3>
           </div>
-          <div class="flex items-center gap-3">
-            <div class="flex gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+          <div class="flex items-center gap-4">
+            <div class="flex gap-1 rounded-xl bg-slate-100/80 p-1 dark:bg-slate-800/80">
               <button
                 v-for="period in certificatePeriods"
                 :key="period.value"
-                class="px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-300"
+                class="rounded-lg px-4 py-1.5 text-xs font-bold transition-all"
                 :class="
                   certificatePeriod === period.value
-                    ? 'bg-success text-white shadow-md transform scale-105'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-400'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
                 "
                 @click="changeCertificatePeriod(period.value)"
               >
@@ -193,29 +192,30 @@
             </div>
             <NuxtLink
               to="/certificates"
-              class="text-sm text-primary hover:underline whitespace-nowrap"
+              class="group/link flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-colors hover:bg-primary/10 hover:text-primary dark:bg-slate-800"
+              title="Все сертификаты"
             >
-              Все сертификаты
+              <IconsArrowRightIcon class="h-5 w-5" />
             </NuxtLink>
           </div>
         </div>
         <div class="p-6">
           <div v-if="loading" class="flex justify-center py-16">
-            <div
-              class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-            ></div>
+            <div class="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
           </div>
           <div
             v-else-if="!currentCertificatesData.series[0]?.data?.length"
             class="flex flex-col items-center justify-center py-16 text-center"
           >
-            <IconsCertificateIcon class="h-12 w-12 text-gray-300 mb-3" />
-            <p class="text-sm text-gray-500">Нет данных о сертификатах</p>
+            <div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800">
+              <IconsCertificateIcon class="h-10 w-10 text-slate-300" />
+            </div>
+            <p class="text-sm font-medium text-slate-500">Данные отсутствуют</p>
           </div>
           <div
             v-else
-            class="transition-opacity duration-500"
-            :class="certificateTransitioning ? 'opacity-50' : 'opacity-100'"
+            class="transition-all duration-500"
+            :class="certificateTransitioning ? 'scale-95 blur-sm opacity-50' : 'scale-100 blur-0 opacity-100'"
           >
             <ChartsDynamicBarChart
               :key="certificatePeriod"
@@ -224,7 +224,7 @@
               :categories="currentCertificatesData.categories"
               :colors="['#10B981']"
               :height="320"
-              y-axis-title="Количество"
+              y-axis-title="Выдано"
               :animation-speed="800"
             />
           </div>
@@ -232,146 +232,145 @@
       </div>
     </div>
 
-    <!-- Топ курсов и Группы в работе -->
+    <!-- Топ программ и Группы в работе -->
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-      <!-- Популярные курсы -->
+      <!-- Популярные программы -->
       <div
-        class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
+        class="group overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-xl shadow-slate-200/20 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/40 dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-none"
       >
         <div
-          class="border-b border-gray-200 dark:border-gray-700 py-4 px-6 flex items-center justify-between"
+          class="flex items-center justify-between border-b border-slate-100/60 px-6 py-5 dark:border-slate-800/60"
         >
           <div class="flex items-center gap-3">
             <div
-              class="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center"
+              class="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400"
             >
-              <IconsAcademicCapIcon class="w-5 h-5 text-info" />
+              <IconsAcademicCapIcon class="h-6 w-6" />
             </div>
-            <h3 class="text-lg font-semibold text-black dark:text-white">
-              Популярные курсы
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+              Популярные программы
             </h3>
           </div>
-          <NuxtLink to="/programs" class="text-sm text-primary hover:underline">
-            Все курсы
+          <NuxtLink to="/programs" class="group/link flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary/80">
+            Все программы
+            <IconsArrowRightIcon class="h-4 w-4 transition-transform group-hover/link:translate-x-1" />
           </NuxtLink>
         </div>
         <div class="p-6">
           <div v-if="loading" class="flex justify-center py-8">
-            <div
-              class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-            ></div>
+            <div class="h-10 w-10 animate-spin rounded-full border-4 border-sky-500 border-t-transparent"></div>
           </div>
           <div
             v-else-if="!stats?.topCourses?.length"
             class="flex flex-col items-center justify-center py-8 text-center"
           >
-            <IconsAcademicCapIcon class="h-12 w-12 text-gray-300 mb-3" />
-            <p class="text-sm text-gray-500">Нет данных о курсах</p>
+            <div class="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800">
+              <IconsAcademicCapIcon class="h-8 w-8 text-slate-300" />
+            </div>
+            <p class="text-sm font-medium text-slate-500">Нет данных о программах</p>
           </div>
-          <div v-else class="space-y-4">
+          <div v-else class="space-y-3">
             <div
               v-for="(course, index) in stats.topCourses"
               :key="course.id"
-              class="flex items-center gap-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+              class="group/item relative flex items-center gap-4 rounded-2xl border border-slate-50 bg-slate-50/30 p-4 transition-all hover:border-sky-200 hover:bg-sky-50/30 dark:border-slate-800/40 dark:bg-slate-800/20 dark:hover:border-sky-900/40 dark:hover:bg-sky-900/10"
               @click="navigateTo(`/groups?course=${course.id}`)"
             >
-              <span
-                class="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shrink-0"
+              <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black shadow-sm transition-transform group-hover/item:scale-110"
                 :class="getRankClass(index)"
               >
                 {{ index + 1 }}
-              </span>
+              </div>
               <div class="flex-1 min-w-0">
-                <p class="font-medium text-black dark:text-white truncate">
+                <p class="font-bold text-slate-900 dark:text-slate-200 truncate group-hover/item:text-sky-600 dark:group-hover/item:text-sky-400">
                   {{ course.name }}
                 </p>
-                <p class="text-xs text-gray-500">{{ course.code }}</p>
+                <p class="text-xs font-semibold text-slate-400">{{ course.code }}</p>
               </div>
               <div class="text-right shrink-0">
-                <p class="text-lg font-bold text-info">
+                <p class="text-xl font-black text-sky-600 dark:text-sky-400">
                   {{ course.students_count }}
                 </p>
-                <p class="text-xs text-gray-500">студентов</p>
+                <p class="text-[10px] font-black uppercase tracking-tighter text-slate-400">чел.</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Группы в работе -->
+      <!-- Активные группы -->
       <div
-        class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
+        class="group overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-xl shadow-slate-200/20 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/40 dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-none"
       >
         <div
-          class="border-b border-gray-200 dark:border-gray-700 py-4 px-6 flex justify-between items-center"
+          class="flex items-center justify-between border-b border-slate-100/60 px-6 py-5 dark:border-slate-800/60"
         >
           <div class="flex items-center gap-3">
             <div
-              class="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"
+              class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/5 text-primary dark:bg-primary/10"
             >
-              <IconsUserGroupIcon class="w-5 h-5 text-primary" />
+              <IconsUserGroupIcon class="h-6 w-6" />
             </div>
-            <h3 class="text-lg font-semibold text-black dark:text-white">
-              Группы в работе
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+              Активные группы
             </h3>
           </div>
-          <NuxtLink to="/groups" class="text-sm text-primary hover:underline">
+          <NuxtLink to="/groups" class="group/link flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary/80">
             Все группы
+            <IconsArrowRightIcon class="h-4 w-4 transition-transform group-hover/link:translate-x-1" />
           </NuxtLink>
         </div>
         <div class="p-6">
           <div v-if="loading" class="flex justify-center py-8">
-            <div
-              class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-            ></div>
+            <div class="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
           </div>
           <div
             v-else-if="!stats?.groups?.length"
-            class="text-center text-gray-500 py-4"
+            class="flex flex-col items-center justify-center py-8 text-center"
           >
-            Нет активных групп
+            <div class="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800">
+              <IconsUserGroupIcon class="h-8 w-8 text-slate-300" />
+            </div>
+            <p class="text-sm font-medium text-slate-500">Нет активных групп</p>
           </div>
-          <div v-else class="flex flex-col gap-3">
+          <div v-else class="flex flex-col gap-4">
             <NuxtLink
               v-for="group in stats.groups"
               :key="group.id"
               :to="`/groups/${group.id}`"
-              class="block rounded-lg border border-gray-200 dark:border-gray-700 p-4 transition-all hover:bg-gray-50 hover:border-primary dark:hover:bg-gray-800 hover:scale-[1.01]"
+              class="group/item relative flex flex-col gap-3 rounded-2xl border border-slate-50 bg-slate-50/30 p-4 transition-all hover:border-primary/20 hover:bg-white hover:shadow-lg hover:shadow-slate-200/20 dark:border-slate-800/40 dark:bg-slate-800/20 dark:hover:border-primary/40 dark:hover:bg-slate-800/40"
             >
-              <div class="flex justify-between items-start mb-2">
-                <div>
-                  <h4 class="font-bold text-black dark:text-white">
+              <div class="flex justify-between items-start">
+                <div class="min-w-0 flex-1">
+                  <h4 class="font-black text-slate-900 dark:text-white truncate">
                     {{ group.code }}
                   </h4>
-                  <p class="text-xs text-gray-500">{{ group.course_name }}</p>
+                  <p class="text-xs font-bold text-slate-400 truncate">{{ group.course_name }}</p>
                 </div>
-                <span
-                  class="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary"
-                >
-                  {{ group.student_count }} студ.
-                </span>
+                <div class="flex flex-col items-end gap-1">
+                  <span
+                    class="rounded-lg bg-primary/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-tight text-primary dark:bg-primary/10"
+                  >
+                    {{ group.student_count }} чел.
+                  </span>
+                  <span class="text-[10px] font-bold text-slate-400 italic">
+                    До {{ formatShortDate(group.end_date) }}
+                  </span>
+                </div>
               </div>
 
-              <div class="flex items-center justify-between text-xs mb-1">
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Прогресс группы</span
-                >
-                <span class="font-medium text-primary"
-                  >{{ group.progress }}%</span
-                >
-              </div>
-              <div
-                class="relative h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden"
-              >
-                <div
-                  class="absolute left-0 h-full rounded-full bg-primary transition-all duration-1000"
-                  :style="{ width: `${group.progress}%` }"
-                ></div>
-              </div>
-              <div class="mt-2 text-right">
-                <span class="text-xs text-gray-400"
-                  >До {{ formatShortDate(group.end_date) }}</span
-                >
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                  <span class="text-slate-400">Прогресс обучения</span>
+                  <span class="text-primary">{{ group.progress }}%</span>
+                </div>
+                <div class="relative h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                  <div
+                    class="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-primary to-indigo-600 transition-all duration-1000 shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+                    :style="{ width: `${group.progress}%` }"
+                  ></div>
+                </div>
               </div>
             </NuxtLink>
           </div>
@@ -381,72 +380,76 @@
 
     <!-- Расписание и алерты -->
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+    <!-- Расписание и алерты -->
+    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
       <!-- Расписание на сегодня -->
       <div
-        class="xl:col-span-2 rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden"
+        class="xl:col-span-2 overflow-hidden rounded-3xl border border-slate-200/60 bg-white shadow-xl shadow-slate-200/20 transition-all duration-300 hover:shadow-2xl hover:shadow-slate-200/40 dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-none"
       >
         <div
-          class="border-b border-gray-200 dark:border-gray-700 py-4 px-6 flex justify-between items-center"
+          class="flex items-center justify-between border-b border-slate-100/60 px-6 py-5 dark:border-slate-800/60"
         >
           <div class="flex items-center gap-3">
             <div
-              class="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center"
+              class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
             >
-              <IconsCalenderIcon class="w-5 h-5 text-success" />
+              <IconsCalenderIcon class="h-6 w-6" />
             </div>
-            <h3 class="text-lg font-semibold text-black dark:text-white">
-              Сегодня
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+              Расписание сегодня
             </h3>
           </div>
-          <NuxtLink to="/schedule" class="text-sm text-primary hover:underline">
+          <NuxtLink to="/schedule" class="group/link flex items-center gap-1 text-sm font-semibold text-primary transition-colors hover:text-primary/80">
             Календарь
+            <IconsArrowRightIcon class="h-4 w-4 transition-transform group-hover/link:translate-x-1" />
           </NuxtLink>
         </div>
         <div class="p-6">
           <div v-if="loading" class="flex justify-center py-8">
-            <div
-              class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-            ></div>
+            <div class="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
           </div>
           <div
             v-else-if="!stats?.todaySchedule?.length"
-            class="text-center text-gray-500 py-4"
+            class="flex flex-col items-center justify-center py-8 text-center"
           >
-            Нет занятий на сегодня
+            <div class="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800">
+              <IconsCalenderIcon class="h-8 w-8 text-slate-300" />
+            </div>
+            <p class="text-sm font-medium text-slate-500">Занятий нет</p>
           </div>
           <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div
               v-for="event in stats.todaySchedule"
               :key="event.id"
-              class="flex flex-col gap-2 p-3 rounded-lg border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              class="group/event relative flex flex-col gap-3 rounded-2xl border border-slate-50 bg-slate-50/30 p-4 transition-all hover:bg-white hover:shadow-lg dark:border-slate-800/40 dark:bg-slate-800/20 dark:hover:bg-slate-800/60"
             >
               <div class="flex items-center justify-between">
                 <span
-                  class="text-sm font-bold text-primary bg-primary/10 px-2 py-0.5 rounded"
+                  class="rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400"
                 >
                   {{ formatTime(event.start_time) }}
                 </span>
                 <span
-                  class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                  class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider"
                   :class="getEventTypeClass(event.event_type)"
                 >
                   {{ getEventTypeLabel(event.event_type) }}
                 </span>
               </div>
               <h5
-                class="text-sm font-medium text-black dark:text-white truncate"
+                class="font-bold text-slate-900 transition-colors group-hover/event:text-emerald-600 dark:text-slate-200 dark:group-hover/event:text-emerald-400 truncate"
               >
                 {{ event.title }}
               </h5>
-              <div class="flex items-center gap-2 text-xs text-gray-500">
-                <IconsUserGroupIcon class="w-3 h-3" />
-                <span>{{ event.group_code }}</span>
-                <span
-                  v-if="event.instructor_name"
-                  class="flex items-center gap-1 border-l border-gray-300 pl-2 ml-1"
-                >
-                  • {{ event.instructor_name }}
-                </span>
+              <div class="flex items-center gap-3 text-xs font-bold text-slate-400">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <IconsUserGroupIcon class="h-3.5 w-3.5 shrink-0" />
+                  <span class="truncate">{{ event.group_code }}</span>
+                </div>
+                <div v-if="event.instructor_name" class="flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-700 pl-3 min-w-0">
+                  <IconsUserCircleIcon class="h-3.5 w-3.5 shrink-0" />
+                  <span class="truncate">{{ event.instructor_name }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -594,7 +597,7 @@ const { authFetch } = useAuthFetch();
 const stats = ref(null);
 const loading = ref(true);
 
-// Периоды для фильтрации сертификатов
+// Периоды для фильтрации дипломов
 const certificatePeriod = ref("months");
 const certificateTransitioning = ref(false);
 const certificatePeriods = [
@@ -612,9 +615,9 @@ const currentDate = new Date().toLocaleDateString("ru-RU", {
 
 const quickActions = [
   { to: "/groups", label: "Все группы", icon: "usergroup" },
-  { to: "/database/import", label: "Импорт студентов", icon: "archive" },
-  { to: "/certificates", label: "Сертификаты", icon: "certificate" },
-  { to: "/schedule", label: "Расписание", icon: "calendar" },
+  { to: "/database/import", label: "Импорт контингента", icon: "archive" },
+  { to: "/certificates", label: "Дипломы", icon: "certificate" },
+  { to: "/schedule", label: "Календарь", icon: "calendar" },
 ];
 
 const fetchDashboardStats = async () => {
@@ -648,7 +651,7 @@ const changeCertificatePeriod = (period) => {
   }, 250);
 };
 
-// Данные для диаграммы студентов по курсам
+// Данные для диаграммы контингента по программам
 const coursesChartData = computed(() => {
   const courses = stats.value?.studentsByCourse || [];
   return {
@@ -657,7 +660,7 @@ const coursesChartData = computed(() => {
   };
 });
 
-// Базовые данные сертификатов по месяцам
+// Базовые данные дипломов по месяцам
 const certificatesChartData = computed(() => {
   const certs = stats.value?.certificatesByMonth || [];
   const monthNames = [
@@ -678,7 +681,7 @@ const certificatesChartData = computed(() => {
   return {
     series: [
       {
-        name: "Сертификаты",
+        name: "Дипломы",
         data: certs.map((c) => Number(c.count) || 0),
       },
     ],

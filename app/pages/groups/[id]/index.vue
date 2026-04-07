@@ -4,9 +4,9 @@
     <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
       <div class="text-center">
         <div
-          class="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+          class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
         ></div>
-        <p class="mt-4 text-gray-600 dark:text-gray-400">
+        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
           Загрузка информации о группе...
         </p>
       </div>
@@ -17,1250 +17,1059 @@
       v-else-if="!group"
       class="flex items-center justify-center min-h-[400px]"
     >
-      <div class="text-center">
-        <svg
-          class="mx-auto h-16 w-16 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      <div class="text-center max-w-md">
+        <div
+          class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">
+          <CalendarIcon class="w-12 h-12 text-slate-400" />
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">
           Группа не найдена
         </h3>
-        <p class="mt-2 text-gray-500 dark:text-gray-400">
-          Возможно, группа была удалена или перемещена
+        <p class="mt-2 text-slate-500 dark:text-gray-400">
+          Возможно, группа была удалена или вы используете неверную ссылку.
         </p>
-        <UiButton class="mt-6" @click="$router.push('/groups')">
-          Вернуться к списку групп
-        </UiButton>
+        <UiButton class="mt-8 shadow-lg" @click="$router.push('/groups')"
+          >Вернуться к списку групп</UiButton
+        >
       </div>
     </div>
 
-    <!-- Содержимое -->
     <template v-else>
-      <!-- Заголовок и навигация -->
-      <div class="mb-6">
-        <div
-          class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-4"
-        >
-          <NuxtLink to="/groups" class="hover:text-primary transition-colors"
-            >Учебные группы</NuxtLink
+      <!-- Header Section -->
+      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+        <!-- Breadcrumbs / Back Navigation -->
+        <div class="mb-6">
+          <NuxtLink
+            to="/groups"
+            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
           >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-          <span class="text-gray-900 dark:text-white">{{ group.code }}</span>
+            <div
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
+            >
+              <ArrowLeft
+                class="w-4 h-4 transition-transform group-hover:-translate-x-1"
+              />
+            </div>
+            Назад к списку групп
+          </NuxtLink>
         </div>
 
         <div
-          class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
         >
-          <div class="flex items-center gap-4">
-            <div
-              class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xl"
-            >
-              {{ group.code.substring(0, 2).toUpperCase() }}
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <h1 class="text-2xl font-bold text-black dark:text-white">
-                  {{ group.code }}
-                </h1>
-                <span
-                  v-if="group.isArchived"
-                  class="px-2 py-1 rounded text-xs font-bold bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
-                >
-                  АРХИВ
-                </span>
+          <!-- Left: Title & Info -->
+          <div class="space-y-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <h1
+                class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase"
+              >
+                {{ group.code }}
+              </h1>
+              <div
+                class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border"
+                :class="statusClass"
+              >
+                {{ statusText }}
               </div>
-              <p class="text-gray-500 dark:text-gray-400">
+            </div>
+
+            <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <div
+                class="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400"
+              >
                 {{ group.course?.name }}
-              </p>
+              </div>
+              <div
+                class="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400"
+              >
+                <CalendarIcon class="w-4 h-4 text-slate-400" />
+                {{ formatDate(group.startDate) }} —
+                {{ formatDate(group.endDate) }}
+              </div>
             </div>
           </div>
-          <div class="flex items-center gap-3 flex-wrap">
+
+          <!-- Right: Action Buttons Group -->
+          <div class="flex flex-wrap items-center gap-2">
             <NuxtLink
               v-if="canIssueCertificates && !group.isArchived"
               :to="`/groups/${group.id}/certificates`"
             >
-              <UiButton variant="primary">
-                <svg
-                  class="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Выдача сертификатов
+              <UiButton
+                variant="primary"
+                size="sm"
+                class="h-10 px-4 gap-2 font-bold shadow-sm"
+              >
+                <GraduationCap class="w-4 h-4" />
+                Сертификаты
               </UiButton>
             </NuxtLink>
 
             <UiButton
-              v-if="canEditGroups && !group.isArchived"
+              v-if="canEditGroups"
               variant="outline"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold"
               @click="showEditModal = true"
             >
-              <svg
-                class="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-              Редактировать
+              <Settings class="w-4 h-4" />
+              Настроить
             </UiButton>
 
-            <!-- Кнопка архивации (только Админ) -->
             <UiButton
               v-if="canArchiveGroups"
               variant="outline"
-              @click="confirmArchive"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold"
+              @click="showArchiveModal = true"
             >
-              <svg
-                class="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                />
-              </svg>
+              <Clock class="w-4 h-4" v-if="group.isArchived" />
+              <CalendarIcon class="w-4 h-4" v-else />
               {{ group.isArchived ? "Восстановить" : "В архив" }}
             </UiButton>
 
-            <!-- Удалить (Только Админ) -->
             <UiButton
-              v-if="isAdmin"
-              variant="danger"
+              v-if="canDeleteGroups"
+              variant="outline"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold text-danger border-danger/20 hover:bg-danger/5 hover:border-danger/40"
               @click="showDeleteModal = true"
             >
-              <svg
-                class="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
+              <Trash2 class="w-4 h-4" />
               Удалить
             </UiButton>
           </div>
         </div>
       </div>
 
-      <!-- Блок дисциплин на всю ширину -->
-      <div
-        v-if="disciplines.length > 0"
-        class="mb-6 rounded-xl bg-white dark:bg-boxdark shadow-md p-6"
-      >
-        <!-- (Укорочено: то же самое, что и было) -->
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-3">
-            <div
-              class="h-10 w-10 rounded-lg bg-info/10 flex items-center justify-center"
-            >
-              <svg
-                class="w-5 h-5 text-info"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-lg font-semibold text-black dark:text-white">
-                Журналы дисциплин
-              </h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                {{ disciplines.length }} дисциплин в программе
-              </p>
-            </div>
-          </div>
-        </div>
-
+      <!-- Bento Box Metrics -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <!-- Attendance Card -->
         <div
-          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
         >
-          <NuxtLink
-            v-for="discipline in disciplines"
-            :key="discipline.id"
-            :to="`/groups/journal/${group?.id}_${discipline.id}`"
-            class="group p-4 rounded-xl bg-linear-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50 border border-gray-200 dark:border-gray-700 hover:border-primary dark:hover:border-primary hover:shadow-lg transition-all duration-200"
-          >
-            <div class="flex items-start justify-between mb-3">
-              <div
-                class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors"
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              </div>
-              <svg
-                class="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </div>
-            <h4
-              class="font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2"
-            >
-              {{ discipline.name }}
-            </h4>
-            <!-- Статистика часов -->
-            <div class="flex flex-wrap items-center gap-2 text-xs">
-              <span
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300"
-              >
-                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-                {{ discipline.theoryHours }} т
-              </span>
-              <span
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300"
-              >
-                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-                {{ discipline.practiceHours }} п
-              </span>
-              <!-- ... -->
-            </div>
-          </NuxtLink>
-        </div>
-      </div>
-
-      <!-- Блок инструкторов -->
-      <div
-        v-if="groupInstructors.length > 0"
-        class="mb-6 rounded-xl bg-white dark:bg-boxdark shadow-md p-6"
-      >
-        <div class="flex items-center justify-between mb-5">
-          <div class="flex items-center gap-3">
-            <div
-              class="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center"
-            >
-              <svg
-                class="w-5 h-5 text-warning"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-lg font-semibold text-black dark:text-white">
-                Инструкторы группы
-              </h3>
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                {{ groupInstructors.length }}
-                {{
-                  groupInstructors.length === 1
-                    ? "инструктор"
-                    : groupInstructors.length < 5
-                      ? "инструктора"
-                      : "инструкторов"
-                }}
-                ведут занятия
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div
-          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
-        >
-          <NuxtLink
-            v-for="instructor in groupInstructors"
-            :key="instructor.id"
-            :to="`/instructors/${instructor.id}`"
-            class="group flex flex-col gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-warning dark:hover:border-warning hover:shadow-md transition-all duration-200 bg-gray-50 dark:bg-gray-800/50"
-          >
-            <!-- Аватар + имя -->
-            <div class="flex items-center gap-3">
-              <div
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning/10 text-warning font-bold text-sm group-hover:bg-warning group-hover:text-white transition-colors"
-              >
-                {{ getInitials(instructor.fullName) }}
-              </div>
-              <div class="min-w-0">
-                <p
-                  class="font-semibold text-gray-900 dark:text-white text-sm truncate"
-                >
-                  {{ instructor.fullName }}
-                </p>
-                <p
-                  v-if="instructor.specialization"
-                  class="text-xs text-gray-500 dark:text-gray-400 truncate"
-                >
-                  {{ instructor.specialization }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Счётчик часов -->
-            <div class="space-y-1.5">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-500 dark:text-gray-400"
-                  >Пройдено / Распределено</span
-                >
-                <span
-                  class="font-medium"
-                  :class="
-                    instructor.completedHours >= instructor.totalHours
-                      ? 'text-success'
-                      : 'text-warning'
-                  "
-                >
-                  {{ instructor.completedHours }} /
-                  {{ instructor.totalHours }} а-ч
-                </span>
-              </div>
-              <div
-                class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden"
-              >
-                <div
-                  class="h-full rounded-full transition-all duration-500"
-                  :class="
-                    instructor.hoursPercent >= 100
-                      ? 'bg-success'
-                      : instructor.hoursPercent >= 75
-                        ? 'bg-info'
-                        : instructor.hoursPercent >= 50
-                          ? 'bg-warning'
-                          : 'bg-danger'
-                  "
-                  :style="{
-                    width: `${Math.min(instructor.hoursPercent, 100)}%`,
-                  }"
-                ></div>
-              </div>
-              <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                <span>{{ instructor.lessonsCount }} занятий</span>
-                <span
-                  class="px-1.5 py-0.5 rounded-full text-xs font-medium"
-                  :class="
-                    instructor.hoursPercent >= 100
-                      ? 'bg-success/10 text-success'
-                      : instructor.hoursPercent >= 50
-                        ? 'bg-warning/10 text-warning'
-                        : 'bg-danger/10 text-danger'
-                  "
-                >
-                  {{ instructor.hoursPercent }}%
-                </span>
-              </div>
-            </div>
-          </NuxtLink>
-        </div>
-      </div>
-
-      <!-- Информация о группе, Курс и Отчеты -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <!-- Левая колонка: Информация + Учебная программа -->
-        <div class="space-y-6">
-          <!-- Карточка информации -->
-          <div class="rounded-xl bg-white dark:bg-boxdark shadow-md p-6">
-            <h3 class="text-lg font-semibold text-black dark:text-white mb-4">
-              Информация о группе
-            </h3>
-
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="text-sm text-gray-500 dark:text-gray-400"
-                  >Код группы</label
-                >
-                <p class="text-gray-900 dark:text-white font-medium">
-                  {{ group.code }}
-                </p>
-              </div>
-
-              <div>
-                <label class="text-sm text-gray-500 dark:text-gray-400"
-                  >Статус</label
-                >
-                <p>
-                  <span
-                    :class="[
-                      'inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-medium',
-                      statusClass,
-                    ]"
-                  >
-                    {{ statusText }}
-                  </span>
-                </p>
-              </div>
-
-              <div>
-                <label class="text-sm text-gray-500 dark:text-gray-400"
-                  >Даты обучения</label
-                >
-                <p class="text-gray-900 dark:text-white font-medium">
-                  {{ formatDate(group.startDate) }} —
-                  {{ formatDate(group.endDate) }}
-                </p>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ daysInfo }}
-                </p>
-              </div>
-
-              <div v-if="group.description" class="col-span-2">
-                <label class="text-sm text-gray-500 dark:text-gray-400"
-                  >Описание</label
-                >
-                <p class="text-gray-900 dark:text-white">
-                  {{ group.description }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Карточка курса (Учебная программа) -->
-          <div
-            v-if="group.course"
-            class="rounded-xl bg-white dark:bg-boxdark shadow-md p-6"
-          >
-            <h3 class="text-lg font-semibold text-black dark:text-white mb-4">
-              Учебная программа
-            </h3>
-
-            <div class="space-y-3">
-              <div>
-                <label class="text-sm text-gray-500 dark:text-gray-400"
-                  >Название</label
-                >
-                <p class="text-gray-900 dark:text-white font-medium">
-                  {{ group.course.name }}
-                </p>
-              </div>
-
-              <div class="flex gap-6">
-                <div>
-                  <label class="text-sm text-gray-500 dark:text-gray-400"
-                    >Код</label
-                  >
-                  <p class="text-gray-900 dark:text-white font-medium">
-                    {{ group.course.code }}
-                  </p>
-                </div>
-                <div>
-                  <label class="text-sm text-gray-500 dark:text-gray-400"
-                    >Всего часов</label
-                  >
-                  <p class="text-gray-900 dark:text-white font-medium">
-                    {{ group.course.totalHours }} а-ч
-                  </p>
-                </div>
-              </div>
-
-              <NuxtLink
-                :to="`/programs/${group.courseId}`"
-                class="inline-flex items-center gap-1 text-primary hover:underline text-sm"
-              >
-                Перейти к программе
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
-              </NuxtLink>
-            </div>
-          </div>
-        </div>
-
-        <!-- Правая колонка: Документы группы -->
-        <div class="rounded-xl bg-white dark:bg-boxdark shadow-md p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-black dark:text-white">
-              Документы группы
-            </h3>
-            <UiButton
-              v-if="canEditGroups && !group.isArchived"
-              variant="outline"
-              size="sm"
-              @click="showUploadReportModal = true"
-            >
-              <svg
-                class="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
-              Загрузить документ
-            </UiButton>
-          </div>
-          <div v-if="loadingReports" class="text-sm text-gray-500">
-            Загрузка документов...
-          </div>
-          <div
-            v-else-if="reports.length === 0"
-            class="text-sm text-gray-500 italic"
-          >
-            Документов не найдено
-          </div>
-          <!-- Список документов с ограничением высоты и скроллингом (4 строки) -->
-          <div v-else class="space-y-3 max-h-[340px] overflow-y-auto pr-2">
-            <div
-              v-for="report in reports"
-              :key="report.id"
-              class="flex items-center justify-between p-3 rounded border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-            >
-              <div class="flex items-center gap-3 overflow-hidden">
-                <div
-                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-danger/10 text-danger"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                </div>
-                <div class="min-w-0">
-                  <p
-                    class="truncate text-sm font-medium text-gray-900 dark:text-white"
-                  >
-                    {{ report.name }}
-                  </p>
-                  <p class="text-xs text-gray-500">
-                    {{ new Date(report.uploadedAt).toLocaleDateString() }} •
-                    {{ formatFileSize(report.size) }}
-                  </p>
-                </div>
-              </div>
-              <div class="flex items-center gap-1">
-                <!-- Кнопка просмотра -->
-                <button
-                  @click="previewReport(report)"
-                  class="text-info hover:text-info-dark p-1.5 rounded-full hover:bg-info/10 transition-colors"
-                  title="Просмотр"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                    />
-                  </svg>
-                </button>
-
-                <!-- Кнопка скачивания -->
-                <button
-                  @click="downloadReport(report)"
-                  class="text-primary hover:text-primary-dark p-1.5 rounded-full hover:bg-primary/10 transition-colors"
-                  title="Скачать"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
-                  </svg>
-                </button>
-
-                <!-- Кнопка удаления (только для модераторов и админов) -->
-                <button
-                  v-if="canEditGroups || isAdmin"
-                  @click="confirmDeleteReport(report)"
-                  class="text-danger hover:text-danger-dark p-1.5 rounded-full hover:bg-danger/10 transition-colors"
-                  title="Удалить"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Слушатели -->
-      <div
-        class="mb-6 rounded-xl bg-white dark:bg-boxdark shadow-md overflow-hidden"
-      >
-        <!-- ... тот же контент ... -->
-        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div
-                class="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center"
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Посещаемость
+              </p>
+              <h3
+                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
               >
-                <svg
-                  class="w-5 h-5 text-success"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h3 class="text-lg font-semibold text-black dark:text-white">
-                  Слушатели
-                </h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                  {{ group.students?.length || 0 }} человек
-                </p>
-              </div>
+                85.4%
+              </h3>
             </div>
-            <div class="flex items-center gap-2">
-              <UiButton
-                v-if="canManageGroupStudents && !group.isArchived"
-                @click="showManageStudentsModal = true"
-              >
-                Управление слушателями
-              </UiButton>
+            <div
+              class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12"
+            >
+              <Users class="w-6 h-6" />
+            </div>
+          </div>
+          <div class="mt-4 flex items-center gap-2">
+            <span
+              class="text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-full"
+              >+2.3%</span
+            >
+            <span class="text-xs text-slate-400 font-medium"
+              >с прошлой недели</span
+            >
+          </div>
+        </div>
 
-              <!-- Кнопка скачивания пустого журнала с выбором формата -->
+        <!-- Hours Progress Card -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Прогресс часов
+              </p>
+              <h3
+                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
+              >
+                {{ totalScheduledHours }} / {{ totalProgramHours }}
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12"
+            >
+              <Clock class="w-6 h-6" />
+            </div>
+          </div>
+          <div class="mt-4">
+            <div
+              class="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800"
+            >
               <div
-                v-if="group.students && group.students.length > 0"
-                class="relative inline-block"
-              >
-                <UiButton
-                  variant="outline"
-                  @click="toggleEmptyJournalDropdown"
-                  :disabled="generatingEmptyJournal"
-                  class="flex items-center gap-2"
-                >
-                  <svg
-                    v-if="!generatingEmptyJournal"
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  <svg
-                    v-else
-                    class="w-4 h-4 animate-spin"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  <span>{{
-                    generatingEmptyJournal ? "Генерация..." : "Пустой журнал"
-                  }}</span>
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </UiButton>
+                class="h-full rounded-full transition-all duration-500"
+                :class="hoursProgressColor"
+                :style="{ width: `${hoursProgress}%` }"
+              ></div>
+            </div>
+          </div>
+        </div>
 
-                <!-- Выпадающее меню -->
-                <div
-                  v-if="showEmptyJournalDropdown"
-                  class="absolute right-0 mt-2 w-48 bg-white dark:bg-boxdark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+        <!-- Disciplines Card -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Дисциплины
+              </p>
+              <h3
+                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
+              >
+                {{ disciplines.length }} предм.
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12"
+            >
+              <BookOpen class="w-6 h-6" />
+            </div>
+          </div>
+          <div class="mt-4">
+            <p class="text-xs text-slate-400 font-medium whitespace-nowrap">
+              Учебная программа активна
+            </p>
+          </div>
+        </div>
+
+        <!-- Schedule/Timeline Card -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Срок обучения
+              </p>
+              <h3
+                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
+              >
+                {{ daysInfo }}
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-info/10 p-3 text-info transition-transform group-hover:rotate-12"
+            >
+              <CalendarIcon class="w-6 h-6" />
+            </div>
+          </div>
+          <div
+            class="mt-4 text-xs font-medium text-slate-600 dark:text-slate-400 space-y-1"
+          >
+            <div class="flex justify-between">
+              <span>Старт:</span>
+              <span class="text-slate-900 dark:text-white">{{
+                formatDate(group.startDate)
+              }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Конец:</span>
+              <span class="text-slate-900 dark:text-white">{{
+                formatDate(group.endDate)
+              }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="mb-8 overflow-x-auto custom-scrollbar pb-2">
+        <div
+          class="inline-flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800"
+        >
+          <nav class="flex gap-1" aria-label="Tabs">
+            <button
+              v-for="tab in tabs"
+              :key="tab.id"
+              @click="changeTab(tab.id)"
+              :class="[
+                'flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap',
+                activeTab === tab.id
+                  ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
+              ]"
+            >
+              <component :is="tab.icon" class="h-4 w-4" />
+              {{ tab.label }}
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Tab Content Area -->
+      <div class="space-y-6">
+        <!-- OVERVIEW TAB -->
+        <div
+          v-show="activeTab === 'overview'"
+          class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
+          <div class="lg:col-span-2 space-y-6">
+            <!-- Group Info Card -->
+            <div
+              class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all hover:shadow-md"
+            >
+              <div
+                class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6"
+              >
+                <h3
+                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
                 >
-                  <button
-                    @click="downloadEmptyJournal('pdf')"
-                    class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-t-lg"
-                  >
-                    <svg
-                      class="w-4 h-4 text-danger"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
+                  <LayoutDashboard class="w-5 h-5 text-primary" />
+                  Информация о группе
+                </h3>
+              </div>
+              <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div class="space-y-1">
+                    <label
+                      class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                      >Код группы</label
                     >
-                      <path
-                        d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
-                      />
-                      <path d="M14 2v6h6" />
-                      <path d="M10 13h4" />
-                      <path d="M10 17h4" />
-                      <path d="M10 9h1" />
-                    </svg>
-                    <span>Скачать PDF</span>
-                  </button>
-                  <button
-                    @click="downloadEmptyJournal('docx')"
-                    class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-b-lg"
-                  >
-                    <svg
-                      class="w-4 h-4 text-primary"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
+                    <p class="text-lg font-bold text-slate-900 dark:text-white">
+                      {{ group.code }}
+                    </p>
+                  </div>
+                  <div class="space-y-1">
+                    <label
+                      class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                      >Статус</label
                     >
-                      <path
-                        d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+                    <div>
+                      <span
+                        :class="[
+                          'inline-flex items-center rounded-full px-3 py-1 text-sm font-bold',
+                          statusClass,
+                        ]"
+                      >
+                        {{ statusText }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="space-y-1">
+                    <label
+                      class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                      >Период обучения</label
+                    >
+                    <p
+                      class="text-slate-900 dark:text-white font-semibold flex items-center gap-2"
+                    >
+                      {{ formatDate(group.startDate) }}
+                      <ChevronRight class="w-4 h-4 text-slate-300" />
+                      {{ formatDate(group.endDate) }}
+                    </p>
+                    <p class="text-sm text-slate-500 font-medium">
+                      {{ daysInfo }}
+                    </p>
+                  </div>
+                  <div class="space-y-1" v-if="group.course">
+                    <label
+                      class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                      >Учебная программа</label
+                    >
+                    <NuxtLink
+                      :to="`/programs/${group.courseId}`"
+                      class="text-primary hover:underline font-semibold group flex items-center gap-1"
+                    >
+                      {{ group.course.name }}
+                      <Eye
+                        class="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
                       />
-                      <path d="M14 2v6h6" />
-                      <path d="M10 12h4" />
-                      <path d="M10 16h4" />
-                    </svg>
-                    <span>Скачать Word</span>
-                  </button>
+                    </NuxtLink>
+                  </div>
+                  <div
+                    v-if="group.description"
+                    class="col-span-1 md:col-span-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800"
+                  >
+                    <label
+                      class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1"
+                      >Описание</label
+                    >
+                    <p
+                      class="text-slate-700 dark:text-slate-300 text-sm leading-relaxed"
+                    >
+                      {{ group.description }}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div
-          v-if="!group.students || group.students.length === 0"
-          class="p-12 text-center text-gray-500 dark:text-gray-400"
-        >
-          <p>В группе пока нет слушателей</p>
-        </div>
-        <template v-else>
-          <!-- Таблица слушателей -->
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead>
-                <tr
-                  class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-                >
-                  <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                  >
-                    Слушатель
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                  >
-                    Организация
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                  >
-                    Должность
-                  </th>
-                  <th
-                    class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
-                  >
-                    Посещаемость
-                  </th>
-                  <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                  >
-                    Дата зачисления
-                  </th>
-                  <th
-                    v-if="canEditGroups || isAdmin"
-                    class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase"
-                  >
-                    Действия
-                  </th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                <tr
-                  v-for="gs in paginatedStudents"
-                  :key="gs.id"
-                  class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <td class="px-6 py-4">
-                    <div class="flex items-center gap-3">
-                      <div
-                        class="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-success/10 text-success font-semibold"
-                      >
-                        {{ getInitials(gs.student?.fullName) }}
-                      </div>
-                      <span class="font-medium text-gray-900 dark:text-white">{{
-                        gs.student?.fullName
-                      }}</span>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 text-sm whitespace-nowrap">
-                    <span
-                      class="truncate max-w-[200px] inline-block"
-                      :title="gs.student?.organization"
-                      >{{ gs.student?.organization || "—" }}</span
-                    >
-                  </td>
-                  <td class="px-6 py-4 text-sm whitespace-nowrap">
-                    <span
-                      class="truncate max-w-[150px] inline-block"
-                      :title="gs.student?.position"
-                      >{{ gs.student?.position || "—" }}</span
-                    >
-                  </td>
-                  <td class="px-6 py-4 text-center">
-                    <span
-                      class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium"
-                      :class="
-                        getAttendanceColorClass(
-                          getStudentAttendance(gs.studentId),
-                        )
-                      "
-                    >
-                      {{ getStudentAttendance(gs.studentId).toFixed(0) }}%
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                    {{ formatDate(gs.enrolledAt) }}
-                  </td>
-                  <td
-                    v-if="canEditGroups || isAdmin"
-                    class="px-6 py-4 text-center"
-                  >
-                    <NuxtLink
-                      :to="`/students/${gs.studentId}`"
-                      class="inline-flex items-center justify-center p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                      title="Просмотр студента"
-                    >
-                      <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        />
-                      </svg>
-                    </NuxtLink>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <!-- Пагинация (как была) -->
-          <div
-            class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-4"
-          >
-            <div class="flex items-center gap-2 text-sm text-gray-500">
-              <span>{{ paginationInfo }}</span>
-            </div>
-            <div class="flex items-center gap-1">
-              <button
-                :disabled="currentStudentsPage === 1"
-                @click="currentStudentsPage--"
-                class="p-2 border rounded hover:bg-gray-100 disabled:opacity-50"
-              >
-                Назад
-              </button>
-              <button
-                :disabled="currentStudentsPage === totalStudentsPages"
-                @click="currentStudentsPage++"
-                class="p-2 border rounded hover:bg-gray-100 disabled:opacity-50"
-              >
-                Вперед
-              </button>
-            </div>
-          </div>
-        </template>
-      </div>
-
-      <!-- Расписание -->
-      <div
-        class="rounded-xl bg-white dark:bg-boxdark shadow-md overflow-hidden"
-      >
-        <button
-          class="w-full p-6 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          @click="scheduleExpanded = !scheduleExpanded"
-        >
-          <div class="flex items-center gap-3 flex-1">
+            <!-- Organization Breakdown Card -->
             <div
-              class="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"
+              class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all hover:shadow-md"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <div
+                class="border-b border-slate-100 dark:border-slate-800 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <div class="text-left flex-1">
-              <div class="flex items-center gap-3 mb-1">
-                <h3 class="text-lg font-semibold text-black dark:text-white">
-                  Расписание занятий
+                <h3
+                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+                >
+                  <Users class="w-5 h-5 text-success" />
+                  Состав по организациям
                 </h3>
-                <span class="text-sm text-gray-500">
-                  {{ scheduleEvents.length }}
-                  {{
-                    scheduleEvents.length === 1
-                      ? "занятие"
-                      : scheduleEvents.length < 5
-                        ? "занятия"
-                        : "занятий"
-                  }}
-                </span>
               </div>
-
-              <!-- Счетчик часов и прогресс-бар -->
-              <div v-if="totalProgramHours > 0" class="space-y-2">
-                <div class="flex items-center gap-3">
-                  <div class="flex items-center gap-2 text-sm">
-                    <span class="font-medium text-gray-900 dark:text-white">
-                      {{ totalScheduledHours }} / {{ totalProgramHours }} а-ч
-                    </span>
+              <div class="p-6">
+                <div
+                  v-if="studentsByOrganization.length > 0"
+                  class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                >
+                  <div
+                    v-for="org in studentsByOrganization"
+                    :key="org.name"
+                    class="flex items-center justify-between p-4 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-success/30 hover:bg-success/5 transition-all group"
+                  >
                     <span
-                      class="px-2 py-0.5 rounded-full text-xs font-medium"
-                      :class="{
-                        'bg-success/10 text-success': hoursProgress >= 100,
-                        'bg-info/10 text-info':
-                          hoursProgress >= 75 && hoursProgress < 100,
-                        'bg-warning/10 text-warning':
-                          hoursProgress >= 50 && hoursProgress < 75,
-                        'bg-danger/10 text-danger': hoursProgress < 50,
-                      }"
+                      class="text-sm font-bold text-slate-700 dark:text-slate-300 truncate pr-2 group-hover:text-success transition-colors"
+                      >{{ org.name }}</span
                     >
-                      {{ hoursProgress }}%
+                    <span
+                      class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-extrabold group-hover:bg-success group-hover:text-white transition-all"
+                    >
+                      {{ org.count }}
                     </span>
                   </div>
                 </div>
-
-                <!-- Прогресс-бар -->
                 <div
-                  class="w-full max-w-md bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden"
+                  v-else
+                  class="text-center py-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800"
                 >
-                  <div
-                    class="h-full transition-all duration-500 rounded-full"
-                    :class="hoursProgressColor"
-                    :style="{ width: `${hoursProgress}%` }"
-                  ></div>
+                  <p class="text-slate-500 font-medium">
+                    Данные об организациях отсутствуют
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-          <!-- Chevron icon -->
-          <svg
-            class="w-5 h-5 text-gray-400 transition-transform duration-200"
-            :class="{ 'rotate-180': scheduleExpanded }"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
 
-        <!-- Schedule content -->
+          <!-- Right Column of Overview -->
+          <div class="space-y-6">
+            <!-- Instructors Card -->
+            <div
+              class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all hover:shadow-md"
+            >
+              <div
+                class="bg-linear-to-br from-warning/10 to-transparent p-6 border-b border-slate-100 dark:border-slate-800"
+              >
+                <h3
+                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+                >
+                  <GraduationCap class="w-5 h-5 text-warning" />
+                  Преподаватели
+                </h3>
+              </div>
+              <div class="p-4 space-y-3">
+                <div
+                  v-for="instructor in groupInstructors"
+                  :key="instructor.id"
+                  class="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
+                >
+                  <div
+                    class="h-10 w-10 shrink-0 rounded-full bg-warning/10 text-warning flex items-center justify-center font-bold text-xs ring-2 ring-white dark:ring-slate-800"
+                  >
+                    {{ getInitials(instructor.fullName) }}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p
+                      class="text-sm font-bold text-slate-900 dark:text-white truncate"
+                    >
+                      {{ instructor.fullName }}
+                    </p>
+                    <p class="text-xs text-slate-500 truncate">
+                      {{ instructor.completedHours }} /
+                      {{ instructor.totalHours }} ч.
+                    </p>
+                  </div>
+                  <div class="text-right">
+                    <div
+                      class="text-xs font-extrabold"
+                      :class="
+                        instructor.hoursPercent >= 100
+                          ? 'text-success'
+                          : 'text-warning'
+                      "
+                    >
+                      {{ instructor.hoursPercent }}%
+                    </div>
+                  </div>
+                </div>
+                <div
+                  v-if="groupInstructors.length === 0"
+                  class="text-center py-6 text-slate-400 text-sm italic"
+                >
+                  Инструкторы не назначены
+                </div>
+              </div>
+              <div class="px-4 pb-4">
+                <UiButton
+                  variant="outline"
+                  size="sm"
+                  class="w-full text-xs font-semibold gap-1"
+                  @click="activeTab = 'schedule'"
+                >
+                  <CalendarDays class="w-3 h-3" />
+                  Смотреть расписание
+                </UiButton>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STUDENTS TAB -->
         <div
-          v-if="scheduleExpanded"
-          class="border-t border-gray-200 dark:border-gray-700"
+          v-show="activeTab === 'students'"
+          class="animate-in fade-in slide-in-from-bottom-4 duration-500"
         >
-          <div v-if="loadingSchedule" class="p-6 text-center">
-            <div
-              class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-            ></div>
-            <p class="mt-2 text-sm text-gray-500">Загрузка расписания...</p>
-          </div>
-
           <div
-            v-else-if="scheduleEvents.length === 0"
-            class="p-12 text-center text-gray-500 dark:text-gray-400"
+            class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden"
           >
-            <svg
-              class="mx-auto h-12 w-12 text-gray-400 mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <p>Занятия не запланированы</p>
-            <p class="text-sm mt-2">
-              Добавьте занятия в расписание через календарь
-            </p>
-          </div>
-
-          <div v-else class="divide-y divide-gray-200 dark:divide-gray-700">
             <div
-              v-for="event in scheduleEvents"
-              :key="event.id"
-              class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-2">
+              <div>
+                <h3
+                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+                >
+                  <GraduationCap class="w-5 h-5 text-success" />
+                  Список слушателей
+                </h3>
+                <p class="text-xs text-slate-500 font-medium mt-1">
+                  {{ group.students?.length || 0 }} подтвержденных участников
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <UiButton
+                  v-if="canManageGroupStudents && !group.isArchived"
+                  variant="outline"
+                  size="sm"
+                  class="gap-2 font-bold"
+                  @click="showManageStudentsModal = true"
+                >
+                  <Plus class="w-4 h-4" />
+                  Управление
+                </UiButton>
+
+                <div
+                  v-if="group.students && group.students.length > 0"
+                  class="relative group/journal"
+                >
+                  <UiButton
+                    variant="outline"
+                    size="sm"
+                    class="gap-2 font-bold"
+                    @click="toggleEmptyJournalDropdown"
+                    :disabled="generatingEmptyJournal"
+                  >
+                    <Download class="w-4 h-4" />
+                    Пустой журнал
+                  </UiButton>
+                  <!-- Dropdown Menu (logic remains same) -->
+                  <div
+                    v-if="showEmptyJournalDropdown"
+                    class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden"
+                  >
+                    <button
+                      @click="downloadEmptyJournal('pdf')"
+                      class="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors"
+                    >
+                      <FileText class="w-4 h-4 text-danger" />
+                      Скачать PDF
+                    </button>
+                    <button
+                      @click="downloadEmptyJournal('docx')"
+                      class="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors border-t border-slate-100 dark:border-slate-700"
+                    >
+                      <FileText class="w-4 h-4 text-primary" />
+                      Скачать Word
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              v-if="!group.students || group.students.length === 0"
+              class="p-16 text-center"
+            >
+              <div
+                class="bg-slate-50 dark:bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+              >
+                <Users class="w-8 h-8 text-slate-300" />
+              </div>
+              <p class="text-slate-500 font-medium">
+                В этой группе пока нет слушателей
+              </p>
+            </div>
+
+            <template v-else>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50/50 dark:bg-slate-800/50">
+                      <th
+                        class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider"
+                      >
+                        Слушатель
+                      </th>
+                      <th
+                        class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider"
+                      >
+                        Организация
+                      </th>
+                      <th
+                        class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
+                      >
+                        Посещаемость
+                      </th>
+                      <th
+                        class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider"
+                      >
+                        Дата зачисления
+                      </th>
+                      <th
+                        class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right"
+                      >
+                        Инфо
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    class="divide-y divide-slate-100 dark:divide-slate-800"
+                  >
+                    <tr
+                      v-for="gs in paginatedStudents"
+                      :key="gs.id"
+                      class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group"
+                    >
+                      <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                          <div
+                            class="h-9 w-9 rounded-full bg-linear-to-br from-success/20 to-success/5 text-success flex items-center justify-center font-bold text-xs border border-success/10"
+                          >
+                            {{ getInitials(gs.student?.fullName) }}
+                          </div>
+                          <div>
+                            <p
+                              class="font-bold text-slate-900 dark:text-white text-sm tracking-tight"
+                            >
+                              {{ gs.student?.fullName }}
+                            </p>
+                            <p
+                              class="text-xs text-slate-500 truncate max-w-[150px] font-medium"
+                            >
+                              {{ gs.student?.position || "Слушатель" }}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4">
+                        <span
+                          class="text-sm font-semibold text-slate-600 dark:text-slate-400 truncate max-w-[200px] block"
+                          :title="gs.student?.organization"
+                        >
+                          {{ gs.student?.organization || "—" }}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4">
+                        <div class="flex flex-col items-center gap-1">
+                          <div
+                            class="w-16 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden"
+                          >
+                            <div
+                              class="h-full rounded-full transition-all"
+                              :class="
+                                getAttendanceColorClass(
+                                  getStudentAttendance(gs.studentId),
+                                )
+                                  .replace('bg-', 'bg-')
+                                  .split(' ')[0]
+                              "
+                              :style="{
+                                width: `${getStudentAttendance(gs.studentId)}%`,
+                              }"
+                            ></div>
+                          </div>
+                          <span
+                            class="text-[10px] font-extrabold uppercase tracking-tighter"
+                            :class="
+                              getAttendanceColorClass(
+                                getStudentAttendance(gs.studentId),
+                              ).split(' ')[1]
+                            "
+                          >
+                            {{ getStudentAttendance(gs.studentId).toFixed(0) }}%
+                          </span>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4 text-xs font-bold text-slate-500">
+                        {{ formatDate(gs.enrolledAt) }}
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <NuxtLink
+                          :to="`/students/${gs.studentId}`"
+                          class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
+                        >
+                          <Eye class="w-4 h-4" />
+                        </NuxtLink>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <!-- Compact Pagination -->
+              <div
+                class="px-6 py-4 bg-slate-50/30 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"
+              >
+                <span
+                  class="text-xs font-bold text-slate-400 uppercase tracking-widest"
+                  >{{ paginationInfo }}</span
+                >
+                <div class="flex gap-2">
+                  <UiButton
+                    :disabled="currentStudentsPage === 1"
+                    variant="outline"
+                    size="sm"
+                    class="h-8 px-3"
+                    @click="currentStudentsPage--"
+                    >Назад</UiButton
+                  >
+                  <UiButton
+                    :disabled="currentStudentsPage === totalStudentsPages"
+                    variant="outline"
+                    size="sm"
+                    class="h-8 px-3"
+                    @click="currentStudentsPage++"
+                    >Вперед</UiButton
+                  >
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- JOURNAL & PROGRAM TAB -->
+        <div
+          v-show="activeTab === 'journal'"
+          class="animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
+          <div
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          >
+            <NuxtLink
+              v-for="discipline in disciplines"
+              :key="discipline.id"
+              :to="`/groups/journal/${group?.id}_${discipline.id}`"
+              class="group relative p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-primary/50 hover:shadow-xl transition-all duration-300 overflow-hidden"
+            >
+              <div
+                class="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <div class="bg-primary/10 text-primary p-2 rounded-lg">
+                  <ArrowLeft class="w-4 h-4 rotate-180" />
+                </div>
+              </div>
+              <div
+                class="h-12 w-12 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 mb-4 group-hover:bg-primary group-hover:text-white transition-colors"
+              >
+                <BookOpen class="w-6 h-6" />
+              </div>
+              <h4
+                class="font-bold text-slate-900 dark:text-white mb-4 line-clamp-2 leading-snug group-hover:text-primary transition-colors"
+              >
+                {{ discipline.name }}
+              </h4>
+              <div class="flex items-center gap-3">
+                <div class="flex -space-x-2">
+                  <div
+                    class="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-blue-500/10 text-blue-600 flex items-center justify-center text-[10px] font-bold"
+                    title="Теория"
+                  >
+                    {{ discipline.theoryHours }}ч
+                  </div>
+                  <div
+                    class="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-green-500/10 text-green-600 flex items-center justify-center text-[10px] font-bold"
+                    title="Практика"
+                  >
+                    {{ discipline.practiceHours }}ч
+                  </div>
+                </div>
+                <span
+                  class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+                  >Перейти к журналу</span
+                >
+              </div>
+            </NuxtLink>
+            <div
+              v-if="disciplines.length === 0"
+              class="col-span-full py-12 text-center text-slate-400 italic"
+            >
+              Дисциплины программы не найдены
+            </div>
+          </div>
+        </div>
+
+        <!-- SCHEDULE TAB -->
+        <div
+          v-show="activeTab === 'schedule'"
+          class="animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
+          <div
+            class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden"
+          >
+            <div
+              class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <div>
+                <h3
+                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+                >
+                  <CalendarDays class="w-5 h-5 text-primary" />
+                  Расписание занятий
+                </h3>
+                <p class="text-xs text-slate-500 font-medium mt-1">
+                  {{ scheduleEvents.length }} запланированных событий
+                </p>
+              </div>
+              <div
+                v-if="totalProgramHours > 0"
+                class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-2 px-4 rounded-xl"
+              >
+                <div class="text-right">
+                  <p
+                    class="text-[10px] font-bold text-slate-400 uppercase leading-none"
+                  >
+                    Прогресс
+                  </p>
+                  <p
+                    class="text-sm font-extrabold text-slate-900 dark:text-white leading-none mt-1"
+                  >
+                    {{ totalScheduledHours }} / {{ totalProgramHours }} ч.
+                  </p>
+                </div>
+                <div
+                  class="w-10 h-10 rounded-full border-4 border-slate-200 dark:border-slate-700 flex items-center justify-center relative"
+                >
+                  <span class="text-[10px] font-bold"
+                    >{{ hoursProgress }}%</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div v-if="loadingSchedule" class="p-12 text-center">
+              <div
+                class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+              ></div>
+              <p class="mt-4 text-slate-500 text-sm">Загрузка расписания...</p>
+            </div>
+
+            <div
+              v-else-if="scheduleEvents.length === 0"
+              class="p-16 text-center"
+            >
+              <CalendarIcon class="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <p class="text-slate-500 font-medium">
+                Занятия еще не запланированы
+              </p>
+              <p class="text-xs text-slate-400 mt-1">
+                Добавьте занятия через общий календарь планирования
+              </p>
+            </div>
+
+            <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+              <div
+                v-for="event in scheduleEvents"
+                :key="event.id"
+                class="p-4 sm:p-6 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all flex flex-col sm:flex-row sm:items-center gap-4"
+              >
+                <div class="shrink-0 flex items-center gap-4">
+                  <div class="w-14 text-center">
+                    <p
+                      class="text-xs font-extrabold text-slate-400 uppercase tracking-tighter"
+                    >
+                      {{
+                        new Date(event.startTime).toLocaleDateString("ru-RU", {
+                          weekday: "short",
+                        })
+                      }}
+                    </p>
+                    <p
+                      class="text-xl font-black text-slate-900 dark:text-white leading-tight"
+                    >
+                      {{ new Date(event.startTime).getDate() }}
+                    </p>
+                  </div>
+                  <div
+                    class="h-10 w-1 bg-slate-200 dark:bg-slate-700 rounded-full hidden sm:block"
+                  ></div>
+                </div>
+
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
                     <span
-                      class="inline-block w-2 h-2 rounded-full"
+                      class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest"
                       :class="{
-                        'bg-blue-500': event.eventType === 'theory',
-                        'bg-green-500': event.eventType === 'practice',
-                        'bg-orange-500': event.eventType === 'assessment',
-                        'bg-gray-500': event.eventType === 'other',
+                        'bg-blue-100 text-blue-600':
+                          event.eventType === 'theory',
+                        'bg-green-100 text-green-600':
+                          event.eventType === 'practice',
+                        'bg-orange-100 text-orange-600':
+                          event.eventType === 'assessment',
+                        'bg-slate-100 text-slate-600': ![
+                          'theory',
+                          'practice',
+                          'assessment',
+                        ].includes(event.eventType),
                       }"
-                    ></span>
+                    >
+                      {{
+                        event.eventType === "theory"
+                          ? "Теория"
+                          : event.eventType === "practice"
+                            ? "Практика"
+                            : "Экзамен"
+                      }}
+                    </span>
                     <h4
-                      class="font-medium text-gray-900 dark:text-white text-sm"
+                      class="font-bold text-slate-900 dark:text-white truncate"
                     >
                       {{ event.title }}
                     </h4>
                   </div>
                   <div
-                    class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-400"
+                    class="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs font-medium text-slate-500"
                   >
                     <div class="flex items-center gap-1.5">
-                      <svg
-                        class="w-4 h-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <span>{{ formatDate(event.startTime) }}</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                      <svg
-                        class="w-4 h-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span
-                        >{{ formatTime(event.startTime) }} -
-                        {{ formatTime(event.endTime) }}</span
-                      >
+                      <Clock class="w-3.5 h-3.5" />
+                      {{ formatTime(event.startTime) }} -
+                      {{ formatTime(event.endTime) }}
                     </div>
                     <div
                       v-if="event.instructor"
                       class="flex items-center gap-1.5"
                     >
-                      <svg
-                        class="w-4 h-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                        />
-                      </svg>
-                      <span>{{
-                        event.instructor.fullName ||
-                        event.instructor.name ||
-                        "Не указан"
-                      }}</span>
+                      <Users class="w-3.5 h-3.5" />
+                      {{ event.instructor.fullName }}
                     </div>
                     <div
-                      v-if="event.classroom"
-                      class="flex items-center gap-1.5"
+                      class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg text-slate-900 dark:text-white tracking-widest"
                     >
-                      <svg
-                        class="w-4 h-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                        />
-                      </svg>
-                      <span>{{ event.classroom.name || event.classroom }}</span>
-                    </div>
-                    <div
-                      v-if="getAcademicHours(event) > 0"
-                      class="flex items-center gap-1.5"
-                    >
-                      <svg
-                        class="w-4 h-4 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span
-                        class="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium"
-                      >
-                        {{ getAcademicHours(event) }} а-ч
-                      </span>
+                      {{ getAcademicHours(event) }} а-ч
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILES TAB -->
+        <div
+          v-show="activeTab === 'files'"
+          class="animate-in fade-in slide-in-from-bottom-4 duration-500"
+        >
+          <div
+            class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden"
+          >
+            <div
+              class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <div>
+                <h3
+                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+                >
+                  <FileText class="w-5 h-5 text-primary" />
+                  Документация группы
+                </h3>
+                <p class="text-xs text-slate-500 font-medium mt-1">
+                  Отчеты, приказы и учебные материалы
+                </p>
+              </div>
+              <UiButton
+                v-if="canEditGroups"
+                variant="outline"
+                size="sm"
+                class="gap-2 font-bold"
+                @click="showUploadReportModal = true"
+              >
+                <Plus class="w-4 h-4" />
+                Загрузить
+              </UiButton>
+            </div>
+
+            <div v-if="loadingReports" class="p-12 text-center text-slate-400">
+              Загрузка документов...
+            </div>
+            <div v-else-if="reports.length === 0" class="p-16 text-center">
+              <FileText class="w-12 h-12 text-slate-200 mx-auto mb-4" />
+              <p class="text-slate-500 font-medium">Список документов пуст</p>
+            </div>
+
+            <div
+              v-else
+              class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6"
+            >
+              <div
+                v-for="report in reports"
+                :key="report.id"
+                class="group flex flex-col p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg transition-all"
+              >
+                <div class="flex items-start justify-between mb-4">
+                  <div
+                    class="h-10 w-10 rounded-lg bg-danger/10 text-danger flex items-center justify-center"
+                  >
+                    <FileText class="w-6 h-6" />
+                  </div>
+                  <div
+                    class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <button
+                      @click="previewReport(report)"
+                      class="p-2 text-slate-400 hover:text-primary transition-colors"
+                      title="Просмотр"
+                    >
+                      <Eye class="w-4 h-4" />
+                    </button>
+                    <button
+                      @click="downloadReport(report)"
+                      class="p-2 text-slate-400 hover:text-success transition-colors"
+                      title="Скачать"
+                    >
+                      <Download class="w-4 h-4" />
+                    </button>
+                    <button
+                      v-if="canEditGroups || isAdmin"
+                      @click="confirmDeleteReport(report)"
+                      class="p-2 text-slate-400 hover:text-danger transition-colors"
+                      title="Удалить"
+                    >
+                      <Trash2 class="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <h4
+                  class="text-sm font-bold text-slate-900 dark:text-white truncate mb-1"
+                  :title="report.name"
+                >
+                  {{ report.name }}
+                </h4>
+                <div class="flex items-center justify-between mt-auto">
+                  <span
+                    class="text-[10px] font-bold text-slate-400 uppercase"
+                    >{{
+                      new Date(report.uploadedAt).toLocaleDateString()
+                    }}</span
+                  >
+                  <span
+                    class="text-[10px] font-bold text-slate-400 uppercase"
+                    >{{ formatFileSize(report.size) }}</span
+                  >
                 </div>
               </div>
             </div>
@@ -1398,10 +1207,25 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import {
+  Users,
+  Clock,
+  BookOpen,
+  Calendar as CalendarIcon,
+  LayoutDashboard,
+  GraduationCap,
+  CalendarDays,
+  FileText,
+  Settings,
+  ChevronRight,
+  Download,
+  Eye,
+  Trash2,
+  Plus,
+  ArrowLeft,
+} from "lucide-vue-next";
 import type { StudyGroup } from "~/types/group";
 import { generateEmptyJournal } from "~/utils/pdf/generateEmptyJournal";
-
-// ... imports ...
 
 interface Discipline {
   id: string;
@@ -1468,6 +1292,30 @@ const isDeletingReport = ref(false);
 
 const currentStudentsPage = ref(1);
 const studentsPerPage = ref(10);
+
+// Вкладки
+const activeTab = ref("overview");
+const tabs = [
+  { id: "overview", label: "Обзор", icon: LayoutDashboard },
+  { id: "students", label: "Слушатели", icon: GraduationCap },
+  { id: "journal", label: "Программа и Журнал", icon: BookOpen },
+  { id: "schedule", label: "Расписание", icon: CalendarDays },
+  { id: "files", label: "Документы", icon: FileText },
+];
+
+const changeTab = (tabId: string) => {
+  activeTab.value = tabId;
+  router.push({ query: { ...route.query, tab: tabId } });
+};
+
+const syncTabWithUrl = () => {
+  const tab = route.query.tab as string;
+  if (tab && tabs.some((t) => t.id === tab)) {
+    activeTab.value = tab;
+  }
+};
+
+watch(() => route.query.tab, syncTabWithUrl);
 
 // ... existing helper methods ...
 const getInitials = (name?: string) => {
@@ -1590,16 +1438,16 @@ const loadStudentAttendance = async () => {
 const statusClass = computed(() => {
   if (!group.value) return "";
   if (group.value.isArchived)
-    return "bg-gray-100 dark:bg-gray-700 text-gray-500";
+    return "bg-slate-100 text-slate-500 border-slate-200";
   const today = new Date();
   const endDate = new Date(group.value.endDate);
   const startDate = new Date(group.value.startDate);
 
   if (!group.value.isActive)
-    return "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400";
-  if (endDate < today) return "bg-warning/10 text-warning";
-  if (startDate > today) return "bg-info/10 text-info";
-  return "bg-success/10 text-success";
+    return "bg-slate-100 text-slate-500 border-slate-200";
+  if (endDate < today) return "bg-warning/10 text-warning border-warning/20";
+  if (startDate > today) return "bg-info/10 text-info border-info/20";
+  return "bg-success/10 text-success border-success/20";
 });
 
 const statusText = computed(() => {
@@ -1644,6 +1492,21 @@ const totalStudentsPages = computed(() => {
   if (!group.value?.students) return 1;
   return Math.ceil(group.value.students.length / studentsPerPage.value) || 1;
 });
+
+const studentsByOrganization = computed(() => {
+  if (!group.value?.students) return [];
+  const orgCount: Record<string, number> = {};
+
+  group.value.students.forEach((gs: any) => {
+    const org = gs.student?.organization?.trim() || "Без организации";
+    orgCount[org] = (orgCount[org] || 0) + 1;
+  });
+
+  return Object.entries(orgCount)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+});
+
 const paginatedStudents = computed(() => {
   if (!group.value?.students) return [];
   const start = (currentStudentsPage.value - 1) * studentsPerPage.value;
@@ -1736,7 +1599,8 @@ const groupInstructors = computed(() => {
     const instr = event.instructor;
     if (!instr) continue;
 
-    const instrId = instr.id || instr.instructorId || String(instr.fullName || instr.name);
+    const instrId =
+      instr.id || instr.instructorId || String(instr.fullName || instr.name);
     if (!instrId) continue;
 
     // Академические часы занятия
@@ -2157,5 +2021,6 @@ const handleReportUploaded = () => {
 onMounted(() => {
   loadScheduleSettings(); // Загружаем настройки расписания
   loadGroup();
+  syncTabWithUrl(); // Синхронизируем вкладку с URL
 });
 </script>

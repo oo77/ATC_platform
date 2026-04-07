@@ -31,122 +31,58 @@
 
     <!-- Статистика -->
     <div class="grid grid-cols-1 gap-4 md:grid-cols-4 mb-6">
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
+      <div class="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-boxdark p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
         <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10"
-          >
-            <svg
-              class="w-6 h-6 text-primary"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Всего групп
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats.total }}
-            </p>
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Всего групп</h3>
+            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.total }}</p>
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
+      <div class="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-boxdark p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
         <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-success/10"
-          >
-            <svg
-              class="w-6 h-6 text-success"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
+            <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Активных
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats.active }}
-            </p>
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Активных</h3>
+            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.active }}</p>
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
+      <div class="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-boxdark p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
         <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10"
-          >
-            <svg
-              class="w-6 h-6 text-warning"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"
-              />
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
+            <svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Завершённых
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats.completed }}
-            </p>
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Завершённых</h3>
+            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.completed }}</p>
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
+      <div class="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-boxdark p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
         <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-info/10"
-          >
-            <svg
-              class="w-6 h-6 text-info"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
+          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-info/10">
+            <svg class="w-6 h-6 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Слушателей
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats.totalStudents }}
-            </p>
+            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Слушателей</h3>
+            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.totalStudents }}</p>
           </div>
         </div>
       </div>
@@ -239,9 +175,9 @@
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
         <!-- Поиск -->
-        <div>
+        <div class="xl:col-span-1">
           <label
             class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
           >
@@ -339,6 +275,33 @@
                 d="M19 9l-7 7-7-7"
               />
             </svg>
+          </div>
+        </div>
+
+        <!-- Период обучения -->
+        <div class="xl:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Период обучения
+          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="relative">
+              <input
+                v-model="filters.startDateFrom"
+                type="date"
+                class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+                @change="handleFilterChange"
+                title="Дата от"
+              />
+            </div>
+            <div class="relative">
+              <input
+                v-model="filters.startDateTo"
+                type="date"
+                class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+                @change="handleFilterChange"
+                title="Дата до"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -558,6 +521,8 @@ const filters = ref({
   courseId: "",
   isActive: undefined as boolean | undefined,
   isArchived: false,
+  startDateFrom: "",
+  startDateTo: "",
 });
 
 // Computed
@@ -565,7 +530,9 @@ const hasActiveFilters = computed(() => {
   return (
     filters.value.search !== "" ||
     filters.value.courseId !== "" ||
-    filters.value.isActive !== undefined
+    filters.value.isActive !== undefined ||
+    filters.value.startDateFrom !== "" ||
+    filters.value.startDateTo !== ""
   );
 });
 
@@ -589,6 +556,14 @@ const loadGroups = async () => {
 
     if (filters.value.isActive !== undefined) {
       params.append("isActive", filters.value.isActive.toString());
+    }
+
+    if (filters.value.startDateFrom) {
+      params.append("startDateFrom", filters.value.startDateFrom);
+    }
+
+    if (filters.value.startDateTo) {
+      params.append("startDateTo", filters.value.startDateTo);
     }
 
     const response = await authFetch<{
@@ -640,6 +615,8 @@ const resetFilters = () => {
   filters.value.search = "";
   filters.value.courseId = "";
   filters.value.isActive = undefined;
+  filters.value.startDateFrom = "";
+  filters.value.startDateTo = "";
   pagination.value.page = 1;
   loadGroups();
 };
