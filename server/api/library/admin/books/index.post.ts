@@ -1,4 +1,4 @@
-﻿import { defineEventHandler, readMultipartFormData, createError } from "h3";
+import { defineEventHandler, readMultipartFormData, createError } from "h3";
 import { requireAuth } from "../../../../utils/auth";
 import { roleHasPermission } from "../../../../utils/permissions";
 import { Permission } from "../../../../types/permissions";
@@ -138,7 +138,7 @@ export default defineEventHandler(async (event) => {
       isbn: metadata.isbn || undefined,
       category: metadata.category || undefined,
       language: metadata.language || "ru",
-      published_at: metadata.publishedAt || undefined,
+      published_year: metadata.publishedYear && !isNaN(parseInt(metadata.publishedYear)) ? parseInt(metadata.publishedYear) : undefined,
       total_pages: pageCount,
       original_file_path: originalPath,
       file_size_bytes: pdfFile.data.length,

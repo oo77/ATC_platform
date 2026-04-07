@@ -31,6 +31,10 @@ export default defineEventHandler(async (event) => {
       filters.isArchived = query.isArchived === "true";
     }
 
+    if (query.courseType !== undefined && query.courseType !== "undefined") {
+      filters.courseType = query.courseType as any;
+    }
+
     // Парсим параметры пагинации
     const page = query.page ? parseInt(query.page as string, 10) : 1;
     const limit = query.limit

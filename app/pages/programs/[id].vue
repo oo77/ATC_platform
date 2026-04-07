@@ -1,741 +1,543 @@
 <template>
   <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Заголовок страницы -->
-    <div
-      class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div>
-        <div class="mb-3">
-          <NuxtLink
-            to="/programs"
-            class="flex items-center gap-2 text-gray-600 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            Назад к списку учебных программ
-          </NuxtLink>
-        </div>
-        <h2 class="text-title-md2 font-bold text-black dark:text-white">
-          Учебная программа
-        </h2>
-      </div>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="flex justify-center items-center py-20">
-      <div
-        class="h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"
-      ></div>
-    </div>
-
-    <!-- Error State -->
-    <div
-      v-else-if="error"
-      class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-8"
-    >
+    <!-- Загрузка -->
+    <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
       <div class="text-center">
         <div
-          class="mx-auto mb-4 h-16 w-16 rounded-full bg-danger/10 flex items-center justify-center"
-        >
-          <svg
-            class="w-8 h-8 text-danger"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        </div>
-        <h3 class="mb-2 text-xl font-semibold text-black dark:text-white">
-          Ошибка загрузки
-        </h3>
-        <p class="text-gray-600 dark:text-gray-400 mb-4">{{ error }}</p>
-        <UiButton variant="primary" @click="loadCourse">
-          Попробовать снова
-        </UiButton>
+          class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+        ></div>
+        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
+          Загрузка информации об учебной программе...
+        </p>
       </div>
     </div>
 
-    <!-- Course Details -->
-    <div v-else-if="course">
-      <!-- Header Card -->
-      <div
-        class="mb-6 rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark"
-      >
-        <!-- Cover Image -->
+    <!-- Ошибка -->
+    <div
+      v-else-if="error"
+      class="flex items-center justify-center min-h-[400px]"
+    >
+      <div class="text-center max-w-md">
         <div
-          class="relative h-48 overflow-hidden rounded-t-sm bg-linear-to-r from-primary to-primary-600"
+          class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6"
         >
-          <div class="absolute inset-0 bg-black/10"></div>
-          <div class="absolute inset-0 flex items-center justify-center">
-            <svg
-              class="w-24 h-24 text-white/20"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
-          </div>
+          <BookOpen class="w-12 h-12 text-slate-400" />
         </div>
-
-        <!-- Course Info -->
-        <div class="px-6 pb-6">
-          <div
-            class="relative -mt-16 mb-6 flex flex-col items-center gap-4 sm:flex-row sm:items-end"
-          >
-            <!-- Icon -->
-            <div class="relative">
-              <div
-                class="h-32 w-32 overflow-hidden rounded-full border-4 border-white bg-white shadow-lg dark:border-gray-900 dark:bg-boxdark"
-              >
-                <div
-                  class="h-full w-full flex items-center justify-center bg-primary/10"
-                >
-                  <span class="text-primary font-bold text-4xl">
-                    {{ course.shortName }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Course Info -->
-            <div class="flex-1 text-center sm:text-left">
-              <h3 class="mb-1 text-2xl font-bold text-gray-900 dark:text-white">
-                {{ course.name }}
-              </h3>
-              <p class="mb-2 text-gray-600 dark:text-gray-400">
-                Код: {{ course.code }}
-              </p>
-              <div
-                class="flex flex-wrap items-center justify-center gap-3 sm:justify-start"
-              >
-                <span
-                  :class="[
-                    'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium',
-                    course.isActive
-                      ? 'bg-success/10 text-success'
-                      : 'bg-danger/10 text-danger',
-                  ]"
-                >
-                  <span
-                    :class="[
-                      'h-2 w-2 rounded-full',
-                      course.isActive ? 'bg-success' : 'bg-danger',
-                    ]"
-                  ></span>
-                  {{ course.isActive ? "Активна" : "Неактивна" }}
-                </span>
-                <span
-                  v-if="course.isArchived"
-                  class="inline-flex items-center gap-1.5 rounded-full bg-gray-500/10 px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-400"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                    />
-                  </svg>
-                  В архиве
-                </span>
-                <span
-                  class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  {{ course.totalHours }} часов
-                </span>
-              </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex gap-3">
-              <UiButton
-                v-if="canEditCourses && !course.isArchived"
-                variant="outline"
-                size="md"
-                @click="editCourse"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-                Редактировать
-              </UiButton>
-
-              <!-- Кнопка архивации для модераторов и админов -->
-              <UiButton
-                v-if="canArchiveCourses && !course.isArchived"
-                variant="warning"
-                size="md"
-                @click="handleArchive"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
-                  />
-                </svg>
-                В архив
-              </UiButton>
-
-              <!-- Кнопка восстановления из архива -->
-              <UiButton
-                v-if="canArchiveCourses && course.isArchived"
-                variant="success"
-                size="md"
-                @click="handleRestore"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                Восстановить
-              </UiButton>
-
-              <!-- Кнопка удаления только для админов -->
-              <UiButton
-                v-if="canDeleteCourses"
-                variant="danger"
-                size="md"
-                @click="handleDelete"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
-                Удалить
-              </UiButton>
-            </div>
-          </div>
-
-          <!-- Stats -->
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all hover:border-primary/50 dark:border-gray-700 dark:bg-gray-800/50"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10"
-                >
-                  <svg
-                    class="w-6 h-6 text-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Дисциплин
-                  </p>
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                    {{ course.disciplines?.length || 0 }}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all hover:border-success/50 dark:border-gray-700 dark:bg-gray-800/50"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="flex h-12 w-12 items-center justify-center rounded-lg bg-success/10"
-                >
-                  <svg
-                    class="w-6 h-6 text-success"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Инструкторов
-                  </p>
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                    {{ totalInstructors }}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all hover:border-warning/50 dark:border-gray-700 dark:bg-gray-800/50"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="flex h-12 w-12 items-center justify-center rounded-lg bg-warning/10"
-                >
-                  <svg
-                    class="w-6 h-6 text-warning"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Всего часов
-                  </p>
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                    {{ course.totalHours }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">
+          Ошибка загрузки
+        </h3>
+        <p class="mt-2 text-slate-500 dark:text-gray-400">
+          {{ error }}
+        </p>
+        <UiButton class="mt-8 shadow-lg" @click="loadCourse"
+          >Попробовать снова</UiButton
+        >
       </div>
+    </div>
 
-      <!-- Details Grid -->
-      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <!-- Основная информация -->
-        <div
-          class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-6"
-        >
-          <h3 class="mb-4 text-xl font-semibold text-gray-900 dark:text-white">
-            Основная информация
-          </h3>
-          <div class="space-y-3">
+    <!-- Контент -->
+    <template v-else-if="course">
+      <!-- Header Section -->
+      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+        <!-- Breadcrumbs / Back Navigation -->
+        <div class="mb-6">
+          <NuxtLink
+            to="/programs"
+            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
+          >
             <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
             >
-              <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                Полное название
-              </p>
-              <p class="font-medium text-gray-900 dark:text-white">
-                {{ course.name }}
-              </p>
+              <ArrowLeft
+                class="w-4 h-4 transition-transform group-hover:-translate-x-1"
+              />
             </div>
-            <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-            >
-              <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                Короткое название
-              </p>
-              <p class="font-medium text-gray-900 dark:text-white">
+            Назад к списку
+          </NuxtLink>
+        </div>
+
+        <div
+          class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
+        >
+          <!-- Left: Title & Info -->
+          <div class="space-y-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <h1
+                class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase"
+              >
                 {{ course.shortName }}
+              </h1>
+              <div
+                class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-primary/20 bg-primary/10 text-primary"
+              >
+                {{ course.courseType || "КПП" }}
+              </div>
+              <div
+                class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border"
+                :class="
+                  course.isActive
+                    ? 'bg-success/10 text-success border-success/20'
+                    : 'bg-danger/10 text-danger border-danger/20'
+                "
+              >
+                {{ course.isActive ? "Активна" : "Неактивна" }}
+              </div>
+              <div
+                v-if="course.isArchived"
+                class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
+              >
+                В архиве
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <div
+                class="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400"
+              >
+                {{ course.name }}
+              </div>
+              <div
+                class="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400"
+              >
+                <Clock class="w-4 h-4 text-slate-400" />
+                Всего: {{ course.totalHours }} часов
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Action Buttons Group -->
+          <div class="flex flex-wrap items-center gap-2">
+            <UiButton
+              v-if="canEditCourses && !course.isArchived"
+              variant="outline"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold"
+              @click="editCourse"
+            >
+              <Settings class="w-4 h-4" />
+              Редактировать
+            </UiButton>
+
+            <UiButton
+              v-if="canArchiveCourses && !course.isArchived"
+              variant="outline"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold text-warning border-warning/20 hover:bg-warning/5 hover:border-warning/40"
+              @click="handleArchive"
+            >
+              <CalendarDays class="w-4 h-4" />
+              В архив
+            </UiButton>
+
+            <UiButton
+              v-if="canArchiveCourses && course.isArchived"
+              variant="outline"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold text-success border-success/20 hover:bg-success/5 hover:border-success/40"
+              @click="handleRestore"
+            >
+              <Clock class="w-4 h-4" />
+              Восстановить
+            </UiButton>
+
+            <UiButton
+              v-if="canDeleteCourses"
+              variant="outline"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold text-danger border-danger/20 hover:bg-danger/5 hover:border-danger/40"
+              @click="handleDelete"
+            >
+              <Trash2 class="w-4 h-4" />
+              Удалить
+            </UiButton>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bento Box Metrics -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <!-- Disciplines Card -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Дисциплин
               </p>
+              <h3
+                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
+              >
+                {{ course.disciplines?.length || 0 }}
+              </h3>
             </div>
             <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
+              class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12"
             >
-              <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                Код программы
-              </p>
-              <p class="font-medium text-gray-900 dark:text-white font-mono">
-                {{ course.code }}
-              </p>
-            </div>
-            <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-            >
-              <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                Описание
-              </p>
-              <p class="font-medium text-gray-900 dark:text-white">
-                {{ course.description || "—" }}
-              </p>
+              <BookOpen class="w-6 h-6" />
             </div>
           </div>
         </div>
 
-        <!-- Дополнительная информация -->
+        <!-- Instructors Card -->
         <div
-          class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-6"
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
         >
-          <h3 class="mb-4 text-xl font-semibold text-gray-900 dark:text-white">
-            Дополнительная информация
-          </h3>
-          <div class="space-y-3">
-            <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-            >
-              <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                Шаблон сертификата
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Инструкторов
               </p>
-              <p class="font-medium text-gray-900 dark:text-white">
-                {{ course.certificateTemplate?.name || "Не указан" }}
-              </p>
-            </div>
-            <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-            >
-              <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                Дата создания
-              </p>
-              <p class="font-medium text-gray-900 dark:text-white">
-                {{ formatDateTime(course.createdAt) }}
-              </p>
-            </div>
-            <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-            >
-              <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                Последнее обновление
-              </p>
-              <p class="font-medium text-gray-900 dark:text-white">
-                {{ formatDateTime(course.updatedAt) }}
-              </p>
-            </div>
-            <div
-              class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-            >
-              <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                ID программы
-              </p>
-              <p
-                class="font-medium text-gray-900 dark:text-white font-mono text-sm"
+              <h3
+                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
               >
-                {{ course.id }}
+                {{ totalInstructors }}
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12"
+            >
+              <Users class="w-6 h-6" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Hours Card -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Всего часов
               </p>
+              <h3
+                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
+              >
+                {{ course.totalHours }}
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12"
+            >
+              <Clock class="w-6 h-6" />
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Disciplines -->
+      <!-- Overview Grid -->
       <div
-        class="mt-6 rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-6"
+        class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 mb-8"
       >
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-            Дисциплины курса
-          </h3>
-          <UiButton
-            v-if="canManageDisciplines"
-            variant="primary"
-            size="sm"
-            @click="openDisciplineModal()"
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Main Info Card -->
+          <div
+            class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all hover:shadow-md"
           >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <div
+              class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-6 py-2"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Добавить дисциплину
-          </UiButton>
+              <h3
+                class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+              >
+                <LayoutDashboard class="w-5 h-5 text-primary" />
+                Основная информация
+              </h3>
+            </div>
+            <div class="p-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="space-y-1">
+                  <label
+                    class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                    >Полное название</label
+                  >
+                  <p class="text-sm font-bold text-slate-900 dark:text-white">
+                    {{ course.name }}
+                  </p>
+                </div>
+                <div class="space-y-1">
+                  <label
+                    class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                    >Короткое название</label
+                  >
+                  <p class="text-sm font-bold text-slate-900 dark:text-white">
+                    {{ course.shortName }}
+                  </p>
+                </div>
+                <div class="space-y-1">
+                  <label
+                    class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                    >Код программы</label
+                  >
+                  <p
+                    class="text-sm font-bold text-slate-900 dark:text-white font-mono"
+                  >
+                    {{ course.code }}
+                  </p>
+                </div>
+                <div class="space-y-1">
+                  <label
+                    class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                    >ID программы</label
+                  >
+                  <p
+                    class="text-sm font-bold text-slate-900 dark:text-white font-mono opacity-80"
+                  >
+                    {{ course.id }}
+                  </p>
+                </div>
+                <div
+                  v-if="course.description"
+                  class="col-span-1 md:col-span-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800"
+                >
+                  <label
+                    class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1"
+                    >Описание</label
+                  >
+                  <p
+                    class="text-slate-700 dark:text-slate-300 text-sm leading-relaxed"
+                  >
+                    {{ course.description }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
+        <div class="space-y-6">
+          <!-- Additional Info Card -->
+          <div
+            class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all hover:shadow-md"
+          >
+            <div
+              class="bg-linear-to-br from-info/10 to-transparent px-6 py-2 border-b border-slate-100 dark:border-slate-800"
+            >
+              <h3
+                class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+              >
+                <FileText class="w-5 h-5 text-info" />
+                Дополнительно
+              </h3>
+            </div>
+            <div class="p-6 space-y-2">
+              <div class="space-y-1">
+                <label
+                  class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                  >Шаблон сертификата</label
+                >
+                <p class="text-sm font-bold text-slate-900 dark:text-white">
+                  {{ course.certificateTemplate?.name || "Не указан" }}
+                </p>
+              </div>
+              <div class="space-y-1">
+                <label
+                  class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                  >Дата создания</label
+                >
+                <p class="text-sm font-bold text-slate-900 dark:text-white">
+                  {{ formatDateTime(course.createdAt) }}
+                </p>
+              </div>
+              <div class="space-y-1">
+                <label
+                  class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                  >Последнее обновление</label
+                >
+                <p class="text-sm font-bold text-slate-900 dark:text-white">
+                  {{ formatDateTime(course.updatedAt) }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Disciplines Section -->
+      <div
+        class="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150"
+      >
         <div
-          v-if="!course.disciplines || course.disciplines.length === 0"
-          class="text-center py-8"
+          class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden"
         >
           <div
-            class="mx-auto mb-4 h-16 w-16 rounded-full bg-gray-100 dark:bg-meta-4 flex items-center justify-center"
+            class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           >
-            <svg
-              class="w-8 h-8 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
-          </div>
-          <p class="text-gray-600 dark:text-gray-400 mb-4">
-            Дисциплины пока не добавлены
-          </p>
-          <UiButton
-            v-if="canManageDisciplines"
-            variant="primary"
-            @click="openDisciplineModal()"
-          >
-            Добавить первую дисциплину
-          </UiButton>
-        </div>
-
-        <div v-else class="space-y-4">
-          <div
-            v-for="(discipline, index) in course.disciplines"
-            :key="discipline.id"
-            class="border border-gray-200 dark:border-gray-700 rounded-lg p-5 hover:border-primary/50 transition-all"
-          >
-            <div class="flex items-start gap-4">
-              <div
-                class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold shrink-0"
+            <div>
+              <h3
+                class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
               >
-                {{ index + 1 }}
-              </div>
-              <div class="flex-1 min-w-0">
-                <h4
-                  class="text-lg font-semibold text-gray-900 dark:text-white mb-2"
-                >
-                  {{ discipline.name }}
-                </h4>
-                <p
-                  v-if="discipline.description"
-                  class="text-sm text-gray-600 dark:text-gray-400 mb-3"
-                >
-                  {{ discipline.description }}
-                </p>
+                <BookOpen class="w-5 h-5 text-primary" />
+                Дисциплины курса
+              </h3>
+            </div>
+            <div class="flex items-center gap-2">
+              <UiButton
+                v-if="canManageDisciplines"
+                variant="outline"
+                size="sm"
+                class="gap-2 font-bold"
+                @click="openDisciplineModal()"
+              >
+                <Plus class="w-4 h-4" />
+                Добавить дисциплину
+              </UiButton>
+            </div>
+          </div>
 
-                <!-- Разбивка часов -->
+          <div
+            v-if="!course.disciplines || course.disciplines.length === 0"
+            class="p-16 text-center"
+          >
+            <div
+              class="bg-slate-50 dark:bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            >
+              <BookOpen class="w-8 h-8 text-slate-300" />
+            </div>
+            <p class="text-slate-500 font-medium mb-4">
+              Дисциплины пока не добавлены
+            </p>
+            <UiButton
+              v-if="canManageDisciplines"
+              variant="primary"
+              @click="openDisciplineModal()"
+            >
+              Добавить первую дисциплину
+            </UiButton>
+          </div>
+
+          <div v-else class="p-6 space-y-4">
+            <div
+              v-for="(discipline, index) in course.disciplines"
+              :key="discipline.id"
+              class="border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/30 hover:bg-primary/5 transition-all group relative"
+            >
+              <div class="flex items-start gap-4">
                 <div
-                  class="mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50"
+                  class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-semibold shrink-0 group-hover:bg-primary group-hover:text-white transition-colors"
                 >
-                  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Теория
-                      </p>
-                      <p
-                        class="text-sm font-semibold text-gray-900 dark:text-white"
+                  {{ index + 1 }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h4
+                    class="text-lg font-bold text-slate-900 dark:text-white mb-2"
+                  >
+                    {{ discipline.name }}
+                  </h4>
+                  <p
+                    v-if="discipline.description"
+                    class="text-sm text-slate-600 dark:text-slate-400 mb-4"
+                  >
+                    {{ discipline.description }}
+                  </p>
+
+                  <div
+                    class="mb-4 rounded-xl border border-slate-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/50 shadow-sm"
+                  >
+                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                      <div>
+                        <p
+                          class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                        >
+                          Теория
+                        </p>
+                        <p
+                          class="text-sm font-bold text-slate-900 dark:text-white mt-1"
+                        >
+                          {{ discipline.theoryHours }} ч
+                        </p>
+                      </div>
+                      <div>
+                        <p
+                          class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                        >
+                          Практика
+                        </p>
+                        <p
+                          class="text-sm font-bold text-slate-900 dark:text-white mt-1"
+                        >
+                          {{ discipline.practiceHours }} ч
+                        </p>
+                      </div>
+                      <div>
+                        <p
+                          class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                        >
+                          Проверка
+                        </p>
+                        <p
+                          class="text-sm font-bold text-slate-900 dark:text-white mt-1"
+                        >
+                          {{ discipline.assessmentHours }} ч
+                        </p>
+                      </div>
+                      <div
+                        class="col-span-2 sm:col-span-1 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-3 sm:pt-0 sm:pl-4"
                       >
-                        {{ discipline.theoryHours }} ч
-                      </p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Практика
-                      </p>
-                      <p
-                        class="text-sm font-semibold text-gray-900 dark:text-white"
-                      >
-                        {{ discipline.practiceHours }} ч
-                      </p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Проверка знаний
-                      </p>
-                      <p
-                        class="text-sm font-semibold text-gray-900 dark:text-white"
-                      >
-                        {{ discipline.assessmentHours }} ч
-                      </p>
-                    </div>
-                    <div class="col-span-2 sm:col-span-1">
-                      <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Всего
-                      </p>
-                      <p class="text-sm font-bold text-primary">
-                        {{ discipline.hours }} ч
-                      </p>
+                        <p
+                          class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                        >
+                          Всего
+                        </p>
+                        <p class="text-base font-black text-primary mt-1">
+                          {{ discipline.hours }} ч
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div class="flex flex-wrap gap-3">
-                  <span
+                  <div
                     v-if="
                       discipline.instructors &&
                       discipline.instructors.length > 0
                     "
-                    class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-sm font-medium text-success"
+                    class="pt-2 border-t border-slate-100 dark:border-slate-800"
                   >
-                    <svg
-                      class="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                    {{ discipline.instructors.length }}
-                    {{
-                      discipline.instructors.length === 1
-                        ? "инструктор"
-                        : "инструктора"
-                    }}
-                  </span>
-                </div>
-
-                <!-- Instructors List -->
-                <div
-                  v-if="
-                    discipline.instructors && discipline.instructors.length > 0
-                  "
-                  class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700"
-                >
-                  <p
-                    class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2"
-                  >
-                    Инструкторы:
-                  </p>
-                  <div class="flex flex-wrap gap-2">
-                    <span
-                      v-for="di in discipline.instructors"
-                      :key="di.id"
-                      class="inline-flex items-center gap-1.5 rounded-md bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300"
-                    >
-                      {{ di.instructor?.fullName }}
-                      <span v-if="di.isPrimary" class="text-primary">★</span>
-                    </span>
+                    <div class="flex flex-wrap gap-2 items-center">
+                      <Users class="w-4 h-4 text-slate-400" />
+                      <span
+                        v-for="di in discipline.instructors"
+                        :key="di.id"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-300"
+                      >
+                        {{ di.instructor?.fullName }}
+                        <span v-if="di.isPrimary" class="text-warning">★</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <!-- Tests Section -->
-                <!-- Tests Section Removed (Moved to Event Schedule) -->
-                <!-- <ProgramsDisciplineTestsSection
-                  :discipline-id="discipline.id"
-                  :can-manage="canManageDisciplines"
-                  @updated="loadCourse"
-                /> -->
-              </div>
-
-              <!-- Кнопки действий -->
-              <div v-if="canManageDisciplines" class="flex gap-2 shrink-0">
-                <button
-                  @click="openDisciplineModal(discipline)"
-                  class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:border-primary hover:text-primary dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-primary dark:hover:text-primary"
-                  title="Редактировать"
+                <!-- Actions -->
+                <div
+                  v-if="canManageDisciplines"
+                  class="flex flex-col gap-2 shrink-0"
                 >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                  <UiButton
+                    variant="outline"
+                    size="sm"
+                    class="h-8 w-8 p-0!"
+                    @click="openDisciplineModal(discipline)"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  @click="handleDeleteDiscipline(discipline)"
-                  class="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:border-danger hover:text-danger dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-danger dark:hover:text-danger"
-                  title="Удалить"
-                >
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                    <Settings class="w-4 h-4 text-slate-500" />
+                  </UiButton>
+                  <UiButton
+                    variant="outline"
+                    size="sm"
+                    class="h-8 w-8 p-0! border-danger/20 hover:bg-danger/5 hover:border-danger/40"
+                    @click="handleDeleteDiscipline(discipline)"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                </button>
+                    <Trash2 class="w-4 h-4 text-danger" />
+                  </UiButton>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </template>
 
-    <!-- Delete Confirmation Modal -->
+    <!-- Modals -->
     <UiConfirmModal
       :is-open="isDeleteModalOpen"
       title="Удаление учебной программы"
@@ -747,7 +549,6 @@
       @cancel="closeDeleteModal"
     />
 
-    <!-- Archive Confirmation Modal -->
     <UiConfirmModal
       :is-open="isArchiveModalOpen"
       title="Архивация учебной программы"
@@ -759,7 +560,6 @@
       @cancel="closeArchiveModal"
     />
 
-    <!-- Restore Confirmation Modal -->
     <UiConfirmModal
       :is-open="isRestoreModalOpen"
       title="Восстановление учебной программы"
@@ -770,7 +570,6 @@
       @cancel="closeRestoreModal"
     />
 
-    <!-- Discipline Form Modal -->
     <ProgramsDisciplineFormModal
       :is-open="isDisciplineModalOpen"
       :course-id="id"
@@ -779,7 +578,6 @@
       @success="handleDisciplineSuccess"
     />
 
-    <!-- Delete Discipline Confirmation Modal -->
     <UiConfirmModal
       :is-open="isDeleteDisciplineModalOpen"
       title="Удаление дисциплины"
@@ -794,7 +592,28 @@
 </template>
 
 <script setup lang="ts">
+import {
+  ArrowLeft,
+  BookOpen,
+  Users,
+  Settings,
+  Clock,
+  Trash2,
+  CalendarDays,
+  LayoutDashboard,
+  FileText,
+  Plus,
+} from "lucide-vue-next";
 import type { Course, Discipline } from "~/types/course";
+import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import {
+  definePageMeta,
+  useHead,
+  useAuthFetch,
+  useNotification,
+  usePermissions,
+} from "#imports";
 
 const route = useRoute();
 const router = useRouter();
@@ -840,8 +659,8 @@ useHead({
 const totalInstructors = computed(() => {
   if (!course.value?.disciplines) return 0;
   const instructorIds = new Set<string>();
-  course.value.disciplines.forEach((discipline) => {
-    discipline.instructors?.forEach((di) => {
+  course.value.disciplines.forEach((discipline: Discipline) => {
+    discipline.instructors?.forEach((di: any) => {
       instructorIds.add(di.instructorId);
     });
   });
@@ -854,7 +673,6 @@ const loadCourse = async () => {
   error.value = null;
 
   try {
-    console.log("Loading course with ID:", id);
     const response = await authFetch<{
       success: boolean;
       course?: Course;
@@ -863,24 +681,13 @@ const loadCourse = async () => {
       method: "GET",
     });
 
-    console.log("API Response:", response);
-
     if (response.success && response.course) {
       course.value = response.course;
-      console.log("Course loaded successfully:", course.value);
     } else {
       error.value =
         response.message || "Не удалось загрузить данные учебной программы";
-      console.error("API returned error:", response.message);
     }
   } catch (err: any) {
-    console.error("Error loading course:", err);
-    console.error("Error details:", {
-      message: err.message,
-      data: err.data,
-      statusCode: err.statusCode,
-      response: err.response,
-    });
     error.value =
       err.data?.message ||
       err.message ||
@@ -900,14 +707,12 @@ const handleDelete = () => {
   isDeleteModalOpen.value = true;
 };
 
-// Close delete modal
 const closeDeleteModal = () => {
   if (!isDeleting.value) {
     isDeleteModalOpen.value = false;
   }
 };
 
-// Confirm delete
 const confirmDelete = async () => {
   isDeleting.value = true;
 
@@ -922,10 +727,9 @@ const confirmDelete = async () => {
       router.push("/programs");
     }, 1000);
   } catch (err: any) {
-    console.error("Error deleting course:", err);
     showError(
       err.data?.message || "Не удалось удалить учебную программу",
-      "Ошибка"
+      "Ошибка",
     );
   } finally {
     isDeleting.value = false;
@@ -956,10 +760,9 @@ const confirmArchive = async () => {
     showSuccess("Учебная программа перемещена в архив", "Успех");
     await loadCourse();
   } catch (err: any) {
-    console.error("Error archiving course:", err);
     showError(
       err.data?.message || "Не удалось переместить учебную программу в архив",
-      "Ошибка"
+      "Ошибка",
     );
   } finally {
     isArchiving.value = false;
@@ -990,11 +793,10 @@ const confirmRestore = async () => {
     showSuccess("Учебная программа восстановлена из архива", "Успех");
     await loadCourse();
   } catch (err: any) {
-    console.error("Error restoring course:", err);
     showError(
       err.data?.message ||
         "Не удалось восстановить учебную программу из архива",
-      "Ошибка"
+      "Ошибка",
     );
   } finally {
     isRestoring.value = false;
@@ -1039,7 +841,7 @@ const confirmDeleteDiscipline = async () => {
       `/api/courses/${id}/disciplines/${selectedDiscipline.value.id}`,
       {
         method: "DELETE",
-      }
+      },
     );
 
     showSuccess("Дисциплина успешно удалена", "Успех");

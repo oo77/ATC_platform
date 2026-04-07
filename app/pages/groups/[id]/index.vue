@@ -114,7 +114,7 @@
               @click="showEditModal = true"
             >
               <Settings class="w-4 h-4" />
-              Настроить
+              Редактировать группу
             </UiButton>
 
             <UiButton
@@ -157,7 +157,7 @@
               <h3
                 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
               >
-                85.4%
+                {{ averageAttendance.toFixed(1) }}%
               </h3>
             </div>
             <div
@@ -167,12 +167,8 @@
             </div>
           </div>
           <div class="mt-4 flex items-center gap-2">
-            <span
-              class="text-xs font-semibold text-success bg-success/10 px-2 py-0.5 rounded-full"
-              >+2.3%</span
-            >
             <span class="text-xs text-slate-400 font-medium"
-              >с прошлой недели</span
+              >В среднем по всем слушателям</span
             >
           </div>
         </div>
@@ -552,7 +548,7 @@
                   @click="showManageStudentsModal = true"
                 >
                   <Plus class="w-4 h-4" />
-                  Управление
+                  Управление слушателями
                 </UiButton>
 
                 <div
@@ -1389,6 +1385,20 @@ const getAttendanceColorClass = (percent: number): string => {
   if (percent >= 50) return "bg-warning/10 text-warning";
   return "bg-danger/10 text-danger";
 };
+
+const averageAttendance = computed(() => {
+  if (studentAttendanceData.value.size === 0) return 0;
+  let totalAttended = 0;
+  let totalMax = 0;
+
+  for (const data of studentAttendanceData.value.values()) {
+    totalAttended += data.attended;
+    totalMax += data.total;
+  }
+
+  if (totalMax === 0) return 0;
+  return (totalAttended / totalMax) * 100;
+});
 
 // Загрузка посещаемости для всех студентов
 const loadStudentAttendance = async () => {

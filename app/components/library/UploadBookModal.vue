@@ -108,52 +108,46 @@
         </div>
 
         <!-- Горизонтальные поля формы -->
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-5">
           <!-- Название -->
-          <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
-            >
+          <div class="col-span-2">
+            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
               Название книги <span class="text-red-500">*</span>
             </label>
             <input
               v-model="form.title"
               type="text"
-              placeholder="Введите название книги"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
-              :class="{ 'border-red-500': errors.title }"
+              placeholder="Например: Введение в физику"
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 px-4 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all"
+              :class="{ 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-100': errors.title }"
             />
-            <p v-if="errors.title" class="mt-1 text-sm text-red-500">
+            <p v-if="errors.title" class="mt-1.5 text-xs font-bold text-red-500">
               {{ errors.title }}
             </p>
           </div>
 
           <!-- Автор -->
           <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
-            >
+            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
               Автор
             </label>
             <input
               v-model="form.author"
               type="text"
-              placeholder="Введите имя автора"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+              placeholder="Имя автора"
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 px-4 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all"
             />
           </div>
 
           <!-- Язык -->
           <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
-            >
+            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
               Язык <span class="text-red-500">*</span>
             </label>
             <select
               v-model="form.language"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none text-sm"
-              :class="{ 'border-red-500': errors.language }"
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 px-4 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all appearance-none cursor-pointer"
+              :class="{ 'border-red-500 bg-red-50': errors.language }"
             >
               <option value="">Выберите язык</option>
               <option value="ru">Русский</option>
@@ -161,52 +155,49 @@
               <option value="en">English</option>
               <option value="kk">Қазақша</option>
             </select>
-            <p v-if="errors.language" class="mt-1 text-sm text-red-500">
+            <p v-if="errors.language" class="mt-1.5 text-xs font-bold text-red-500">
               {{ errors.language }}
             </p>
           </div>
 
-          <!-- Дата выпуска -->
-          <div>
-            <label
-              class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
-            >
-              Дата выпуска
+          <!-- Год выпуска -->
+          <div class="col-span-2 sm:col-span-1">
+            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              Год издания
             </label>
             <input
-              v-model="form.publishedAt"
-              type="date"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+              v-model="form.publishedYear"
+              type="number"
+              min="1800"
+              max="2100"
+              placeholder="Например: 2026"
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 px-4 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all"
             />
           </div>
         </div>
 
         <!-- Описание (полная ширина) -->
         <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
-          >
+          <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
             Описание
           </label>
           <textarea
             v-model="form.description"
             rows="2"
             placeholder="Краткое описание книги"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none text-sm"
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 px-4 text-sm font-medium text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all resize-none"
           ></textarea>
         </div>
 
         <!-- Обложка (горизонтальная) -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
-          >
+        <div class="border border-slate-200 dark:border-slate-700 rounded-2xl p-4 bg-slate-50 dark:bg-slate-800/30">
+          <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">
             Обложка (опционально)
           </label>
           <div class="flex items-center gap-4">
             <div
               v-if="coverPreview"
-              class="relative w-16 h-22 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0"
+              class="relative w-16 h-22 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 shadow-sm shrink-0"
               style="height: 88px"
             >
               <img
@@ -217,39 +208,23 @@
               <button
                 type="button"
                 @click="removeCover"
-                class="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                class="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-sm"
               >
-                <svg
-                  class="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
             <div class="flex-1">
-              <input
-                ref="coverInput"
-                type="file"
-                accept="image/*"
-                class="hidden"
-                @change="handleCoverSelect"
-              />
+              <input ref="coverInput" type="file" accept="image/*" class="hidden" @change="handleCoverSelect" />
               <button
                 type="button"
                 @click="triggerCoverInput"
-                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                class="px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-xl font-bold text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
               >
                 {{ coverPreview ? "Изменить обложку" : "Выбрать обложку" }}
               </button>
-              <p class="mt-1 text-xs text-gray-500">
+              <p class="mt-2 text-xs font-medium text-slate-500 dark:text-slate-400">
                 Если не указана, будет использована первая страница PDF
               </p>
             </div>
@@ -276,30 +251,15 @@
     </form>
 
     <template #footer>
-      <div class="flex justify-end gap-3">
-        <UiButton
-          variant="secondary"
-          :disabled="uploading"
-          @click="handleClose"
-        >
+      <div class="flex justify-end gap-3 mt-4">
+        <UiButton variant="outline" :disabled="uploading" @click="handleClose" class="rounded-xl border-slate-200">
           Отмена
         </UiButton>
-        <UiButton :disabled="uploading" @click="handleSubmit">
+        <UiButton variant="primary" :disabled="uploading" @click="handleSubmit" class="rounded-xl">
           <span v-if="uploading" class="flex items-center gap-2">
             <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             Загрузка...
           </span>
@@ -351,13 +311,14 @@ const form = ref({
   author: "",
   description: "",
   language: "",
-  publishedAt: "",
+  publishedYear: "" as number | string,
 });
 
 const errors = ref({
   pdfFile: "",
   title: "",
   language: "",
+  publishedYear: "",
 });
 
 // Методы
@@ -433,6 +394,7 @@ const validate = () => {
     pdfFile: "",
     title: "",
     language: "",
+    publishedYear: "",
   };
 
   let isValid = true;
@@ -450,6 +412,14 @@ const validate = () => {
   if (!form.value.language) {
     errors.value.language = "Пожалуйста, выберите язык";
     isValid = false;
+  }
+
+  if (form.value.publishedYear) {
+    const year = parseInt(String(form.value.publishedYear));
+    if (isNaN(year) || year < 1000 || year > new Date().getFullYear() + 1) {
+      errors.value.publishedYear = "Некорректный год издания";
+      isValid = false;
+    }
   }
 
   return isValid;
@@ -471,8 +441,8 @@ const handleSubmit = async () => {
     formData.append("author", form.value.author || "");
     formData.append("description", form.value.description || "");
     formData.append("language", form.value.language);
-    if (form.value.publishedAt) {
-      formData.append("publishedAt", form.value.publishedAt);
+    if (form.value.publishedYear) {
+      formData.append("publishedYear", form.value.publishedYear.toString());
     }
 
     // Симуляция прогресса
@@ -515,12 +485,13 @@ const resetForm = () => {
     author: "",
     description: "",
     language: "",
-    publishedAt: "",
+    publishedYear: "",
   };
   errors.value = {
     pdfFile: "",
     title: "",
     language: "",
+    publishedYear: "",
   };
   coverPreview.value = "";
   if (pdfInput.value) pdfInput.value.value = "";

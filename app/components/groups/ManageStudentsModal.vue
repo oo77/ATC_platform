@@ -2,7 +2,7 @@
   <UiModal :is-open="isOpen" title="Управление слушателями" size="xl" @close="$emit('close')">
     <div class="space-y-4">
       <!-- Информация о группе -->
-      <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+      <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
             <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -10,8 +10,8 @@
             </svg>
           </div>
           <div>
-            <h4 class="font-semibold text-gray-900 dark:text-white">{{ group?.code }}</h4>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ group?.course?.name }}</p>
+            <h4 class="font-bold text-slate-900 dark:text-white">{{ group?.code }}</h4>
+            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">{{ group?.course?.name }}</p>
           </div>
         </div>
       </div>
@@ -19,9 +19,9 @@
       <!-- Двухколоночный layout -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Левая колонка: База слушателей -->
-        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h5 class="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col">
+          <div class="bg-slate-50 dark:bg-slate-800/70 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+            <h5 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -37,10 +37,10 @@
                   v-model="searchQuery"
                   type="text"
                   placeholder="Поиск по ФИО, ПИНФЛ..."
-                  class="w-full rounded border border-stroke bg-transparent py-2 pl-9 pr-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+                  class="w-full rounded-lg border border-slate-200 bg-transparent py-2.5 pl-10 pr-4 text-sm font-medium outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 block"
                   @input="debouncedSearch"
                 />
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
@@ -71,12 +71,12 @@
                 v-for="student in searchResults"
                 :key="student.id"
                 :class="[
-                  'flex items-center gap-3 p-2 rounded cursor-pointer transition-colors',
+                  'flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all border border-transparent',
                   existingStudentIds.includes(student.id)
-                    ? 'bg-gray-100 dark:bg-gray-700 opacity-50 cursor-not-allowed'
+                    ? 'bg-slate-50 dark:bg-slate-800/50 opacity-50 cursor-not-allowed'
                     : selectedStudentIds.includes(student.id)
-                      ? 'bg-primary/10 border border-primary/30'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                      ? 'bg-primary/5 border-primary/20 text-primary'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-slate-200 dark:hover:border-slate-700'
                 ]"
               >
                 <input
@@ -90,10 +90,10 @@
                   {{ getInitials(student.fullName) }}
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ student.fullName }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ student.pinfl }} • {{ student.organization }}</p>
+                  <p class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ student.fullName }}</p>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">{{ student.pinfl }} • {{ student.organization }}</p>
                 </div>
-                <span v-if="existingStudentIds.includes(student.id)" class="text-xs text-gray-400">В группе</span>
+                <span v-if="existingStudentIds.includes(student.id)" class="text-xs font-bold uppercase tracking-wider text-slate-400 shrink-0">В группе</span>
               </label>
             </div>
 
@@ -116,9 +116,9 @@
         </div>
 
         <!-- Правая колонка: Слушатели группы -->
-        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-          <div class="bg-gray-50 dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h5 class="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col">
+          <div class="bg-slate-50 dark:bg-slate-800/70 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+            <h5 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
               <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
@@ -139,14 +139,14 @@
               <div
                 v-for="gs in currentStudents"
                 :key="gs.id"
-                class="flex items-center gap-2 p-2 rounded bg-gray-50 dark:bg-gray-800 group"
+                class="flex items-center gap-3 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 group hover:border-slate-200 dark:hover:border-slate-700 transition-all cursor-default"
               >
                 <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/10 text-success text-xs font-semibold">
                   {{ getInitials(gs.student?.fullName) }}
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ gs.student?.fullName }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ gs.student?.organization }}</p>
+                  <p class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ gs.student?.fullName }}</p>
+                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">{{ gs.student?.organization }}</p>
                 </div>
                 <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
@@ -203,10 +203,10 @@
               :key="g.id"
               type="button"
               @click="transferStudentToGroup(g.id)"
-              class="w-full p-3 text-left rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary hover:bg-primary/5 transition-colors"
+              class="w-full p-4 text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary hover:ring-1 hover:ring-primary hover:bg-primary/5 transition-all outline-none"
             >
-              <p class="font-medium text-gray-900 dark:text-white">{{ g.code }}</p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">{{ g.courseName }}</p>
+              <p class="font-bold text-slate-900 dark:text-white mb-1">{{ g.code }}</p>
+              <p class="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{{ g.courseName }}</p>
             </button>
           </div>
         </div>

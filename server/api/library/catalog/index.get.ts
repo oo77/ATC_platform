@@ -62,6 +62,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // Применение фильтров
+    if (query.author) {
+      whereClause += " AND b.author = ?";
+      whereParams.push(query.author);
+      console.log(`[Library] Applied author filter: "${query.author}"`);
+    }
     if (query.search) {
       whereClause +=
         " AND (b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?)";
@@ -95,7 +100,7 @@ export default defineEventHandler(async (event) => {
     let sql = `
       SELECT 
         b.id, b.title, b.author, b.description, b.isbn, 
-        NULL as publisher, NULL as published_year, 
+        NULL as publisher, b.published_year as published_year, 
         b.language, b.category, b.is_published, b.cover_path,
         b.total_pages, b.created_at,
         ${accessSubquery} as granted_at, 
@@ -158,6 +163,7 @@ export default defineEventHandler(async (event) => {
         isbn: book.isbn,
         language: book.language,
         category: book.category,
+        published_year: book.published_year,
         total_pages: book.total_pages,
         cover_url: book.cover_path ? `/api/library/covers/${book.id}` : null,
         grantedAt: book.granted_at,

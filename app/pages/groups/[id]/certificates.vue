@@ -1,48 +1,56 @@
 <template>
   <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Навигация -->
-    <div class="mb-6">
-      <NuxtLink
-        :to="`/groups/${groupId}`"
-        class="inline-flex items-center gap-2 text-gray-600 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors"
-      >
-        <svg
-          class="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-        Назад к группе
-      </NuxtLink>
-    </div>
-
     <!-- Загрузка -->
-    <div v-if="loading" class="flex justify-center items-center py-20">
-      <div
-        class="h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"
-      ></div>
+    <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
+      <div class="text-center">
+        <div
+          class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+        ></div>
+        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
+          Загрузка сертификатов...
+        </p>
+      </div>
     </div>
 
     <!-- Контент -->
     <template v-else-if="group">
-      <!-- Заголовок -->
-      <div class="mb-6">
+      <!-- Header Section -->
+      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+        <!-- Breadcrumbs -->
+        <div class="mb-6">
+          <NuxtLink
+            :to="`/groups/${groupId}`"
+            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
+          >
+            <div
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
+            >
+              <ArrowLeft
+                class="w-4 h-4 transition-transform group-hover:-translate-x-1"
+              />
+            </div>
+            Назад к группе
+          </NuxtLink>
+        </div>
+
         <div
-          class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
         >
-          <div>
-            <h2 class="text-title-md2 font-bold text-black dark:text-white">
+          <!-- Left: Title & Info -->
+          <div class="space-y-3">
+            <h1
+              class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase flex items-center gap-4"
+            >
               Выдача сертификатов
-            </h2>
-            <p class="mt-1 text-gray-500 dark:text-gray-400">
-              Группа {{ group.code }} • {{ group.course?.name }}
+            </h1>
+            <p
+              class="text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2"
+            >
+              <span
+                class="text-primary bg-primary/10 px-2 py-0.5 rounded uppercase tracking-wider"
+                >{{ group.code }}</span
+              >
+              {{ group.course?.name }}
             </p>
           </div>
 
@@ -51,64 +59,42 @@
             <!-- Информация о шаблоне -->
             <div
               v-if="template"
-              class="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-lg"
+              class="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-xl font-bold text-sm border border-primary/20 shadow-sm"
             >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <span class="text-sm font-medium">{{ template.name }}</span>
+              <FileIcon class="w-4 h-4" />
+              <span>{{ template.name }}</span>
             </div>
 
             <!-- Предупреждение если нет шаблона -->
             <div
               v-else
-              class="flex items-center gap-2 px-3 py-2 bg-warning/10 text-warning rounded-lg"
+              class="flex items-center gap-2 px-3 py-2 bg-warning/10 text-warning rounded-xl font-bold text-sm border border-warning/20 shadow-sm"
             >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <span class="text-sm font-medium"
-                >Шаблон не назначен для курса</span
-              >
+              <AlertTriangle class="w-4 h-4" />
+              <span>Шаблон не назначен для курса</span>
               <NuxtLink
                 :to="`/programs/edit/${group.course?.id}`"
-                class="text-xs underline hover:no-underline"
+                class="text-xs underline hover:no-underline ml-2 text-warning/80"
               >
                 Настроить
               </NuxtLink>
             </div>
 
             <!-- Выбор инструктора -->
-            <div v-if="instructors.length > 0" class="flex items-center gap-2">
-              <label
-                class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap"
-                >Инструктор:</label
+            <div
+              v-if="instructors.length > 0"
+              class="flex items-center gap-2 group relative"
+            >
+              <div
+                class="absolute left-3 text-slate-400 pointer-events-none z-10"
               >
+                <UserIcon class="w-4 h-4" />
+              </div>
               <select
                 v-model="selectedInstructorId"
-                class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 min-w-[200px]"
+                class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pl-9 pr-8 py-2 text-sm font-bold text-slate-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none shadow-sm cursor-pointer"
               >
-                <option :value="null">Не указан</option>
+                <option :value="null">Инструктор (не указан)</option>
                 <option
                   v-for="instructor in instructors"
                   :key="instructor.id"
@@ -118,101 +104,160 @@
                   <template v-if="instructor.isPrimary"> (основной)</template>
                 </option>
               </select>
+              <div class="absolute right-3 pointer-events-none text-slate-400">
+                <ChevronDown class="w-4 h-4" />
+              </div>
             </div>
 
             <!-- Дата выдачи -->
-            <div class="flex items-center gap-2">
-              <label
-                class="text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap"
-                >Дата выдачи:</label
-              >
+            <div class="flex items-center gap-2 relative">
               <input
                 v-model="issueDate"
                 type="date"
-                class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm appearance-none"
               />
             </div>
 
-            <!-- Срок действия (показываем только информацию из курса) -->
+            <!-- Срок действия -->
             <div
               v-if="group.course?.certificateValidityMonths"
-              class="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg"
+              class="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
             >
-              <svg
-                class="w-4 h-4 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <Clock class="w-4 h-4 text-slate-500" />
+              <span
+                class="text-sm font-bold text-slate-600 dark:text-slate-400"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              <span class="text-sm text-gray-600 dark:text-gray-400">
                 Срок: {{ group.course.certificateValidityMonths }} мес.
               </span>
             </div>
             <div
               v-else
-              class="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg"
+              class="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
             >
-              <svg
-                class="w-4 h-4 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              <span class="text-sm text-gray-600 dark:text-gray-400"
+              <Clock class="w-4 h-4 text-slate-500" />
+              <span class="text-sm font-bold text-slate-600 dark:text-slate-400"
                 >Бессрочный</span
               >
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Статистика -->
-        <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-6">
-          <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Всего слушателей
-            </p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">
-              {{ stats.totalStudents }}
-            </p>
-          </div>
-          <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Допущены</p>
-            <p class="text-2xl font-bold text-success">{{ stats.eligible }}</p>
-          </div>
-          <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              С предупреждениями
-            </p>
-            <p class="text-2xl font-bold text-warning">
-              {{ stats.withWarnings }}
-            </p>
-          </div>
-          <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Выдано</p>
-            <p class="text-2xl font-bold text-primary">{{ stats.issued }}</p>
-          </div>
-          <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Отозвано</p>
-            <p class="text-2xl font-bold text-danger">{{ stats.revoked }}</p>
+      <!-- Bento Box Metrics -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <!-- Total -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Слушателей
+              </p>
+              <h3
+                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
+              >
+                {{ stats.totalStudents }}
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-slate-100 dark:bg-slate-800 p-3 text-slate-600 dark:text-slate-300 transition-transform group-hover:rotate-12"
+            >
+              <Users class="w-5 h-5" />
+            </div>
           </div>
         </div>
 
-        <!-- Кнопки массовых действий -->
-        <div class="flex flex-wrap gap-3 mt-6">
+        <!-- Eligible -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Допущены
+              </p>
+              <h3 class="mt-1 text-2xl font-bold text-success">
+                {{ stats.eligible }}
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12"
+            >
+              <CheckCircle class="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+
+        <!-- With Warnings -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                С предупреждениями
+              </p>
+              <h3 class="mt-1 text-2xl font-bold text-warning">
+                {{ stats.withWarnings }}
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12"
+            >
+              <AlertTriangle class="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Issued -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Выдано
+              </p>
+              <h3 class="mt-1 text-2xl font-bold text-primary">
+                {{ stats.issued }}
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12"
+            >
+              <Award class="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Revoked -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Отозвано
+              </p>
+              <h3 class="mt-1 text-2xl font-bold text-danger">
+                {{ stats.revoked }}
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-danger/10 p-3 text-danger transition-transform group-hover:rotate-12"
+            >
+              <XCircle class="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions Toolkit -->
+      <div
+        class="flex flex-wrap items-center justify-between gap-4 mb-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100"
+      >
+        <div class="flex flex-wrap gap-3">
           <!-- Выдать всем допущенным -->
           <UiButton
             @click="openBulkIssueModal('eligible')"
@@ -272,62 +317,19 @@
             <UiButton
               @click="toggleReportDropdown"
               :disabled="generatingPdf || journal.length === 0"
-              variant="secondary"
+              variant="outline"
+              class="font-bold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
-              <svg
-                v-if="!generatingPdf"
-                class="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <svg
-                v-else
-                class="w-4 h-4 mr-2 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
+              <FileIcon v-if="!generatingPdf" class="w-4 h-4 mr-2" />
+              <Loader2 v-else class="w-4 h-4 mr-2 animate-spin" />
               <span>{{ generatingPdf ? "Генерация..." : "Ведомость" }}</span>
-              <svg
-                class="w-4 h-4 ml-1"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+              <ChevronDown class="w-4 h-4 ml-1 opacity-50" />
             </UiButton>
 
             <!-- Выпадающее меню -->
             <div
               v-if="showReportDropdown"
-              class="absolute right-0 mt-2 w-48 bg-white dark:bg-boxdark rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+              class="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden"
             >
               <button
                 @click="downloadReport('pdf')"
@@ -377,52 +379,32 @@
             certIssueStore.isIssuing.value &&
             certIssueStore.currentJob.value?.groupId === groupId
           "
-          class="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
+          class="w-full sm:w-auto px-4 py-3 bg-success/5 dark:bg-success/10 rounded-xl border border-success/20 flex items-center justify-between gap-4"
         >
           <div class="flex items-center gap-3">
-            <div
-              class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center"
-            >
-              <svg
-                class="w-5 h-5 text-green-600 dark:text-green-400 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-            </div>
-            <div class="flex-1">
-              <p class="text-sm font-medium text-green-800 dark:text-green-200">
-                Выдача сертификатов в процессе...
-              </p>
-              <div class="flex items-center gap-2 mt-1">
-                <div
-                  class="flex-1 h-2 bg-green-200 dark:bg-green-700 rounded-full overflow-hidden"
+            <Loader2 class="w-5 h-5 text-success animate-spin" />
+            <div class="flex-1 min-w-[200px]">
+              <div class="flex items-center justify-between gap-4 mb-1">
+                <span class="text-sm font-bold text-success"
+                  >Выдача сертификатов</span
                 >
-                  <div
-                    class="h-full bg-green-500 rounded-full transition-all duration-300"
-                    :style="{ width: `${certIssueStore.percentage.value}%` }"
-                  ></div>
-                </div>
-                <span class="text-xs text-green-600 dark:text-green-400">
-                  {{ certIssueStore.processedCount.value }}/{{
+                <span class="text-xs font-bold text-success"
+                  >{{ certIssueStore.processedCount.value }}/{{
                     certIssueStore.totalCount.value
-                  }}
-                </span>
+                  }}</span
+                >
               </div>
-              <p class="text-xs text-green-600 dark:text-green-400 mt-1">
+              <div
+                class="h-1.5 w-full bg-success/20 rounded-full overflow-hidden"
+              >
+                <div
+                  class="h-full bg-success transition-all duration-300 rounded-full"
+                  :style="{ width: `${certIssueStore.percentage.value}%` }"
+                ></div>
+              </div>
+              <p
+                class="text-xs font-medium text-success mt-1 opacity-80 truncate max-w-[200px]"
+              >
                 {{ certIssueStore.currentStudentName.value || "Обработка..." }}
               </p>
             </div>
@@ -432,93 +414,97 @@
 
       <!-- Таблица журнала -->
       <div
-        class="rounded-xl bg-white dark:bg-boxdark shadow-md overflow-hidden"
+        class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 mb-8"
       >
-        <div class="overflow-x-auto">
-          <table class="w-full">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left border-collapse">
             <thead>
               <tr
-                class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800"
               >
-                <th class="px-4 py-3 text-left">
+                <th
+                  class="px-4 py-3 w-12 text-center border-r border-slate-100 dark:border-slate-800"
+                >
                   <input
                     type="checkbox"
                     :checked="isAllSelected"
                     :indeterminate="isPartialSelected"
                     @change="toggleSelectAll"
-                    class="rounded border-gray-300 text-primary focus:ring-primary"
+                    class="rounded-md border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/20 bg-white dark:bg-slate-800 w-4 h-4"
                   />
                 </th>
                 <th
-                  class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider"
                 >
                   Слушатель
                 </th>
                 <th
-                  class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
                 >
                   Посещаемость
                 </th>
                 <th
-                  class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
                 >
                   Дисциплин
                 </th>
                 <th
-                  class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
                 >
                   Ср. балл
                 </th>
                 <th
-                  class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
                 >
                   Допуск
                 </th>
                 <th
-                  class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
                 >
                   Сертификат
                 </th>
                 <th
-                  class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
                 >
                   Действия
                 </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
               <tr
                 v-for="row in journal"
                 :key="row.student.id"
-                class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group"
               >
                 <!-- Чекбокс -->
-                <td class="px-4 py-4">
+                <td
+                  class="px-4 py-4 text-center border-r border-slate-100 dark:border-slate-800"
+                >
                   <input
                     type="checkbox"
                     :checked="selectedStudentIds.includes(row.student.id)"
                     :disabled="row.certificate?.status === 'issued'"
                     @change="toggleStudent(row.student.id)"
-                    class="rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                    class="rounded-md border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/20 bg-white dark:bg-slate-800 w-4 h-4 disabled:opacity-50"
                   />
                 </td>
 
                 <!-- Слушатель -->
-                <td class="px-4 py-4">
+                <td class="px-6 py-4">
                   <div class="flex items-center gap-3">
                     <div
-                      class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold shrink-0"
+                      class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/10 text-sm font-bold shadow-inner"
                     >
                       {{ getInitials(row.student.fullName) }}
                     </div>
                     <div class="min-w-0">
                       <p
-                        class="font-medium text-gray-900 dark:text-white truncate"
+                        class="font-bold text-slate-900 dark:text-white truncate"
                       >
                         {{ row.student.fullName }}
                       </p>
                       <p
-                        class="text-sm text-gray-500 dark:text-gray-400 truncate"
+                        class="text-xs text-slate-500 font-medium truncate mt-0.5"
                       >
                         {{ row.student.organization }}
                       </p>
@@ -527,106 +513,91 @@
                 </td>
 
                 <!-- Посещаемость -->
-                <td class="px-4 py-4 text-center">
+                <td class="px-6 py-4 text-center">
                   <span
-                    :class="[
-                      'px-2 py-1 rounded-full text-sm font-medium',
-                      row.totalAttendancePercent >= 75
-                        ? 'bg-success/10 text-success'
-                        : row.totalAttendancePercent >= 50
-                          ? 'bg-warning/10 text-warning'
-                          : 'bg-danger/10 text-danger',
-                    ]"
+                    class="inline-flex flex-col items-center justify-center"
                   >
-                    {{ row.totalAttendancePercent.toFixed(0) }}%
+                    <span
+                      class="inline-block px-2.5 py-1 rounded-full text-xs font-bold ring-1 ring-inset"
+                      :class="
+                        row.totalAttendancePercent >= 75
+                          ? 'bg-success/10 text-success ring-success/20'
+                          : row.totalAttendancePercent >= 50
+                            ? 'bg-warning/10 text-warning ring-warning/20'
+                            : 'bg-danger/10 text-danger ring-danger/20'
+                      "
+                    >
+                      {{ row.totalAttendancePercent.toFixed(0) }}%
+                    </span>
                   </span>
                 </td>
 
                 <!-- Дисциплин пройдено -->
-                <td
-                  class="px-4 py-4 text-center text-sm text-gray-600 dark:text-gray-400"
-                >
-                  {{ row.eligibility.completedDisciplines }}/{{
-                    row.eligibility.totalDisciplines
-                  }}
+                <td class="px-6 py-4 text-center">
+                  <span
+                    class="inline-flex items-center justify-center px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold"
+                  >
+                    {{ row.eligibility.completedDisciplines }} /
+                    {{ row.eligibility.totalDisciplines }}
+                  </span>
                 </td>
 
                 <!-- Средний балл -->
-                <td class="px-4 py-4 text-center">
+                <td class="px-6 py-4 text-center">
                   <span
                     v-if="row.averageGrade !== null"
-                    class="font-medium text-gray-900 dark:text-white"
+                    class="text-sm font-black text-slate-900 dark:text-white"
                   >
                     {{ row.averageGrade.toFixed(1) }}
                   </span>
-                  <span v-else class="text-gray-400">—</span>
+                  <span v-else class="text-slate-400 font-bold">—</span>
                 </td>
 
                 <!-- Допуск -->
-                <td class="px-4 py-4 text-center">
-                  <div
-                    v-if="row.eligibility.isEligible"
-                    class="flex items-center justify-center gap-1 text-success"
-                  >
-                    <svg
-                      class="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                <td class="px-6 py-4">
+                  <div class="flex items-center justify-center">
+                    <div
+                      v-if="row.eligibility.isEligible"
+                      class="flex items-center gap-1.5 text-success font-bold"
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span class="text-sm">Допущен</span>
+                      <CheckCircle class="w-4 h-4" />
+                      <span class="text-xs">Допущен</span>
+                    </div>
+                    <button
+                      v-else
+                      @click="showWarnings(row)"
+                      class="flex items-center gap-1.5 text-warning hover:text-warning/80 hover:bg-warning/10 px-2 py-1 rounded-lg transition-colors font-bold"
+                    >
+                      <AlertTriangle class="w-4 h-4" />
+                      <span class="text-xs"
+                        >{{ row.eligibility.warnings.length }} замеч.</span
+                      >
+                    </button>
                   </div>
-                  <button
-                    v-else
-                    @click="showWarnings(row)"
-                    class="flex items-center justify-center gap-1 text-warning hover:text-warning/80"
-                  >
-                    <svg
-                      class="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                      />
-                    </svg>
-                    <span class="text-sm"
-                      >{{ row.eligibility.warnings.length }} замеч.</span
-                    >
-                  </button>
                 </td>
 
                 <!-- Статус сертификата -->
-                <td class="px-4 py-4 text-center">
+                <td class="px-6 py-4 text-center">
                   <span
                     v-if="row.certificate"
+                    class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border"
                     :class="[
-                      'px-2 py-1 rounded-full text-xs font-medium',
                       row.certificate.status === 'issued'
-                        ? 'bg-success/10 text-success'
+                        ? 'bg-success/10 text-success border-success/20'
                         : row.certificate.status === 'revoked'
-                          ? 'bg-danger/10 text-danger'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+                          ? 'bg-danger/10 text-danger border-danger/20'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700',
                     ]"
                   >
                     {{ certificateStatusLabels[row.certificate.status] }}
                   </span>
-                  <span v-else class="text-gray-400 text-sm">Не выдан</span>
+                  <span v-else class="text-slate-400 font-medium text-xs"
+                    >Не выдан</span
+                  >
                 </td>
 
                 <!-- Действия -->
-                <td class="px-4 py-4">
+                <td class="px-6 py-4">
                   <div class="flex items-center justify-center gap-2">
                     <!-- Скачать (показываем для выданных сертификатов) -->
                     <a
@@ -740,6 +711,25 @@
 </template>
 
 <script setup lang="ts">
+import {
+  ArrowLeft,
+  BookOpen,
+  Clock,
+  Users,
+  CheckCircle,
+  AlertTriangle,
+  Award,
+  XCircle,
+  Download,
+  FileText,
+  FileIcon,
+  User as UserIcon,
+  ChevronDown,
+  CheckCircle2,
+  XCircle as XCircleIcon,
+  Loader2,
+  Play,
+} from "lucide-vue-next";
 import type {
   CertificateTemplate,
   CertificateJournalRow,

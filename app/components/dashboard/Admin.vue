@@ -2,7 +2,7 @@
   <div class="mx-auto max-w-screen-2xl space-y-8 pb-10">
     <!-- HERO БАННЕР -->
     <div
-      class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-blue-700 to-primary p-8 shadow-xl text-white shadow-indigo-500/20"
+      class="relative overflow-hidden rounded-3xl bg-linear-to-br from-indigo-600 via-blue-700 to-primary p-8 shadow-xl text-white shadow-indigo-500/20"
     >
       <div class="absolute inset-0 bg-[url('/img/noise.png')] opacity-10 mix-blend-overlay"></div>
       <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
@@ -19,7 +19,7 @@
         </div>
         <NuxtLink to="/settings">
           <UiButton class="bg-white/10 text-white hover:bg-white/20 backdrop-blur-md border border-white/20 shadow-sm rounded-xl px-4 py-2 transition-all flex items-center gap-2">
-            <IconsSettingsIcon class="w-5 h-5 flex-shrink-0" />
+            <IconsSettingsIcon class="w-5 h-5 shrink-0" />
             <span class="font-medium tracking-wide">Параметры</span>
           </UiButton>
         </NuxtLink>
@@ -38,7 +38,7 @@
         </div>
         <div class="relative z-10 flex flex-col gap-4">
           <div class="flex items-center gap-3">
-            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30">
               <IconsUserGroupIcon class="w-6 h-6 text-white" />
             </div>
             <h3 class="text-sm font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
@@ -69,7 +69,7 @@
         </div>
         <div class="relative z-10 flex flex-col gap-4">
           <div class="flex items-center gap-3">
-            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/30">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/30">
               <IconsInstructorIcon class="w-6 h-6 text-white" />
             </div>
             <h3 class="text-sm font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
@@ -97,7 +97,7 @@
         </div>
         <div class="relative z-10 flex flex-col gap-4">
           <div class="flex items-center gap-3">
-            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/30">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/30">
               <IconsUserGroupIcon class="w-6 h-6 text-white" />
             </div>
             <h3 class="text-sm font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
@@ -125,7 +125,7 @@
         </div>
         <div class="relative z-10 flex flex-col gap-4">
           <div class="flex items-center gap-3">
-            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 shadow-lg shadow-fuchsia-500/30">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-br from-fuchsia-500 to-purple-600 shadow-lg shadow-fuchsia-500/30">
               <IconsCertificateIcon class="w-6 h-6 text-white" />
             </div>
             <h3 class="text-sm font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400 truncate">
@@ -448,7 +448,7 @@
           <div v-else-if="!stats?.recentActivities?.length" class="flex flex-col items-center justify-center py-10 text-center">
             <p class="text-slate-500">Пока нет свежих действий</p>
           </div>
-          <div v-else class="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 dark:before:via-slate-700 before:to-transparent">
+          <div v-else class="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-linear-to-b before:from-transparent before:via-slate-200 dark:before:via-slate-700 before:to-transparent">
             
             <div v-for="(activity, index) in stats.recentActivities.slice(0, 5)" :key="activity.id" class="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                 <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-500 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10" :class="getActivityIconBg(activity.action)">
@@ -489,7 +489,7 @@
             :to="action.to"
             class="group flex flex-col items-start gap-4 p-5 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-indigo-400/50 hover:-translate-y-1 transition-all duration-300 backdrop-blur-md"
           >
-            <div class="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform group-hover:bg-indigo-500">
+            <div class="h-12 w-12 shrink-0 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform group-hover:bg-indigo-500">
               <IconsUserGroupIcon v-if="action.icon === 'usergroup'" class="w-6 h-6 text-indigo-300 group-hover:text-white transition-colors" />
               <IconsAcademicCapIcon v-else-if="action.icon === 'academic'" class="w-6 h-6 text-indigo-300 group-hover:text-white transition-colors" />
               <IconsSettingsIcon v-else-if="action.icon === 'settings'" class="w-6 h-6 text-indigo-300 group-hover:text-white transition-colors" />

@@ -29,7 +29,7 @@ export interface Book {
   category: string | null;
   isbn: string | null;
   language: string | null;
-  published_at: Date | null;
+  published_year: number | null;
   original_file_path: string;
   cover_path: string | null;
   total_pages: number;
@@ -93,7 +93,7 @@ export interface CreateBookData {
   category?: string;
   isbn?: string;
   language?: string;
-  published_at?: string;
+  published_year?: number;
   original_file_path: string;
   cover_path?: string;
   total_pages: number;
@@ -108,7 +108,7 @@ export interface UpdateBookData {
   category?: string | null;
   isbn?: string | null;
   language?: string;
-  published_at?: string | null;
+  published_year?: number | null;
   cover_path?: string;
   status?: BookStatus;
   processing_error?: string;
@@ -137,7 +137,7 @@ export async function createBook(data: CreateBookData): Promise<string> {
 
   await db.execute(
     `INSERT INTO books (
-      id, title, author, description, category, isbn, language, published_at,
+      id, title, author, description, category, isbn, language, published_year,
       original_file_path, cover_path, total_pages, file_size_bytes,
       status, uploaded_by
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'processing', ?)`,
@@ -149,7 +149,7 @@ export async function createBook(data: CreateBookData): Promise<string> {
       data.category || null,
       data.isbn || null,
       data.language || "ru",
-      data.published_at || null,
+      data.published_year || null,
       data.original_file_path,
       data.cover_path || null,
       data.total_pages,
@@ -284,9 +284,9 @@ export async function updateBook(
     params.push(data.language);
   }
 
-  if (data.published_at !== undefined) {
-    fields.push("published_at = ?");
-    params.push(data.published_at);
+  if (data.published_year !== undefined) {
+    fields.push("published_year = ?");
+    params.push(data.published_year);
   }
 
   if (fields.length === 0) return;

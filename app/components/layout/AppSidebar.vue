@@ -19,7 +19,9 @@
     <div
       :class="[
         'flex items-center justify-between shrink-0 px-4 transition-all duration-200',
-        isExpanded || isHovered || isMobileOpen ? 'h-20 py-4 pr-3' : 'h-16 justify-center py-4',
+        isExpanded || isHovered || isMobileOpen
+          ? 'h-20 py-4 pr-3'
+          : 'h-16 justify-center py-4',
       ]"
     >
       <NuxtLink to="/" class="flex items-center gap-3 min-w-0 flex-1">
@@ -35,8 +37,14 @@
             v-show="isExpanded || isHovered || isMobileOpen"
             class="flex flex-col min-w-0 overflow-hidden"
           >
-            <span class="text-[13px] font-black tracking-tight text-gray-900 dark:text-white leading-tight truncate">ATC Platform</span>
-            <span class="text-[9px] font-semibold uppercase tracking-[0.15em] text-blue-600 dark:text-blue-400 leading-tight">Управление</span>
+            <span
+              class="text-[13px] font-black tracking-tight text-gray-900 dark:text-white leading-tight truncate"
+              >ATC Platform</span
+            >
+            <span
+              class="text-[9px] font-semibold uppercase tracking-[0.15em] text-blue-600 dark:text-blue-400 leading-tight"
+              >Управление</span
+            >
           </div>
         </Transition>
       </NuxtLink>
@@ -51,7 +59,10 @@
           <component
             :is="ChevronLeft"
             :size="16"
-            :class="['transition-transform duration-300', isExpanded ? '' : 'rotate-180']"
+            :class="[
+              'transition-transform duration-300',
+              isExpanded ? '' : 'rotate-180',
+            ]"
           />
         </button>
       </Transition>
@@ -61,7 +72,9 @@
     <div class="shrink-0 mx-4 h-px bg-gray-100 dark:bg-gray-800" />
 
     <!-- Navigation — flex-1 + min-h-0 чтобы скролл работал внутри flex-col -->
-    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-visible py-3 px-2.5 no-scrollbar">
+    <div
+      class="flex-1 min-h-0 overflow-y-auto overflow-x-visible py-3 px-2.5 no-scrollbar"
+    >
       <nav
         v-for="(menuGroup, groupIndex) in menuGroups"
         :key="groupIndex"
@@ -70,7 +83,9 @@
         <!-- Group label -->
         <Transition name="label-fade">
           <h3
-            v-show="menuGroup.title && (isExpanded || isHovered || isMobileOpen)"
+            v-show="
+              menuGroup.title && (isExpanded || isHovered || isMobileOpen)
+            "
             class="px-3 mb-1 mt-2 text-[9px] font-black uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500"
           >
             {{ menuGroup.title }}
@@ -98,7 +113,9 @@
                 ]"
               >
                 <div class="flex items-center gap-3 min-w-0">
-                  <div class="shrink-0 flex items-center justify-center w-[22px] h-[22px]">
+                  <div
+                    class="shrink-0 flex items-center justify-center w-[22px] h-[22px]"
+                  >
                     <component
                       :is="item.icon"
                       :size="18"
@@ -119,7 +136,10 @@
                     v-show="isExpanded || isHovered || isMobileOpen"
                     :is="ChevronDown"
                     :size="13"
-                    :class="['shrink-0 transition-transform duration-200', isSubmenuOpen(groupIndex, index) ? 'rotate-180' : '']"
+                    :class="[
+                      'shrink-0 transition-transform duration-200',
+                      isSubmenuOpen(groupIndex, index) ? 'rotate-180' : '',
+                    ]"
                   />
                 </Transition>
 
@@ -142,9 +162,14 @@
                 leave-to-class="max-h-0 opacity-0"
               >
                 <div
-                  v-show="isSubmenuOpen(groupIndex, index) && (isExpanded || isHovered || isMobileOpen)"
+                  v-show="
+                    isSubmenuOpen(groupIndex, index) &&
+                    (isExpanded || isHovered || isMobileOpen)
+                  "
                 >
-                  <ul class="mt-0.5 ml-4 pl-5 pr-1 space-y-0.5 border-l border-gray-100 dark:border-gray-800">
+                  <ul
+                    class="mt-0.5 ml-4 pl-5 pr-1 space-y-0.5 border-l border-gray-100 dark:border-gray-800"
+                  >
                     <li v-for="subItem in item.subItems" :key="subItem.name">
                       <NuxtLink
                         :to="subItem.path"
@@ -154,7 +179,8 @@
                             ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10'
                             : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800/60',
                         ]"
-                      >{{ subItem.name }}</NuxtLink>
+                        >{{ subItem.name }}</NuxtLink
+                      >
                     </li>
                   </ul>
                 </div>
@@ -175,8 +201,14 @@
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white',
               ]"
             >
-              <div class="shrink-0 flex items-center justify-center w-[22px] h-[22px]">
-                <component :is="item.icon" :size="18" :stroke-width="isActive(item.path ?? '') ? 2.5 : 2" />
+              <div
+                class="shrink-0 flex items-center justify-center w-[22px] h-[22px]"
+              >
+                <component
+                  :is="item.icon"
+                  :size="18"
+                  :stroke-width="isActive(item.path ?? '') ? 2.5 : 2"
+                />
               </div>
               <Transition name="label-fade">
                 <span
@@ -212,13 +244,26 @@
           isExpanded || isHovered || isMobileOpen ? '' : 'justify-center',
         ]"
       >
-        <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-sm">
+        <div
+          class="shrink-0 w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-black text-xs shadow-sm"
+        >
           {{ userInitial }}
         </div>
         <Transition name="label-fade">
-          <div v-show="isExpanded || isHovered || isMobileOpen" class="flex-1 min-w-0 overflow-hidden">
-            <p class="text-[11px] font-bold text-gray-900 dark:text-white truncate">{{ userName }}</p>
-            <p class="text-[9px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-tight">{{ userRoleLabel }}</p>
+          <div
+            v-show="isExpanded || isHovered || isMobileOpen"
+            class="flex-1 min-w-0 overflow-hidden"
+          >
+            <p
+              class="text-[11px] font-bold text-gray-900 dark:text-white truncate"
+            >
+              {{ userName }}
+            </p>
+            <p
+              class="text-[9px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-tight"
+            >
+              {{ userRoleLabel }}
+            </p>
           </div>
         </Transition>
       </div>
@@ -249,87 +294,238 @@ import {
   Trophy,
   Award,
   History,
-  Settings
+  Settings,
+  BookOpen,
+  ClipboardList,
 } from "lucide-vue-next";
 import type { Component } from "vue";
 
 // Интерфейсы
-interface SubMenuItem { name: string; path: string; permission?: Permission; anyPermissions?: Permission[]; excludePaths?: string[]; hideForRoles?: string[]; }
-interface MenuItem { icon: Component; name: string; path?: string; permission?: Permission; anyPermissions?: Permission[]; subItems?: SubMenuItem[]; showOnlyForRoles?: string[]; hideForRoles?: string[]; excludePaths?: string[]; }
-interface MenuGroup { title: string; items: MenuItem[]; }
+interface SubMenuItem {
+  name: string;
+  path: string;
+  permission?: Permission;
+  anyPermissions?: Permission[];
+  excludePaths?: string[];
+  hideForRoles?: string[];
+}
+interface MenuItem {
+  icon: Component;
+  name: string;
+  path?: string;
+  permission?: Permission;
+  anyPermissions?: Permission[];
+  subItems?: SubMenuItem[];
+  showOnlyForRoles?: string[];
+  hideForRoles?: string[];
+  excludePaths?: string[];
+}
+interface MenuGroup {
+  title: string;
+  items: MenuItem[];
+}
 
 const route = useRoute();
 const auth = useAuth();
-const { isExpanded, isMobileOpen, isHovered, openSubmenu, setIsHovered, toggleSidebar } = useSidebar();
-const { hasPermission, hasAnyPermission, isStudent, isTeacher, isAdmin, isManager } = usePermissions();
+const {
+  isExpanded,
+  isMobileOpen,
+  isHovered,
+  openSubmenu,
+  setIsHovered,
+  toggleSidebar,
+} = useSidebar();
+const {
+  hasPermission,
+  hasAnyPermission,
+  isStudent,
+  isTeacher,
+  isAdmin,
+  isManager,
+} = usePermissions();
 
 const userName = computed(() => auth.user.value?.name || "Пользователь");
 const userInitial = computed(() => userName.value.charAt(0).toUpperCase());
-const userRoleLabel = computed(() => isAdmin.value ? "Админ" : isManager.value ? "Менеджер" : isTeacher.value ? "Преподаватель" : "Студент");
+const userRoleLabel = computed(() =>
+  isAdmin.value
+    ? "Админ"
+    : isManager.value
+      ? "Менеджер"
+      : isTeacher.value
+        ? "Преподаватель"
+        : "Студент",
+);
 
 const handleMouseEnter = () => !isExpanded.value && setIsHovered(true);
 const handleMouseLeave = () => setIsHovered(false);
 
 // Меню
 const allMenuGroups: MenuGroup[] = [
-  { title: "Панель", items: [
-    { icon: LayoutDashboard, name: "Обзор", path: "/", permission: Permission.DASHBOARD_VIEW },
-    { icon: CalendarRange, name: isStudent.value || isTeacher.value ? "Мои занятия" : "Расписание", path: "/schedule", anyPermissions: [Permission.SCHEDULE_VIEW_ALL, Permission.SCHEDULE_VIEW_OWN] }
-  ]},
-  { title: "Обучение", items: [
-    { icon: GraduationCap, name: "Программы", permission: Permission.COURSES_VIEW, path: "/programs" },
-    { icon: Users, name: "Учебные группы", path: "/groups", anyPermissions: [Permission.GROUPS_VIEW_ALL, Permission.GROUPS_VIEW_OWN] },
-    { icon: Trophy, name: "Мои успехи", path: "/my-certificates", showOnlyForRoles: ["STUDENT"] },
-    { icon: FileCheck, name: "Тесты", showOnlyForRoles: ["STUDENT"], path: "/tests/my" },
-    { icon: FileCheck, name: "База тестов", hideForRoles: ["STUDENT"], subItems: [
-        { name: "Вопросы", path: "/test-bank" },
-        { name: "Шаблоны", path: "/test-bank/templates" }
-    ] }
-  ]},
-  { title: "Контент", items: [
-    { icon: Award, name: "Сертификаты", hideForRoles: ["STUDENT"], subItems: [
-      { name: "База сертификатов", path: "/certificates", excludePaths: ["/certificates/templates"] },
-      { name: "Организации", path: "/certificates?tab=orgs" },
-      { name: "Шаблоны", path: "/certificates/templates" }
-    ]},
-    { icon: Library, name: "Библиотека", hideForRoles: ["STUDENT", "TEACHER"], subItems: [
-      { name: "Каталог", path: "/library" },
-      { name: "Управление", path: "/admin/library/books", permission: Permission.LIBRARY_MANAGE }
-    ]},
-    { icon: Library, name: "Библиотека", showOnlyForRoles: ["STUDENT", "TEACHER"], path: "/library" },
-    { icon: FolderTree, name: "Файлы", path: "/files", hideForRoles: ["STUDENT"] }
-  ]},
-  { title: "Управление", items: [
-    { icon: Users, name: "Пользователи", path: "/users", permission: Permission.USERS_VIEW },
-    { icon: BarChart3, name: "Аналитика", path: "/reports", hideForRoles: ["STUDENT", "TEACHER"] }
-  ]},
-  { title: "Администрирование", items: [
-    { icon: History, name: "Логи системы", path: "/activity-logs", permission: Permission.LOGS_VIEW },
-    { icon: Settings, name: "Настройки", path: "/settings", permission: Permission.SETTINGS_MANAGE },
-    { icon: ShieldCheck, name: "Безопасность", path: "/users?tab=admin", permission: Permission.USERS_MANAGE_ROLES }
-  ]},
-  { title: "Сервис", items: [
-    { icon: HelpCircle, name: "Поддержка", path: "/support" }
-  ]}
+  {
+    title: "Панель",
+    items: [
+      {
+        icon: LayoutDashboard,
+        name: "Обзор",
+        path: "/",
+        permission: Permission.DASHBOARD_VIEW,
+      },
+      {
+        icon: CalendarRange,
+        name: isStudent.value || isTeacher.value ? "Мои занятия" : "Расписание",
+        path: "/schedule",
+        anyPermissions: [
+          Permission.SCHEDULE_VIEW_ALL,
+          Permission.SCHEDULE_VIEW_OWN,
+        ],
+      },
+    ],
+  },
+  {
+    title: "Обучение",
+    items: [
+      {
+        icon: GraduationCap,
+        name: "Программы",
+        permission: Permission.COURSES_VIEW,
+        path: "/programs",
+      },
+      {
+        icon: Users,
+        name: "Учебные группы",
+        path: "/groups",
+        anyPermissions: [
+          Permission.GROUPS_VIEW_ALL,
+          Permission.GROUPS_VIEW_OWN,
+        ],
+      },
+      {
+        icon: Trophy,
+        name: "Мои успехи",
+        path: "/my-certificates",
+        showOnlyForRoles: ["STUDENT"],
+      },
+      {
+        icon: FileCheck,
+        name: "Тесты",
+        showOnlyForRoles: ["STUDENT"],
+        path: "/tests/my",
+      },
+      {
+        icon: FileCheck,
+        name: "База тестов",
+        hideForRoles: ["STUDENT"],
+        subItems: [
+          { name: "Вопросы", path: "/test-bank" },
+          { name: "Шаблоны", path: "/test-bank/templates" },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Контент",
+    items: [
+      {
+        icon: Award,
+        name: "Сертификаты",
+        hideForRoles: ["STUDENT"],
+        subItems: [
+          {
+            name: "База сертификатов",
+            path: "/certificates",
+            excludePaths: ["/certificates/templates"],
+          },
+          { name: "Организации", path: "/certificates?tab=orgs" },
+          { name: "Шаблоны", path: "/certificates/templates" },
+        ],
+      },
+      {
+        icon: Library,
+        name: "Библиотека",
+        hideForRoles: ["STUDENT", "TEACHER"],
+        subItems: [
+          { name: "Каталог", path: "/library" },
+          {
+            name: "Управление",
+            path: "/admin/library/books",
+            permission: Permission.LIBRARY_MANAGE,
+          },
+        ],
+      },
+      {
+        icon: Library,
+        name: "Библиотека",
+        showOnlyForRoles: ["STUDENT", "TEACHER"],
+        path: "/library",
+      },
+      {
+        icon: FolderTree,
+        name: "Файлы",
+        path: "/files",
+        hideForRoles: ["STUDENT"],
+      },
+    ],
+  },
+  {
+    title: "Управление",
+    items: [
+      {
+        icon: Users,
+        name: "Пользователи",
+        path: "/users",
+        permission: Permission.USERS_VIEW,
+      },
+      {
+        icon: ClipboardList,
+        name: "Запросы посещаемости",
+        path: "/admin/attendance-requests",
+        hideForRoles: ["STUDENT"],
+      },
+      {
+        icon: BarChart3,
+        name: "Аналитика",
+        path: "/reports",
+        hideForRoles: ["STUDENT", "TEACHER"],
+      },
+    ],
+  },
+
+  {
+    title: "Сервис",
+    items: [
+      { icon: HelpCircle, name: "Поддержка", path: "/support" },
+      { icon: BookOpen, name: "Документация", path: "/docs" },
+    ],
+  },
 ];
 
 const menuGroups = computed(() => {
-  return allMenuGroups.map(group => {
-    const items = group.items.filter(item => {
-      const role = isAdmin.value ? "ADMIN" : isManager.value ? "MANAGER" : isTeacher.value ? "TEACHER" : "STUDENT";
-      if (item.showOnlyForRoles && !item.showOnlyForRoles.includes(role)) return false;
-      if (item.hideForRoles && item.hideForRoles.includes(role)) return false;
-      if (item.permission && !hasPermission(item.permission)) return false;
-      if (item.anyPermissions && !hasAnyPermission(item.anyPermissions)) return false;
-      return true;
-    });
-    return { ...group, items };
-  }).filter(g => g.items.length > 0);
+  return allMenuGroups
+    .map((group) => {
+      const items = group.items.filter((item) => {
+        const role = isAdmin.value
+          ? "ADMIN"
+          : isManager.value
+            ? "MANAGER"
+            : isTeacher.value
+              ? "TEACHER"
+              : "STUDENT";
+        if (item.showOnlyForRoles && !item.showOnlyForRoles.includes(role))
+          return false;
+        if (item.hideForRoles && item.hideForRoles.includes(role)) return false;
+        if (item.permission && !hasPermission(item.permission)) return false;
+        if (item.anyPermissions && !hasAnyPermission(item.anyPermissions))
+          return false;
+        return true;
+      });
+      return { ...group, items };
+    })
+    .filter((g) => g.items.length > 0);
 });
 
 const isActive = (path: string, exclude?: string[]) => {
   if (path === "/") return route.path === "/";
-  if (exclude?.some(ex => route.path.startsWith(ex))) return false;
+  if (exclude?.some((ex) => route.path.startsWith(ex))) return false;
   if (path.includes("?")) {
     const [b, q] = path.split("?");
     const p = new URLSearchParams(q);
@@ -338,24 +534,34 @@ const isActive = (path: string, exclude?: string[]) => {
   return route.path === path || route.path.startsWith(path + "/");
 };
 
-const toggleSubmenu = (g: number, i: number) => { const k = `${g}-${i}`; openSubmenu.value = openSubmenu.value === k ? null : k; };
+const toggleSubmenu = (g: number, i: number) => {
+  const k = `${g}-${i}`;
+  openSubmenu.value = openSubmenu.value === k ? null : k;
+};
 const isSubmenuOpen = (g: number, i: number) => {
   const k = `${g}-${i}`;
   if (openSubmenu.value === k) return true;
   const item = menuGroups.value[g]?.items[i];
-  return item?.subItems?.some(s => isActive(s.path)) || false;
+  return item?.subItems?.some((s) => isActive(s.path)) || false;
 };
 </script>
 
 <style scoped>
 /* Скрыть скроллбар */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 /* Плавное появление/скрытие текстовых лейблов */
 .label-fade-enter-active,
 .label-fade-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 .label-fade-enter-from,
 .label-fade-leave-to {
@@ -380,7 +586,7 @@ const isSubmenuOpen = (g: number, i: number) => {
   opacity: 0;
   transition: opacity 0.1s ease;
   z-index: 999;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 /* Показываем tooltip только при hover на родительский li/button/a */

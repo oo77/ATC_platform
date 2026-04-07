@@ -1,4 +1,4 @@
-﻿import { defineEventHandler, readBody, createError } from "h3";
+import { defineEventHandler, readBody, createError } from "h3";
 import { requireAuth } from "../../../../../utils/auth";
 import { roleHasPermission } from "../../../../../utils/permissions";
 import {
@@ -12,8 +12,7 @@ interface UpdateBookBody {
   description?: string;
   isbn?: string;
   publisher?: string;
-  publishedYear?: number;
-  publishedAt?: string | null;
+  publishedYear?: number | null;
   language?: string;
   category?: string;
 }
@@ -112,15 +111,20 @@ export default defineEventHandler(async (event) => {
     }
 
     if (body.publishedYear !== undefined) {
-      const year = parseInt(String(body.publishedYear));
-      if (year && (year < 1000 || year > new Date().getFullYear() + 1)) {
-        throw createError({
-          statusCode: 400,
-          message: "Некорректный год издания",
-        });
+      if (body.publishedYear === null || String(body.publishedYear).trim() === "") {
+        updateData.published_year = null;
+      } else {
+        const year = parseInt(String(body.publishedYear));
+        if (isNaN(year) || year < 1000 || year > new Date().getFullYear() + 1) {
+          throw createError({
+            statusCode: 400,
+            message: "Некорректный год издания",
+          });
+        }
+        updateData.published_year = year;
       }
-      updateData.published_year = year || null;
     }
+
 
     if (body.language !== undefined) {
       updateData.language = body.language || "ru";
@@ -128,10 +132,6 @@ export default defineEventHandler(async (event) => {
 
     if (body.category !== undefined) {
       updateData.category = body.category ? body.category.trim() : null;
-    }
-
-    if (body.publishedAt !== undefined) {
-      updateData.published_at = body.publishedAt || null;
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -146,9 +146,6 @@ export default defineEventHandler(async (event) => {
       ...updateData,
       ...(body.language !== undefined
         ? { language: body.language || "ru" }
-        : {}),
-      ...(body.publishedAt !== undefined
-        ? { published_at: body.publishedAt || null }
         : {}),
     });
     const updatedBook = await getBookById(String(bookId));
@@ -174,7 +171,7 @@ export default defineEventHandler(async (event) => {
         isbn: updatedBook.isbn,
         category: updatedBook.category,
         language: updatedBook.language,
-        published_at: updatedBook.published_at,
+        published_year: body.publishedYear ? parseInt(String(body.publishedYear)) : null,
         updatedAt: updatedBook.updated_at,
       },
     };

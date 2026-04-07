@@ -32,8 +32,9 @@ const updateCourseSchema = z.object({
   shortName: z.string().min(2).max(10).optional(),
   code: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
+  courseType: z.enum(['КПП', 'КПК']).optional(),
   certificateTemplateId: z.string().nullable().optional(),
-  certificateValidityMonths: z.number().positive().int().nullable().optional(), // Срок действия сертификата в месяцах (null = бессрочный)
+  certificateValidityMonths: z.number().positive().int().nullable().optional(),
   isActive: z.boolean().optional(),
   disciplines: z.array(disciplineSchema).optional(),
 });

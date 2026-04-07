@@ -34,6 +34,8 @@ import * as reportBuilder from "./migrations/20260305_023_report_builder";
 import * as trainingRequests from "./migrations/20260310_024_training_requests";
 import * as fixTestingSystemSchema from "./migrations/20260317_025_fix_testing_system_schema";
 import * as gradesTestColumns from "./migrations/20260319_026_grades_test_columns";
+import * as changeBookPublishedAtToYear from "./migrations/20260407_027_change_book_published_at_to_year";
+import * as addCourseTypeToCourses from "./migrations/20260407_028_add_course_type_to_courses";
 
 /**
  * ============================================================================
@@ -291,6 +293,24 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: gradesTestColumns.up,
     down: gradesTestColumns.down,
     description: gradesTestColumns.description,
+  },
+  // ============================================================
+  // Миграция 027: Change books published_at to published_year
+  // ============================================================
+  {
+    name: "20260407_027_change_book_published_at_to_year",
+    up: changeBookPublishedAtToYear.up,
+    down: changeBookPublishedAtToYear.down,
+    description: changeBookPublishedAtToYear.description,
+  },
+  // ============================================================
+  // Миграция 028: Add course_type (КПП/КПК) to courses
+  // ============================================================
+  {
+    name: "20260407_028_add_course_type_to_courses",
+    up: addCourseTypeToCourses.up,
+    down: addCourseTypeToCourses.down,
+    description: addCourseTypeToCourses.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

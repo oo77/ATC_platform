@@ -27,8 +27,9 @@ const courseSchema = z.object({
   shortName: z.string().min(2).max(10, 'Короткое название должно быть от 2 до 10 символов'),
   code: z.string().min(1, 'Код курса обязателен'),
   description: z.string().optional(),
+  courseType: z.enum(['КПП', 'КПК']).optional().default('КПП'),
   certificateTemplateId: z.string().optional(),
-  certificateValidityMonths: z.number().positive().int().nullable().optional(), // Срок действия сертификата в месяцах (null = бессрочный)
+  certificateValidityMonths: z.number().positive().int().nullable().optional(),
   isActive: z.boolean().optional(),
   disciplines: z.array(disciplineSchema).optional(),
 });

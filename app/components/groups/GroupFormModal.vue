@@ -55,19 +55,15 @@
           <!-- Учебная программа -->
           <div>
             <label
-              class="mb-1.5 block text-sm font-medium text-black dark:text-white"
+              class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
             >
               Учебная программа <span class="text-danger">*</span>
             </label>
             <div class="relative">
               <select
                 v-model="form.courseId"
-                :class="[
-                  'w-full rounded-lg border-[1.5px] bg-white dark:bg-boxdark px-4 py-2 font-medium outline-none transition appearance-none text-sm',
-                  errors.courseId
-                    ? 'border-danger focus:border-danger'
-                    : 'border-stroke focus:border-primary dark:border-form-strokedark dark:focus:border-primary',
-                ]"
+                class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 appearance-none transition-all font-medium"
+                :class="{ 'border-danger focus:border-danger focus:ring-danger': errors.courseId }"
               >
                 <option value="">Выберите программу...</option>
                 <option
@@ -104,7 +100,7 @@
           <!-- Код группы -->
           <div>
             <label
-              class="mb-1.5 block text-sm font-medium text-black dark:text-white"
+              class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
             >
               Код группы <span class="text-danger">*</span>
             </label>
@@ -112,12 +108,8 @@
               v-model="form.code"
               type="text"
               placeholder="АПАК-20"
-              :class="[
-                'w-full rounded-lg border-[1.5px] bg-white dark:bg-boxdark px-4 py-2 font-medium outline-none transition text-sm',
-                errors.code
-                  ? 'border-danger focus:border-danger'
-                  : 'border-stroke focus:border-primary dark:border-form-strokedark dark:focus:border-primary',
-              ]"
+              class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 transition-all font-medium"
+              :class="{ 'border-danger focus:border-danger focus:ring-danger': errors.code }"
             />
             <p v-if="errors.code" class="mt-1 text-xs text-danger">
               {{ errors.code }}
@@ -128,7 +120,7 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label
-                class="mb-1.5 block text-sm font-medium text-black dark:text-white"
+                class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
               >
                 Начало
               </label>
@@ -136,14 +128,10 @@
                 v-model="form.startDate"
                 type="date"
                 :disabled="isEdit && !canEditDates"
+                class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 transition-all font-medium"
                 :class="[
-                  'w-full rounded-lg border-[1.5px] bg-white dark:bg-boxdark px-4 py-2 font-medium outline-none transition text-sm',
-                  errors.startDate
-                    ? 'border-danger focus:border-danger'
-                    : 'border-stroke focus:border-primary dark:border-form-strokedark dark:focus:border-primary',
-                  isEdit && !canEditDates
-                    ? 'bg-gray-100 dark:bg-meta-4 opacity-70 cursor-not-allowed'
-                    : '',
+                  errors.startDate ? 'border-danger focus:border-danger focus:ring-danger' : '',
+                  isEdit && !canEditDates ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-800/50' : ''
                 ]"
               />
               <p v-if="errors.startDate" class="mt-1 text-xs text-danger">
@@ -152,7 +140,7 @@
             </div>
             <div>
               <label
-                class="mb-1.5 block text-sm font-medium text-black dark:text-white"
+                class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
               >
                 Окончание
               </label>
@@ -160,14 +148,10 @@
                 v-model="form.endDate"
                 type="date"
                 :disabled="isEdit && !canEditDates"
+                class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 transition-all font-medium"
                 :class="[
-                  'w-full rounded-lg border-[1.5px] bg-white dark:bg-boxdark px-4 py-2 font-medium outline-none transition text-sm',
-                  errors.endDate
-                    ? 'border-danger focus:border-danger'
-                    : 'border-stroke focus:border-primary dark:border-form-strokedark dark:focus:border-primary',
-                  isEdit && !canEditDates
-                    ? 'bg-gray-100 dark:bg-meta-4 opacity-70 cursor-not-allowed'
-                    : '',
+                  errors.endDate ? 'border-danger focus:border-danger focus:ring-danger' : '',
+                  isEdit && !canEditDates ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-800/50' : ''
                 ]"
               />
               <p v-if="errors.endDate" class="mt-1 text-xs text-danger">
@@ -179,7 +163,7 @@
           <!-- Описание (маленькое) -->
           <div>
             <label
-              class="mb-1.5 block text-sm font-medium text-black dark:text-white"
+              class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
             >
               Заметки
             </label>
@@ -187,43 +171,59 @@
               v-model="form.description"
               placeholder="..."
               rows="2"
-              class="w-full rounded-lg border-[1.5px] border-stroke bg-white dark:bg-boxdark px-4 py-2 font-medium outline-none transition text-sm focus:border-primary dark:border-form-strokedark dark:focus:border-primary resize-none"
+              class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 transition-all font-medium resize-none"
             ></textarea>
           </div>
 
           <!-- Статус -->
-          <div class="pt-1">
+          <div class="space-y-3">
             <label
-              class="relative inline-flex cursor-pointer items-center group"
+              class="block text-xs font-bold text-slate-400 uppercase tracking-wider"
             >
-              <input
-                v-model="form.isActive"
-                type="checkbox"
-                class="peer sr-only"
-              />
-              <div
-                class="h-5 w-9 shrink-0 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-success peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700"
-              ></div>
-              <span
-                class="ml-3 text-sm font-medium text-black dark:text-white group-hover:text-primary transition-colors"
-              >
-                {{ form.isActive ? "Активна" : "Неактивна" }}
-              </span>
+              Статус группы
             </label>
+            <div
+              class="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
+            >
+              <span
+                class="font-bold text-sm"
+                :class="
+                  form.isActive ? 'text-success' : 'text-slate-500'
+                "
+              >
+                {{
+                  form.isActive
+                    ? "Группа активна"
+                    : "Группа неактивна"
+                }}
+              </span>
+              <label
+                class="relative inline-flex items-center cursor-pointer"
+              >
+                <input
+                  v-model="form.isActive"
+                  type="checkbox"
+                  class="sr-only peer"
+                />
+                <div
+                  class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-success peer-checked:border-success"
+                ></div>
+              </label>
+            </div>
           </div>
         </div>
 
         <!-- Правая колонка: Только Файлы (Официальные основания) -->
         <div class="h-full flex flex-col">
           <label
-            class="mb-1.5 block text-sm font-medium text-black dark:text-white"
+            class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
           >
             Официальные основания (PDF)
             <span class="text-danger" v-if="!isEdit">*</span>
           </label>
 
           <div
-            class="grow rounded-lg border border-stroke bg-gray-50 dark:bg-meta-4/20 dark:border-strokedark p-4 flex flex-col"
+            class="grow rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4 flex flex-col"
           >
             <!-- Загрузка новых файлов (при создании) -->
             <div v-if="!isEdit" class="h-full">
@@ -276,7 +276,7 @@
                 <div
                   v-for="report in existingReports"
                   :key="report.id"
-                  class="flex items-center justify-between rounded bg-white dark:bg-boxdark p-3 border border-stroke dark:border-strokedark hover:shadow-sm"
+                  class="flex items-center justify-between rounded-xl bg-white dark:bg-slate-900 p-3 border border-slate-200 dark:border-slate-700 hover:shadow-sm"
                 >
                   <div class="flex items-center gap-3 overflow-hidden">
                     <div
@@ -321,7 +321,7 @@
               </div>
 
               <div
-                class="mt-3 text-[10px] text-gray-400 text-center border-t border-stroke dark:border-strokedark pt-2"
+                class="mt-3 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center border-t border-slate-200 dark:border-slate-700 pt-2"
               >
                 Управление документами на странице группы
               </div>

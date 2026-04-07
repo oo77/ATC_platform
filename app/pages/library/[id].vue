@@ -454,7 +454,8 @@ const scheduleProgressSave = (pageNum: number) => {
   if (progressSaveTimeout) clearTimeout(progressSaveTimeout);
   progressSaveTimeout = setTimeout(async () => {
     try {
-      await $fetch(`/api/library/reading/${route.params.id}/progress`, {
+      const bookId = route.params.id as string;
+      await ($fetch as any)(`/api/library/reading/${bookId}/progress`, {
         method: "POST",
         body: { page: pageNum },
       });
@@ -480,7 +481,7 @@ const loadDocument = async () => {
 
 const startSession = async () => {
   try {
-    const res = await $fetch(`/api/library/reading/${route.params.id}/start`, {
+    const res = await ($fetch as any)(`/api/library/reading/${route.params.id}/start`, {
       method: "POST",
     });
     book.value = (res as any).book;
@@ -491,7 +492,7 @@ const startSession = async () => {
 
 const endSession = async () => {
   if (!book.value) return;
-  await $fetch(`/api/library/reading/${route.params.id}/end`, {
+  await ($fetch as any)(`/api/library/reading/${route.params.id}/end`, {
     method: "POST",
   }).catch(() => {});
 };
@@ -505,5 +506,6 @@ input::-webkit-inner-spin-button {
 }
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 </style>

@@ -20,6 +20,7 @@ export interface Course {
   shortName: string;
   code: string;
   description?: string | null;
+  courseType: 'КПП' | 'КПК';
   totalHours: number;
   certificateTemplateId?: string | null;
   certificateValidityMonths?: number | null;
@@ -107,6 +108,7 @@ export interface CreateCourseInput {
   shortName: string;
   code: string;
   description?: string;
+  courseType?: 'КПП' | 'КПК';
   certificateTemplateId?: string;
   certificateValidityMonths?: number | null;
   isActive?: boolean;
@@ -118,6 +120,7 @@ export interface UpdateCourseInput {
   shortName?: string;
   code?: string;
   description?: string | null;
+  courseType?: 'КПП' | 'КПК';
   certificateTemplateId?: string | null;
   certificateValidityMonths?: number | null;
   isActive?: boolean;
@@ -157,6 +160,7 @@ interface CourseRow extends RowDataPacket {
   short_name: string;
   code: string;
   description: string | null;
+  course_type: 'КПП' | 'КПК';
   total_hours: number;
   certificate_template_id: string | null;
   certificate_validity_months: number | null;
@@ -232,6 +236,7 @@ function mapRowToCourse(row: CourseRow): Course {
     shortName: row.short_name,
     code: row.code,
     description: row.description,
+    courseType: row.course_type || 'КПП',
     totalHours: row.total_hours,
     certificateTemplateId: row.certificate_template_id,
     certificateValidityMonths: row.certificate_validity_months,
@@ -388,7 +393,7 @@ export async function getCoursesPaginated(
   params: PaginationParams = {}
 ): Promise<PaginatedResult<Course>> {
   const { page = 1, limit = 10, filters = {} } = params;
-  const { search, isActive, isArchived, certificateTemplateId } = filters;
+  const { search, isActive, isArchived, certificateTemplateId, courseType } = filters;
 
   const conditions: string[] = [];
   const queryParams: any[] = [];
@@ -419,6 +424,11 @@ export async function getCoursesPaginated(
   if (certificateTemplateId) {
     conditions.push("certificate_template_id = ?");
     queryParams.push(certificateTemplateId);
+  }
+
+  if (courseType) {
+    conditions.push("course_type = ?");
+    queryParams.push(courseType);
   }
 
   const whereClause =
@@ -551,17 +561,18 @@ export async function createCourse(data: CreateCourseInput): Promise<Course> {
   await executeTransaction(async (connection: PoolConnection) => {
     // Создаём курс
     await connection.execute(
-      `INSERT INTO courses (id, name, short_name, code, description, total_hours, certificate_template_id, certificate_validity_months, is_active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO courses (id, name, short_name, code, description, course_type, total_hours, certificate_template_id, certificate_validity_months, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         data.name,
         data.shortName.toUpperCase(),
         data.code,
         data.description || null,
+        data.courseType || 'КПП',
         totalHours,
         data.certificateTemplateId || null,
-        data.certificateValidityMonths ?? null, // null = бессрочный сертификат
+        data.certificateValidityMonths ?? null,
         data.isActive !== false,
         now,
         now,
@@ -638,6 +649,10 @@ export async function updateCourse(
   if (data.description !== undefined) {
     updates.push("description = ?");
     params.push(data.description);
+  }
+  if (data.courseType !== undefined) {
+    updates.push("course_type = ?");
+    params.push(data.courseType);
   }
   if (data.certificateTemplateId !== undefined) {
     updates.push("certificate_template_id = ?");

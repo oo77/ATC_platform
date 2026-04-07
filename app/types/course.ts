@@ -81,16 +81,29 @@ export interface UpdateDisciplineData extends Partial<CreateDisciplineData> {}
 
 // ============ Курсы (Учебные программы) ============
 
+export type CourseType = 'КПП' | 'КПК';
+
+export const COURSE_TYPE_LABELS: Record<CourseType, string> = {
+  'КПП': 'КПП — Курс повышения профессиональной подготовки',
+  'КПК': 'КПК — Курсы повышения квалификации',
+};
+
+export const COURSE_TYPE_SHORT: Record<CourseType, string> = {
+  'КПП': 'КПП',
+  'КПК': 'КПК',
+};
+
 export interface Course {
   id: string;
   name: string;
   shortName: string;
   code: string;
   description?: string;
+  courseType: CourseType;
   totalHours: number;
   certificateTemplateId?: string;
   certificateTemplate?: CertificateTemplate;
-  certificateValidityMonths?: number; // Срок действия сертификата в месяцах
+  certificateValidityMonths?: number;
   isActive: boolean;
   isArchived: boolean;
   archivedAt?: string;
@@ -106,8 +119,9 @@ export interface CreateCourseData {
   shortName: string;
   code: string;
   description?: string;
+  courseType?: CourseType;
   certificateTemplateId?: string;
-  certificateValidityMonths?: number; // Срок действия сертификата в месяцах
+  certificateValidityMonths?: number;
   isActive?: boolean;
   disciplines?: CreateDisciplineData[];
 }
@@ -124,6 +138,7 @@ export interface UpdateCourseData
 
 export interface CourseFilters {
   search?: string;
+  courseType?: CourseType;
   isActive?: boolean;
   isArchived?: boolean;
   certificateTemplateId?: string;

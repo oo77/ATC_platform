@@ -2,7 +2,7 @@
   <div class="mx-auto max-w-screen-2xl space-y-6">
     <!-- Заголовок страницы (Hero) -->
     <div
-      class="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-indigo-600 via-indigo-700 to-primary p-8 shadow-2xl shadow-indigo-200 dark:shadow-none sm:p-10"
+      class="relative overflow-hidden rounded-[2.5rem] bg-linear-to-br from-indigo-600 via-indigo-700 to-primary p-8 shadow-2xl shadow-indigo-200 dark:shadow-none sm:p-10"
     >
       <!-- Декоративные элементы фона -->
       <div class="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
@@ -367,7 +367,7 @@
                 </div>
                 <div class="relative h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                   <div
-                    class="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-primary to-indigo-600 transition-all duration-1000 shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+                    class="absolute inset-y-0 left-0 rounded-full bg-linear-to-r from-primary to-indigo-600 transition-all duration-1000 shadow-[0_0_8px_rgba(99,102,241,0.5)]"
                     :style="{ width: `${group.progress}%` }"
                   ></div>
                 </div>
@@ -378,8 +378,6 @@
       </div>
     </div>
 
-    <!-- Расписание и алерты -->
-    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
     <!-- Расписание и алерты -->
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
       <!-- Расписание на сегодня -->

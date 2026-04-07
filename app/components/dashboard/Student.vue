@@ -392,39 +392,39 @@
           >
             <IconsClipboardCheckIcon
               v-if="notification.type === 'test_upcoming'"
-              class="w-5 h-5 flex-shrink-0 text-primary"
+              class="w-5 h-5 shrink-0 text-primary"
             />
             <IconsWarningIcon
               v-else-if="
                 notification.type === 'test_today' ||
                 notification.type === 'deadline_warning'
               "
-              class="w-5 h-5 flex-shrink-0 text-warning"
+              class="w-5 h-5 shrink-0 text-warning"
             />
             <IconsErrorIcon
               v-else-if="
                 notification.type === 'test_overdue' ||
                 notification.type === 'deadline_critical'
               "
-              class="w-5 h-5 flex-shrink-0 text-danger"
+              class="w-5 h-5 shrink-0 text-danger"
             />
             <IconsCalenderIcon
               v-else-if="notification.type === 'schedule_change'"
-              class="w-5 h-5 flex-shrink-0 text-info"
+              class="w-5 h-5 shrink-0 text-info"
             />
             <IconsBarChartIcon
               v-else-if="notification.type === 'grade_posted'"
-              class="w-5 h-5 flex-shrink-0 text-success"
+              class="w-5 h-5 shrink-0 text-success"
             />
             <IconsCertificateIcon
               v-else-if="notification.type === 'certificate_issued'"
-              class="w-5 h-5 flex-shrink-0 text-success"
+              class="w-5 h-5 shrink-0 text-success"
             />
             <IconsInfoCircleIcon
               v-else-if="notification.type === 'info'"
-              class="w-5 h-5 flex-shrink-0 text-info"
+              class="w-5 h-5 shrink-0 text-info"
             />
-            <IconsBellIcon v-else class="w-5 h-5 flex-shrink-0 text-primary" />
+            <IconsBellIcon v-else class="w-5 h-5 shrink-0 text-primary" />
             <div class="flex-1 min-w-0">
               <div class="flex items-start justify-between gap-2">
                 <div class="flex-1">
@@ -441,7 +441,7 @@
                 <button
                   v-if="!notification.is_read"
                   @click="markAsRead(notification.id)"
-                  class="text-xs text-primary hover:underline flex-shrink-0"
+                  class="text-xs text-primary hover:underline shrink-0"
                 >
                   Прочитано
                 </button>
