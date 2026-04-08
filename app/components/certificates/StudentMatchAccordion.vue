@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-4">
     <div class="flex items-center justify-between">
-      <h5 class="text-sm font-semibold text-black dark:text-white">
+      <h5 class="text-sm font-semibold text-slate-800 dark:text-white">
         Выбор слушателя
       </h5>
-      <span v-if="selectedStudent" class="text-xs text-success font-medium">
-        ✓ Выбран
+      <span v-if="selectedStudent" class="text-xs text-emerald-500 font-medium flex items-center gap-1">
+        <CheckCircle2 class="w-3.5 h-3.5" /> Выбран
       </span>
     </div>
 
@@ -21,10 +21,10 @@
         :key="alternative.student.id"
         @click="selectStudent(alternative.student)"
         :class="[
-          'relative rounded-lg border-2 transition-all duration-200 cursor-pointer overflow-hidden',
+          'relative rounded-xl border-2 transition-all duration-200 cursor-pointer overflow-hidden',
           isSelected(alternative.student.id)
-            ? 'border-primary bg-primary/5 dark:bg-primary/10 shadow-md'
-            : 'border-stroke dark:border-strokedark hover:border-primary/50 dark:hover:border-primary/50 hover:shadow-sm',
+            ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10 shadow-sm'
+            : 'border-slate-200 dark:border-slate-700/50 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-xs',
         ]"
       >
         <div class="p-4">
@@ -35,8 +35,8 @@
                 :class="[
                   'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all',
                   isSelected(alternative.student.id)
-                    ? 'border-primary bg-primary'
-                    : 'border-gray-300 dark:border-gray-600',
+                    ? 'border-blue-500 bg-blue-500'
+                    : 'border-slate-300 dark:border-slate-600',
                 ]"
               >
                 <div
@@ -51,110 +51,58 @@
               <div class="flex items-start justify-between gap-4">
                 <div class="flex-1 min-w-0">
                   <!-- Name with Rank Badge -->
-                  <div class="flex items-center gap-2 mb-2">
+                  <div class="flex items-center gap-2 mb-2.5">
                     <span
                       :class="[
-                        'inline-flex items-center justify-center h-6 w-6 rounded-full text-xs font-bold',
+                        'inline-flex items-center justify-center h-6 w-6 rounded-lg text-xs font-bold leading-none',
                         index === 0
-                          ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
                           : index === 1
-                            ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                            : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+                            ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                            : 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50',
                       ]"
                     >
                       {{ index + 1 }}
                     </span>
                     <h6
-                      class="text-sm font-semibold text-black dark:text-white truncate"
+                      class="text-sm font-bold text-slate-900 dark:text-white truncate"
                     >
                       {{ alternative.student.fullName }}
                     </h6>
                   </div>
 
                   <!-- Additional Info -->
-                  <div class="space-y-1">
+                  <div class="space-y-1.5">
                     <div
                       v-if="alternative.student.pinfl"
-                      class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+                      class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800 inline-flex w-fit"
                     >
-                      <svg
-                        class="h-3.5 w-3.5 shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
-                      <span class="truncate"
-                        >ПИНФЛ: {{ alternative.student.pinfl }}</span
-                      >
+                      <IdCard class="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span class="truncate font-medium">ПИНФЛ: {{ alternative.student.pinfl }}</span>
                     </div>
 
                     <div
                       v-if="alternative.student.organization"
-                      class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+                      class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400"
                     >
-                      <svg
-                        class="h-3.5 w-3.5 shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
-                      <span class="truncate font-medium">{{
-                        alternative.student.organization
-                      }}</span>
+                      <Building2 class="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span class="truncate">{{ alternative.student.organization }}</span>
                     </div>
 
                     <div
                       v-if="alternative.student.department"
-                      class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+                      class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400"
                     >
-                      <svg
-                        class="h-3.5 w-3.5 shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z"
-                          clip-rule="evenodd"
-                        />
-                        <path
-                          d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"
-                        />
-                      </svg>
-                      <span class="truncate">{{
-                        alternative.student.department
-                      }}</span>
+                      <Briefcase class="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span class="truncate">{{ alternative.student.department }}</span>
                     </div>
 
                     <div
                       v-if="alternative.student.email"
-                      class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400"
+                      class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400"
                     >
-                      <svg
-                        class="h-3.5 w-3.5 shrink-0"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"
-                        />
-                        <path
-                          d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"
-                        />
-                      </svg>
-                      <span class="truncate">{{
-                        alternative.student.email
-                      }}</span>
+                      <Mail class="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span class="truncate">{{ alternative.student.email }}</span>
                     </div>
                   </div>
                 </div>
@@ -163,22 +111,22 @@
                 <div class="shrink-0 text-right">
                   <div
                     :class="[
-                      'text-2xl font-bold',
+                      'text-2xl font-black tracking-tight',
                       getScoreColor(alternative.matchScore),
                     ]"
                   >
                     {{ alternative.matchScore }}%
                   </div>
-                  <div class="text-xs text-gray-500 dark:text-gray-400">
+                  <div class="text-[10px] uppercase font-semibold tracking-wider text-slate-400 dark:text-slate-500 mt-0.5">
                     совпадение
                   </div>
                 </div>
               </div>
 
               <!-- Match Score Progress Bar -->
-              <div class="mt-3">
+              <div class="mt-4">
                 <div
-                  class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
+                  class="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden"
                 >
                   <div
                     :class="[
@@ -196,7 +144,7 @@
         <!-- Selected Indicator -->
         <div
           v-if="isSelected(alternative.student.id)"
-          class="absolute top-0 right-0 bg-primary text-white px-3 py-1 rounded-bl-lg text-xs font-semibold"
+          class="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-xl text-[10px] font-bold uppercase tracking-wider"
         >
           Выбран
         </div>
@@ -210,50 +158,26 @@
         (!matchResult.topAlternatives ||
           matchResult.topAlternatives.length === 0)
       "
-      class="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 p-6 text-center"
+      class="rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 p-8 text-center bg-slate-50/50 dark:bg-slate-900/30"
     >
       <div class="flex flex-col items-center">
         <div
-          class="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3"
+          class="h-14 w-14 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center mb-4 border border-slate-200 dark:border-slate-700 shadow-sm"
         >
-          <svg
-            class="h-6 w-6 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+          <SearchX class="h-6 w-6 text-slate-400" />
         </div>
-        <h6 class="text-sm font-semibold text-black dark:text-white mb-1">
+        <h6 class="text-base font-bold text-slate-900 dark:text-white mb-1.5">
           Совпадений не найдено
         </h6>
-        <p class="text-xs text-gray-600 dark:text-gray-400 mb-4">
+        <p class="text-sm text-slate-500 dark:text-slate-400 mb-6">
           В базе данных нет подходящих слушателей
         </p>
         <button
           @click="$emit('create-new')"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm shadow-blue-500/20"
         >
-          <svg
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-          Создать нового слушателя
+          <Plus class="h-4 w-4" />
+          Создать слушателя
         </button>
       </div>
     </div>
@@ -263,25 +187,13 @@
       v-if="
         matchResult?.topAlternatives && matchResult.topAlternatives.length > 0
       "
-      class="pt-2 border-t border-stroke dark:border-strokedark"
+      class="pt-3 border-t border-slate-100 dark:border-slate-800"
     >
       <button
         @click="$emit('create-new')"
-        class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-primary dark:hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all text-sm font-medium text-gray-700 dark:text-gray-300"
+        class="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-600 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all text-sm font-bold text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400"
       >
-        <svg
-          class="h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4v16m8-8H4"
-          />
-        </svg>
+        <Plus class="h-4 w-4" />
         Создать нового слушателя
       </button>
     </div>
@@ -290,6 +202,7 @@
 
 <script setup>
 import { computed } from "vue";
+import { CheckCircle2, IdCard, Building2, Briefcase, Mail, SearchX, Plus } from "lucide-vue-next";
 
 const props = defineProps({
   fileId: {

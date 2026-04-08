@@ -1,82 +1,80 @@
 <template>
   <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Заголовок страницы -->
-    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h2 class="text-title-md2 font-bold text-black dark:text-white">
-          Расписание занятий
-        </h2>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Управление расписанием учебных групп
-        </p>
+    <!-- Header Section -->
+    <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div class="space-y-2">
+          <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+            Расписание занятий
+          </h1>
+          <p class="text-slate-500 font-medium">
+            Управление расписанием учебных групп
+          </p>
+        </div>
       </div>
     </div>
 
-    <!-- Статистика -->
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-4 mb-6">
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
+    <!-- Bento Box Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Сегодня</h3>
-            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.today }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Сегодня</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.today }}</h3>
+          </div>
+          <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
+            <Calendar class="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
-            <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-            </svg>
-          </div>
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">На этой неделе</h3>
-            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.thisWeek }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">На этой неделе</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.thisWeek }}</h3>
+          </div>
+          <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
+            <CalendarDays class="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
-            <svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Активных групп</h3>
-            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.activeGroups }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Активных групп</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.activeGroups }}</h3>
+          </div>
+          <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
+            <Users class="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-info/10">
-            <svg class="w-6 h-6 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Аудиторий</h3>
-            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.classrooms }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Аудиторий</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.classrooms }}</h3>
+          </div>
+          <div class="rounded-xl bg-info/10 p-3 text-info transition-transform group-hover:rotate-12">
+            <Building class="w-6 h-6" />
           </div>
         </div>
       </div>
     </div>
 
     <!-- Календарь -->
-    <ScheduleCalendarView />
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden p-6 md:p-8">
+      <ScheduleCalendarView />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { Calendar, CalendarDays, Users, Building } from 'lucide-vue-next';
+
 definePageMeta({
   layout: 'default',
 });

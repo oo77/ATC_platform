@@ -2,365 +2,182 @@
   <UiModal
     :is-open="isOpen"
     @close="$emit('close')"
-    :title="`Сертификат ${certificate?.certificateNumber || ''}`"
+    title="Просмотр сертификата"
     size="lg"
   >
-    <div v-if="certificate" class="space-y-6">
-      <!-- Статус и общие данные -->
-      <div
-        class="flex items-center justify-between p-4 rounded-lg"
-        :class="
-          certificate.status === 'issued' ? 'bg-success/10' : 'bg-danger/10'
-        "
-      >
-        <div class="flex items-center gap-3">
-          <div
-            :class="[
-              'h-12 w-12 rounded-full flex items-center justify-center',
-              certificate.status === 'issued'
-                ? 'bg-success/20'
-                : 'bg-danger/20',
-            ]"
-          >
-            <svg
-              v-if="certificate.status === 'issued'"
-              class="h-6 w-6 text-success"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <svg
-              v-else
-              class="h-6 w-6 text-danger"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <div>
-            <p
-              class="font-semibold text-lg"
-              :class="
-                certificate.status === 'issued' ? 'text-success' : 'text-danger'
-              "
-            >
-              {{
-                certificate.status === "issued"
-                  ? "Сертификат выдан"
-                  : "Сертификат отозван"
-              }}
-            </p>
-            <p class="text-sm text-gray-600 dark:text-gray-400">
-              {{ formatDate(certificate.issueDate) }}
-            </p>
-          </div>
-        </div>
-        <span class="font-mono text-lg font-bold text-primary">
-          {{ certificate.certificateNumber }}
-        </span>
-      </div>
+    <div v-if="certificate" class="space-y-5">
 
-      <!-- Предупреждения (если есть) -->
+      <!-- Hero: Номер + статус -->
       <div
-        v-if="certificate.hasWarnings"
-        class="p-4 bg-warning/10 border border-warning/20 rounded-lg"
+        class="relative overflow-hidden rounded-2xl p-5"
+        :class="certificate.status === 'issued'
+          ? 'bg-success/5 border border-success/20'
+          : 'bg-danger/5 border border-danger/20'"
       >
-        <div class="flex items-center gap-2 mb-2">
-          <svg
-            class="h-5 w-5 text-warning"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-            />
-          </svg>
-          <span class="font-medium text-warning">Выдан с предупреждениями</span>
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-4">
+            <div
+              class="h-12 w-12 rounded-xl flex items-center justify-center shrink-0"
+              :class="certificate.status === 'issued' ? 'bg-success/15' : 'bg-danger/15'"
+            >
+              <CheckCircle v-if="certificate.status === 'issued'" class="h-6 w-6 text-success" />
+              <XCircle v-else class="h-6 w-6 text-danger" />
+            </div>
+            <div>
+              <p
+                class="text-lg font-black"
+                :class="certificate.status === 'issued' ? 'text-success' : 'text-danger'"
+              >
+                {{ certificate.status === 'issued' ? 'Сертификат действителен' : 'Сертификат отозван' }}
+              </p>
+              <p class="text-sm font-medium text-slate-500 mt-0.5">
+                Выдан: {{ formatDate(certificate.issueDate) }}
+              </p>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">№ сертификата</p>
+            <span class="font-mono text-xl font-black text-primary">
+              {{ certificate.certificateNumber }}
+            </span>
+          </div>
         </div>
-        <p class="text-sm text-gray-600 dark:text-gray-400">
-          Этот сертификат был выдан несмотря на несоответствие некоторым
-          требованиям (например, недостаточная посещаемость или отсутствие
-          оценок).
-        </p>
+
+        <!-- Source badge -->
+        <div class="mt-3 flex items-center gap-2 flex-wrap">
+          <span
+            v-if="certificate.sourceType === 'import' && certificate.importSource === 'ai'"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/20"
+          >
+            <Zap class="w-3 h-3" />
+            AI Импорт
+            <span v-if="certificate.aiConfidence">· {{ Math.round(certificate.aiConfidence * 100) }}%</span>
+          </span>
+          <span
+            v-else-if="certificate.sourceType === 'import'"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-success/5 text-success border border-success/20"
+          >
+            <FileSpreadsheet class="w-3 h-3" />
+            Импортирован из Excel
+          </span>
+          <span
+            v-else-if="certificate.sourceType === 'manual'"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/20"
+          >
+            <PenLine class="w-3 h-3" />
+            Добавлен вручную
+          </span>
+          <span
+            v-else
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-primary/5 text-primary border border-primary/15"
+          >
+            <ClipboardList class="w-3 h-3" />
+            Из журнала группы
+          </span>
+
+          <span
+            v-if="certificate.hasWarnings"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-warning/5 text-warning border border-warning/20"
+          >
+            <AlertTriangle class="w-3 h-3" />
+            Выдан с предупреждениями
+          </span>
+        </div>
       </div>
 
       <!-- Причина отзыва -->
       <div
         v-if="certificate.status === 'revoked' && certificate.revokeReason"
-        class="p-4 bg-danger/10 border border-danger/20 rounded-lg"
+        class="p-4 bg-danger/5 border border-danger/20 rounded-xl"
       >
-        <p class="font-medium text-danger mb-1">Причина отзыва:</p>
-        <p class="text-gray-600 dark:text-gray-400">
-          {{ certificate.revokeReason }}
+        <p class="font-bold text-danger flex items-center gap-2 mb-2">
+          <AlertTriangle class="w-4 h-4" />
+          Причина отзыва
         </p>
-        <p class="text-sm text-gray-500 mt-2">
+        <p class="text-sm text-slate-700 dark:text-slate-300 font-medium">{{ certificate.revokeReason }}</p>
+        <p class="text-xs text-slate-400 mt-2 font-medium">
           Дата отзыва: {{ formatDate(certificate.revokedAt) }}
         </p>
       </div>
 
-      <!-- Информация о слушателе -->
-      <div
-        class="border border-stroke dark:border-strokedark rounded-lg overflow-hidden"
-      >
-        <div
-          class="bg-gray-50 dark:bg-meta-4 px-4 py-3 border-b border-stroke dark:border-strokedark"
-        >
-          <h4
-            class="font-semibold text-black dark:text-white flex items-center gap-2"
-          >
-            <svg
-              class="h-5 w-5 text-primary"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-            Слушатель
-          </h4>
-        </div>
-        <div class="p-4 space-y-3">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">ФИО</p>
-              <p class="font-medium text-black dark:text-white">
-                {{ certificate.student.fullName }}
-              </p>
+      <!-- Cards Grid: Слушатель + Курс -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Слушатель -->
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2.5">
+            <div class="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <User class="w-4 h-4" />
             </div>
-            <div v-if="certificate.student.pinfl">
-              <p class="text-sm text-gray-500 dark:text-gray-400">ПИНФЛ</p>
-              <p class="font-mono text-black dark:text-white">
-                {{ certificate.student.pinfl }}
-              </p>
-            </div>
-            <div v-if="certificate.student.organization">
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Организация
-              </p>
-              <p class="text-black dark:text-white">
-                {{ certificate.student.organization }}
-              </p>
-            </div>
-            <div v-if="certificate.student.position">
-              <p class="text-sm text-gray-500 dark:text-gray-400">Должность</p>
-              <p class="text-black dark:text-white">
-                {{ certificate.student.position }}
-              </p>
-            </div>
+            <h4 class="font-bold text-slate-900 dark:text-white text-sm">Слушатель</h4>
+          </div>
+          <div class="p-5 space-y-3">
+            <InfoRow label="ФИО" :value="certificate.student.fullName" bold />
+            <InfoRow v-if="certificate.student.pinfl" label="ПИНФЛ" :value="certificate.student.pinfl" mono />
+            <InfoRow v-if="certificate.student.organization" label="Организация" :value="certificate.student.organization" />
+            <InfoRow v-if="certificate.student.position" label="Должность" :value="certificate.student.position" />
           </div>
         </div>
-      </div>
 
-      <!-- Информация о курсе -->
-      <div
-        class="border border-stroke dark:border-strokedark rounded-lg overflow-hidden"
-      >
-        <div
-          class="bg-gray-50 dark:bg-meta-4 px-4 py-3 border-b border-stroke dark:border-strokedark"
-        >
-          <div class="flex items-center justify-between">
-            <h4
-              class="font-semibold text-black dark:text-white flex items-center gap-2"
-            >
-              <svg
-                class="h-5 w-5 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-              </svg>
-              Курс
-            </h4>
-            <!-- Бейдж источника -->
-            <span
-              v-if="certificate.sourceType === 'import'"
-              class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-info/20 text-info"
-            >
-              📥 Импортирован
-            </span>
-            <span
-              v-else-if="certificate.sourceType === 'manual'"
-              class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400"
-            >
-              ✍️ Добавлен вручную
-            </span>
-            <span
-              v-else
-              class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-success/20 text-success"
-            >
-              📋 Из журнала группы
-            </span>
+        <!-- Курс -->
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2.5">
+            <div class="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <BookOpen class="w-4 h-4" />
+            </div>
+            <h4 class="font-bold text-slate-900 dark:text-white text-sm">Учебный курс</h4>
           </div>
-        </div>
-        <div class="p-4 space-y-3">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2">
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Название курса
-              </p>
-              <p class="font-medium text-black dark:text-white">
-                {{ certificate.course?.name || "Не указан" }}
-              </p>
-            </div>
-            <div v-if="certificate.course?.code">
-              <p class="text-sm text-gray-500 dark:text-gray-400">Код курса</p>
-              <p class="font-mono text-black dark:text-white">
-                {{ certificate.course.code }}
-              </p>
-            </div>
-            <div v-if="certificate.course?.hours">
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Количество часов
-              </p>
-              <p class="text-black dark:text-white">
-                {{ certificate.course.hours }} ч.
-              </p>
-            </div>
-            <div v-if="certificate.group?.code">
-              <p class="text-sm text-gray-500 dark:text-gray-400">Группа</p>
-              <p class="font-mono text-black dark:text-white">
-                {{ certificate.group.code }}
-              </p>
-            </div>
-            <div v-else-if="certificate.sourceType !== 'group_journal'">
-              <p class="text-sm text-gray-500 dark:text-gray-400">Группа</p>
-              <p class="text-gray-400 dark:text-gray-500 italic">Без группы</p>
-            </div>
-            <div v-if="certificate.expiryDate">
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Срок действия до
-              </p>
-              <p class="text-black dark:text-white">
-                {{ formatDate(certificate.expiryDate) }}
-              </p>
-            </div>
+          <div class="p-5 space-y-3">
+            <InfoRow label="Название" :value="certificate.course?.name || 'Не указан'" bold />
+            <InfoRow v-if="certificate.course?.code" label="Код курса" :value="certificate.course.code" mono />
+            <InfoRow v-if="certificate.course?.hours" label="Часов" :value="`${certificate.course.hours} ч.`" />
+            <InfoRow
+              label="Группа"
+              :value="certificate.group?.code || (certificate.sourceType !== 'group_journal' ? 'Без группы' : '')"
+              :mono="!!certificate.group?.code"
+              :muted="!certificate.group?.code"
+            />
+            <InfoRow v-if="certificate.expiryDate" label="Действителен до" :value="formatDate(certificate.expiryDate)" />
           </div>
         </div>
       </div>
 
       <!-- Информация о выдаче -->
-      <div
-        class="border border-stroke dark:border-strokedark rounded-lg overflow-hidden"
-      >
-        <div
-          class="bg-gray-50 dark:bg-meta-4 px-4 py-3 border-b border-stroke dark:border-strokedark"
-        >
-          <h4
-            class="font-semibold text-black dark:text-white flex items-center gap-2"
-          >
-            <svg
-              class="h-5 w-5 text-primary"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            Информация о выдаче
-          </h4>
-        </div>
-        <div class="p-4 space-y-3">
-          <div class="grid grid-cols-2 gap-4">
-            <div v-if="certificate.template">
-              <p class="text-sm text-gray-500 dark:text-gray-400">Шаблон</p>
-              <p class="text-black dark:text-white">
-                {{ certificate.template.name }}
-              </p>
-            </div>
-            <div v-else>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Шаблон</p>
-              <p class="text-gray-400 dark:text-gray-500 italic">
-                Без шаблона (standalone)
-              </p>
-            </div>
-            <div v-if="certificate.issuedBy">
-              <p class="text-sm text-gray-500 dark:text-gray-400">Выдал</p>
-              <p class="text-black dark:text-white">
-                {{ certificate.issuedBy.name }}
-              </p>
-            </div>
-            <div v-if="certificate.issuedAt">
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Дата и время выдачи
-              </p>
-              <p class="text-black dark:text-white">
-                {{ formatDateTime(certificate.issuedAt) }}
-              </p>
-            </div>
-            <div>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Создано</p>
-              <p class="text-black dark:text-white">
-                {{ formatDateTime(certificate.createdAt) }}
-              </p>
-            </div>
+      <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2.5">
+          <div class="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <FileCheck class="w-4 h-4" />
           </div>
-          <div v-if="certificate.notes">
-            <p class="text-sm text-gray-500 dark:text-gray-400">Примечания</p>
-            <p class="text-black dark:text-white">{{ certificate.notes }}</p>
+          <h4 class="font-bold text-slate-900 dark:text-white text-sm">Сведения о выдаче</h4>
+        </div>
+        <div class="p-5 grid grid-cols-2 gap-4">
+          <InfoRow
+            label="Шаблон"
+            :value="certificate.template?.name || 'Без шаблона'"
+            :muted="!certificate.template"
+          />
+          <InfoRow v-if="certificate.issuedBy" label="Выдал" :value="certificate.issuedBy.name" />
+          <InfoRow v-if="certificate.issuedAt" label="Дата и время выдачи" :value="formatDateTime(certificate.issuedAt)" />
+          <InfoRow label="Создано в системе" :value="formatDateTime(certificate.createdAt)" />
+          <div v-if="certificate.notes" class="col-span-2">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Примечания</p>
+            <p class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ certificate.notes }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Действия -->
-      <div
-        class="flex justify-end gap-3 pt-4 border-t border-stroke dark:border-strokedark"
-      >
-        <UiButton variant="secondary" @click="$emit('close')">
+      <!-- Footer Actions -->
+      <div class="flex justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <UiButton variant="outline" @click="$emit('close')">
           Закрыть
         </UiButton>
         <a
           v-if="certificate.id"
           :href="`/api/certificates/download/${certificate.id}`"
           target="_blank"
-          class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-white font-medium hover:bg-primary/90 transition-colors"
+          class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm text-white font-bold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20"
         >
-          <svg
-            class="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+          <Download class="h-4 w-4" />
           Скачать PDF
         </a>
       </div>
@@ -369,33 +186,53 @@
 </template>
 
 <script setup lang="ts">
+import {
+  CheckCircle, XCircle, AlertTriangle, User, BookOpen, FileCheck,
+  Download, Zap, FileSpreadsheet, PenLine, ClipboardList,
+} from 'lucide-vue-next';
+
+// Inline row component for clean repetition
+const InfoRow = defineComponent({
+  props: {
+    label: { type: String, required: true },
+    value: { type: String, default: '—' },
+    bold: { type: Boolean, default: false },
+    mono: { type: Boolean, default: false },
+    muted: { type: Boolean, default: false },
+  },
+  setup(props) {
+    return () => h('div', {}, [
+      h('p', { class: 'text-xs font-bold text-slate-400 uppercase tracking-widest mb-1' }, props.label),
+      h('p', {
+        class: [
+          'text-sm',
+          props.bold ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300',
+          props.mono ? 'font-mono' : '',
+          props.muted ? 'text-slate-400 italic' : '',
+        ].filter(Boolean).join(' '),
+      }, props.value || '—'),
+    ]);
+  },
+});
+
 interface Props {
   certificate: any;
   isOpen: boolean;
 }
 
 defineProps<Props>();
-defineEmits<{
-  close: [];
-}>();
+defineEmits<{ close: [] }>();
 
 function formatDate(date: string | Date): string {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  if (!date) return '—';
+  return new Date(date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function formatDateTime(date: string | Date): string {
-  if (!date) return "—";
-  return new Date(date).toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
+  if (!date) return '—';
+  return new Date(date).toLocaleString('ru-RU', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
   });
 }
 </script>

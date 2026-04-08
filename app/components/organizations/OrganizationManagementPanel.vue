@@ -1,167 +1,121 @@
 <template>
   <div class="flex flex-col gap-6">
-    <!-- Заголовок и кнопки действий -->
-    <div
-      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div>
-        <h3 class="text-xl font-semibold text-black dark:text-white">
-          Управление организациями
-        </h3>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Всего организаций: {{ pagination.total }}
-          <span v-if="hasActiveFilters" class="text-primary">
-            (отфильтровано)
-          </span>
+    <!-- Action Bar -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="space-y-1">
+        <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+          Организации
+        </h2>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Всего: {{ pagination.total }}
+          <span v-if="hasActiveFilters" class="text-primary">· (фильтр активен)</span>
         </p>
       </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <UiButton
-          variant="primary"
-          @click="openCreateModal"
-          class="flex items-center gap-2"
-        >
-          <Plus class="w-5 h-5" />
+      <div class="flex flex-wrap items-center gap-2">
+        <UiButton variant="primary" size="sm" class="h-10 px-4 gap-2 font-bold shadow-sm" @click="openCreateModal">
+          <Plus class="w-4 h-4" />
           Добавить организацию
         </UiButton>
       </div>
     </div>
 
-    <!-- Общая статистика (из OrgStats.vue) -->
-    <div v-if="globalStats" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-boxdark p-6 shadow-md border border-stroke dark:border-strokedark group transition-all hover:shadow-xl">
-        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-          <Award class="h-16 w-16 text-primary" />
-        </div>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Всего выданных</p>
-        <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-3xl font-bold text-black dark:text-white">{{ globalStats.totalIssued }}</span>
-          <span class="text-xs font-medium text-success text-nowrap">сертификатов</span>
-        </div>
-      </div>
-
-      <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-boxdark p-6 shadow-md border border-stroke dark:border-strokedark group transition-all hover:shadow-xl">
-        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-          <Users class="h-16 w-16 text-warning" />
-        </div>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Управляемых организаций</p>
-        <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-3xl font-bold text-black dark:text-white">{{ pagination.total }}</span>
-          <span class="text-xs font-medium text-warning text-nowrap">юр. лиц</span>
+    <!-- Bento Box Metrics -->
+    <div v-if="globalStats" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Выдано сертификатов</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ globalStats.totalIssued }}</h3>
+          </div>
+          <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
+            <Award class="w-6 h-6" />
+          </div>
         </div>
       </div>
 
-      <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-boxdark p-6 shadow-md border border-stroke dark:border-strokedark group transition-all hover:shadow-xl">
-        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-          <FileCheck class="h-16 w-16 text-success" />
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Организаций</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ pagination.total }}</h3>
+          </div>
+          <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
+            <Building2 class="w-6 h-6" />
+          </div>
         </div>
-        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Среднее на орг.</p>
-        <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-3xl font-bold text-black dark:text-white">{{ averagePerOrg }}</span>
-          <span class="text-xs font-medium text-info text-nowrap">серт./орг.</span>
+      </div>
+
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Среднее на орг.</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ averagePerOrg }}</h3>
+          </div>
+          <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
+            <FileCheck class="w-6 h-6" />
+          </div>
         </div>
+        <p class="mt-1 text-xs font-medium text-slate-400">серт./орг.</p>
       </div>
     </div>
 
-    <!-- Панель фильтрации -->
-    <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-      <div class="flex items-center gap-3 mb-4">
-        <div
-          class="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"
-        >
-          <svg
-            class="w-5 h-5 text-primary"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-            />
-          </svg>
+    <!-- Filters Panel -->
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Filter class="w-5 h-5" />
+          </div>
+          <h4 class="text-lg font-bold text-slate-900 dark:text-white">Фильтры</h4>
         </div>
-        <h4 class="text-lg font-semibold text-black dark:text-white">
-          Фильтры
-        </h4>
         <button
           v-if="hasActiveFilters"
           @click="clearFilters"
-          class="ml-auto text-sm text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+          class="text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10"
         >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-          Сбросить фильтры
+          <RotateCcw class="w-4 h-4" />
+          Сбросить
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <!-- Поиск по названию -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Поиск
-          </label>
-          <div class="relative">
-            <input
-              v-model="filters.search"
-              type="text"
-              placeholder="Название, код..."
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-              @input="debouncedFetch"
-            />
-            <svg
-              class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </div>
+      <div class="flex flex-col gap-6">
+        <!-- Search -->
+        <div class="relative max-w-xl">
+          <input
+            v-model="filters.search"
+            type="text"
+            placeholder="Поиск по названию, коду организации..."
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
+            @input="debouncedFetch"
+          />
+          <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
         </div>
 
-        <!-- Фильтр по статусу -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
+        <!-- Status chips -->
+        <div class="space-y-3">
+          <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+            <Activity class="w-3.5 h-3.5" />
             Статус
           </label>
-          <select
-            v-model="filters.isActive"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-            @change="handleFilterChange"
-          >
-            <option value="">Все</option>
-            <option value="true">Активные</option>
-            <option value="false">Неактивные</option>
-          </select>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="opt in statusOptions"
+              :key="opt.value"
+              @click="filters.isActive = opt.value; handleFilterChange()"
+              class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+              :class="filters.isActive === opt.value
+                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Таблица организаций -->
-    <div class="bg-white dark:bg-boxdark rounded-xl shadow-md overflow-hidden">
+    <!-- Table -->
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
       <OrganizationsOrganizationTable
         :organizations="organizations"
         :loading="loading"
@@ -171,7 +125,7 @@
         @download="openDownloadModal"
       />
 
-      <!-- Пагинация -->
+      <!-- Pagination -->
       <UiPagination
         v-if="pagination.totalPages > 0"
         :current-page="pagination.page"
@@ -184,7 +138,7 @@
       />
     </div>
 
-    <!-- Модальное окно создания/редактирования -->
+    <!-- Modals -->
     <OrganizationsOrganizationFormModal
       v-if="isFormModalOpen"
       :organization="selectedOrganization"
@@ -193,7 +147,6 @@
       @submit="handleSubmit"
     />
 
-    <!-- Модальное окно деталей -->
     <OrganizationsOrganizationDetailModal
       v-if="isDetailModalOpen"
       :organization="selectedOrganization"
@@ -202,7 +155,6 @@
       @edit="openEditModalFromDetail"
     />
 
-    <!-- Модальное окно скачивания сертификатов -->
     <OrganizationsDownloadCertificatesModal
       v-if="isDownloadModalOpen"
       :organization="selectedOrganization"
@@ -210,7 +162,6 @@
       @close="closeDownloadModal"
     />
 
-    <!-- Модальное окно подтверждения удаления -->
     <UiConfirmModal
       :is-open="isDeleteModalOpen"
       title="Удаление организации"
@@ -225,14 +176,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
-import { Plus, Award, Users, FileCheck } from "lucide-vue-next";
+import { ref, onMounted, computed } from 'vue';
+import { Plus, Award, Building2, FileCheck, Filter, RotateCcw, Search, Activity } from 'lucide-vue-next';
 
-// Используем authFetch для авторизованных запросов
 const { authFetch } = useAuthFetch();
 const notification = useNotification();
 
-// Интерфейс организации
 interface Organization {
   id: string;
   code: string;
@@ -246,14 +195,12 @@ interface Organization {
   studentsCount: number;
   createdAt: Date | string;
   updatedAt: Date | string;
-  // Статистика сертификатов
   totalCertificates?: number;
   issuedCertificates?: number;
   revokedCertificates?: number;
   latestCertificateDate?: string | null;
 }
 
-// Тип ответа от API
 interface OrganizationsResponse {
   success: boolean;
   data: Organization[];
@@ -261,12 +208,16 @@ interface OrganizationsResponse {
   page: number;
   limit: number;
   totalPages: number;
-  stats?: {
-    totalIssued: number;
-  };
+  stats?: { totalIssued: number };
 }
 
-// Состояние
+const statusOptions = [
+  { value: '', label: 'Все' },
+  { value: 'true', label: 'Активные' },
+  { value: 'false', label: 'Неактивные' },
+];
+
+// State
 const organizations = ref<Organization[]>([]);
 const loading = ref(false);
 const isFormModalOpen = ref(false);
@@ -277,255 +228,119 @@ const isDeleting = ref(false);
 const selectedOrganization = ref<Organization | null>(null);
 const deleteOrganization = ref<Organization | null>(null);
 
-// Пагинация
-const pagination = ref({
-  page: 1,
-  limit: 20,
-  total: 0,
-  totalPages: 0,
-});
-
+const pagination = ref({ page: 1, limit: 20, total: 0, totalPages: 0 });
 const globalStats = ref<{ totalIssued: number } | null>(null);
 
-// Фильтры
-const filters = ref({
-  search: "",
-  isActive: "" as string,
-});
+const filters = ref({ search: '', isActive: '' as string });
 
-// Debounce таймер
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-// Вычисляемые свойства
-const hasActiveFilters = computed(() => {
-  return filters.value.search !== "" || filters.value.isActive !== "";
-});
-
+const hasActiveFilters = computed(() => filters.value.search !== '' || filters.value.isActive !== '');
 const averagePerOrg = computed(() => {
   if (!pagination.value.total) return 0;
   const avg = (globalStats.value?.totalIssued || 0) / pagination.value.total;
   return isNaN(avg) ? 0 : avg.toFixed(1);
 });
 
-// Debounced fetch для фильтров
 const debouncedFetch = () => {
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
-  }
-  debounceTimer = setTimeout(() => {
-    pagination.value.page = 1;
-    fetchOrganizations();
-  }, 300);
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => { pagination.value.page = 1; fetchOrganizations(); }, 300);
 };
 
-// Обработка изменения фильтров
-const handleFilterChange = () => {
-  pagination.value.page = 1;
-  fetchOrganizations();
-};
+const handleFilterChange = () => { pagination.value.page = 1; fetchOrganizations(); };
+const clearFilters = () => { filters.value = { search: '', isActive: '' }; pagination.value.page = 1; fetchOrganizations(); };
+const handlePageChange = (page: number) => { pagination.value.page = page; fetchOrganizations(); };
+const handleLimitChange = (limit: number) => { pagination.value.limit = limit; pagination.value.page = 1; fetchOrganizations(); };
 
-// Сброс фильтров
-const clearFilters = () => {
-  filters.value = {
-    search: "",
-    isActive: "",
-  };
-  pagination.value.page = 1;
-  fetchOrganizations();
-};
-
-// Обработка изменения страницы
-const handlePageChange = (page: number) => {
-  pagination.value.page = page;
-  fetchOrganizations();
-};
-
-// Обработка изменения количества записей на странице
-const handleLimitChange = (limit: number) => {
-  pagination.value.limit = limit;
-  pagination.value.page = 1;
-  fetchOrganizations();
-};
-
-// Загрузка организаций
 const fetchOrganizations = async () => {
   loading.value = true;
   try {
     const params = new URLSearchParams();
-    params.append("page", pagination.value.page.toString());
-    params.append("limit", pagination.value.limit.toString());
+    params.append('page', pagination.value.page.toString());
+    params.append('limit', pagination.value.limit.toString());
+    if (filters.value.search) params.append('search', filters.value.search);
+    if (filters.value.isActive !== '') params.append('isActive', filters.value.isActive);
 
-    if (filters.value.search) {
-      params.append("search", filters.value.search);
-    }
-    if (filters.value.isActive !== "") {
-      params.append("isActive", filters.value.isActive);
-    }
-
-    const response = await authFetch<OrganizationsResponse>(
-      `/api/organizations?${params.toString()}`,
-      { method: "GET" }
-    );
-
+    const response = await authFetch<OrganizationsResponse>(`/api/organizations?${params.toString()}`, { method: 'GET' });
     if (response.success) {
       organizations.value = response.data;
       pagination.value.total = response.total;
       pagination.value.totalPages = response.totalPages;
       pagination.value.page = response.page || 1;
       pagination.value.limit = response.limit || 20;
-      
-      if (response.stats) {
-        globalStats.value = response.stats;
-      }
+      if (response.stats) globalStats.value = response.stats;
     }
   } catch (error) {
-    console.error("Ошибка загрузки организаций:", error);
-    notification.error("Не удалось загрузить список организаций", "Ошибка");
+    console.error('Ошибка загрузки организаций:', error);
+    notification.error('Не удалось загрузить список организаций', 'Ошибка');
   } finally {
     loading.value = false;
   }
 };
 
-// Открытие модального окна создания
-const openCreateModal = () => {
-  selectedOrganization.value = null;
-  isFormModalOpen.value = true;
-};
-
-// Открытие модального окна редактирования
-const openEditModal = (organization: Organization) => {
-  selectedOrganization.value = organization;
-  isFormModalOpen.value = true;
-};
-
-// Открытие модального окна редактирования из деталей
-const openEditModalFromDetail = () => {
-  isDetailModalOpen.value = false;
-  isFormModalOpen.value = true;
-};
-
-// Закрытие модального окна формы
-const closeFormModal = () => {
-  isFormModalOpen.value = false;
-  selectedOrganization.value = null;
-};
-
-// Открытие модального окна деталей
-const openDetailModal = (organization: Organization) => {
-  selectedOrganization.value = organization;
-  isDetailModalOpen.value = true;
-};
-
-// Закрытие модального окна деталей
-const closeDetailModal = () => {
-  isDetailModalOpen.value = false;
-  selectedOrganization.value = null;
-};
-
-// Открытие модального окна скачивания
-const openDownloadModal = (organization: Organization) => {
-  selectedOrganization.value = organization;
-  isDownloadModalOpen.value = true;
-};
-
-// Закрытие модального окна скачивания
-const closeDownloadModal = () => {
-  isDownloadModalOpen.value = false;
-  selectedOrganization.value = null;
-};
-
-// Открытие модального окна удаления
+const openCreateModal = () => { selectedOrganization.value = null; isFormModalOpen.value = true; };
+const openEditModal = (organization: Organization) => { selectedOrganization.value = organization; isFormModalOpen.value = true; };
+const openEditModalFromDetail = () => { isDetailModalOpen.value = false; isFormModalOpen.value = true; };
+const closeFormModal = () => { isFormModalOpen.value = false; selectedOrganization.value = null; };
+const openDetailModal = (organization: Organization) => { selectedOrganization.value = organization; isDetailModalOpen.value = true; };
+const closeDetailModal = () => { isDetailModalOpen.value = false; selectedOrganization.value = null; };
+const openDownloadModal = (organization: Organization) => { selectedOrganization.value = organization; isDownloadModalOpen.value = true; };
+const closeDownloadModal = () => { isDownloadModalOpen.value = false; selectedOrganization.value = null; };
 const openDeleteModal = (organizationId: string) => {
-  const organization = organizations.value.find((o) => o.id === organizationId);
-  if (organization) {
-    deleteOrganization.value = organization;
-    isDeleteModalOpen.value = true;
-  }
+  const organization = organizations.value.find(o => o.id === organizationId);
+  if (organization) { deleteOrganization.value = organization; isDeleteModalOpen.value = true; }
 };
-
-// Закрытие модального окна удаления
 const closeDeleteModal = () => {
-  if (!isDeleting.value) {
-    isDeleteModalOpen.value = false;
-    deleteOrganization.value = null;
-  }
+  if (!isDeleting.value) { isDeleteModalOpen.value = false; deleteOrganization.value = null; }
 };
 
-// Подтверждение удаления
 const confirmDelete = async () => {
   if (!deleteOrganization.value) return;
-
   isDeleting.value = true;
   try {
     const response = await authFetch<{ success: boolean; message?: string }>(
-      `/api/organizations/${deleteOrganization.value.id}`,
-      { method: "DELETE" }
+      `/api/organizations/${deleteOrganization.value.id}`, { method: 'DELETE' }
     );
-
     if (response.success) {
-      notification.success("Организация успешно удалена", "Успех");
+      notification.success('Организация успешно удалена', 'Успех');
       await fetchOrganizations();
       closeDeleteModal();
     }
   } catch (error: any) {
-    console.error("Ошибка удаления организации:", error);
-    const message =
-      error.data?.statusMessage || "Не удалось удалить организацию";
-    notification.error(message, "Ошибка");
+    const message = error.data?.statusMessage || 'Не удалось удалить организацию';
+    notification.error(message, 'Ошибка');
   } finally {
     isDeleting.value = false;
   }
 };
 
-// Обработка отправки формы
 const handleSubmit = async (data: Partial<Organization>) => {
   try {
     if (selectedOrganization.value) {
-      // Обновление
-      const response = await authFetch<{
-        success: boolean;
-        data: Organization;
-      }>(`/api/organizations/${selectedOrganization.value.id}`, {
-        method: "PUT",
-        body: data,
-      });
-
+      const response = await authFetch<{ success: boolean; data: Organization }>(
+        `/api/organizations/${selectedOrganization.value.id}`, { method: 'PUT', body: data }
+      );
       if (response.success) {
-        const index = organizations.value.findIndex(
-          (o) => o.id === selectedOrganization.value!.id
-        );
-        if (index !== -1) {
-          organizations.value[index] = response.data;
-        }
-        notification.success("Организация успешно обновлена", "Успех");
+        const index = organizations.value.findIndex(o => o.id === selectedOrganization.value!.id);
+        if (index !== -1) organizations.value[index] = response.data;
+        notification.success('Организация успешно обновлена', 'Успех');
         closeFormModal();
       }
     } else {
-      // Создание
-      const response = await authFetch<{
-        success: boolean;
-        data: Organization;
-      }>("/api/organizations", {
-        method: "POST",
-        body: data,
-      });
-
+      const response = await authFetch<{ success: boolean; data: Organization }>(
+        '/api/organizations', { method: 'POST', body: data }
+      );
       if (response.success) {
         await fetchOrganizations();
-        notification.success("Организация успешно создана", "Успех");
+        notification.success('Организация успешно создана', 'Успех');
         closeFormModal();
       }
     }
   } catch (error: any) {
-    console.error("Ошибка сохранения организации:", error);
-    const message =
-      error.data?.statusMessage || "Не удалось сохранить организацию";
-    notification.error(message, "Ошибка");
+    const message = error.data?.statusMessage || 'Не удалось сохранить организацию';
+    notification.error(message, 'Ошибка');
   }
 };
 
-// Загрузка данных при монтировании
-onMounted(() => {
-  fetchOrganizations();
-});
+onMounted(() => { fetchOrganizations(); });
 </script>

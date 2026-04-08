@@ -1,497 +1,298 @@
 <template>
-  <div class="flex flex-col gap-6">
-    <!-- Хлебные крошки и заголовок -->
-    <div
-      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div>
-        <div
-          class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2"
-        >
+  <div class="flex flex-col gap-6 max-w-7xl mx-auto w-full">
+    <!-- Breadcrumbs & Header -->
+    <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-2 text-sm font-medium text-slate-500 dark:text-slate-400">
           <NuxtLink
             to="/database/import-certificates"
-            class="hover:text-primary transition-colors"
+            class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5"
           >
+            <Database class="w-4 h-4" />
             База сертификатов
           </NuxtLink>
-          <svg
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-          <span class="text-black dark:text-white font-medium">AI Импорт</span>
+          <ChevronRight class="w-4 h-4 text-slate-300 dark:text-slate-600" />
+          <span class="text-slate-900 dark:text-white flex items-center gap-1.5 flex-nowrap">
+            <Bot class="w-4 h-4 text-purple-500" />
+            AI Импорт
+          </span>
         </div>
-        <h1 class="text-2xl font-semibold text-black dark:text-white">
-          Пакетный AI Импорт Сертификатов
-        </h1>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Массовое распознавание и импорт сертификатов с помощью искусственного
-          интеллекта
-        </p>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+            AI Импорт Сертификатов
+          </h1>
+          <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">
+            Пакетное распознавание и импорт с помощью искусственного интеллекта
+          </p>
+        </div>
       </div>
     </div>
 
-    <!-- Stats Card - Три счетчика в один ряд -->
+    <!-- Stats Card -->
     <ImportStats v-if="stats" :stats="stats" />
 
-    <!-- Wizard Progress Bar -->
-    <div
-      class="bg-white dark:bg-boxdark rounded-xl shadow-sm border border-stroke dark:border-strokedark p-6"
-    >
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Прогресс импорта
-        </h3>
-        <span class="text-xs text-gray-500 dark:text-gray-400">
-          Шаг {{ batchCurrentStep }} из {{ batchSteps.length }}
-        </span>
-      </div>
-
-      <!-- Progress Steps -->
-      <div class="relative">
-        <!-- Progress Line -->
-        <div
-          class="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700"
-        >
-          <div
-            class="h-full bg-linear-to-r from-primary to-success transition-all duration-500"
-            :style="{
-              width: `${((batchCurrentStep - 1) / (batchSteps.length - 1)) * 100}%`,
-            }"
-          ></div>
-        </div>
-
-        <!-- Steps -->
-        <div class="relative flex justify-between">
-          <div
-            v-for="step in batchSteps"
-            :key="step.number"
-            class="flex flex-col items-center z-10"
-            :style="{ width: `${100 / batchSteps.length}%` }"
-          >
-            <!-- Step Circle -->
-            <div
-              class="relative flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 bg-white dark:bg-boxdark"
-              :class="[
-                batchCurrentStep === step.number
-                  ? 'border-primary text-primary shadow-lg shadow-primary/30 scale-110'
-                  : batchCurrentStep > step.number
-                    ? 'border-success bg-success text-white'
-                    : 'border-gray-300 dark:border-gray-600 text-gray-400',
-              ]"
-            >
-              <svg
-                v-if="batchCurrentStep > step.number"
-                class="h-5 w-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span v-else class="text-sm font-semibold">{{
-                step.number
-              }}</span>
+    <!-- Main Bento Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+      
+      <!-- LEFT SIDEBAR: Wizard Progress (Bento Block) -->
+      <div class="xl:col-span-4 flex flex-col gap-6">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/60 dark:border-slate-800/60 shadow-xs">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="h-10 w-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <Route class="w-5 h-5" />
             </div>
-
-            <!-- Step Label -->
-            <div class="mt-2 text-center w-full">
-              <p
-                class="text-xs font-medium transition-colors truncate px-1"
-                :class="[
-                  batchCurrentStep >= step.number
-                    ? 'text-black dark:text-white'
-                    : 'text-gray-500 dark:text-gray-400',
-                ]"
-              >
-                {{ step.name }}
-              </p>
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white leading-tight">Прогресс</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Шаг {{ batchCurrentStep }} из {{ batchSteps.length }}</p>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Main Work Area -->
-    <div
-      class="bg-white dark:bg-boxdark rounded-xl shadow-md border border-stroke dark:border-strokedark overflow-hidden"
-    >
-      <!-- Step Content -->
-      <div class="p-6 lg:p-8">
-        <transition name="fade" mode="out-in">
-          <div :key="'batch-' + batchCurrentStep">
-            <!-- Batch Step 1: Upload -->
-            <div v-if="batchCurrentStep === 1" class="space-y-6">
-              <div class="flex items-center gap-3 mb-6">
+          <div class="relative pl-3 mt-4">
+            <!-- Vertical Line -->
+            <div class="absolute top-4 bottom-4 left-5 w-0.5 bg-slate-100 dark:bg-slate-800/80"></div>
+            <!-- Active Line -->
+            <div
+              class="absolute top-4 left-5 w-0.5 rounded-full bg-blue-500 transition-all duration-500 origin-top"
+              :style="{ height: `${((batchCurrentStep - 1) / (batchSteps.length - 1)) * 100}%` }"
+            ></div>
+
+            <div class="flex flex-col gap-6 relative">
+              <div v-for="step in batchSteps" :key="step.number" class="flex items-start gap-4">
                 <div
-                  class="h-12 w-12 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0"
+                  class="relative shrink-0 flex h-5 w-5 rounded-full border-2 transition-all duration-300 z-10 bg-white dark:bg-slate-900 mt-0.5"
+                  :class="[
+                    batchCurrentStep === step.number
+                      ? 'border-blue-500 ring-4 ring-blue-50 dark:ring-blue-900/20 shadow-sm shadow-blue-500/20'
+                      : batchCurrentStep > step.number
+                        ? 'border-blue-500 bg-blue-500'
+                        : 'border-slate-200 dark:border-slate-700'
+                  ]"
                 >
-                  <svg
-                    class="h-6 w-6 text-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                  </svg>
+                  <div v-if="batchCurrentStep > step.number" class="absolute inset-0 flex items-center justify-center">
+                    <Check class="w-3 h-3 text-white" stroke-width="3" />
+                  </div>
+                  <div v-if="batchCurrentStep === step.number" class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+                  </div>
                 </div>
                 <div>
-                  <h2 class="text-lg font-semibold text-black dark:text-white">
-                    Пакетная загрузка
-                  </h2>
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Загрузите до 20 файлов сертификатов (PDF, JPG, PNG)
+                  <h4
+                    class="text-sm font-semibold transition-colors"
+                    :class="[
+                      batchCurrentStep >= step.number
+                        ? 'text-slate-900 dark:text-white'
+                        : 'text-slate-400 dark:text-slate-500'
+                    ]"
+                  >
+                    {{ step.name }}
+                  </h4>
+                  <p v-if="step.description" class="text-xs mt-0.5" :class="[batchCurrentStep >= step.number ? 'text-slate-500 dark:text-slate-400' : 'text-slate-400/60 dark:text-slate-600']">
+                    {{ step.description }}
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-              <!-- Фильтр по организации -->
-              <div
-                class="rounded-xl border border-stroke dark:border-strokedark bg-gray-50 dark:bg-meta-4 p-4"
-              >
-                <div class="flex items-start gap-3">
-                  <div
-                    class="h-9 w-9 rounded-lg bg-warning/10 flex items-center justify-center shrink-0 mt-0.5"
-                  >
-                    <svg
-                      class="h-5 w-5 text-warning"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                      />
-                    </svg>
+        <ProcessingLogs
+          :logs="logs"
+          :current-page="logsPage"
+          :total-pages="totalPages"
+          @page-change="handlePageChange"
+          @refresh="loadLogs"
+        />
+      </div>
+
+      <!-- RIGHT SIDE: Main Work Area (Bento Block) -->
+      <div class="xl:col-span-8 flex flex-col">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/60 dark:border-slate-800/60 shadow-xs overflow-hidden flex flex-col flex-1 min-h-[500px]">
+          
+          <!-- Content Area -->
+          <div class="p-6 md:p-8 flex-1">
+            <transition name="fade-slide" mode="out-in">
+              <div :key="'batch-' + batchCurrentStep" class="h-full">
+                
+                <!-- Batch Step 1: Upload -->
+                <div v-if="batchCurrentStep === 1" class="space-y-6 h-full flex flex-col">
+                  <div class="flex items-start gap-4">
+                    <div class="h-12 w-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-800/30">
+                      <FileUp class="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <h2 class="text-xl font-bold text-slate-900 dark:text-white">Пакетная загрузка</h2>
+                      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Загрузите до 20 файлов сертификатов (PDF, JPG, PNG)</p>
+                    </div>
                   </div>
-                  <div class="flex-1">
-                    <label
-                      class="block text-sm font-semibold text-black dark:text-white mb-1"
-                    >
-                      Организация
-                      <span class="text-gray-400 font-normal ml-1"
-                        >(необязательно)</span
-                      >
-                    </label>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                      Укажите организацию, чтобы сузить радиус поиска и
-                      ускорить матчинг слушателей в несколько раз
-                    </p>
-                    <div class="relative">
-                      <select
-                        id="organization-select"
-                        v-model="selectedOrgId"
-                        class="w-full rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark px-4 py-2.5 text-sm text-black dark:text-white focus:border-primary focus:outline-none transition-colors appearance-none pr-10"
-                        :disabled="orgsLoading"
-                      >
-                        <option value="">
-                          {{orgsLoading ? 'Загрузка...' : '— Все организации (поиск по всей базе)'}}
-                        </option>
-                        <option
-                          v-for="org in organizations"
-                          :key="org.id"
-                          :value="org.id"
-                        >
-                          {{ org.name }}
-                          <template v-if="org.studentsCount > 0">
-                            ({{ org.studentsCount }} сл.)
-                          </template>
-                        </option>
-                      </select>
-                      <div
-                        class="pointer-events-none absolute inset-y-0 right-3 flex items-center"
-                      >
-                        <svg
-                          class="h-4 w-4 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
+
+                  <!-- Фильтр по организации -->
+                  <div class="rounded-2xl border border-slate-200/60 dark:border-slate-700/60 bg-slate-50/50 dark:bg-slate-800/20 p-5 mt-6">
+                    <div class="flex items-start gap-4">
+                      <div class="h-10 w-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-800/30">
+                        <Building2 class="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div class="flex-1">
+                        <label class="block text-sm font-semibold text-slate-900 dark:text-white mb-1">
+                          Сузить радиус поиска
+                        </label>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                          Укажите организацию для ускорения матчинга слушателей. Опционально.
+                        </p>
+                        <div class="relative group">
+                          <select
+                            id="organization-select"
+                            v-model="selectedOrgId"
+                            class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all appearance-none cursor-pointer outline-none hover:border-slate-300 dark:hover:border-slate-600 disabled:opacity-50"
+                            :disabled="orgsLoading"
+                          >
+                            <option value="">
+                              {{ orgsLoading ? 'Загрузка...' : '— Искать по всей базе слушателей' }}
+                            </option>
+                            <option v-for="org in organizations" :key="org.id" :value="org.id">
+                              {{ org.name }}
+                              <template v-if="org.studentsCount > 0"> ({{ org.studentsCount }} сл.)</template>
+                            </option>
+                          </select>
+                          <div class="pointer-events-none absolute inset-y-0 right-4 flex items-center">
+                            <ChevronDown class="h-4 w-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors" />
+                          </div>
+                        </div>
+                        <div v-if="selectedOrgId" class="mt-3 flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 rounded-lg border border-emerald-100 dark:border-emerald-800/30 w-fit">
+                          <Target class="h-3.5 w-3.5" />
+                          <span>Поиск сужен до {{ selectedOrg?.studentsCount ?? '?' }} слушателей</span>
+                        </div>
                       </div>
                     </div>
-                    <!-- Подсказка при выборе орг -->
-                    <div
-                      v-if="selectedOrgId"
-                      class="mt-2 flex items-center gap-1.5 text-xs text-success"
-                    >
-                      <svg
-                        class="h-3.5 w-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13 10V3L4 14h7v7l9-11h-7z"
-                        />
-                      </svg>
-                      <span
-                        >Поиск сужен до
-                        {{selectedOrg?.studentsCount ?? '?'}} слушателей —
-                        матчинг будет значительно быстрее</span
-                      >
+                  </div>
+
+                  <div class="flex-1">
+                    <BatchFileUploader :loading="isProcessing" @upload="handleBatchUpload" />
+                  </div>
+                </div>
+
+                <!-- Batch Step 2: Analysis -->
+                <div v-else-if="batchCurrentStep === 2" class="space-y-6 h-full flex flex-col justify-center items-center text-center py-12">
+                  <div class="relative w-24 h-24 flex items-center justify-center mb-6">
+                    <div class="absolute inset-0 rounded-full border-4 border-slate-100 dark:border-slate-800"></div>
+                    <div v-if="isProcessing" class="absolute inset-0 rounded-full border-4 border-purple-500 border-t-transparent animate-spin"></div>
+                    <div class="bg-purple-50 dark:bg-purple-900/20 rounded-full h-16 w-16 w-full h-full flex items-center justify-center relative z-10 m-3">
+                      <BrainCircuit class="h-8 w-8 text-purple-600 dark:text-purple-400" :class="{ 'animate-pulse': isProcessing }" />
                     </div>
+                  </div>
+                  
+                  <div class="max-w-md">
+                    <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">Анализ файлов</h2>
+                    <p class="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+                      {{ isProcessing ? 'Искусственный интеллект считывает данные из сертификатов и ищет совпадения в базе слушателей...' : 'Файлы успешно загружены. Запустите процесс интеллектуального распознавания.' }}
+                    </p>
+                    <button
+                      v-if="!isProcessing"
+                      @click="() => analyzeBatch(selectedOrgId || null)"
+                      class="inline-flex items-center gap-2 px-8 py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 font-semibold transition-all shadow-sm active:scale-[0.98]"
+                    >
+                      <Sparkles class="w-5 h-5" />
+                      Запустить распознавание
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Batch Step 3: Select & Review -->
+                <div v-else-if="batchCurrentStep === 3" class="space-y-6">
+                  <div class="flex items-start gap-4">
+                    <div class="h-12 w-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-800/30">
+                      <UserCheck class="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <div>
+                      <h2 class="text-xl font-bold text-slate-900 dark:text-white">Проверка и выбор</h2>
+                      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Подтвердите данные или выберите слушателей вручную</p>
+                    </div>
+                  </div>
+                  <BatchAnalysisResults
+                    :items="batchItems"
+                    :stats="batchStats"
+                    @toggle-item="toggleItemExpanded"
+                    @select-student="selectStudentForFile"
+                    @update-field="handleFieldUpdate"
+                  />
+                </div>
+
+                <!-- Batch Step 4: Confirm -->
+                <div v-else-if="batchCurrentStep === 4" class="space-y-6">
+                  <div class="flex items-start gap-4">
+                    <div class="h-12 w-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-800/30">
+                      <ShieldCheck class="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <h2 class="text-xl font-bold text-slate-900 dark:text-white">Подтверждение</h2>
+                      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Финальная проверка перед сохранением в базу</p>
+                    </div>
+                  </div>
+                  <BatchConfirmPanel
+                    :items="batchItems"
+                    :stats="batchStats"
+                    :loading="isProcessing"
+                    @confirm="handleBatchConfirm"
+                    @cancel="batchCurrentStep = 3"
+                  />
+                </div>
+
+                <!-- Batch Step 5: Done -->
+                <div v-else-if="batchCurrentStep === 5" class="py-20 text-center flex flex-col items-center">
+                  <div class="h-24 w-24 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-6 ring-8 ring-emerald-50 dark:ring-emerald-900/10">
+                    <CheckCircle2 class="h-12 w-12 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <h3 class="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Импорт завершен!</h3>
+                  <p class="mt-3 text-lg text-slate-500 dark:text-slate-400 max-w-md">
+                    Все готовые сертификаты были успешно обработаны и добавлены в базу данных.
+                  </p>
+                  <div class="mt-10 flex flex-col sm:flex-row justify-center gap-4 w-full max-w-sm">
+                    <button
+                      @click="resetBatch(); loadStats();"
+                      class="flex-1 inline-flex justify-center items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm active:scale-[0.98]"
+                    >
+                      <Plus class="w-4 h-4" />
+                      Новый импорт
+                    </button>
+                    <NuxtLink
+                      to="/database/certificates"
+                      class="flex-1 inline-flex justify-center items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-6 py-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-[0.98]"
+                    >
+                      <Database class="w-4 h-4" />
+                      В базу
+                    </NuxtLink>
                   </div>
                 </div>
               </div>
-
-              <BatchFileUploader
-                :loading="isProcessing"
-                @upload="handleBatchUpload"
-              />
-            </div>
-
-            <!-- Batch Step 2: Analysis -->
-            <div v-else-if="batchCurrentStep === 2" class="space-y-6">
-              <div class="flex items-center gap-3 mb-6">
-                <div
-                  class="h-12 w-12 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0"
-                  :class="{ 'animate-pulse': isProcessing }"
-                >
-                  <svg
-                    class="h-6 w-6 text-primary"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h2 class="text-lg font-semibold text-black dark:text-white">
-                    Анализ файлов
-                  </h2>
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Идёт пакетная обработка и распознавание сертификатов
-                  </p>
-                </div>
-              </div>
-              <div v-if="isProcessing" class="text-center py-12">
-                <div
-                  class="h-16 w-16 mx-auto mb-4 animate-spin rounded-full border-4 border-primary border-t-transparent"
-                ></div>
-                <h3 class="text-lg font-medium text-black dark:text-white">
-                  Обработка...
-                </h3>
-                <p class="text-gray-500">
-                  Пожалуйста, подождите, это может занять некоторое время.
-                </p>
-              </div>
-              <div v-else class="text-center py-8">
-                <!-- Fallback if analysis finishes but step doesn't change automatically (should typically not happen) -->
-                <button
-                  @click="() => analyzeBatch(selectedOrgId || null)"
-                  class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
-                >
-                  Запустить анализ
-                </button>
-              </div>
-            </div>
-
-            <!-- Batch Step 3: Select & Review -->
-            <div v-else-if="batchCurrentStep === 3" class="space-y-6">
-              <div class="flex items-center gap-3 mb-6">
-                <div
-                  class="h-12 w-12 rounded-lg bg-info/10 dark:bg-info/20 flex items-center justify-center shrink-0"
-                >
-                  <svg
-                    class="h-6 w-6 text-info"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h2 class="text-lg font-semibold text-black dark:text-white">
-                    Проверка и выбор
-                  </h2>
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Проверьте результаты и выберите слушателей для каждого файла
-                  </p>
-                </div>
-              </div>
-              <BatchAnalysisResults
-                :items="batchItems"
-                :stats="batchStats"
-                @toggle-item="toggleItemExpanded"
-                @select-student="selectStudentForFile"
-                @update-field="handleFieldUpdate"
-              />
-            </div>
-
-            <!-- Batch Step 4: Confirm -->
-            <div v-else-if="batchCurrentStep === 4" class="space-y-6">
-              <div class="flex items-center gap-3 mb-6">
-                <div
-                  class="h-12 w-12 rounded-lg bg-success/10 dark:bg-success/20 flex items-center justify-center shrink-0"
-                >
-                  <svg
-                    class="h-6 w-6 text-success"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <h2 class="text-lg font-semibold text-black dark:text-white">
-                    Пакетное подтверждение
-                  </h2>
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    Финальная проверка перед сохранением в базу
-                  </p>
-                </div>
-              </div>
-              <BatchConfirmPanel
-                :items="batchItems"
-                :stats="batchStats"
-                :loading="isProcessing"
-                @confirm="handleBatchConfirm"
-                @cancel="batchCurrentStep = 3"
-              />
-            </div>
-
-            <!-- Batch Step 5: Done (Summary) -->
-            <div v-else-if="batchCurrentStep === 5" class="py-12 text-center">
-              <div
-                class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-success/10"
-              >
-                <svg
-                  class="h-10 w-10 text-success"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-              <h3 class="mt-4 text-2xl font-bold text-gray-900 dark:text-white">
-                Импорт завершен!
-              </h3>
-              <p class="mt-2 text-gray-600 dark:text-gray-400">
-                Все готовые сертификаты были успешно добавлены в базу данных.
-              </p>
-              <div class="mt-8 flex justify-center gap-4">
-                <button
-                  @click="
-                    resetBatch();
-                    loadStats();
-                  "
-                  class="rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white hover:bg-primary/90 shadow-lg hover:shadow-xl transition-all"
-                >
-                  Загрузить ещё
-                </button>
-                <NuxtLink
-                  to="/certificates"
-                  class="rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Перейти в базу
-                </NuxtLink>
-              </div>
-            </div>
+            </transition>
           </div>
-        </transition>
-      </div>
 
-      <!-- Actions Footer -->
-      <div
-        class="flex flex-col sm:flex-row justify-between items-center gap-3 px-6 lg:px-8 py-4 bg-gray-50 dark:bg-meta-4 border-t border-stroke dark:border-strokedark"
-      >
-        <button
-          v-if="batchCurrentStep > 1 && batchCurrentStep < 5"
-          @click="prevBatchStep"
-          class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 bg-white dark:bg-boxdark hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
-          :disabled="isProcessing"
-        >
-          ← Назад
-        </button>
-        <div v-else></div>
-
-        <button
-          v-if="batchCurrentStep === 3"
-          @click="nextBatchStep"
-          class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-600 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          :disabled="!canConfirmBatch"
-        >
-          Далее к подтверждению
-          <svg
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          <!-- Actions Footer (only for interactive steps) -->
+          <div
+            v-if="batchCurrentStep > 1 && batchCurrentStep < 5"
+            class="px-6 md:px-8 py-5 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between gap-4 mt-auto"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
+            <button
+              @click="prevBatchStep"
+              class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 transition-all active:scale-[0.98]"
+              :disabled="isProcessing"
+            >
+              <ArrowLeft class="w-4 h-4" />
+              Назад
+            </button>
+
+            <button
+              v-if="batchCurrentStep === 3"
+              @click="nextBatchStep"
+              class="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl hover:bg-slate-800 dark:hover:bg-slate-100 font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm active:scale-[0.98]"
+              :disabled="!canConfirmBatch"
+            >
+              Подтверждение
+              <ArrowRight class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-
-    <!-- Processing Logs -->
-    <ProcessingLogs
-      :logs="logs"
-      :current-page="logsPage"
-      :total-pages="totalPages"
-      @page-change="handlePageChange"
-      @refresh="loadLogs"
-    />
   </div>
 </template>
 
@@ -509,6 +310,27 @@ import ProcessingLogs from "~/components/database/ai-import/ProcessingLogs.vue";
 import BatchFileUploader from "~/components/certificates/BatchFileUploader.vue";
 import BatchAnalysisResults from "~/components/certificates/BatchAnalysisResults.vue";
 import BatchConfirmPanel from "~/components/certificates/BatchConfirmPanel.vue";
+
+// Lucide Icons
+import {
+  ChevronRight,
+  Database,
+  Bot,
+  Route,
+  Check,
+  FileUp,
+  Building2,
+  ChevronDown,
+  Target,
+  BrainCircuit,
+  Sparkles,
+  UserCheck,
+  ShieldCheck,
+  CheckCircle2,
+  Plus,
+  ArrowLeft,
+  ArrowRight
+} from "lucide-vue-next";
 
 definePageMeta({
   layout: "default",
@@ -539,11 +361,11 @@ const {
 
 // Steps definitions
 const batchSteps = [
-  { number: 1, name: "Загрузка" },
-  { number: 2, name: "Анализ" },
-  { number: 3, name: "Выбор" },
-  { number: 4, name: "Подтверждение" },
-  { number: 5, name: "Финиш" },
+  { number: 1, name: "Пакетная загрузка", description: "Файлы сертификатов" },
+  { number: 2, name: "Распознавание", description: "Извлечение AI" },
+  { number: 3, name: "Сопоставление", description: "Матчинг слушателей" },
+  { number: 4, name: "Подтверждение", description: "Финальная проверка" },
+  { number: 5, name: "Завершение", description: "Сохранение в базу" },
 ];
 
 const stats = ref<AIImportStats | null>(null);
@@ -659,21 +481,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Fade transition for step changes */
-.fade-enter-active,
-.fade-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+/* Fade + slide transition for step changes */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.fade-enter-from {
+.fade-slide-enter-from {
   opacity: 0;
-  transform: translateX(10px);
+  transform: translateY(8px);
 }
 
-.fade-leave-to {
+.fade-slide-leave-to {
   opacity: 0;
-  transform: translateX(-10px);
+  transform: translateY(-8px);
 }
 </style>
+

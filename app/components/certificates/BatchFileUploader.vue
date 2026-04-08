@@ -1,91 +1,56 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 h-full flex flex-col items-center justify-center">
     <!-- Drag & Drop Zone -->
     <div
       @drop.prevent="handleDrop"
       @dragover.prevent="isDragging = true"
       @dragleave.prevent="isDragging = false"
       :class="[
-        'relative border-2 border-dashed rounded-xl transition-all duration-300',
+        'w-full max-w-2xl relative border-2 border-dashed rounded-3xl transition-all duration-300 bg-slate-50/50 dark:bg-slate-900/50',
         isDragging
-          ? 'border-primary bg-primary/5 dark:bg-primary/10 scale-[1.02]'
-          : 'border-gray-300 dark:border-gray-600 hover:border-primary/50 dark:hover:border-primary/50',
+          ? 'border-blue-500 bg-blue-50/80 dark:bg-blue-900/20 scale-[1.02] shadow-xl shadow-blue-500/10'
+          : 'border-slate-300 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800/80',
         loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
       ]"
       @click="triggerFileInput"
     >
-      <div class="p-8 lg:p-12 text-center">
+      <div class="p-10 lg:p-16 text-center">
         <!-- Upload Icon -->
-        <div class="flex justify-center mb-4">
+        <div class="flex justify-center mb-6">
           <div
             :class="[
-              'h-16 w-16 rounded-full flex items-center justify-center transition-all duration-300',
+              'h-20 w-20 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-sm',
               isDragging
-                ? 'bg-primary text-white scale-110'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-400',
+                ? 'bg-blue-600 text-white scale-110 shadow-blue-600/30'
+                : 'bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 group-hover:scale-105',
             ]"
           >
-            <svg
-              class="h-8 w-8"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              />
-            </svg>
+            <UploadCloud v-if="!isDragging" class="h-10 w-10 text-blue-500" />
+            <DownloadCloud v-else class="h-10 w-10 text-white" />
           </div>
         </div>
 
         <!-- Text -->
-        <h3 class="text-lg font-semibold text-black dark:text-white mb-2">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">
           {{ isDragging ? 'Отпустите файлы здесь' : 'Загрузите сертификаты' }}
         </h3>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Перетащите файлы или нажмите для выбора
+        <p class="text-base text-slate-500 dark:text-slate-400 mb-6">
+          Перетащите файлы с устройства или нажмите для выбора
         </p>
 
         <!-- Info Badges -->
-        <div class="flex flex-wrap items-center justify-center gap-2">
-          <span
-            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-          >
-            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            Максимум 20 файлов
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 text-blue-700 dark:text-blue-400">
+            <Files class="w-4 h-4" />
+            До 20 файлов
           </span>
-          <span
-            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-          >
-            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
-                clip-rule="evenodd"
-              />
-            </svg>
+          <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/30 text-purple-700 dark:text-purple-400">
+            <Image class="w-4 h-4" />
             JPG, PNG, PDF
           </span>
-          <span
-            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-          >
-            <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            До 10 МБ каждый
+          <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 text-emerald-700 dark:text-emerald-400">
+            <HardDrive class="w-4 h-4" />
+            До 10 МБ/файл
           </span>
         </div>
 
@@ -103,15 +68,11 @@
       <!-- Loading Overlay -->
       <div
         v-if="loading"
-        class="absolute inset-0 bg-white/80 dark:bg-boxdark/80 backdrop-blur-sm rounded-xl flex items-center justify-center"
+        class="absolute inset-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl flex items-center justify-center"
       >
         <div class="text-center">
-          <div
-            class="h-12 w-12 mx-auto mb-3 animate-spin rounded-full border-4 border-primary border-t-transparent"
-          ></div>
-          <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Загрузка файлов...
-          </p>
+          <div class="h-12 w-12 mx-auto mb-3 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+          <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">Загрузка файлов...</p>
         </div>
       </div>
     </div>
@@ -119,45 +80,36 @@
     <!-- Files Preview Grid -->
     <div v-if="selectedFiles.length > 0" class="space-y-4">
       <div class="flex items-center justify-between">
-        <h4 class="text-sm font-semibold text-black dark:text-white">
-          Выбрано файлов: {{ selectedFiles.length }}
+        <h4 class="text-sm font-bold text-slate-800 dark:text-white">
+          Выбрано файлов: <span class="text-blue-600 dark:text-blue-400">{{ selectedFiles.length }}</span>
         </h4>
         <button
           @click="clearAll"
           :disabled="loading"
-          class="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="text-sm text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Очистить всё
         </button>
       </div>
 
       <!-- Grid Layout -->
-      <div
-        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
-      >
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
         <div
           v-for="(file, index) in selectedFiles"
           :key="index"
-          class="group relative bg-white dark:bg-boxdark rounded-lg border border-stroke dark:border-strokedark overflow-hidden hover:shadow-lg transition-all duration-300"
+          class="group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-slate-900/50 transition-all duration-300"
         >
           <!-- Preview Image -->
-          <div class="aspect-square bg-gray-100 dark:bg-gray-800 relative">
+          <div class="aspect-square bg-slate-100 dark:bg-slate-700 relative">
             <img
               v-if="file.preview"
               :src="file.preview"
               :alt="file.file.name"
               class="w-full h-full object-cover"
             />
-            <div
-              v-else
-              class="w-full h-full flex items-center justify-center text-gray-400"
-            >
+            <div v-else class="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-600">
               <svg class="h-12 w-12" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fill-rule="evenodd"
-                  d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
-                  clip-rule="evenodd"
-                />
+                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
               </svg>
             </div>
 
@@ -168,22 +120,13 @@
               class="absolute top-2 right-2 h-7 w-7 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
 
             <!-- File Size Badge -->
-            <div
-              class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm"
-            >
-              <span class="text-xs font-medium text-white">
-                {{ formatFileSize(file.file.size) }}
-              </span>
+            <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded-lg bg-black/60 backdrop-blur-sm">
+              <span class="text-xs font-medium text-white">{{ formatFileSize(file.file.size) }}</span>
             </div>
 
             <!-- Validation Error -->
@@ -191,18 +134,13 @@
               v-if="file.error"
               class="absolute inset-0 bg-red-500/90 backdrop-blur-sm flex items-center justify-center p-2"
             >
-              <p class="text-xs text-white text-center font-medium">
-                {{ file.error }}
-              </p>
+              <p class="text-xs text-white text-center font-semibold">{{ file.error }}</p>
             </div>
           </div>
 
           <!-- File Name -->
           <div class="p-2">
-            <p
-              class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate"
-              :title="file.file.name"
-            >
+            <p class="text-xs font-medium text-slate-600 dark:text-slate-300 truncate" :title="file.file.name">
               {{ file.file.name }}
             </p>
           </div>
@@ -214,26 +152,13 @@
         <button
           @click="uploadFiles"
           :disabled="loading || !hasValidFiles"
-          class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          class="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-blue-500/20 hover:shadow-md"
         >
-          <svg
-            v-if="!loading"
-            class="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
+          <svg v-if="!loading" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          <div
-            v-else
-            class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"
-          ></div>
+          <div v-else class="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
           {{ loading ? 'Загрузка...' : `Загрузить (${validFilesCount})` }}
         </button>
       </div>
@@ -243,6 +168,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { UploadCloud, DownloadCloud, Files, Image, HardDrive } from 'lucide-vue-next'
 
 const props = defineProps({
   loading: {

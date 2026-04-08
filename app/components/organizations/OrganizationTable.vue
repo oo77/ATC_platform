@@ -1,289 +1,158 @@
 <template>
   <div class="overflow-x-auto">
-    <!-- Таблица -->
-    <table class="w-full table-auto">
+    <table class="w-full text-left border-collapse">
       <thead>
-        <tr class="bg-gray-50 dark:bg-meta-4 text-left">
-          <th class="py-4 px-4 font-medium text-black dark:text-white">
-            Название
-          </th>
-          <th class="py-4 px-4 font-medium text-black dark:text-white">Код</th>
-          <th
-            class="py-4 px-4 font-medium text-black dark:text-white text-center"
-          >
-            Слушатели
-          </th>
-          <th class="py-4 px-4 font-medium text-black dark:text-white">
-            Контакты
-          </th>
-          <th
-            class="py-4 px-4 font-medium text-black dark:text-white text-center"
-          >
-            Статус
-          </th>
-          <th
-            class="py-4 px-4 font-medium text-black dark:text-white text-center"
-          >
-            Сертификаты
-          </th>
-          <th
-            class="py-4 px-4 font-medium text-black dark:text-white text-center"
-          >
-            Действия
-          </th>
+        <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Организация</th>
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Код</th>
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Слушатели</th>
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Контакты</th>
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Статус</th>
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Сертификаты</th>
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Действия</th>
         </tr>
       </thead>
-      <tbody>
-        <!-- Загрузка -->
+      <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+        <!-- Loading -->
         <tr v-if="loading">
-          <td colspan="6" class="py-10 text-center">
-            <div class="flex items-center justify-center gap-2">
-              <svg
-                class="animate-spin h-5 w-5 text-primary"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <span class="text-gray-500 dark:text-gray-400">Загрузка...</span>
+          <td colspan="7" class="px-6 py-12 text-center">
+            <div class="flex flex-col items-center gap-3">
+              <div class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+              <p class="font-bold text-slate-500 dark:text-slate-400">Загрузка организаций...</p>
             </div>
           </td>
         </tr>
 
-        <!-- Пустой список -->
+        <!-- Empty State -->
         <tr v-else-if="organizations.length === 0">
-          <td colspan="6" class="py-10 text-center">
+          <td colspan="7" class="px-6 py-16 text-center">
             <div class="flex flex-col items-center gap-3">
-              <div
-                class="h-16 w-16 rounded-full bg-gray-100 dark:bg-meta-4 flex items-center justify-center"
-              >
-                <svg
-                  class="w-8 h-8 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
+              <div class="h-16 w-16 rounded-full bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center">
+                <Building2 class="w-8 h-8 text-slate-300" />
               </div>
-              <p class="text-gray-500 dark:text-gray-400">
-                Организации не найдены
+              <p class="text-lg font-bold text-slate-900 dark:text-white">Организации не найдены</p>
+              <p class="text-sm text-slate-500 font-medium">Создайте первую организацию или измените параметры фильтра</p>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Data Rows -->
+        <tr
+          v-else
+          v-for="org in organizations"
+          :key="org.id"
+          class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+          @click="emit('view', org)"
+        >
+          <!-- Название -->
+          <td class="px-6 py-4">
+            <div>
+              <p class="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
+                {{ org.name }}
+              </p>
+              <p v-if="org.shortName" class="text-xs font-medium text-slate-400 mt-0.5">
+                {{ org.shortName }}
               </p>
             </div>
           </td>
-        </tr>
-
-        <!-- Данные -->
-        <tr
-          v-else
-          v-for="organization in organizations"
-          :key="organization.id"
-          class="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors cursor-pointer"
-          @click="emit('view', organization)"
-        >
-          <td class="py-4 px-4">
-            <span class="font-medium text-black dark:text-white">
-              {{ organization.name }}
-            </span>
-          </td>
 
           <!-- Код -->
-          <td class="py-4 px-4">
-            <span
-              class="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800 dark:bg-meta-4 dark:text-gray-300"
-            >
-              {{ organization.code }}
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 font-mono">
+              {{ org.code }}
             </span>
           </td>
 
-          <!-- Количество слушателей -->
-          <td class="py-4 px-4 text-center">
+          <!-- Слушатели -->
+          <td class="px-6 py-4 text-center">
             <span
-              class="inline-flex items-center justify-center min-w-10 px-2 py-1 rounded-full text-sm font-semibold"
-              :class="
-                organization.studentsCount > 0
-                  ? 'bg-primary/10 text-primary'
-                  : 'bg-gray-100 text-gray-500 dark:bg-meta-4 dark:text-gray-400'
-              "
+              class="inline-flex items-center justify-center min-w-10 px-2.5 py-1 rounded-lg text-sm font-bold"
+              :class="org.studentsCount > 0
+                ? 'bg-primary/10 text-primary'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-400'"
             >
-              {{ organization.studentsCount }}
+              {{ org.studentsCount }}
             </span>
           </td>
 
           <!-- Контакты -->
-          <td class="py-4 px-4">
+          <td class="px-6 py-4">
             <div class="flex flex-col gap-1 text-sm">
-              <div
-                v-if="organization.contactPhone"
-                class="flex items-center gap-2 text-gray-600 dark:text-gray-400"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                  />
-                </svg>
-                {{ organization.contactPhone }}
+              <div v-if="org.contactPhone" class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                <Phone class="w-3.5 h-3.5 shrink-0" />
+                <span class="font-medium">{{ org.contactPhone }}</span>
               </div>
-              <div
-                v-if="organization.contactEmail"
-                class="flex items-center gap-2 text-gray-600 dark:text-gray-400"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-                {{ organization.contactEmail }}
+              <div v-if="org.contactEmail" class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                <Mail class="w-3.5 h-3.5 shrink-0" />
+                <span class="font-medium truncate max-w-[160px]">{{ org.contactEmail }}</span>
               </div>
-              <span
-                v-if="!organization.contactPhone && !organization.contactEmail"
-                class="text-gray-400 dark:text-gray-500"
-              >
+              <span v-if="!org.contactPhone && !org.contactEmail" class="text-slate-300 dark:text-slate-600 text-xs italic">
                 Не указаны
               </span>
             </div>
           </td>
 
           <!-- Статус -->
-          <td class="py-4 px-4 text-center">
+          <td class="px-6 py-4 text-center">
             <span
-              class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
-              :class="
-                organization.isActive
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-              "
+              class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-black uppercase tracking-widest border"
+              :class="org.isActive
+                ? 'bg-success/5 text-success border-success/20'
+                : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'"
             >
-              {{ organization.isActive ? "Активна" : "Неактивна" }}
+              <span class="w-1.5 h-1.5 rounded-full" :class="org.isActive ? 'bg-success' : 'bg-slate-400'"></span>
+              {{ org.isActive ? 'Активна' : 'Неактивна' }}
             </span>
           </td>
 
-          <!-- Статистика сертификатов -->
-          <td class="py-4 px-4">
-            <div class="flex flex-col gap-2 min-w-[150px]">
-              <div class="flex items-center justify-between text-xs font-medium">
-                <span class="text-gray-500 dark:text-gray-400">Выдано:</span>
-                <span class="text-black dark:text-white font-bold">{{ organization.issuedCertificates || 0 }} / {{ organization.totalCertificates || 0 }}</span>
+          <!-- Сертификаты -->
+          <td class="px-6 py-4">
+            <div class="flex flex-col gap-2 min-w-[140px]">
+              <div class="flex items-center justify-between text-xs font-bold">
+                <span class="text-slate-400">Выдано</span>
+                <span class="text-slate-900 dark:text-white">
+                  {{ org.issuedCertificates || 0 }} / {{ org.totalCertificates || 0 }}
+                </span>
               </div>
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                <div 
-                  class="h-full bg-primary transition-all duration-500"
-                  :style="{ width: `${getPercent(organization)}%` }"
+              <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                <div
+                  class="h-full bg-primary transition-all duration-500 rounded-full"
+                  :style="{ width: `${getPercent(org)}%` }"
                 ></div>
               </div>
-              <div v-if="organization.latestCertificateDate" class="text-[10px] text-gray-400 dark:text-gray-500 text-right italic">
-                {{ formatDate(organization.latestCertificateDate) }}
+              <div v-if="org.latestCertificateDate" class="text-[10px] text-slate-400 text-right">
+                {{ formatDate(org.latestCertificateDate) }}
               </div>
             </div>
           </td>
 
           <!-- Действия -->
-          <td class="py-4 px-4" @click.stop>
-            <div class="flex items-center justify-center gap-2">
-              <!-- Редактировать -->
+          <td class="px-6 py-4" @click.stop>
+            <div class="flex items-center justify-center gap-1">
               <button
-                @click="emit('edit', organization)"
-                class="p-2 rounded-lg text-gray-500 hover:text-primary hover:bg-primary/10 transition-all"
+                @click="emit('edit', org)"
+                class="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors"
                 title="Редактировать"
               >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
+                <Pencil class="w-4 h-4" />
               </button>
-
-              <!-- Скачать сертификаты -->
               <button
-                @click="emit('download', organization)"
-                class="p-2 rounded-lg text-gray-500 hover:text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30 transition-all"
+                @click="emit('download', org)"
+                class="p-2 rounded-lg text-slate-400 hover:text-success hover:bg-success/10 transition-colors"
                 title="Скачать сертификаты (ZIP)"
               >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                  />
-                </svg>
+                <Download class="w-4 h-4" />
               </button>
-
-              <!-- Удалить -->
               <button
-                @click="emit('delete', organization.id)"
-                class="p-2 rounded-lg text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
-                :class="{
-                  'opacity-50 cursor-not-allowed':
-                    organization.studentsCount > 0,
-                }"
-                :disabled="organization.studentsCount > 0"
-                :title="
-                  organization.studentsCount > 0
-                    ? 'Нельзя удалить: есть слушатели'
-                    : 'Удалить'
-                "
+                @click="emit('delete', org.id)"
+                class="p-2 rounded-lg transition-colors"
+                :class="org.studentsCount > 0
+                  ? 'text-slate-200 dark:text-slate-700 cursor-not-allowed'
+                  : 'text-slate-400 hover:text-danger hover:bg-danger/10'"
+                :disabled="org.studentsCount > 0"
+                :title="org.studentsCount > 0 ? 'Нельзя удалить: есть слушатели' : 'Удалить'"
               >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
+                <Trash2 class="w-4 h-4" />
               </button>
             </div>
           </td>
@@ -294,13 +163,16 @@
 </template>
 
 <script setup lang="ts">
+import { Building2, Phone, Mail, Pencil, Download, Trash2 } from 'lucide-vue-next';
+
 interface Organization {
   id: string;
   code: string;
   name: string;
-  nameUz: string | null;
-  nameEn: string | null;
-  nameRu: string | null;
+  shortName?: string | null;
+  nameUz?: string | null;
+  nameEn?: string | null;
+  nameRu?: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
   address: string | null;
@@ -309,7 +181,6 @@ interface Organization {
   studentsCount: number;
   createdAt: Date | string;
   updatedAt: Date | string;
-  // Статистика сертификатов
   totalCertificates?: number;
   issuedCertificates?: number;
   revokedCertificates?: number;
@@ -322,23 +193,19 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "edit", organization: Organization): void;
-  (e: "delete", id: string): void;
-  (e: "view", organization: Organization): void;
-  (e: "download", organization: Organization): void;
+  (e: 'edit', organization: Organization): void;
+  (e: 'delete', id: string): void;
+  (e: 'view', organization: Organization): void;
+  (e: 'download', organization: Organization): void;
 }>();
 
 const getPercent = (org: Organization) => {
   if (!org.totalCertificates || org.totalCertificates === 0) return 0;
-  return Math.round((org.issuedCertificates || 0) / org.totalCertificates * 100);
+  return Math.round(((org.issuedCertificates || 0) / org.totalCertificates) * 100);
 };
 
 const formatDate = (date: string | Date | null): string => {
-  if (!date) return "—";
-  return new Date(date).toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  if (!date) return '—';
+  return new Date(date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 </script>

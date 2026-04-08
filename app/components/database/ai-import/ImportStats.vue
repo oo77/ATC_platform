@@ -1,131 +1,69 @@
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <!-- Обработано -->
-    <div
-      class="bg-white dark:bg-boxdark p-6 rounded-xl shadow-sm border border-stroke dark:border-strokedark"
-    >
-      <div class="flex items-center">
-        <div
-          class="bg-primary/10 dark:bg-primary/20 p-3 rounded-lg text-primary mr-4"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-        </div>
-        <div>
-          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Всего обработано
-          </p>
-          <h3 class="text-2xl font-bold text-black dark:text-white">
-            {{ stats.totalProcessed || 0 }}
-          </h3>
-        </div>
-      </div>
-      <div class="mt-4 flex items-center text-sm">
-        <span class="text-success font-medium flex items-center mr-2">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-4 w-4 mr-1"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clip-rule="evenodd"
-            />
-          </svg>
-          {{ successRate }}%
-        </span>
-        <span class="text-gray-400 dark:text-gray-500">успешно</span>
+  <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-xs border border-slate-200/60 dark:border-slate-800/60 p-6 md:p-8">
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <Activity class="w-5 h-5 text-blue-500" />
+          Показатели эффективности
+        </h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Аналитика работы AI моделей</p>
       </div>
     </div>
 
-    <!-- Точность AI -->
-    <div
-      class="bg-white dark:bg-boxdark p-6 rounded-xl shadow-sm border border-stroke dark:border-strokedark"
-    >
-      <div class="flex items-center">
-        <div
-          class="bg-success/10 dark:bg-success/20 p-3 rounded-lg text-success mr-4"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- Обработано -->
+      <div class="bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl p-6 border border-slate-100 dark:border-slate-800/50 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-6">
+          <div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800/30 text-blue-600 dark:text-blue-400">
+            <Files class="w-5 h-5" />
+          </div>
+          <span class="text-xs font-semibold px-2.5 py-1 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border border-green-100 dark:border-green-800/30 rounded-full flex items-center gap-1.5">
+            <CheckCircle2 class="w-3.5 h-3.5" />
+            {{ successRate }}% успешно
+          </span>
         </div>
         <div>
-          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Средняя уверенность AI
-          </p>
-          <h3 class="text-2xl font-bold text-black dark:text-white">
-            {{ averageConfidence }}%
-          </h3>
+          <h3 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{{ stats.totalProcessed || 0 }}</h3>
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Всего обработано</p>
         </div>
       </div>
-      <div class="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-        <div
-          class="bg-success h-1.5 rounded-full transition-all duration-300"
-          :style="{ width: `${averageConfidence}%` }"
-        ></div>
-      </div>
-    </div>
 
-    <!-- Расходы -->
-    <div
-      class="bg-white dark:bg-boxdark p-6 rounded-xl shadow-sm border border-stroke dark:border-strokedark"
-    >
-      <div class="flex items-center">
-        <div
-          class="bg-warning/10 dark:bg-warning/20 p-3 rounded-lg text-warning mr-4"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+      <!-- Точность AI -->
+      <div class="bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl p-6 border border-slate-100 dark:border-slate-800/50 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-6">
+          <div class="bg-purple-50 dark:bg-purple-900/20 p-3 rounded-xl border border-purple-100 dark:border-purple-800/30 text-purple-600 dark:text-purple-400">
+            <BrainCircuit class="w-5 h-5" />
+          </div>
         </div>
         <div>
-          <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-            Общие расходы
-          </p>
-          <h3 class="text-2xl font-bold text-black dark:text-white">
-            ${{ totalCost }}
-          </h3>
+          <div class="flex items-baseline gap-2">
+            <h3 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{{ averageConfidence }}%</h3>
+            <span class="text-sm font-medium text-slate-500 dark:text-slate-400">уверенность</span>
+          </div>
+          <div class="mt-4 w-full bg-slate-200 dark:bg-slate-700/50 rounded-full h-2 overflow-hidden ring-1 ring-inset ring-slate-900/5 dark:ring-white/5">
+            <div
+              class="h-full rounded-full transition-all duration-500"
+              :class="confidenceColorClass"
+              :style="{ width: `${averageConfidence}%` }"
+            ></div>
+          </div>
         </div>
       </div>
-      <div class="mt-4 text-xs text-gray-500 dark:text-gray-400">
-        Средняя стоимость: ${{ averageCost }} / шт.
+
+      <!-- Расходы -->
+      <div class="bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl p-6 border border-slate-100 dark:border-slate-800/50 flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-6">
+          <div class="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800/30 text-emerald-600 dark:text-emerald-400">
+            <Banknote class="w-5 h-5" />
+          </div>
+          <span class="text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg">
+            ~${{ averageCost }} / шт.
+          </span>
+        </div>
+        <div>
+          <h3 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight">${{ totalCost }}</h3>
+          <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">Ориентировочные затраты</p>
+        </div>
       </div>
     </div>
   </div>
@@ -134,6 +72,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { AIImportStats } from "~/../server/types/aiCertificateImport";
+import { Activity, Files, CheckCircle2, BrainCircuit, Banknote } from "lucide-vue-next";
 
 const props = defineProps<{
   stats: AIImportStats;
@@ -149,6 +88,12 @@ const averageConfidence = computed(() => {
   return props.stats.averageConfidence
     ? Math.round(props.stats.averageConfidence * 100)
     : 0;
+});
+
+const confidenceColorClass = computed(() => {
+  if (averageConfidence.value >= 90) return "bg-green-500";
+  if (averageConfidence.value >= 70) return "bg-yellow-500";
+  return "bg-red-500";
 });
 
 const totalCost = computed(() => {

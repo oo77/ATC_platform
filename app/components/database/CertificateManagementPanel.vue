@@ -1,644 +1,378 @@
 <template>
   <div class="flex flex-col gap-6">
-    <!-- Заголовок и статистика -->
-    <div
-      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div>
-        <h3 class="text-xl font-semibold text-black dark:text-white">
+    <!-- Action Bar -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div class="space-y-1">
+        <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
           База сертификатов
-        </h3>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Всего сертификатов: {{ stats.total }}
+        </h2>
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Всего в базе: {{ stats.total }}
           <span v-if="hasActiveFilters" class="text-primary">
-            (отфильтровано: {{ pagination.total }})
+            · найдено: {{ pagination.total }}
           </span>
         </p>
       </div>
 
-      <!-- Кнопки действий -->
-      <div class="flex flex-wrap items-center gap-3">
-        <UiButton variant="primary" size="sm" @click="openManualFormModal">
-          <svg
-            class="mr-2 h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
+      <div class="flex flex-wrap items-center gap-2">
+        <UiButton variant="primary" size="sm" class="h-10 px-4 gap-2 font-bold shadow-sm" @click="openManualFormModal">
+          <Plus class="w-4 h-4" />
           Добавить вручную
         </UiButton>
         <NuxtLink
           to="/database/import-certificates"
-          class="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+          class="inline-flex items-center gap-2 h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 text-sm font-bold text-slate-700 dark:text-slate-300 transition-all hover:shadow-sm hover:border-slate-300 dark:hover:border-slate-600"
         >
-          <svg
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-            />
-          </svg>
-          Импорт из Excel
+          <FileSpreadsheet class="h-4 w-4" />
+          Импорт Excel
         </NuxtLink>
         <button
           @click="navigateTo('/admin/database/ai-import-certificates')"
-          class="inline-flex items-center gap-2 rounded-lg bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
+          class="inline-flex items-center gap-2 h-10 rounded-xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 px-4 text-sm font-bold text-violet-700 dark:text-violet-400 transition-all hover:bg-violet-100 dark:hover:bg-violet-500/20"
         >
-          <svg
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-            />
-          </svg>
+          <Zap class="h-4 w-4" />
           AI Импорт
         </button>
         <UiButton
-          variant="secondary"
+          variant="outline"
           size="sm"
+          class="h-10 px-4 gap-2 font-bold"
           @click="openExportModal"
           :disabled="loading || !data.length"
         >
-          <svg
-            class="mr-2 h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+          <Download class="w-4 h-4" />
           Экспорт
         </UiButton>
       </div>
     </div>
 
-    <!-- Статистические карточки -->
+    <!-- Bento Box Metrics -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div
-        class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm border border-stroke dark:border-strokedark"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"
-          >
-            <svg
-              class="h-5 w-5 text-primary"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Выдано</p>
-            <p class="text-2xl font-bold text-success">{{ stats.issued }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Выдано</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.issued }}</h3>
+          </div>
+          <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
+            <CheckCircle class="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      <div
-        class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm border border-stroke dark:border-strokedark"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            class="h-10 w-10 rounded-full bg-danger/10 flex items-center justify-center"
-          >
-            <svg
-              class="h-5 w-5 text-danger"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Отозвано</p>
-            <p class="text-2xl font-bold text-danger">{{ stats.revoked }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Отозвано</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.revoked }}</h3>
+          </div>
+          <div class="rounded-xl bg-danger/10 p-3 text-danger transition-transform group-hover:rotate-12">
+            <XCircle class="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      <div
-        class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm border border-stroke dark:border-strokedark"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            class="h-10 w-10 rounded-full bg-warning/10 flex items-center justify-center"
-          >
-            <svg
-              class="h-5 w-5 text-warning"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-              />
-            </svg>
-          </div>
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Организаций</p>
-            <p class="text-2xl font-bold text-warning">
-              {{ stats.organizations }}
-            </p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Организаций</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.organizations }}</h3>
+          </div>
+          <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
+            <Building2 class="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      <div
-        class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm border border-stroke dark:border-strokedark"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            class="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center"
-          >
-            <svg
-              class="h-5 w-5 text-info"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-          </div>
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Групп</p>
-            <p class="text-2xl font-bold text-info">{{ stats.groups }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Учебных групп</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.groups }}</h3>
+          </div>
+          <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
+            <Users class="w-6 h-6" />
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Панель фильтрации -->
-    <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-      <div class="flex items-center gap-3 mb-4">
-        <div
-          class="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center"
-        >
-          <svg
-            class="h-5 w-5 text-primary"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-            />
-          </svg>
+    <!-- Filters Panel -->
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Filter class="w-5 h-5" />
+          </div>
+          <h4 class="text-lg font-bold text-slate-900 dark:text-white">Фильтры</h4>
         </div>
-        <h4 class="font-semibold text-black dark:text-white">Фильтры</h4>
         <button
           v-if="hasActiveFilters"
           @click="resetFilters"
-          class="ml-auto text-sm text-primary hover:underline flex items-center gap-1"
+          class="text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10"
         >
-          <svg
-            class="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-          Сбросить фильтры
+          <RotateCcw class="w-4 h-4" />
+          Сбросить
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <!-- Поиск -->
-        <div class="md:col-span-2">
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Поиск
-          </label>
+      <div class="flex flex-col gap-6">
+        <!-- Search Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="relative">
             <input
               v-model="filters.search"
               type="text"
               placeholder="ФИО, номер сертификата, ПИНФЛ..."
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
               @input="debouncedSearch"
             />
-            <svg
-              class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+            <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          </div>
+          <div class="relative">
+            <input
+              v-model="filters.organizationName"
+              type="text"
+              placeholder="Фильтр по организации..."
+              class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
+              @input="debouncedSearch"
+            />
+            <Building2 class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           </div>
         </div>
 
-        <!-- Организация -->
-        <div class="md:col-span-2">
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Организация
-          </label>
-          <input
-            v-model="filters.organizationName"
-            type="text"
-            placeholder="Название организации..."
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
-            @input="debouncedSearch"
-          />
-        </div>
+        <div class="flex flex-wrap gap-x-10 gap-y-5">
+          <!-- Статус (chips) -->
+          <div class="space-y-3">
+            <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <CheckCircle class="w-3.5 h-3.5" />
+              Статус
+            </label>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="opt in statusOptions"
+                :key="opt.value"
+                @click="filters.status = opt.value; handleFilterChange()"
+                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+                :class="filters.status === opt.value
+                  ? 'bg-primary text-white shadow-md shadow-primary/20'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
 
-        <!-- Статус -->
-        <div class="md:col-span-1">
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Статус
-          </label>
-          <select
-            v-model="filters.status"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
-            @change="handleFilterChange"
-          >
-            <option value="all">Все статусы</option>
-            <option value="issued">Выданные</option>
-            <option value="revoked">Отозванные</option>
-          </select>
-        </div>
+          <!-- Источник (chips) -->
+          <div class="space-y-3">
+            <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <Layers class="w-3.5 h-3.5" />
+              Источник
+            </label>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="opt in sourceOptions"
+                :key="opt.value"
+                @click="filters.sourceType = opt.value; handleFilterChange()"
+                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+                :class="filters.sourceType === opt.value
+                  ? 'bg-primary text-white shadow-md shadow-primary/20'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
 
-        <!-- Источник -->
-        <div class="md:col-span-1">
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Источник
-          </label>
-          <select
-            v-model="filters.sourceType"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
-            @change="handleFilterChange"
-          >
-            <option value="all">Все источники</option>
-            <option value="group_journal">📋 Журнал группы</option>
-            <option value="import">📥 Импорт (Excel)</option>
-            <option value="ai">✨ AI Импорт</option>
-            <option value="manual">✍️ Ручной ввод</option>
-          </select>
-        </div>
-
-        <!-- Дата выдачи -->
-        <div class="md:col-span-2">
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Период выдачи
-          </label>
-          <div class="flex gap-2">
-            <input
-              v-model="filters.dateFrom"
-              type="date"
-              class="flex-1 rounded-lg border border-stroke bg-transparent py-2 px-3 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
-              @change="handleFilterChange"
-            />
-            <input
-              v-model="filters.dateTo"
-              type="date"
-              class="flex-1 rounded-lg border border-stroke bg-transparent py-2 px-3 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white"
-              @change="handleFilterChange"
-            />
+          <!-- Период выдачи -->
+          <div class="space-y-3">
+            <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <CalendarRange class="w-3.5 h-3.5" />
+              Период выдачи
+            </label>
+            <div class="flex items-center gap-2">
+              <input
+                v-model="filters.dateFrom"
+                type="date"
+                class="rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2 px-3 text-sm outline-none focus:border-primary dark:border-slate-700 dark:text-white transition-all font-medium"
+                @change="handleFilterChange"
+              />
+              <span class="text-slate-400 font-bold text-sm">—</span>
+              <input
+                v-model="filters.dateTo"
+                type="date"
+                class="rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2 px-3 text-sm outline-none focus:border-primary dark:border-slate-700 dark:text-white transition-all font-medium"
+                @change="handleFilterChange"
+              />
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Таблица сертификатов -->
-    <div class="bg-white dark:bg-boxdark rounded-xl shadow-md overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full">
+    <!-- Table -->
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+      <!-- Loading -->
+      <div v-if="loading" class="p-12 text-center">
+        <div class="mx-auto inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+        <p class="mt-4 font-bold text-slate-900 dark:text-white">Загрузка сертификатов...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="!data.length" class="p-16 text-center">
+        <div class="bg-slate-50 dark:bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FileCheck class="w-8 h-8 text-slate-300" />
+        </div>
+        <p class="text-lg font-bold text-slate-900 dark:text-white">
+          {{ hasActiveFilters ? 'По фильтрам не найдено' : 'Сертификаты пока не выданы' }}
+        </p>
+        <p class="mt-2 text-slate-500 font-medium max-w-sm mx-auto">
+          {{ hasActiveFilters ? 'Попробуйте изменить параметры фильтрации' : 'Добавьте первый сертификат через кнопку "Добавить вручную" или импорт' }}
+        </p>
+      </div>
+
+      <!-- Data Table -->
+      <div v-else class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
           <thead>
-            <tr
-              class="border-b border-stroke dark:border-strokedark bg-gray-50 dark:bg-meta-4"
-            >
+            <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
               <th
-                class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
                 @click="toggleSort('certificate_number')"
               >
-                <div class="flex items-center gap-1">
-                  № Сертификата
-                  <SortIcon
-                    :active="filters.sortBy === 'certificate_number'"
-                    :order="filters.sortOrder"
-                  />
+                <div class="flex items-center gap-1.5">
+                  № сертификата
+                  <component :is="SortIcon" :active="filters.sortBy === 'certificate_number'" :order="filters.sortOrder" />
                 </div>
               </th>
               <th
-                class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
                 @click="toggleSort('student_name')"
               >
-                <div class="flex items-center gap-1">
+                <div class="flex items-center gap-1.5">
                   Слушатель
-                  <SortIcon
-                    :active="filters.sortBy === 'student_name'"
-                    :order="filters.sortOrder"
-                  />
+                  <component :is="SortIcon" :active="filters.sortBy === 'student_name'" :order="filters.sortOrder" />
                 </div>
               </th>
               <th
-                class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
                 @click="toggleSort('course_name')"
               >
-                <div class="flex items-center gap-1">
+                <div class="flex items-center gap-1.5">
                   Курс / Группа
-                  <SortIcon
-                    :active="filters.sortBy === 'course_name'"
-                    :order="filters.sortOrder"
-                  />
+                  <component :is="SortIcon" :active="filters.sortBy === 'course_name'" :order="filters.sortOrder" />
                 </div>
               </th>
               <th
-                class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
+                class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
                 @click="toggleSort('issue_date')"
               >
-                <div class="flex items-center gap-1">
+                <div class="flex items-center gap-1.5">
                   Дата выдачи
-                  <SortIcon
-                    :active="filters.sortBy === 'issue_date'"
-                    :order="filters.sortOrder"
-                  />
+                  <component :is="SortIcon" :active="filters.sortBy === 'issue_date'" :order="filters.sortOrder" />
                 </div>
               </th>
-              <th
-                class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
+              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">
                 Статус
               </th>
-              <th
-                class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
+              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">
                 Действия
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-            <!-- Loading -->
-            <tr v-if="loading">
-              <td colspan="6" class="px-4 py-12 text-center">
-                <div class="flex flex-col items-center gap-3">
-                  <div
-                    class="h-10 w-10 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"
-                  ></div>
-                  <p class="text-gray-500 dark:text-gray-400">
-                    Загрузка сертификатов...
-                  </p>
-                </div>
-              </td>
-            </tr>
-
-            <!-- Empty state -->
-            <tr v-else-if="!data.length">
-              <td colspan="6" class="px-4 py-12 text-center">
-                <div class="flex flex-col items-center gap-3">
-                  <svg
-                    class="h-12 w-12 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  <p class="text-gray-500 dark:text-gray-400">
-                    {{
-                      hasActiveFilters
-                        ? "По заданным фильтрам сертификаты не найдены"
-                        : "Сертификаты пока не выданы"
-                    }}
-                  </p>
-                </div>
-              </td>
-            </tr>
-
-            <!-- Data -->
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
             <tr
-              v-else
               v-for="cert in data"
               :key="cert.id"
-              class="hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
+              class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group"
             >
-              <!-- Номер сертификата -->
-              <td class="px-4 py-4">
+              <!-- № сертификата -->
+              <td class="px-6 py-4">
                 <div class="flex items-center gap-2">
-                  <span class="font-mono text-sm font-semibold text-primary">
+                  <span class="font-mono text-sm font-bold text-primary group-hover:text-primary/80 transition-colors">
                     {{ cert.certificateNumber }}
                   </span>
                   <span
                     v-if="cert.hasWarnings"
-                    class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-warning/20 text-warning"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold bg-warning/10 text-warning"
                     title="Выдан с предупреждениями"
                   >
-                    ⚠️
+                    ⚠
                   </span>
                 </div>
               </td>
 
               <!-- Слушатель -->
-              <td class="px-4 py-4">
+              <td class="px-6 py-4">
                 <div>
-                  <p class="font-medium text-black dark:text-white">
-                    {{ cert.student.fullName }}
-                  </p>
-                  <p
-                    v-if="cert.student.organization"
-                    class="text-sm text-gray-500 dark:text-gray-400"
-                  >
+                  <p class="font-bold text-slate-900 dark:text-white">{{ cert.student.fullName }}</p>
+                  <p v-if="cert.student.organization" class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
                     {{ cert.student.organization }}
                   </p>
-                  <p
-                    v-if="cert.student.pinfl"
-                    class="text-xs text-gray-400 font-mono"
-                  >
-                    ПИНФЛ: {{ cert.student.pinfl }}
+                  <p v-if="cert.student.pinfl" class="text-xs text-slate-400 font-mono mt-0.5">
+                    {{ cert.student.pinfl }}
                   </p>
                 </div>
               </td>
 
               <!-- Курс / Группа -->
-              <td class="px-4 py-4">
+              <td class="px-6 py-4">
                 <div>
-                  <div class="flex items-center gap-2">
-                    <p class="font-medium text-black dark:text-white">
-                      {{ cert.course.name }}
-                    </p>
-                    <!-- Бейдж источника -->
-                    <!-- Бейдж источника -->
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <p class="font-bold text-slate-900 dark:text-white">{{ cert.course.name }}</p>
+                    <!-- Source badges -->
                     <span
-                      v-if="
-                        cert.sourceType === 'import' &&
-                        cert.importSource === 'ai'
-                      "
-                      class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-linear-to-r from-violet-500/10 to-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 shadow-sm"
-                      :title="
-                        cert.aiConfidence
-                          ? 'Уверенность AI: ' +
-                            Math.round(cert.aiConfidence * 100) +
-                            '%'
-                          : 'Импортирован через AI'
-                      "
+                      v-if="cert.sourceType === 'import' && cert.importSource === 'ai'"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30"
+                      :title="cert.aiConfidence ? 'Уверенность AI: ' + Math.round(cert.aiConfidence * 100) + '%' : 'AI Импорт'"
                     >
-                      <svg
-                        class="h-3 w-3 text-indigo-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13 10V3L4 14h7v7l9-11h-7z"
-                        />
-                      </svg>
-                      AI Import
-                      <span v-if="cert.aiConfidence" class="ml-0.5 opacity-80">
-                        {{ Math.round(cert.aiConfidence * 100) }}%
-                      </span>
+                      <Zap class="w-2.5 h-2.5" />
+                      AI{{ cert.aiConfidence ? ' ' + Math.round(cert.aiConfidence * 100) + '%' : '' }}
                     </span>
                     <span
                       v-else-if="cert.sourceType === 'import'"
-                      class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-medium bg-success/10 text-success border border-success/20"
-                      title="Импортирован из Excel"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-success/5 text-success border border-success/20"
                     >
-                      <svg
-                        class="h-3 w-3"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
+                      <FileSpreadsheet class="w-2.5 h-2.5" />
                       Excel
                     </span>
                     <span
                       v-else-if="cert.sourceType === 'manual'"
-                      class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-400"
-                      title="Добавлен вручную"
+                      class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20"
                     >
-                      ✍️ Ручной
+                      ✍ Ручной
                     </span>
                   </div>
-                  <p
-                    v-if="cert.group.code"
-                    class="text-sm text-gray-500 dark:text-gray-400"
-                  >
+                  <p v-if="cert.group.code" class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
                     Группа: {{ cert.group.code }}
-                  </p>
-                  <p
-                    v-else-if="cert.sourceType !== 'group_journal'"
-                    class="text-xs text-gray-400 italic"
-                  >
-                    Без группы
                   </p>
                 </div>
               </td>
 
               <!-- Дата выдачи -->
-              <td class="px-4 py-4">
-                <div class="text-sm">
-                  <p class="text-black dark:text-white">
-                    {{ formatDate(cert.issueDate) }}
-                  </p>
-                  <p
-                    v-if="cert.issuedBy"
-                    class="text-gray-500 dark:text-gray-400"
-                  >
+              <td class="px-6 py-4">
+                <div>
+                  <p class="font-bold text-slate-900 dark:text-white text-sm">{{ formatDate(cert.issueDate) }}</p>
+                  <p v-if="cert.issuedBy" class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
                     {{ cert.issuedBy.name }}
                   </p>
                 </div>
               </td>
 
               <!-- Статус -->
-              <td class="px-4 py-4 text-center">
+              <td class="px-6 py-4 text-center">
                 <span
-                  :class="[
-                    'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium',
-                    cert.status === 'issued'
-                      ? 'bg-success/20 text-success'
-                      : 'bg-danger/20 text-danger',
-                  ]"
+                  class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-black uppercase tracking-widest border"
+                  :class="cert.status === 'issued'
+                    ? 'bg-success/5 text-success border-success/20'
+                    : 'bg-danger/5 text-danger border-danger/20'"
                 >
-                  <span class="mr-1">{{
-                    cert.status === "issued" ? "✓" : "✕"
-                  }}</span>
-                  {{ cert.status === "issued" ? "Выдан" : "Отозван" }}
+                  <span class="w-1.5 h-1.5 rounded-full" :class="cert.status === 'issued' ? 'bg-success' : 'bg-danger'"></span>
+                  {{ cert.status === 'issued' ? 'Выдан' : 'Отозван' }}
                 </span>
                 <p
                   v-if="cert.status === 'revoked' && cert.revokeReason"
-                  class="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-32 truncate"
+                  class="text-xs text-slate-400 mt-1 max-w-32 truncate mx-auto"
                   :title="cert.revokeReason"
                 >
                   {{ cert.revokeReason }}
@@ -646,9 +380,8 @@
               </td>
 
               <!-- Действия -->
-              <td class="px-4 py-4 text-center">
-                <div class="flex items-center justify-center gap-2">
-                  <!-- Скачать PDF -->
+              <td class="px-6 py-4 text-center">
+                <div class="flex items-center justify-center gap-1">
                   <a
                     v-if="cert.id"
                     :href="`/api/certificates/download/${cert.id}`"
@@ -656,68 +389,22 @@
                     class="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
                     title="Скачать PDF"
                   >
-                    <svg
-                      class="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
+                    <Download class="h-4 w-4" />
                   </a>
-
-                  <!-- Подробнее -->
                   <button
                     @click="openDetailModal(cert)"
-                    class="p-2 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
+                    class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-400 transition-colors"
                     title="Подробнее"
                   >
-                    <svg
-                      class="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
+                    <Eye class="h-4 w-4" />
                   </button>
-
-                  <!-- Отозвать (если выдан) -->
                   <button
                     v-if="cert.status === 'issued'"
                     @click="openRevokeModal(cert)"
                     class="p-2 rounded-lg text-danger hover:bg-danger/10 transition-colors"
                     title="Отозвать сертификат"
                   >
-                    <svg
-                      class="h-5 w-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                      />
-                    </svg>
+                    <XCircle class="h-4 w-4" />
                   </button>
                 </div>
               </td>
@@ -726,39 +413,41 @@
         </table>
       </div>
 
-      <!-- Пагинация -->
+      <!-- Pagination -->
       <div
         v-if="pagination.totalPages > 1"
-        class="flex items-center justify-between px-6 py-4 border-t border-stroke dark:border-strokedark"
+        class="px-6 py-4 bg-slate-50/30 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"
       >
-        <p class="text-sm text-gray-600 dark:text-gray-400">
-          Показано {{ (pagination.page - 1) * pagination.limit + 1 }} -
-          {{ Math.min(pagination.page * pagination.limit, pagination.total) }}
-          из {{ pagination.total }}
-        </p>
-        <div class="flex items-center gap-2">
-          <button
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">
+          Показано {{ (pagination.page - 1) * pagination.limit + 1 }} — {{ Math.min(pagination.page * pagination.limit, pagination.total) }} из {{ pagination.total }}
+        </span>
+        <div class="flex gap-2">
+          <UiButton
+            variant="outline"
+            size="sm"
+            class="h-8 px-3 font-bold"
             :disabled="pagination.page <= 1"
             @click="goToPage(pagination.page - 1)"
-            class="px-3 py-1 rounded border border-stroke dark:border-strokedark hover:bg-gray-100 dark:hover:bg-meta-4 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            ←
-          </button>
-          <span class="px-3 py-1 text-sm">
+            Назад
+          </UiButton>
+          <span class="flex items-center px-3 text-sm font-bold text-slate-600 dark:text-slate-400">
             {{ pagination.page }} / {{ pagination.totalPages }}
           </span>
-          <button
+          <UiButton
+            variant="outline"
+            size="sm"
+            class="h-8 px-3 font-bold"
             :disabled="pagination.page >= pagination.totalPages"
             @click="goToPage(pagination.page + 1)"
-            class="px-3 py-1 rounded border border-stroke dark:border-strokedark hover:bg-gray-100 dark:hover:bg-meta-4 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            →
-          </button>
+            Вперёд
+          </UiButton>
         </div>
       </div>
     </div>
 
-    <!-- Модальное окно деталей -->
+    <!-- Modals -->
     <DatabaseCertificateDetailModal
       v-if="selectedCertificate"
       :certificate="selectedCertificate"
@@ -766,7 +455,6 @@
       @close="closeDetailModal"
     />
 
-    <!-- Модальное окно отзыва -->
     <UiModal
       :is-open="isRevokeModalOpen"
       @close="closeRevokeModal"
@@ -774,39 +462,34 @@
       size="md"
     >
       <div class="space-y-4">
-        <div class="p-4 bg-danger/10 border border-danger/20 rounded-lg">
-          <p class="text-danger font-medium">⚠️ Внимание!</p>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+        <div class="p-4 bg-danger/5 border border-danger/20 rounded-xl">
+          <p class="text-danger font-bold flex items-center gap-2">
+            <AlertTriangle class="w-4 h-4" />
+            Внимание!
+          </p>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mt-2">
             Вы собираетесь отозвать сертификат
-            <span class="font-mono font-semibold">{{
-              revokeTarget?.certificateNumber
-            }}</span>
+            <span class="font-mono font-bold">{{ revokeTarget?.certificateNumber }}</span>
             слушателя
-            <span class="font-semibold">{{
-              revokeTarget?.student.fullName
-            }}</span
-            >. Это действие будет записано в журнал.
+            <span class="font-bold">{{ revokeTarget?.student.fullName }}</span>.
+            Это действие будет записано в журнал.
           </p>
         </div>
 
         <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
+          <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
             Причина отзыва <span class="text-danger">*</span>
           </label>
           <textarea
             v-model="revokeReason"
             rows="3"
             placeholder="Укажите причину отзыва сертификата..."
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 text-black outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:text-white resize-none"
+            class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 text-slate-900 dark:text-white outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all resize-none"
           ></textarea>
         </div>
 
         <div class="flex justify-end gap-3">
-          <UiButton variant="secondary" @click="closeRevokeModal">
-            Отмена
-          </UiButton>
+          <UiButton variant="outline" @click="closeRevokeModal">Отмена</UiButton>
           <UiButton
             variant="danger"
             @click="confirmRevoke"
@@ -819,7 +502,6 @@
       </div>
     </UiModal>
 
-    <!-- Модальное окно экспорта -->
     <DatabaseCertificateExportModal
       :is-open="isExportModalOpen"
       :filters="filters"
@@ -829,7 +511,6 @@
       @close="closeExportModal"
     />
 
-    <!-- Модальное окно ручного добавления сертификата -->
     <DatabaseCertificateManualFormModal
       :is-open="isManualFormModalOpen"
       @close="closeManualFormModal"
@@ -839,97 +520,78 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, defineComponent, h } from 'vue';
+import {
+  Plus, FileCheck, CheckCircle, XCircle, Building2, Users, Filter,
+  RotateCcw, Search, Download, Eye, Zap, FileSpreadsheet, Layers,
+  CalendarRange, AlertTriangle,
+} from 'lucide-vue-next';
 
 const { authFetch } = useAuthFetch();
 const notification = useNotification();
 
-// Иконка сортировки
+// Sort icon inline component
 const SortIcon = defineComponent({
-  props: {
-    active: Boolean,
-    order: String,
-  },
+  props: { active: Boolean, order: String },
   setup(props) {
     return () =>
-      h(
-        "svg",
-        {
-          class: [
-            "h-4 w-4 transition-colors",
-            props.active ? "text-primary" : "text-gray-400",
-          ],
-          fill: "none",
-          stroke: "currentColor",
-          viewBox: "0 0 24 24",
-        },
-        [
-          h("path", {
-            "stroke-linecap": "round",
-            "stroke-linejoin": "round",
-            "stroke-width": "2",
-            d:
-              props.active && props.order === "asc"
-                ? "M5 15l7-7 7 7"
-                : "M19 9l-7 7-7-7",
-          }),
-        ],
-      );
+      h('svg', {
+        class: ['h-3.5 w-3.5 transition-colors', props.active ? 'text-primary' : 'text-slate-300'],
+        fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24',
+      }, [
+        h('path', {
+          'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2.5',
+          d: props.active && props.order === 'asc' ? 'M5 15l7-7 7 7' : 'M19 9l-7 7-7-7',
+        }),
+      ]);
   },
 });
 
-// Данные
+// Filter options
+const statusOptions = [
+  { value: 'all', label: 'Все' },
+  { value: 'issued', label: 'Выданные' },
+  { value: 'revoked', label: 'Отозванные' },
+];
+const sourceOptions = [
+  { value: 'all', label: 'Все' },
+  { value: 'group_journal', label: 'Журнал группы' },
+  { value: 'import', label: 'Excel' },
+  { value: 'ai', label: 'AI Импорт' },
+  { value: 'manual', label: 'Ручной ввод' },
+];
+
+// State
 const data = ref<any[]>([]);
 const loading = ref(false);
-const pagination = ref({
-  page: 1,
-  limit: 20,
-  total: 0,
-  totalPages: 0,
-});
-const stats = ref({
-  total: 0,
-  issued: 0,
-  revoked: 0,
-  organizations: 0,
-  groups: 0,
-});
+const pagination = ref({ page: 1, limit: 20, total: 0, totalPages: 0 });
+const stats = ref({ total: 0, issued: 0, revoked: 0, organizations: 0, groups: 0 });
 
-// Фильтры
 const filters = ref({
-  search: "",
-  status: "all",
-  sourceType: "all",
-  organizationName: "",
-  dateFrom: "",
-  dateTo: "",
-  sortBy: "issue_date",
-  sortOrder: "desc" as "asc" | "desc",
+  search: '',
+  status: 'all',
+  sourceType: 'all',
+  organizationName: '',
+  dateFrom: '',
+  dateTo: '',
+  sortBy: 'issue_date',
+  sortOrder: 'desc' as 'asc' | 'desc',
 });
 
-// Модальные окна
 const selectedCertificate = ref<any>(null);
 const isDetailModalOpen = ref(false);
 const isRevokeModalOpen = ref(false);
 const revokeTarget = ref<any>(null);
-const revokeReason = ref("");
+const revokeReason = ref('');
 const isManualFormModalOpen = ref(false);
 const isRevoking = ref(false);
 const isExportModalOpen = ref(false);
 
-// Computed
-const hasActiveFilters = computed(() => {
-  return !!(
-    filters.value.search ||
-    filters.value.status !== "all" ||
-    filters.value.sourceType !== "all" ||
-    filters.value.organizationName ||
-    filters.value.dateFrom ||
-    filters.value.dateTo
-  );
-});
+const hasActiveFilters = computed(() =>
+  !!(filters.value.search || filters.value.status !== 'all' || filters.value.sourceType !== 'all' ||
+    filters.value.organizationName || filters.value.dateFrom || filters.value.dateTo)
+);
 
-// Методы
 async function loadData() {
   loading.value = true;
   try {
@@ -939,31 +601,22 @@ async function loadData() {
       sortBy: filters.value.sortBy,
       sortOrder: filters.value.sortOrder,
     });
-
-    if (filters.value.search) params.append("search", filters.value.search);
-    if (filters.value.status !== "all")
-      params.append("status", filters.value.status);
-    if (filters.value.sourceType !== "all")
-      params.append("sourceType", filters.value.sourceType);
-    if (filters.value.organizationName)
-      params.append("organizationName", filters.value.organizationName);
-    if (filters.value.dateFrom)
-      params.append("dateFrom", filters.value.dateFrom);
-    if (filters.value.dateTo) params.append("dateTo", filters.value.dateTo);
+    if (filters.value.search) params.append('search', filters.value.search);
+    if (filters.value.status !== 'all') params.append('status', filters.value.status);
+    if (filters.value.sourceType !== 'all') params.append('sourceType', filters.value.sourceType);
+    if (filters.value.organizationName) params.append('organizationName', filters.value.organizationName);
+    if (filters.value.dateFrom) params.append('dateFrom', filters.value.dateFrom);
+    if (filters.value.dateTo) params.append('dateTo', filters.value.dateTo);
 
     const response = await authFetch(`/api/certificates?${params.toString()}`);
-
     if (response.success) {
       data.value = response.data.items;
       pagination.value = response.data.pagination;
       stats.value = response.data.stats;
     }
   } catch (error: any) {
-    console.error("Error loading certificates:", error);
-    notification.error(
-      "Ошибка загрузки",
-      error.message || "Не удалось загрузить сертификаты",
-    );
+    console.error('Error loading certificates:', error);
+    notification.error('Ошибка загрузки', error.message || 'Не удалось загрузить сертификаты');
   } finally {
     loading.value = false;
   }
@@ -972,142 +625,67 @@ async function loadData() {
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 function debouncedSearch() {
   if (searchTimeout) clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    pagination.value.page = 1;
-    loadData();
-  }, 350);
+  searchTimeout = setTimeout(() => { pagination.value.page = 1; loadData(); }, 350);
 }
 
-function handleFilterChange() {
-  pagination.value.page = 1;
-  loadData();
-}
+function handleFilterChange() { pagination.value.page = 1; loadData(); }
 
 function resetFilters() {
-  filters.value = {
-    search: "",
-    status: "all",
-    sourceType: "all",
-    organizationName: "",
-    dateFrom: "",
-    dateTo: "",
-    sortBy: "issue_date",
-    sortOrder: "desc",
-  };
+  filters.value = { search: '', status: 'all', sourceType: 'all', organizationName: '', dateFrom: '', dateTo: '', sortBy: 'issue_date', sortOrder: 'desc' };
   pagination.value.page = 1;
   loadData();
 }
 
 function toggleSort(field: string) {
   if (filters.value.sortBy === field) {
-    filters.value.sortOrder =
-      filters.value.sortOrder === "asc" ? "desc" : "asc";
+    filters.value.sortOrder = filters.value.sortOrder === 'asc' ? 'desc' : 'asc';
   } else {
     filters.value.sortBy = field;
-    filters.value.sortOrder = "desc";
+    filters.value.sortOrder = 'desc';
   }
   loadData();
 }
 
-function goToPage(page: number) {
-  pagination.value.page = page;
-  loadData();
-}
+function goToPage(page: number) { pagination.value.page = page; loadData(); }
 
 function formatDate(date: string | Date): string {
-  return new Date(date).toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return new Date(date).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function openDetailModal(cert: any) {
-  selectedCertificate.value = cert;
-  isDetailModalOpen.value = true;
-}
-
-function closeDetailModal() {
-  isDetailModalOpen.value = false;
-  selectedCertificate.value = null;
-}
-
-function openRevokeModal(cert: any) {
-  revokeTarget.value = cert;
-  revokeReason.value = "";
-  isRevokeModalOpen.value = true;
-}
-
-function closeRevokeModal() {
-  isRevokeModalOpen.value = false;
-  revokeTarget.value = null;
-  revokeReason.value = "";
-}
+function openDetailModal(cert: any) { selectedCertificate.value = cert; isDetailModalOpen.value = true; }
+function closeDetailModal() { isDetailModalOpen.value = false; selectedCertificate.value = null; }
+function openRevokeModal(cert: any) { revokeTarget.value = cert; revokeReason.value = ''; isRevokeModalOpen.value = true; }
+function closeRevokeModal() { isRevokeModalOpen.value = false; revokeTarget.value = null; revokeReason.value = ''; }
 
 async function confirmRevoke() {
   if (!revokeTarget.value || !revokeReason.value.trim()) return;
-
   isRevoking.value = true;
   try {
-    const response = await authFetch(
-      `/api/certificates/${revokeTarget.value.id}/revoke`,
-      {
-        method: "PATCH",
-        body: { reason: revokeReason.value.trim() },
-      },
-    );
-
+    const response = await authFetch(`/api/certificates/${revokeTarget.value.id}/revoke`, {
+      method: 'PATCH', body: { reason: revokeReason.value.trim() },
+    });
     if (response.success) {
-      notification.success(
-        "Сертификат отозван",
-        `Сертификат ${revokeTarget.value.certificateNumber} успешно отозван`,
-      );
+      notification.success('Сертификат отозван', `Сертификат ${revokeTarget.value.certificateNumber} успешно отозван`);
       closeRevokeModal();
       loadData();
     } else {
-      notification.error(
-        "Ошибка",
-        response.message || "Не удалось отозвать сертификат",
-      );
+      notification.error('Ошибка', response.message || 'Не удалось отозвать сертификат');
     }
   } catch (error: any) {
-    console.error("Error revoking certificate:", error);
-    notification.error(
-      "Ошибка",
-      error.message || "Не удалось отозвать сертификат",
-    );
+    notification.error('Ошибка', error.message || 'Не удалось отозвать сертификат');
   } finally {
     isRevoking.value = false;
   }
 }
 
-function openExportModal() {
-  isExportModalOpen.value = true;
-}
-
-function closeExportModal() {
-  isExportModalOpen.value = false;
-}
-
-// Методы для модального окна ручного добавления
-function openManualFormModal() {
-  isManualFormModalOpen.value = true;
-}
-
-function closeManualFormModal() {
-  isManualFormModalOpen.value = false;
-}
-
+function openExportModal() { isExportModalOpen.value = true; }
+function closeExportModal() { isExportModalOpen.value = false; }
+function openManualFormModal() { isManualFormModalOpen.value = true; }
+function closeManualFormModal() { isManualFormModalOpen.value = false; }
 function handleCertificateCreated(certificate: any) {
-  notification.success(
-    "Сертификат создан",
-    `Сертификат ${certificate.certificateNumber} успешно добавлен`,
-  );
-  loadData(); // Перезагрузить данные
+  notification.success('Сертификат создан', `Сертификат ${certificate.certificateNumber} успешно добавлен`);
+  loadData();
 }
 
-// Lifecycle
-onMounted(() => {
-  loadData();
-});
+onMounted(() => { loadData(); });
 </script>
