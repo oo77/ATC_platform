@@ -95,7 +95,18 @@ export default defineEventHandler(async (event) => {
 
     const templateData = template.templateData as CertificateTemplateData;
 
-    if (!templateData.elements || templateData.elements.length === 0) {
+    // Подсчитываем общее количество элементов (с учетом страниц v2 и legacy v1)
+    let totalElements = 0;
+    if (templateData.pages && templateData.pages.length > 0) {
+      totalElements = templateData.pages.reduce(
+        (sum, p) => sum + (p.elements?.length || 0),
+        0,
+      );
+    } else {
+      totalElements = templateData.elements?.length || 0;
+    }
+
+    if (totalElements === 0) {
       throw createError({
         statusCode: 400,
         message: "Шаблон пустой. Добавьте элементы в визуальном редакторе.",

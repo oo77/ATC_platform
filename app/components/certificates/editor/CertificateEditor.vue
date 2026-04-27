@@ -209,20 +209,91 @@
         @set-background="setBackground"
         @apply-preset="handleApplyPreset"
         :current-layout="templateData.layout"
+        :template-width="templateData.width"
+        :template-height="templateData.height"
         :template-id="templateId"
       />
 
       <!-- Холст -->
       <div class="canvas-container" ref="canvasContainerRef">
         <EditorCanvas
+          v-if="activePage"
           :template-data="templateData"
+          :active-page="activePage"
           :selected-element-ids="selectedElementIds"
           :zoom="zoom"
           @select="selectElement"
           @select-multiple="selectMultipleElements"
           @update-element="updateElement"
           @delete-element="deleteElement"
+          @set-custom-dimensions="setCustomDimensions"
         />
+
+        <!-- Панель навигации страниц -->
+        <div class="pages-panel">
+          <div class="pages-list">
+            <div
+              v-for="(page, idx) in templateData.pages"
+              :key="page.id"
+              class="page-thumb"
+              :class="{ active: idx === activePageIndex }"
+              :draggable="true"
+              @click="setActivePage(idx)"
+              @dragstart="handlePageDragStart(idx)"
+              @dragover.prevent="handlePageDragOver(idx)"
+              @drop="handlePageDrop(idx)"
+              @dragend="handlePageDragEnd"
+              :title="`Страница ${idx + 1}`"
+            >
+              <!-- Миниатюра -->
+              <div
+                class="page-preview"
+                :style="getPagePreviewStyle(page)"
+              >
+                <span class="page-number">{{ idx + 1 }}</span>
+              </div>
+
+              <!-- Контекстное меню -->
+              <div class="page-actions">
+                <button
+                  class="page-action-btn"
+                  @click.stop="duplicatePage(idx)"
+                  title="Дублировать"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                  </svg>
+                </button>
+                <button
+                  class="page-action-btn danger"
+                  @click.stop="removePage(idx)"
+                  :disabled="pagesCount <= 1"
+                  title="Удалить"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Кнопка добавить страницу -->
+            <button class="add-page-btn" @click="addPage" title="Добавить страницу">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14" />
+                <path d="M5 12h14" />
+              </svg>
+              <span>Добавить страницу</span>
+            </button>
+          </div>
+
+          <div class="pages-info">
+            <span>Стр. {{ activePageIndex + 1 }} / {{ pagesCount }}</span>
+          </div>
+        </div>
       </div>
 
       <!-- Панель свойств справа -->
@@ -299,6 +370,7 @@ import {
 import { preloadAllFonts } from "~/composables/useGoogleFonts";
 import type {
   CertificateTemplateData,
+  CertificatePage,
   TemplateElement,
   VariableSource,
   TemplateLayout,
@@ -313,6 +385,7 @@ const props = defineProps<{
   templateId: string;
   templateName?: string;
   initialData?: CertificateTemplateData;
+  isSaving?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -330,7 +403,9 @@ const {
   selectedElements,
   zoom,
   isDirty,
-  isSaving,
+  activePageIndex,
+  activePage,
+  pagesCount,
   canUndo,
   canRedo,
   minZoom,
@@ -342,6 +417,11 @@ const {
   setLayout,
   setCustomDimensions,
   setBackground,
+  addPage,
+  removePage,
+  duplicatePage,
+  setActivePage,
+  reorderPages,
   addElement,
   updateElement,
   updateMultipleElements,
@@ -458,7 +538,7 @@ function handleKeydown(e: KeyboardEvent) {
   // Ctrl+C - копировать
   if (e.ctrlKey && e.key === "c" && selectedElementId.value) {
     e.preventDefault();
-    const element = templateData.value.elements.find(
+    const element = activePage.value?.elements.find(
       (el: TemplateElement) => el.id === selectedElementId.value,
     );
     if (element) {
@@ -556,7 +636,7 @@ function handleAlign(
 
 function handleApplyPreset(presetData: CertificateTemplateData) {
   // Если есть элементы — показываем модалку подтверждения
-  if (templateData.value.elements.length > 0) {
+  if (templateData.value.pages.some(p => p.elements.length > 0)) {
     pendingPresetData.value = presetData;
     showPresetConfirm.value = true;
     return;
@@ -577,6 +657,48 @@ function confirmPreset() {
 function cancelPreset() {
   showPresetConfirm.value = false;
   pendingPresetData.value = null;
+}
+
+// Drag & Drop страниц
+const draggedPageIndex = ref<number | null>(null);
+
+function handlePageDragStart(index: number) {
+  draggedPageIndex.value = index;
+}
+
+function handlePageDragOver(index: number) {
+  // Просто разрешаем drop
+}
+
+function handlePageDrop(index: number) {
+  if (draggedPageIndex.value !== null && draggedPageIndex.value !== index) {
+    reorderPages(draggedPageIndex.value, index);
+  }
+  draggedPageIndex.value = null;
+}
+
+function handlePageDragEnd() {
+  draggedPageIndex.value = null;
+}
+
+// Превью страницы
+function getPagePreviewStyle(page: CertificatePage) {
+  const bg = page.background;
+  const ratio = templateData.value.width / templateData.value.height;
+  const width = 56;
+  const height = width / ratio;
+  
+  const baseStyle = {
+    width: `${width}px`,
+    height: `${height}px`,
+  };
+
+  if (bg.type === "color") {
+    return { ...baseStyle, backgroundColor: bg.value };
+  } else if (bg.type === "image") {
+    return { ...baseStyle, backgroundImage: `url(${bg.value})`, backgroundSize: 'cover', backgroundPosition: 'center' };
+  }
+  return { ...baseStyle, backgroundColor: "#FFFFFF" };
 }
 
 // Обработчики для группового редактирования
@@ -861,6 +983,202 @@ function handleSendToBack() {
     linear-gradient(-45deg, var(--color-gray-800) 25%, transparent 25%),
     linear-gradient(45deg, transparent 75%, var(--color-gray-800) 75%),
     linear-gradient(-45deg, transparent 75%, var(--color-gray-800) 75%);
+}
+
+/* Панель страниц */
+.canvas-container {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.pages-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 88px;
+  background: white;
+  border-top: 1px solid var(--color-gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  z-index: 10;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+:root.dark .pages-panel {
+  background: var(--color-gray-800);
+  border-color: var(--color-gray-700);
+}
+
+.pages-list {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  flex: 1;
+}
+
+.pages-list::-webkit-scrollbar {
+  height: 4px;
+}
+.pages-list::-webkit-scrollbar-thumb {
+  background-color: var(--color-gray-300);
+  border-radius: 4px;
+}
+
+.page-thumb {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--color-gray-50);
+}
+
+:root.dark .page-thumb {
+  background: var(--color-gray-900);
+}
+
+.page-thumb:hover {
+  background: var(--color-gray-100);
+}
+
+:root.dark .page-thumb:hover {
+  background: var(--color-gray-700);
+}
+
+.page-thumb.active {
+  border-color: var(--color-primary-500, #3b82f6);
+  background: var(--color-primary-50, #eff6ff);
+}
+
+:root.dark .page-thumb.active {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.page-preview {
+  position: relative;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.25rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:root.dark .page-preview {
+  border-color: var(--color-gray-600);
+}
+
+.page-number {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: rgba(0,0,0,0.1);
+  pointer-events: none;
+}
+
+.page-actions {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.page-thumb:hover .page-actions {
+  opacity: 1;
+}
+
+.page-action-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  color: var(--color-gray-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.page-action-btn:hover {
+  background: var(--color-gray-100);
+  color: var(--color-gray-900);
+}
+
+.page-action-btn.danger:hover:not(:disabled) {
+  color: #ef4444;
+}
+
+.page-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.add-page-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px dashed var(--color-gray-300);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--color-gray-500);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  height: 48px;
+  margin-left: 0.5rem;
+}
+
+.add-page-btn:hover {
+  border-color: var(--color-gray-400);
+  color: var(--color-gray-700);
+  background: var(--color-gray-50);
+}
+
+:root.dark .add-page-btn {
+  border-color: var(--color-gray-600);
+  color: var(--color-gray-400);
+}
+
+:root.dark .add-page-btn:hover {
+  border-color: var(--color-gray-500);
+  color: var(--color-gray-200);
+  background: var(--color-gray-700);
+}
+
+.pages-info {
+  font-size: 0.875rem;
+  color: var(--color-gray-500);
+  font-weight: 500;
+  padding-left: 1rem;
+  border-left: 1px solid var(--color-gray-200);
+  white-space: nowrap;
+}
+
+:root.dark .pages-info {
+  border-color: var(--color-gray-700);
 }
 
 /* Анимация спиннера */

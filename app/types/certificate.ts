@@ -96,6 +96,17 @@ export interface TemplateBackground {
 }
 
 /**
+ * Одна страница шаблона сертификата
+ */
+export interface CertificatePage {
+  id: string;
+  /** Настройки фона этой страницы */
+  background: TemplateBackground;
+  /** Элементы на этой странице */
+  elements: TemplateElement[];
+}
+
+/**
  * Базовый элемент на холсте
  */
 export interface BaseElement {
@@ -214,21 +225,29 @@ export type TemplateElement =
   | ShapeElement;
 
 /**
- * JSON-структура шаблона редактора
+ * JSON-структура шаблона редактора (v2 — многостраничная)
  */
 export interface CertificateTemplateData {
-  /** Версия формата (для будущей совместимости) */
+  /** Версия формата: "1.0" — однострочный, "2.0" — многостраничный */
   version: string;
   /** Макет */
   layout: TemplateLayout;
-  /** Ширина в пикселях */
+  /** Ширина в пикселях (одинакова для всех страниц) */
   width: number;
-  /** Высота в пикселях */
+  /** Высота в пикселях (одинакова для всех страниц) */
   height: number;
-  /** Настройки фона */
-  background: TemplateBackground;
-  /** Элементы на холсте */
-  elements: TemplateElement[];
+  /** Страницы шаблона (v2) */
+  pages: CertificatePage[];
+  /**
+   * @deprecated v1 — Legacy фон (для обратной совместимости).
+   * Используется только при миграции старых шаблонов.
+   */
+  background?: TemplateBackground;
+  /**
+   * @deprecated v1 — Legacy элементы (для обратной совместимости).
+   * Используется только при миграции старых шаблонов.
+   */
+  elements?: TemplateElement[];
 }
 
 export interface CertificateTemplate {

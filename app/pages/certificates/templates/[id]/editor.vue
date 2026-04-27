@@ -324,21 +324,30 @@ async function handleSave(data: CertificateTemplateData) {
 
 // Проверка наличия base64-изображений
 function checkForBase64Images(data: CertificateTemplateData): boolean {
-  // Проверяем фон
-  if (
-    data.background?.type === "image" &&
-    data.background.value?.startsWith("data:image/")
-  ) {
-    return true;
-  }
+  // Миграция v1 -> v2
+  const pages = data.pages && data.pages.length > 0
+    ? data.pages
+    : [{
+        id: "page_0",
+        background: data.background,
+        elements: data.elements || [],
+      }];
 
-  // Проверяем элементы изображений
-  for (const element of data.elements) {
+  for (const page of pages) {
     if (
-      element.type === "image" &&
-      (element as any).src?.startsWith("data:image/")
+      page.background?.type === "image" &&
+      page.background.value?.startsWith("data:image/")
     ) {
       return true;
+    }
+
+    for (const element of page.elements || []) {
+      if (
+        element.type === "image" &&
+        (element as any).src?.startsWith("data:image/")
+      ) {
+        return true;
+      }
     }
   }
 

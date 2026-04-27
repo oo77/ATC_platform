@@ -596,60 +596,72 @@ async function buildPdf(
   const pageWidth = templateData.width;
   const pageHeight = templateData.height;
 
-  const page = pdfDoc.addPage([pageWidth, pageHeight]);
+  // Нормализация данных (миграция v1 -> v2)
+  const pages = templateData.pages && templateData.pages.length > 0
+    ? templateData.pages
+    : [{
+        id: "page_0",
+        background: templateData.background,
+        elements: templateData.elements || [],
+      }];
 
-  // ── Фон ────────────────────────────────────────────────────
-  if (templateData.background) {
-    if (
-      templateData.background.type === "color" &&
-      templateData.background.value !== "transparent"
-    ) {
-      const c = parseCssColor(templateData.background.value);
-      page.drawRectangle({
-        x: 0,
-        y: 0,
-        width: pageWidth,
-        height: pageHeight,
-        color: rgb(c.r, c.g, c.b),
-      });
-    } else if (templateData.background.type === "image") {
-      const imgBuffer = await loadImageBuffer(templateData.background.value);
-      if (imgBuffer) {
-        try {
-          const ext = templateData.background.value
-            .split("?")[0]
-            .split(".")
-            .pop()
-            ?.toLowerCase();
-          const img =
-            ext === "jpg" || ext === "jpeg"
-              ? await pdfDoc.embedJpg(imgBuffer)
-              : await pdfDoc.embedPng(imgBuffer);
-          page.drawImage(img, {
+  for (const pageData of pages) {
+    const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+    // 1. ОТРИСОВКА ФОНА
+    if (pageData.background) {
+      if (pageData.background.type === "color" && pageData.background.value !== "transparent") {
+        const c = parseCssColor(pageData.background.value);
+        if (c) {
+          page.drawRectangle({
             x: 0,
             y: 0,
             width: pageWidth,
             height: pageHeight,
+            color: rgb(c.r, c.g, c.b),
           });
-        } catch (e) {
-          console.warn("[pdfGenerator] Could not embed background image:", e);
         }
+      } else if (pageData.background.type === "image") {
+        const buf = await loadImageBuffer(pageData.background.value);
+        if (buf) {
+          try {
+            const isPng =
+              buf[0] === 0x89 &&
+              buf[1] === 0x50 &&
+              buf[2] === 0x4e &&
+              buf[3] === 0x47;
+            const pdfImage = isPng
+              ? await pdfDoc.embedPng(buf)
+              : await pdfDoc.embedJpg(buf);
+            page.drawImage(pdfImage, {
+              x: 0,
+              y: 0,
+              width: pageWidth,
+              height: pageHeight,
+            });
+          } catch (e) {
+            console.error("[pdfGenerator] Failed to embed background image", e);
+          }
+        }
+      }
+    }
+
+    // 2. ОТРИСОВКА ЭЛЕМЕНТОВ
+    const elements = [...(pageData.elements || [])].sort(
+      (a, b) => a.zIndex - b.zIndex,
+    );
+
+    for (const element of elements) {
+      try {
+        await drawElement(pdfDoc, page, element, context, pageWidth, pageHeight);
+      } catch (e) {
+        console.warn(`[pdfGenerator] Failed to draw element ${element.id}:`, e);
       }
     }
   }
 
-  // ── Элементы (сортируем по zIndex) ─────────────────────────
-  const sorted = [...templateData.elements].sort((a, b) => a.zIndex - b.zIndex);
-
-  for (const element of sorted) {
-    try {
-      await drawElement(pdfDoc, page, element, context, pageWidth, pageHeight);
-    } catch (e) {
-      console.warn(`[pdfGenerator] Failed to draw element ${element.id}:`, e);
-    }
-  }
-
-  return pdfDoc.save();
+  // 3. СОХРАНЕНИЕ
+  return await pdfDoc.save();
 }
 
 /**
@@ -969,7 +981,13 @@ export async function generateCertificatePdf(
   console.log(
     `[pdfGenerator] Template size: ${templateData.width}x${templateData.height}`,
   );
-  console.log(`[pdfGenerator] Elements: ${templateData.elements.length}`);
+  const pages = templateData.pages && templateData.pages.length > 0 
+    ? templateData.pages 
+    : [{ id: "v1_legacy", background: templateData.background!, elements: templateData.elements || [] }];
+
+  const totalElements = pages.reduce((sum, p) => sum + p.elements.length, 0);
+
+  console.log(`[pdfGenerator] Pages: ${pages.length}, Total elements: ${totalElements}`);
 
   const pdfBytes = await buildPdf(templateData, context);
 
@@ -1113,27 +1131,46 @@ export async function generateCertificateHtml(
   templateData: CertificateTemplateData,
   context: VariableContext,
 ): Promise<string> {
-  const sorted = [...templateData.elements].sort((a, b) => a.zIndex - b.zIndex);
-  const elementsHtml: string[] = [];
-  for (const el of sorted) {
-    elementsHtml.push(await elementToHtml(el, context));
-  }
+  // Миграция v1 -> v2
+  const pages = templateData.pages && templateData.pages.length > 0
+    ? templateData.pages
+    : [{
+        id: "page_0",
+        background: templateData.background,
+        elements: templateData.elements || [],
+      }];
 
-  let backgroundStyle = "";
-  if (templateData.background) {
-    if (templateData.background.type === "color") {
-      backgroundStyle = `background-color:${templateData.background.value};`;
-    } else if (templateData.background.type === "image") {
-      const imgUrl = await convertForPreview(templateData.background.value);
-      backgroundStyle = `background-image:url(${imgUrl});background-size:cover;background-position:center;`;
-    }
-  }
-
+  const pagesHtml: string[] = [];
   const fonts = new Set<string>();
-  for (const el of templateData.elements) {
-    if (el.type === "text" || el.type === "variable")
-      fonts.add((el as TextElement).fontFamily);
+
+  for (const [index, page] of pages.entries()) {
+    const sorted = [...(page.elements || [])].sort((a, b) => a.zIndex - b.zIndex);
+    const elementsHtml: string[] = [];
+    
+    for (const el of sorted) {
+      elementsHtml.push(await elementToHtml(el, context));
+      if (el.type === "text" || el.type === "variable") {
+        fonts.add((el as TextElement).fontFamily);
+      }
+    }
+
+    let backgroundStyle = "";
+    if (page.background) {
+      if (page.background.type === "color") {
+        backgroundStyle = `background-color:${page.background.value};`;
+      } else if (page.background.type === "image") {
+        const imgUrl = await convertForPreview(page.background.value);
+        backgroundStyle = `background-image:url(${imgUrl});background-size:cover;background-position:center;`;
+      }
+    }
+
+    // Добавляем margin-bottom между страницами, кроме последней
+    const marginBottom = index < pages.length - 1 ? 'margin-bottom: 20px;' : '';
+    const pageWrapper = `<div style="width:${templateData.width}px;height:${templateData.height}px;position:relative;overflow:hidden;${backgroundStyle}font-family:'Inter',Arial,sans-serif;${marginBottom}box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">${elementsHtml.join("\n")}</div>`;
+    
+    pagesHtml.push(pageWrapper);
   }
+
   const fontLinks = Array.from(fonts)
     .filter(
       (f) =>
@@ -1147,6 +1184,6 @@ export async function generateCertificateHtml(
 
   return `<!DOCTYPE html>
 <html><head><meta charset="UTF-8">${fontLinks}
-<style>*{margin:0;padding:0;box-sizing:border-box;}body{width:${templateData.width}px;height:${templateData.height}px;position:relative;overflow:hidden;${backgroundStyle}font-family:'Inter',Arial,sans-serif;}</style>
-</head><body>${elementsHtml.join("\n")}</body></html>`;
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#f3f4f6;display:flex;flex-direction:column;align-items:center;padding:20px;min-height:100vh;}</style>
+</head><body>${pagesHtml.join("\n")}</body></html>`;
 }

@@ -17,6 +17,13 @@
         background: backgroundStyle,
       }"
     >
+      <!-- Ручки изменения размера холста -->
+      <template v-if="!isDragging && !isSelecting && selectedElementIds.size === 0">
+        <div class="canvas-resize-handle right" @mousedown.stop="handleCanvasResizeStart($event, 'right')"></div>
+        <div class="canvas-resize-handle bottom" @mousedown.stop="handleCanvasResizeStart($event, 'bottom')"></div>
+        <div class="canvas-resize-handle bottom-right" @mousedown.stop="handleCanvasResizeStart($event, 'bottom-right')"></div>
+      </template>
+
       <!-- Направляющие линии -->
       <div
         v-if="guides.vertical.length > 0 || guides.horizontal.length > 0"
@@ -270,6 +277,7 @@ import { ref, computed, nextTick } from "vue";
 import { AVAILABLE_VARIABLES } from "~/composables/useCertificateEditor";
 import type {
   CertificateTemplateData,
+  CertificatePage,
   TemplateElement,
   TextElement,
   VariableElement,
@@ -281,6 +289,7 @@ import type {
 
 const props = defineProps<{
   templateData: CertificateTemplateData;
+  activePage: CertificatePage;
   selectedElementIds: Set<string>;
   zoom: number;
 }>();
@@ -295,6 +304,7 @@ const emit = defineEmits<{
     updates: Partial<TemplateElement>,
   ): void;
   (e: "delete-element", id: string): void;
+  (e: "set-custom-dimensions", width: number, height: number, saveHistory: boolean): void;
 }>();
 
 const editingId = ref<string | null>(null);
@@ -318,6 +328,14 @@ const resizeStartHeight = ref(0);
 const resizeStartElX = ref(0);
 const resizeStartElY = ref(0);
 const resizeElement = ref<TemplateElement | null>(null);
+
+// Состояние для изменения размера холста
+const isCanvasResizing = ref(false);
+const canvasResizeHandle = ref("");
+const canvasResizeStartX = ref(0);
+const canvasResizeStartY = ref(0);
+const canvasResizeStartWidth = ref(0);
+const canvasResizeStartHeight = ref(0);
 
 // Состояние для рамки выделения
 const isSelecting = ref(false);
@@ -354,19 +372,17 @@ const guides = ref<{
 
 const SNAP_THRESHOLD = 8; // Порог привязки в пикселях
 
-// Сортировка элементов по zIndex
+// Сортировка элементов по zIndex (из активной страницы)
 const sortedElements = computed(() => {
-  return [...props.templateData.elements].sort((a, b) => a.zIndex - b.zIndex);
+  return [...props.activePage.elements].sort((a, b) => a.zIndex - b.zIndex);
 });
 
-// Стиль фона
+// Стиль фона (из активной страницы)
 const backgroundStyle = computed(() => {
-  const bg = props.templateData.background;
-  if (bg.type === "color") {
-    return bg.value;
-  } else if (bg.type === "image") {
-    return `url(${bg.value}) center/cover no-repeat`;
-  }
+  const bg = props.activePage.background;
+  if (!bg) return "#FFFFFF";
+  if (bg.type === "color") return bg.value;
+  if (bg.type === "image") return `url(${bg.value}) center/cover no-repeat`;
   return "#FFFFFF";
 });
 
@@ -431,7 +447,7 @@ function calculateGuides(
   const movingCenterY = newY + movingElement.height / 2;
 
   // Направляющие относительно других элементов
-  props.templateData.elements.forEach((el) => {
+  props.activePage.elements.forEach((el) => {
     if (movingElements.some((me) => me.id === el.id)) return;
 
     const elRight = el.x + el.width;
@@ -588,7 +604,7 @@ function handleSelectionEnd() {
     const box = selectionBox.value;
     const selectedIds: string[] = [];
 
-    props.templateData.elements.forEach((el) => {
+    props.activePage.elements.forEach((el) => {
       const elRight = el.x + el.width;
       const elBottom = el.y + el.height;
       const boxRight = box.x + box.width;
@@ -636,7 +652,7 @@ function handleMouseDown(e: MouseEvent, element: TemplateElement) {
 
   // Сохраняем начальные позиции всех выбранных элементов
   dragInitialPositions.value.clear();
-  props.templateData.elements.forEach((el) => {
+  props.activePage.elements.forEach((el) => {
     if (props.selectedElementIds.has(el.id) && !el.locked) {
       dragInitialPositions.value.set(el.id, { x: el.x, y: el.y });
     }
@@ -654,7 +670,7 @@ function handleMouseMove(e: MouseEvent) {
 
     // Находим первый выбранный элемент для расчета направляющих
     const firstSelectedId = Array.from(props.selectedElementIds)[0];
-    const firstElement = props.templateData.elements.find(
+    const firstElement = props.activePage.elements.find(
       (el) => el.id === firstSelectedId,
     );
 
@@ -674,9 +690,7 @@ function handleMouseMove(e: MouseEvent) {
 
         // Перемещаем все выбранные элементы
         dragInitialPositions.value.forEach((initialPos, id) => {
-          const element = props.templateData.elements.find(
-            (el) => el.id === id,
-          );
+          const element = props.activePage.elements.find((el) => el.id === id);
           if (!element) return;
 
           let finalX = initialPos.x + deltaX + snapDeltaX;
@@ -713,6 +727,51 @@ function handleMouseUp() {
 
   document.removeEventListener("mousemove", handleMouseMove);
   document.removeEventListener("mouseup", handleMouseUp);
+}
+
+// Начало изменения размера холста
+function handleCanvasResizeStart(e: MouseEvent, handle: string) {
+  isCanvasResizing.value = true;
+  canvasResizeHandle.value = handle;
+  canvasResizeStartX.value = e.clientX;
+  canvasResizeStartY.value = e.clientY;
+  canvasResizeStartWidth.value = props.templateData.width;
+  canvasResizeStartHeight.value = props.templateData.height;
+
+  document.addEventListener("mousemove", handleCanvasMouseMove);
+  document.addEventListener("mouseup", handleCanvasMouseUp);
+}
+
+// Изменение размера холста
+function handleCanvasMouseMove(e: MouseEvent) {
+  if (!isCanvasResizing.value) return;
+
+  const deltaX = (e.clientX - canvasResizeStartX.value) / props.zoom;
+  const deltaY = (e.clientY - canvasResizeStartY.value) / props.zoom;
+
+  let newWidth = canvasResizeStartWidth.value;
+  let newHeight = canvasResizeStartHeight.value;
+
+  if (canvasResizeHandle.value.includes("right")) {
+    newWidth = Math.max(200, Math.min(5000, canvasResizeStartWidth.value + deltaX));
+  }
+  if (canvasResizeHandle.value.includes("bottom")) {
+    newHeight = Math.max(200, Math.min(5000, canvasResizeStartHeight.value + deltaY));
+  }
+
+  // Обновляем размер без сохранения в историю
+  emit("set-custom-dimensions", newWidth, newHeight, false);
+}
+
+// Окончание изменения размера холста
+function handleCanvasMouseUp() {
+  if (isCanvasResizing.value) {
+    // Сохраняем в историю
+    emit("set-custom-dimensions", props.templateData.width, props.templateData.height, true);
+  }
+  isCanvasResizing.value = false;
+  document.removeEventListener("mousemove", handleCanvasMouseMove);
+  document.removeEventListener("mouseup", handleCanvasMouseUp);
 }
 
 // Начало изменения размера
@@ -1114,5 +1173,54 @@ function handleTextEnter() {
   font-size: 12px;
   font-weight: 700;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Ручки изменения размера холста */
+.canvas-resize-handle {
+  position: absolute;
+  background-color: white;
+  border: 2px solid #3b82f6;
+  z-index: 100;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.15s, transform 0.1s;
+}
+.canvas-resize-handle:hover {
+  background-color: #3b82f6;
+}
+.canvas-resize-handle:active {
+  transform: scale(1.1);
+  background-color: #2563eb;
+}
+.canvas-resize-handle.right {
+  right: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: ew-resize;
+}
+.canvas-resize-handle.right:active {
+  transform: translateY(-50%) scale(1.1);
+}
+.canvas-resize-handle.bottom {
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 14px;
+  border-radius: 6px;
+  cursor: ns-resize;
+}
+.canvas-resize-handle.bottom:active {
+  transform: translateX(-50%) scale(1.1);
+}
+.canvas-resize-handle.bottom-right {
+  right: -8px;
+  bottom: -8px;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+  border-radius: 50%;
 }
 </style>

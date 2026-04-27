@@ -272,13 +272,18 @@
         </label>
 
         <div v-if="useCustomSize" class="custom-size-panel">
+          <div class="size-presets">
+            <button class="size-preset-btn" @click="applySizePreset(1587, 1123)">A3 Альбом</button>
+            <button class="size-preset-btn" @click="applySizePreset(1123, 1587)">A3 Книга</button>
+            <button class="size-preset-btn" @click="applySizePreset(1123, 794)">A4 Альбом</button>
+            <button class="size-preset-btn" @click="applySizePreset(794, 1123)">A4 Книга</button>
+          </div>
           <div class="custom-size-inputs">
             <div class="size-input-group">
               <label>Ширина (px)</label>
               <input
                 type="number"
                 v-model.number="customWidth"
-                @input="validateCustomSize"
                 min="200"
                 max="5000"
                 placeholder="794"
@@ -289,7 +294,6 @@
               <input
                 type="number"
                 v-model.number="customHeight"
-                @input="validateCustomSize"
                 min="200"
                 max="5000"
                 placeholder="1123"
@@ -373,51 +377,33 @@
     </div>
 
     <div class="toolbar-section presets-section">
-      <h3 class="section-title">Шаблоны</h3>
+      <h3 class="section-title">Библиотека шаблонов</h3>
 
-      <button
-        class="preset-btn"
-        @click="applyPreset('classic')"
-        title="Классический"
-      >
-        <div class="preset-preview classic">
-          <div class="pp-line"></div>
-          <div class="pp-line short"></div>
-          <div class="pp-line"></div>
-        </div>
-        <span>Классический</span>
-      </button>
-
-      <button
-        class="preset-btn"
-        @click="applyPreset('modern')"
-        title="Современный"
-      >
-        <div class="preset-preview modern">
-          <div class="pp-line"></div>
-          <div class="pp-line short"></div>
-          <div class="pp-line"></div>
-        </div>
-        <span>Современный</span>
-      </button>
-
-      <button
-        class="preset-btn"
-        @click="applyPreset('minimal')"
-        title="Минималистичный"
-      >
-        <div class="preset-preview minimal">
-          <div class="pp-line"></div>
-          <div class="pp-line short"></div>
-        </div>
-        <span>Минимальный</span>
-      </button>
+      <div v-if="isTemplatesLoading" class="loading-templates">
+        <div class="h-4 w-4 animate-spin rounded-full border-2 border-solid border-primary border-t-transparent mx-auto mb-1"></div>
+        <span>Загрузка...</span>
+      </div>
+      <div v-else-if="savedTemplates.length === 0" class="empty-templates">
+        <span>Нет доступных шаблонов</span>
+      </div>
+      <div v-else class="templates-grid">
+        <button
+          v-for="tpl in savedTemplates"
+          :key="tpl.id"
+          class="saved-template-btn"
+          @click="applySavedTemplate(tpl)"
+          :title="tpl.name"
+        >
+          <div class="saved-template-preview" :style="getTemplatePreviewStyle(tpl)"></div>
+          <span class="template-name">{{ tpl.name }}</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { AVAILABLE_VARIABLES } from "~/composables/useCertificateEditor";
 import { getPreset } from "~/utils/certificatePresets";
 import type {
@@ -427,11 +413,14 @@ import type {
   ShapeType,
   CertificateTemplateData,
 } from "~/types/certificate";
+import type { CertificateTemplate } from "~/types/certificate";
 import { useAuthFetch } from "~/composables/useAuthFetch";
 import { useNotification } from "~/composables/useNotification";
 
 const props = defineProps<{
   currentLayout: TemplateLayout;
+  templateWidth?: number;
+  templateHeight?: number;
   templateId: string; // Добавляем templateId для загрузки изображений
 }>();
 
@@ -452,7 +441,7 @@ const emit = defineEmits<{
 }>();
 
 const { authFetch } = useAuthFetch();
-const { error: showError } = useNotification();
+const { error: showError, success: showSuccess } = useNotification();
 
 const showVariableMenu = ref(false);
 const showShapeMenu = ref(false);
@@ -463,9 +452,43 @@ const isUploadingBackground = ref(false);
 
 // Кастомные размеры
 const useCustomSize = ref(false);
-const customWidth = ref(794);
-const customHeight = ref(1123);
-const isCustomSizeValid = ref(false);
+const customWidth = ref(props.templateWidth || 794);
+const customHeight = ref(props.templateHeight || 1123);
+
+import { watch, computed } from "vue";
+
+const isCustomSizeValid = computed(() => {
+  return customWidth.value >= 200 && customWidth.value <= 5000 &&
+         customHeight.value >= 200 && customHeight.value <= 5000;
+});
+
+watch(
+  () => props.templateWidth,
+  (newWidth) => {
+    if (newWidth && newWidth !== customWidth.value) {
+      customWidth.value = newWidth;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.templateHeight,
+  (newHeight) => {
+    if (newHeight && newHeight !== customHeight.value) {
+      customHeight.value = newHeight;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.currentLayout,
+  (newLayout) => {
+    useCustomSize.value = newLayout === "custom";
+  },
+  { immediate: true }
+);
 
 // Группировка переменных для удобного отображения
 const variableGroups = computed(() => [
@@ -604,12 +627,10 @@ function applyPreset(preset: "classic" | "modern" | "minimal") {
 }
 
 // Кастомные размеры
-function validateCustomSize() {
-  const width = customWidth.value;
-  const height = customHeight.value;
-
-  isCustomSizeValid.value =
-    width >= 200 && width <= 5000 && height >= 200 && height <= 5000;
+function applySizePreset(width: number, height: number) {
+  customWidth.value = width;
+  customHeight.value = height;
+  applyCustomSize();
 }
 
 function applyCustomSize() {
@@ -620,6 +641,7 @@ function applyCustomSize() {
   const height = Math.max(200, Math.min(5000, customHeight.value));
 
   emit("set-layout", "custom", width, height);
+  showSuccess("Размер холста успешно изменен");
 }
 
 // Закрытие меню при клике вне
@@ -631,8 +653,52 @@ function handleClickOutside(e: MouseEvent) {
   }
 }
 
+// Библиотека шаблонов
+const savedTemplates = ref<CertificateTemplate[]>([]);
+const isTemplatesLoading = ref(false);
+
+const loadSavedTemplates = async () => {
+  isTemplatesLoading.value = true;
+  try {
+    const response = await authFetch<{
+      success: boolean;
+      templates: CertificateTemplate[];
+    }>("/api/certificates/templates");
+    if (response.success) {
+      savedTemplates.value = response.templates.filter(
+        (t) => t.id !== props.templateId && t.templateData
+      );
+    }
+  } catch (error: any) {
+    console.error("Error loading templates:", error);
+  } finally {
+    isTemplatesLoading.value = false;
+  }
+};
+
+const applySavedTemplate = (tpl: CertificateTemplate) => {
+  if (tpl.templateData) {
+    emit("apply-preset", JSON.parse(JSON.stringify(tpl.templateData)));
+  }
+};
+
+const getTemplatePreviewStyle = (template: CertificateTemplate) => {
+  const bg = template.templateData?.background;
+  if (!bg) return { backgroundColor: "#f3f4f6" };
+
+  if (bg.type === "color") return { backgroundColor: bg.value };
+  if (bg.type === "image")
+    return {
+      backgroundImage: `url(${bg.value})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    };
+  return { backgroundColor: "#f3f4f6" };
+};
+
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
+  loadSavedTemplates();
 });
 
 onUnmounted(() => {
@@ -1156,5 +1222,98 @@ onUnmounted(() => {
 
 .hidden-input {
   display: none;
+}
+
+/* Custom Size Presets */
+.size-presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
+}
+
+.size-preset-btn {
+  padding: 0.375rem 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-gray-600);
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.size-preset-btn:hover {
+  background: var(--color-gray-100);
+  color: var(--color-gray-800);
+  border-color: var(--color-gray-300);
+}
+
+:root.dark .size-preset-btn {
+  background: var(--color-gray-700);
+  border-color: var(--color-gray-600);
+  color: var(--color-gray-300);
+}
+
+:root.dark .size-preset-btn:hover {
+  background: var(--color-gray-600);
+  color: white;
+}
+
+/* Saved Templates Library */
+.templates-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.saved-template-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.375rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.saved-template-btn:hover {
+  background: var(--color-gray-50);
+  border-color: var(--color-gray-200);
+}
+
+:root.dark .saved-template-btn:hover {
+  background: var(--color-gray-800);
+  border-color: var(--color-gray-700);
+}
+
+.saved-template-preview {
+  width: 36px;
+  height: 24px;
+  border-radius: 0.125rem;
+  border: 1px solid var(--color-gray-200);
+  flex-shrink: 0;
+}
+
+:root.dark .saved-template-preview {
+  border-color: var(--color-gray-600);
+}
+
+.template-name {
+  font-size: 0.75rem;
+  color: var(--color-gray-700);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-grow: 1;
+}
+
+:root.dark .template-name {
+  color: var(--color-gray-300);
 }
 </style>

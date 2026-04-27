@@ -77,6 +77,14 @@ export default defineEventHandler(async (event) => {
     // Генерируем HTML
     const html = await generateCertificateHtml(templateData, testContext);
 
+    // Подсчет элементов
+    let elementsCount = 0;
+    if (templateData.pages && templateData.pages.length > 0) {
+      elementsCount = templateData.pages.reduce((sum, p) => sum + (p.elements?.length || 0), 0);
+    } else {
+      elementsCount = templateData.elements?.length || 0;
+    }
+
     return {
       success: true,
       hasTemplate: true,
@@ -85,7 +93,7 @@ export default defineEventHandler(async (event) => {
         width: templateData.width,
         height: templateData.height,
         layout: templateData.layout,
-        elementsCount: templateData.elements.length,
+        elementsCount,
       },
       template: {
         id: template.id,

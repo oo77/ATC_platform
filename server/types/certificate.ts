@@ -269,6 +269,15 @@ export interface ShapeElement extends BaseElement {
 }
 
 /**
+ * Одна страница шаблона сертификата
+ */
+export interface CertificatePage {
+  id: string;
+  background: TemplateBackground;
+  elements: TemplateElement[];
+}
+
+/**
  * Объединённый тип элемента
  */
 export type TemplateElement =
@@ -290,10 +299,14 @@ export interface CertificateTemplateData {
   width: number;
   /** Высота в пикселях */
   height: number;
+  /** Страницы (v2) */
+  pages?: CertificatePage[];
+
+  // Legacy-поля (v1), сохраняются для обратной совместимости
   /** Настройки фона */
-  background: TemplateBackground;
+  background?: TemplateBackground;
   /** Элементы на холсте */
-  elements: TemplateElement[];
+  elements?: TemplateElement[];
 }
 
 // ============================================================================

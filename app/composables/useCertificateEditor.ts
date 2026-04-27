@@ -6,6 +6,7 @@
 import { ref, computed, shallowRef, watch } from "vue";
 import type {
   CertificateTemplateData,
+  CertificatePage,
   TemplateElement,
   TextElement,
   VariableElement,
@@ -169,22 +170,66 @@ function generateId(): string {
 }
 
 /**
- * Создание пустого шаблона
+ * Генерация ID страницы
  */
-export function createEmptyTemplate(
-  layout: TemplateLayout = "A4_landscape",
-): CertificateTemplateData {
-  const dimensions = LAYOUT_DIMENSIONS[layout];
+function generatePageId(): string {
+  return `page_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Создание пустой страницы
+ */
+export function createEmptyPage(): CertificatePage {
   return {
-    version: "1.0",
-    layout,
-    width: dimensions.width,
-    height: dimensions.height,
+    id: generatePageId(),
     background: {
       type: "color",
       value: "#FFFFFF",
     },
     elements: [],
+  };
+}
+
+/**
+ * Создание пустого шаблона
+ */
+export function createEmptyTemplate(
+  layout: TemplateLayout = "A4_landscape",
+): CertificateTemplateData {
+  const dimensions = layout === "custom" 
+    ? LAYOUT_DIMENSIONS.A4_landscape 
+    : LAYOUT_DIMENSIONS[layout];
+  return {
+    version: "2.0",
+    layout,
+    width: dimensions.width,
+    height: dimensions.height,
+    pages: [createEmptyPage()],
+  };
+}
+
+/**
+ * Миграция старых шаблонов v1 → v2
+ */
+export function migrateLegacyData(
+  data: any,
+): CertificateTemplateData {
+  // Уже v2 — проверяем, что страницы валидны
+  if (Array.isArray(data.pages) && data.pages.length > 0) {
+    return data as CertificateTemplateData;
+  }
+  // v1 — переносим legacy background + elements в pages[0]
+  const legacyPage: CertificatePage = {
+    id: generatePageId(),
+    background: data.background ?? { type: "color", value: "#FFFFFF" },
+    elements: Array.isArray(data.elements) ? data.elements : [],
+  };
+  return {
+    version: "2.0",
+    layout: data.layout ?? "A4_landscape",
+    width: data.width ?? 1123,
+    height: data.height ?? 794,
+    pages: [legacyPage],
   };
 }
 
@@ -323,6 +368,9 @@ export function useCertificateEditor() {
   // Данные шаблона
   const templateData = ref<CertificateTemplateData>(createEmptyTemplate());
 
+  // Индекс активной страницы
+  const activePageIndex = ref<number>(0);
+
   // Множественный выбор элементов
   const selectedElementIds = ref<Set<string>>(new Set());
 
@@ -341,15 +389,35 @@ export function useCertificateEditor() {
   const minZoom = 0.25;
   const maxZoom = 2;
 
-  // Вычисляемые свойства
+  // ── Вычисляемые свойства страниц ────────────────────────────
+
+  /** Активная страница */
+  const activePage = computed(() => {
+    const pages = templateData.value.pages;
+    const idx = Math.min(activePageIndex.value, pages.length - 1);
+    return pages[idx] ?? pages[0];
+  });
+
+  /** Элементы активной страницы */
+  const activePageElements = computed(() => activePage.value?.elements ?? []);
+
+  /** Фон активной страницы */
+  const activePageBackground = computed(
+    () => activePage.value?.background ?? { type: "color", value: "#FFFFFF" },
+  );
+
+  /** Количество страниц */
+  const pagesCount = computed(() => templateData.value.pages.length);
+
+  // ── Вычисляемые свойства элементов (из активной страницы) ───
+
   const selectedElements = computed(() => {
     if (selectedElementIds.value.size === 0) return [];
-    return templateData.value.elements.filter((el: TemplateElement) =>
+    return activePageElements.value.filter((el: TemplateElement) =>
       selectedElementIds.value.has(el.id),
     );
   });
 
-  // Для обратной совместимости - первый выбранный элемент
   const selectedElementId = computed(() => {
     const ids = Array.from(selectedElementIds.value);
     return ids.length > 0 ? ids[0] : null;
@@ -358,7 +426,7 @@ export function useCertificateEditor() {
   const selectedElement = computed(() => {
     if (!selectedElementId.value) return null;
     return (
-      templateData.value.elements.find(
+      activePageElements.value.find(
         (el: TemplateElement) => el.id === selectedElementId.value,
       ) ?? null
     );
@@ -366,30 +434,23 @@ export function useCertificateEditor() {
 
   const canUndo = computed(() => historyIndex.value > 0);
   const canRedo = computed(() => historyIndex.value < history.value.length - 1);
+  const elementsCount = computed(() => activePageElements.value.length);
 
-  const elementsCount = computed(() => templateData.value.elements.length);
+  // ── История ─────────────────────────────────────────────────
 
-  // Сохранение состояния в историю
   function saveToHistory() {
-    // Удаляем все состояния после текущего (при новом действии после undo)
     if (historyIndex.value < history.value.length - 1) {
       history.value = history.value.slice(0, historyIndex.value + 1);
     }
-
-    // Добавляем текущее состояние
     history.value.push(JSON.parse(JSON.stringify(templateData.value)));
-
-    // Ограничиваем длину истории
     if (history.value.length > maxHistoryLength) {
       history.value.shift();
     } else {
       historyIndex.value++;
     }
-
     isDirty.value = true;
   }
 
-  // Отмена действия
   function undo() {
     if (!canUndo.value) return;
     historyIndex.value--;
@@ -399,7 +460,6 @@ export function useCertificateEditor() {
     isDirty.value = true;
   }
 
-  // Повтор действия
   function redo() {
     if (!canRedo.value) return;
     historyIndex.value++;
@@ -409,38 +469,35 @@ export function useCertificateEditor() {
     isDirty.value = true;
   }
 
-  // Инициализация шаблона
-  function initTemplate(data?: CertificateTemplateData) {
-    if (data) {
-      templateData.value = JSON.parse(JSON.stringify(data));
-    } else {
-      templateData.value = createEmptyTemplate();
-    }
+  // ── Инициализация ────────────────────────────────────────────
 
-    // Сбрасываем историю
+  function initTemplate(data?: CertificateTemplateData | any) {
+    // Автоматическая миграция v1 → v2
+    const migrated = data ? migrateLegacyData(data) : createEmptyTemplate();
+    templateData.value = JSON.parse(JSON.stringify(migrated));
+
     history.value = [JSON.parse(JSON.stringify(templateData.value))];
     historyIndex.value = 0;
+    activePageIndex.value = 0;
     selectedElementIds.value.clear();
     isDirty.value = false;
   }
 
-  // Изменение макета
+  // ── Макет и размеры ──────────────────────────────────────────
+
   function setLayout(
     layout: TemplateLayout,
     customWidth?: number,
     customHeight?: number,
   ) {
     saveToHistory();
-
     if (layout === "custom") {
-      // Для кастомного макета используем переданные размеры или текущие
       templateData.value.layout = layout;
       if (customWidth !== undefined && customHeight !== undefined) {
         templateData.value.width = customWidth;
         templateData.value.height = customHeight;
       }
     } else {
-      // Для стандартных макетов используем предопределенные размеры
       const dimensions = LAYOUT_DIMENSIONS[layout];
       templateData.value.layout = layout;
       templateData.value.width = dimensions.width;
@@ -448,9 +505,8 @@ export function useCertificateEditor() {
     }
   }
 
-  // Изменение кастомных размеров
-  function setCustomDimensions(width: number, height: number) {
-    saveToHistory();
+  function setCustomDimensions(width: number, height: number, saveHistory: boolean = true) {
+    if (saveHistory) saveToHistory();
     templateData.value.width = Math.max(200, Math.min(5000, width));
     templateData.value.height = Math.max(200, Math.min(5000, height));
     if (templateData.value.layout !== "custom") {
@@ -458,101 +514,150 @@ export function useCertificateEditor() {
     }
   }
 
-  // Изменение фона
+  // ── Фон активной страницы ────────────────────────────────────
+
   function setBackground(background: TemplateBackground) {
     saveToHistory();
-    templateData.value.background = background;
+    const idx = Math.min(activePageIndex.value, templateData.value.pages.length - 1);
+    const page = templateData.value.pages[idx];
+    if (page) {
+      page.background = background;
+    }
   }
 
-  // Добавление элемента
+  // ── Управление страницами ────────────────────────────────────
+
+  /** Добавить пустую страницу после текущей */
+  function addPage() {
+    saveToHistory();
+    const newPage = createEmptyPage();
+    templateData.value.pages.push(newPage);
+    activePageIndex.value = templateData.value.pages.length - 1;
+    selectedElementIds.value.clear();
+  }
+
+  /** Удалить страницу по индексу (нельзя удалить последнюю) */
+  function removePage(index: number) {
+    if (templateData.value.pages.length <= 1) return;
+    saveToHistory();
+    templateData.value.pages.splice(index, 1);
+    // Корректируем активный индекс
+    if (activePageIndex.value >= templateData.value.pages.length) {
+      activePageIndex.value = templateData.value.pages.length - 1;
+    }
+    selectedElementIds.value.clear();
+  }
+
+  /** Дублировать страницу */
+  function duplicatePage(index: number) {
+    saveToHistory();
+    const source = templateData.value.pages[index];
+    if (!source) return;
+    const copy: CertificatePage = {
+      ...JSON.parse(JSON.stringify(source)),
+      id: generatePageId(),
+    };
+    // Генерируем новые ID для всех элементов копии
+    copy.elements = copy.elements.map((el: TemplateElement) => ({
+      ...el,
+      id: generateId(),
+    }));
+    templateData.value.pages.splice(index + 1, 0, copy);
+    activePageIndex.value = index + 1;
+    selectedElementIds.value.clear();
+  }
+
+  /** Переключить активную страницу */
+  function setActivePage(index: number) {
+    if (index < 0 || index >= templateData.value.pages.length) return;
+    activePageIndex.value = index;
+    selectedElementIds.value.clear();
+  }
+
+  function reorderPages(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    saveToHistory();
+    const pages = templateData.value.pages;
+    const [moved] = pages.splice(fromIndex, 1);
+    if (moved) {
+      pages.splice(toIndex, 0, moved);
+    }
+    activePageIndex.value = toIndex;
+  }
+
+  // ── Утилита ─────────────────────────────────────────────────
+
+  /** Геттер элементов активной страницы (мутабельно) */
+  function getActivePageElements(): TemplateElement[] {
+    const idx = Math.min(activePageIndex.value, templateData.value.pages.length - 1);
+    return templateData.value.pages[idx]?.elements ?? [];
+  }
+
+  // ── Операции с элементами ───────────────────────────────────
+
   function addElement(element: TemplateElement) {
     saveToHistory();
-    // Устанавливаем zIndex выше всех текущих
-    const maxZIndex = Math.max(
-      0,
-      ...templateData.value.elements.map((el: TemplateElement) => el.zIndex),
-    );
+    const els = getActivePageElements();
+    const maxZIndex = Math.max(0, ...els.map((el: TemplateElement) => el.zIndex));
     element.zIndex = maxZIndex + 1;
-    templateData.value.elements.push(element);
-    // Выбираем новый элемент
+    els.push(element);
     selectedElementIds.value.clear();
     selectedElementIds.value.add(element.id);
   }
 
-  // Обновление элемента
   function updateElement(id: string, updates: Partial<TemplateElement>) {
-    const index = templateData.value.elements.findIndex(
-      (el: TemplateElement) => el.id === id,
-    );
+    const els = getActivePageElements();
+    const index = els.findIndex((el: TemplateElement) => el.id === id);
     if (index === -1) return;
-
     saveToHistory();
-    templateData.value.elements[index] = {
-      ...templateData.value.elements[index],
-      ...updates,
-    } as TemplateElement;
+    els[index] = { ...els[index], ...updates } as TemplateElement;
   }
 
-  // Удаление элемента
   function deleteElement(id: string) {
     saveToHistory();
-    templateData.value.elements = templateData.value.elements.filter(
-      (el: TemplateElement) => el.id !== id,
-    );
-    // Убираем из выбора, если был выбран
+    const idx = Math.min(activePageIndex.value, templateData.value.pages.length - 1);
+    const page = templateData.value.pages[idx];
+    if (page) {
+      page.elements = page.elements.filter(
+        (el: TemplateElement) => el.id !== id,
+      );
+    }
     if (selectedElementIds.value.has(id)) {
       selectedElementIds.value.delete(id);
     }
   }
 
-  // Удаление выбранного элемента
   function deleteSelectedElement() {
-    if (selectedElementId.value) {
-      deleteElement(selectedElementId.value);
-    }
+    if (selectedElementId.value) deleteElement(selectedElementId.value);
   }
 
-  // Дублирование элемента
   function duplicateElement(id: string) {
-    const element = templateData.value.elements.find(
-      (el: TemplateElement) => el.id === id,
-    );
+    const element = getActivePageElements().find((el: TemplateElement) => el.id === id);
     if (!element) return;
-
     const newElement = {
       ...JSON.parse(JSON.stringify(element)),
       id: generateId(),
       x: element.x + 20,
       y: element.y + 20,
     };
-
     addElement(newElement);
   }
 
-  // Перемещение элемента на передний план
   function bringToFront(id: string) {
-    const maxZIndex = Math.max(
-      ...templateData.value.elements.map((el: TemplateElement) => el.zIndex),
-    );
+    const els = getActivePageElements();
+    const maxZIndex = Math.max(...els.map((el: TemplateElement) => el.zIndex));
     updateElement(id, { zIndex: maxZIndex + 1 });
   }
 
-  // Перемещение элемента на задний план
   function sendToBack(id: string) {
-    const minZIndex = Math.min(
-      ...templateData.value.elements.map((el: TemplateElement) => el.zIndex),
-    );
+    const els = getActivePageElements();
+    const minZIndex = Math.min(...els.map((el: TemplateElement) => el.zIndex));
     updateElement(id, { zIndex: minZIndex - 1 });
   }
 
-  // Блокировка/разблокировка элемента
   function toggleLock(id: string) {
-    const element = templateData.value.elements.find(
-      (el: TemplateElement) => el.id === id,
-    );
-    if (element) {
-      updateElement(id, { locked: !element.locked });
-    }
+    const element = getActivePageElements().find((el: TemplateElement) => el.id === id);
+    if (element) updateElement(id, { locked: !element.locked });
   }
 
   // Выбор элемента/элементов
@@ -592,122 +697,99 @@ export function useCertificateEditor() {
     selectedElementIds.value.clear();
   }
 
-  // Обновление нескольких элементов одновременно
   function updateMultipleElements(
     ids: string[],
     updates: Partial<TemplateElement>,
   ) {
     saveToHistory();
+    const els = getActivePageElements();
     ids.forEach((id) => {
-      const index = templateData.value.elements.findIndex(
-        (el: TemplateElement) => el.id === id,
-      );
-      if (index !== -1 && !templateData.value.elements[index].locked) {
-        templateData.value.elements[index] = {
-          ...templateData.value.elements[index],
-          ...updates,
-        } as TemplateElement;
+      const index = els.findIndex((el: TemplateElement) => el.id === id);
+      const el = els[index];
+      if (el && !el.locked) {
+        els[index] = { ...el, ...updates } as TemplateElement;
       }
     });
   }
 
-  // Выравнивание нескольких элементов относительно друг друга
   function alignMultipleElements(
     ids: string[],
     direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
   ) {
     if (ids.length < 2) return;
-
-    const elements = templateData.value.elements.filter(
+    const elements = getActivePageElements().filter(
       (el: TemplateElement) => ids.includes(el.id) && !el.locked,
     );
     if (elements.length < 2) return;
-
     saveToHistory();
-
-    // Находим опорную точку (первый элемент или крайний)
     let referenceValue: number;
-
     switch (direction) {
       case "left":
         referenceValue = Math.min(...elements.map((el) => el.x));
-        elements.forEach((el) => {
-          updateElement(el.id, { x: referenceValue });
-        });
+        elements.forEach((el) => updateElement(el.id, { x: referenceValue }));
         break;
       case "center-h":
         const avgCenterX =
-          elements.reduce((sum, el) => sum + el.x + el.width / 2, 0) /
-          elements.length;
-        elements.forEach((el) => {
-          updateElement(el.id, { x: avgCenterX - el.width / 2 });
-        });
+          elements.reduce((sum, el) => sum + el.x + el.width / 2, 0) / elements.length;
+        elements.forEach((el) => updateElement(el.id, { x: avgCenterX - el.width / 2 }));
         break;
       case "right":
         referenceValue = Math.max(...elements.map((el) => el.x + el.width));
-        elements.forEach((el) => {
-          updateElement(el.id, { x: referenceValue - el.width });
-        });
+        elements.forEach((el) => updateElement(el.id, { x: referenceValue - el.width }));
         break;
       case "top":
         referenceValue = Math.min(...elements.map((el) => el.y));
-        elements.forEach((el) => {
-          updateElement(el.id, { y: referenceValue });
-        });
+        elements.forEach((el) => updateElement(el.id, { y: referenceValue }));
         break;
       case "center-v":
         const avgCenterY =
-          elements.reduce((sum, el) => sum + el.y + el.height / 2, 0) /
-          elements.length;
-        elements.forEach((el) => {
-          updateElement(el.id, { y: avgCenterY - el.height / 2 });
-        });
+          elements.reduce((sum, el) => sum + el.y + el.height / 2, 0) / elements.length;
+        elements.forEach((el) => updateElement(el.id, { y: avgCenterY - el.height / 2 }));
         break;
       case "bottom":
         referenceValue = Math.max(...elements.map((el) => el.y + el.height));
-        elements.forEach((el) => {
-          updateElement(el.id, { y: referenceValue - el.height });
-        });
+        elements.forEach((el) => updateElement(el.id, { y: referenceValue - el.height }));
         break;
     }
   }
 
-  // Распределение элементов с равными интервалами
   function distributeElements(
     ids: string[],
     direction: "horizontal" | "vertical",
   ) {
     if (ids.length < 3) return;
-
-    const elements = templateData.value.elements
+    const elements = getActivePageElements()
       .filter((el: TemplateElement) => ids.includes(el.id) && !el.locked)
       .sort((a, b) => (direction === "horizontal" ? a.x - b.x : a.y - b.y));
-
     if (elements.length < 3) return;
-
     saveToHistory();
-
     if (direction === "horizontal") {
       const first = elements[0];
       const last = elements[elements.length - 1];
+      if (!first || !last) return;
       const totalSpace = last.x - (first.x + first.width);
       const gap = totalSpace / (elements.length - 1);
-
       let currentX = first.x + first.width + gap;
       for (let i = 1; i < elements.length - 1; i++) {
-        updateElement(elements[i].id, { x: currentX });
-        currentX += elements[i].width + gap;
+        const el = elements[i];
+        if (el) {
+          updateElement(el.id, { x: currentX });
+          currentX += el.width + gap;
+        }
       }
     } else {
       const first = elements[0];
       const last = elements[elements.length - 1];
+      if (!first || !last) return;
       const totalSpace = last.y - (first.y + first.height);
       const gap = totalSpace / (elements.length - 1);
-
       let currentY = first.y + first.height + gap;
       for (let i = 1; i < elements.length - 1; i++) {
-        updateElement(elements[i].id, { y: currentY });
-        currentY += elements[i].height + gap;
+        const el = elements[i];
+        if (el) {
+          updateElement(el.id, { y: currentY });
+          currentY += el.height + gap;
+        }
       }
     }
   }
@@ -729,42 +811,25 @@ export function useCertificateEditor() {
     zoom.value = 1;
   }
 
-  // Выравнивание элемента относительно холста
   function alignElement(
     id: string,
     direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
   ) {
-    const element = templateData.value.elements.find(
+    const element = getActivePageElements().find(
       (el: TemplateElement) => el.id === id,
     );
     if (!element || element.locked) return;
-
     const canvasWidth = templateData.value.width;
     const canvasHeight = templateData.value.height;
-
     let updates: Partial<TemplateElement> = {};
-
     switch (direction) {
-      case "left":
-        updates.x = 0;
-        break;
-      case "center-h":
-        updates.x = (canvasWidth - element.width) / 2;
-        break;
-      case "right":
-        updates.x = canvasWidth - element.width;
-        break;
-      case "top":
-        updates.y = 0;
-        break;
-      case "center-v":
-        updates.y = (canvasHeight - element.height) / 2;
-        break;
-      case "bottom":
-        updates.y = canvasHeight - element.height;
-        break;
+      case "left": updates.x = 0; break;
+      case "center-h": updates.x = (canvasWidth - element.width) / 2; break;
+      case "right": updates.x = canvasWidth - element.width; break;
+      case "top": updates.y = 0; break;
+      case "center-v": updates.y = (canvasHeight - element.height) / 2; break;
+      case "bottom": updates.y = canvasHeight - element.height; break;
     }
-
     updateElement(id, updates);
   }
 
@@ -845,6 +910,13 @@ export function useCertificateEditor() {
     isLoading,
     isSaving,
 
+    // Страницы
+    activePageIndex,
+    activePage,
+    activePageElements,
+    activePageBackground,
+    pagesCount,
+
     // Вычисляемые
     canUndo,
     canRedo,
@@ -863,6 +935,13 @@ export function useCertificateEditor() {
     setLayout,
     setCustomDimensions,
     setBackground,
+
+    // Методы страниц
+    addPage,
+    removePage,
+    duplicatePage,
+    setActivePage,
+    reorderPages,
 
     // Методы элементов
     addElement,
