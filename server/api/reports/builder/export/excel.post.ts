@@ -79,9 +79,34 @@ export default defineEventHandler(async (event) => {
     });
     headerRow.height = 28;
 
-    // Данные
-    for (const row of rows) {
-      sheet.addRow(Object.values(row));
+    // Подготовка данных (форматирование дат для исключения сдвигов часовых поясов)
+    const formattedRows = rows.map((row) => {
+      return columnLabels.map((label) => {
+        const value = row[label];
+        if (value instanceof Date) {
+          const d = String(value.getDate()).padStart(2, "0");
+          const m = String(value.getMonth() + 1).padStart(2, "0");
+          const y = value.getFullYear();
+
+          // Если есть время (не полночь), добавляем его
+          if (
+            value.getHours() !== 0 ||
+            value.getMinutes() !== 0 ||
+            value.getSeconds() !== 0
+          ) {
+            const h = String(value.getHours()).padStart(2, "0");
+            const mi = String(value.getMinutes()).padStart(2, "0");
+            return `${d}.${m}.${y} ${h}:${mi}`;
+          }
+          return `${d}.${m}.${y}`;
+        }
+        return value ?? "";
+      });
+    });
+
+    // Добавление строк данных
+    for (const rowData of formattedRows) {
+      sheet.addRow(rowData);
     }
 
     // Авто-ширина столбцов
@@ -89,7 +114,7 @@ export default defineEventHandler(async (event) => {
       const label = columnLabels[index] || "";
       const maxLen = Math.max(
         label.length,
-        ...rows.map((r) => String(Object.values(r)[index] ?? "").length),
+        ...formattedRows.map((r) => String(r[index] ?? "").length),
       );
       col.width = Math.min(Math.max(maxLen + 2, 12), 50);
     });
