@@ -39,6 +39,8 @@ export type JoinKey =
   | "students"
   | "organizations"
   | "schedule_events"
+  | "classrooms"
+  | "event_instructors"
   | "attendance_marking_status"
   | "test_sessions"
   | "test_assignments"
@@ -138,6 +140,20 @@ export const JOIN_DEFINITIONS: Record<JoinKey, JoinDefinition> = {
     condition: "se.group_id = sg.id",
     type: "LEFT",
     requires: ["study_groups"],
+  },
+  classrooms: {
+    table: "classrooms",
+    alias: "cr",
+    condition: "cr.id = se.classroom_id",
+    type: "LEFT",
+    requires: ["schedule_events"],
+  },
+  event_instructors: {
+    table: "instructors",
+    alias: "ei",
+    condition: "ei.id = se.instructor_id",
+    type: "LEFT",
+    requires: ["schedule_events"],
   },
   attendance_marking_status: {
     table: "attendance_marking_status",
@@ -668,14 +684,40 @@ export const ENTITY_GROUPS: EntityGroup[] = [
         isDateField: true,
       },
       {
+        key: "event.time",
+        label: "Время занятия",
+        type: "text",
+        sqlExpression: "TIME_FORMAT(se.start_time, '%H:%i')",
+        requiredJoins: ["schedule_events"],
+        allowedAggregations: ["none", "list", "count_distinct"],
+        defaultAggregation: "none",
+      },
+      {
         key: "event.duration_hours",
-        label: "Длительность занятия (ч)",
-        type: "computed",
-        sqlExpression:
-          "ROUND(TIMESTAMPDIFF(MINUTE, se.start_time, se.end_time) / 60.0, 1)",
+        label: "Длительность занятия (ач)",
+        type: "number",
+        sqlExpression: "se.academic_hours",
         requiredJoins: ["schedule_events"],
         allowedAggregations: ["sum", "avg", "min", "max"],
         defaultAggregation: "sum",
+      },
+      {
+        key: "event.classroom",
+        label: "Место проведения (Аудитория)",
+        type: "text",
+        sqlExpression: "cr.name",
+        requiredJoins: ["schedule_events", "classrooms"],
+        allowedAggregations: ["none", "list", "count_distinct"],
+        defaultAggregation: "none",
+      },
+      {
+        key: "event.instructor",
+        label: "Инструктор (занятия)",
+        type: "text",
+        sqlExpression: "ei.full_name",
+        requiredJoins: ["schedule_events", "event_instructors"],
+        allowedAggregations: ["none", "list", "count_distinct"],
+        defaultAggregation: "none",
       },
     ],
   },

@@ -24,37 +24,40 @@
         >
           <div
             v-if="isVisible"
-            class="w-full max-w-3xl rounded-lg bg-white dark:bg-boxdark shadow-xl"
+            class="w-full max-w-3xl rounded-2xl bg-white dark:bg-boxdark shadow-2xl overflow-hidden"
             @click.stop
           >
             <!-- Заголовок -->
-            <div class="border-b border-stroke px-6 py-4 dark:border-strokedark flex items-center justify-between">
-              <h3 class="text-xl font-semibold text-black dark:text-white">
-                {{ modalTitle }}
-              </h3>
+            <div class="border-b border-stroke px-8 py-5 dark:border-strokedark flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+              <div class="flex items-center gap-3">
+                <div class="p-2 rounded-xl bg-primary/10 text-primary">
+                  <GraduationCap class="w-6 h-6" />
+                </div>
+                <h3 class="text-xl font-bold text-black dark:text-white uppercase tracking-tight">
+                  {{ modalTitle }}
+                </h3>
+              </div>
               <button
                 @click="handleClose"
-                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-gray-400 hover:text-gray-600 transition-all"
               >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X class="w-6 h-6" />
               </button>
             </div>
 
             <!-- Форма -->
-            <form @submit.prevent="handleSubmit" class="p-6">
+            <form @submit.prevent="handleSubmit" class="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
               <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <!-- Ф.И.О -->
                 <div class="sm:col-span-2">
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Ф.И.О <span class="text-danger">*</span>
                   </label>
                   <input
                     v-model="formData.fullName"
                     type="text"
                     placeholder="Введите полное имя"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                     :class="{ 'border-danger': errors.fullName }"
                     required
                   />
@@ -63,9 +66,61 @@
                   </p>
                 </div>
 
+                <!-- Фото -->
+                <div class="sm:col-span-2">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    Фотография
+                  </label>
+                  <div class="flex items-center gap-6 p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/30 hover:border-primary/50 transition-all group">
+                    <div class="relative shrink-0">
+                      <div v-if="formData.photo_base64" class="w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-white dark:ring-slate-800 shadow-xl">
+                        <img :src="formData.photo_base64" class="w-full h-full object-cover" />
+                        <button 
+                          @click="removePhoto" 
+                          type="button"
+                          class="absolute -top-2 -right-2 p-1.5 rounded-full bg-danger text-white shadow-lg hover:scale-110 transition-transform"
+                        >
+                          <X class="w-3 h-3" />
+                        </button>
+                      </div>
+                      <div v-else class="w-24 h-24 rounded-2xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-500 ring-4 ring-white dark:ring-slate-800 shadow-inner group-hover:bg-slate-200 dark:group-hover:bg-slate-600 transition-colors">
+                        <UserIcon class="w-10 h-10" />
+                      </div>
+                    </div>
+                    
+                    <div class="grow">
+                      <p class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">
+                        Загрузите фото студента
+                      </p>
+                      <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                        PNG, JPG или WEBP. Максимум 2MB.
+                      </p>
+                      <input
+                        type="file"
+                        ref="fileInput"
+                        class="hidden"
+                        accept="image/*"
+                        @change="handlePhotoUpload"
+                      />
+                        <UiButton
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        @click="fileInput?.click()"
+                        class="h-9 px-4 rounded-xl border-slate-200 dark:border-slate-700"
+                      >
+                        <template #icon>
+                          <Upload class="w-4 h-4" />
+                        </template>
+                        Выбрать файл
+                      </UiButton>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- ПИНФЛ -->
                 <div>
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     ПИНФЛ <span class="text-danger">*</span>
                   </label>
                   <input
@@ -74,7 +129,7 @@
                     placeholder="14-значный ПИНФЛ"
                     maxlength="14"
                     pattern="[0-9]{14}"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary font-mono"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50 font-mono"
                     :class="{ 'border-danger': errors.pinfl }"
                     required
                   />
@@ -86,9 +141,27 @@
                   </p>
                 </div>
 
+                <!-- Дата рождения -->
+                <div>
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    Дата рождения
+                  </label>
+                  <div class="relative">
+                    <input
+                      v-model="formData.birthDate"
+                      type="date"
+                      :max="new Date().toISOString().split('T')[0]"
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
+                    />
+                    <div class="absolute right-12 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                      <CalendarIcon class="w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Организация с автокомплитом -->
                 <div class="relative">
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Организация <span class="text-danger">*</span>
                   </label>
                   <div class="relative">
@@ -96,7 +169,7 @@
                       v-model="formData.organization"
                       type="text"
                       placeholder="Введите название организации"
-                      class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                       :class="{ 'border-danger': errors.organization }"
                       required
                       autocomplete="off"
@@ -155,27 +228,27 @@
 
                 <!-- Служба/Отдел -->
                 <div>
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Служба/Отдел
                   </label>
                   <input
                     v-model="formData.department"
                     type="text"
                     placeholder="Введите название службы или отдела"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                   />
                 </div>
 
                 <!-- Должность -->
                 <div>
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Должность <span class="text-danger">*</span>
                   </label>
                   <input
                     v-model="formData.position"
                     type="text"
                     placeholder="Введите должность"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                     :class="{ 'border-danger': errors.position }"
                     required
                   />
@@ -250,11 +323,12 @@
               </div>
 
               <!-- Кнопки -->
-              <div class="mt-6 flex justify-end gap-4">
+              <div class="mt-8 flex justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
                 <UiButton
-                  variant="danger"
+                  variant="outline"
                   @click="handleClose"
                   :disabled="isSubmitting"
+                  class="h-11 px-8 rounded-xl font-bold"
                 >
                   Отмена
                 </UiButton>
@@ -262,6 +336,7 @@
                   variant="success"
                   type="submit"
                   :loading="isSubmitting"
+                  class="h-11 px-8 rounded-xl font-bold shadow-lg shadow-success/20"
                 >
                   {{ submitButtonText }}
                 </UiButton>
@@ -277,6 +352,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import type { Student, CreateStudentData, UpdateStudentData } from '~/types/student';
+import { GraduationCap, X, User as UserIcon, Upload, Calendar as CalendarIcon } from 'lucide-vue-next';
 
 // Интерфейс для организации
 interface Organization {
@@ -312,6 +388,7 @@ const isSubmitting = ref(false);
 const isVisible = ref(false);
 const isResettingPassword = ref(false);
 const showChangePasswordModal = ref(false);
+const fileInput = ref<HTMLInputElement | null>(null);
 const errors = reactive<Record<string, string[]>>({});
 const notification = useNotification();
 
@@ -328,8 +405,36 @@ const formData = reactive({
   organization: '',
   department: '',
   position: '',
+  birthDate: null as string | null,
+  photo_base64: null as string | null,
   accountPassword: '',
 });
+
+// Загрузка фото
+const handlePhotoUpload = (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  
+  if (!file) return;
+
+  // Валидация размера (2MB)
+  if (file.size > 2 * 1024 * 1024) {
+    notification.error('Размер файла не должен превышать 2MB', 'Ошибка');
+    if (fileInput.value) fileInput.value.value = '';
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    formData.photo_base64 = e.target?.result as string;
+  };
+  reader.readAsDataURL(file);
+};
+
+const removePhoto = () => {
+  formData.photo_base64 = null;
+  if (fileInput.value) fileInput.value.value = '';
+};
 
 // Сброс пароля на ПИНФЛ
 const handleResetPassword = async () => {
@@ -490,6 +595,8 @@ const handleSubmit = async () => {
       organization: formData.organization.trim(),
       department: formData.department?.trim() || undefined,
       position: formData.position.trim(),
+      birthDate: formData.birthDate || null,
+      photo_base64: formData.photo_base64 || null,
     };
 
     // Добавляем пароль если указан (иначе будет использован ПИНФЛ)
@@ -545,6 +652,16 @@ onMounted(() => {
     formData.organization = props.student.organization;
     formData.department = props.student.department || '';
     formData.position = props.student.position;
+    
+    // Новые поля
+    if (props.student.birthDate) {
+      const date = new Date(props.student.birthDate);
+      formData.birthDate = date.toISOString().split('T')[0] || null;
+    }
+    
+    if (props.student.photo_base64) {
+      formData.photo_base64 = props.student.photo_base64;
+    }
   }
 });
 </script>

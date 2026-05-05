@@ -53,7 +53,7 @@
       <!-- Прогресс-бар с анимацией -->
       <div class="relative h-4 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
         <div
-          class="h-full rounded-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-300 ease-out"
+          class="h-full rounded-full bg-linear-to-r from-primary to-primary/80 transition-all duration-300 ease-out"
           :style="{ width: `${progressPercentage}%` }"
         >
           <div class="h-full w-full animate-pulse bg-white/20" />
@@ -91,7 +91,7 @@
       <div class="border-b border-red-200 bg-red-100 px-6 py-4 dark:border-red-800 dark:bg-red-900/30">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-500">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>

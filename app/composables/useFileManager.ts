@@ -81,6 +81,23 @@ export const useFileManager = () => {
   };
 
   /**
+   * Получение файлов по UUID
+   */
+  const getFilesByUuids = async (uuids: string[]): Promise<FileRecord[]> => {
+    if (!uuids || uuids.length === 0) return [];
+
+    const response = await authFetch<{ success: boolean; data: FileRecord[]; message?: string }>(
+      `/api/files/batch?uuids=${uuids.join(',')}`
+    );
+
+    if (!response.success) {
+      throw new Error(response.message || 'Не удалось получить файлы');
+    }
+
+    return response.data;
+  };
+
+  /**
    * Удаление файла
    */
   const deleteFile = async (uuid: string): Promise<void> => {
@@ -116,6 +133,7 @@ export const useFileManager = () => {
   return {
     uploadFile,
     getFiles,
+    getFilesByUuids,
     deleteFile,
     getFileUrl,
     formatFileSize,

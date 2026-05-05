@@ -1,122 +1,149 @@
 <template>
-  <div>
-    <!-- Заголовок и статистика -->
-    <div
-      class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-    >
+  <div class="flex flex-col gap-6">
+    <!-- Header & Actions -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
       <div>
-        <h3 class="text-xl font-semibold text-black dark:text-white">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           Представители организаций
         </h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
           Управление заявками и доступом представителей
         </p>
       </div>
 
       <!-- Статистика -->
-      <div v-if="stats" class="flex gap-3">
-        <div class="rounded-lg bg-primary/10 px-4 py-2">
-          <div class="text-xs text-gray-600 dark:text-gray-400">Всего</div>
-          <div class="text-lg font-bold text-primary">{{ stats.total }}</div>
+      <div v-if="stats" class="flex gap-3 overflow-x-auto pb-1 custom-scrollbar">
+        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-3 shadow-sm flex items-center gap-4">
+          <div>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Всего</div>
+            <div class="text-xl font-black text-slate-900 dark:text-white">{{ stats.total }}</div>
+          </div>
+          <div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+            <Users class="w-5 h-5" />
+          </div>
         </div>
-        <div class="rounded-lg bg-warning/10 px-4 py-2">
-          <div class="text-xs text-gray-600 dark:text-gray-400">Ожидают</div>
-          <div class="text-lg font-bold text-warning">{{ stats.pending }}</div>
+        <div class="rounded-2xl border border-warning/20 bg-warning/5 px-5 py-3 shadow-sm flex items-center gap-4">
+          <div>
+            <div class="text-xs font-bold text-warning uppercase tracking-widest">Ожидают</div>
+            <div class="text-xl font-black text-warning">{{ stats.pending }}</div>
+          </div>
+          <div class="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning">
+            <Clock class="w-5 h-5" />
+          </div>
         </div>
-        <div class="rounded-lg bg-success/10 px-4 py-2">
-          <div class="text-xs text-gray-600 dark:text-gray-400">Одобрено</div>
-          <div class="text-lg font-bold text-success">{{ stats.approved }}</div>
+        <div class="rounded-2xl border border-success/20 bg-success/5 px-5 py-3 shadow-sm flex items-center gap-4">
+          <div>
+            <div class="text-xs font-bold text-success uppercase tracking-widest">Одобрено</div>
+            <div class="text-xl font-black text-success">{{ stats.approved }}</div>
+          </div>
+          <div class="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center text-success">
+            <CheckCircle class="w-5 h-5" />
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Фильтры -->
-    <div class="mb-6 rounded-lg bg-white dark:bg-boxdark p-4 shadow-sm">
+    <!-- Filters Section -->
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+          <Filter class="w-5 h-5" />
+        </div>
+        <h4 class="text-lg font-bold text-slate-900 dark:text-white">
+          Фильтры
+        </h4>
+      </div>
+
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <!-- Поиск -->
         <div>
-          <label
-            class="mb-2 block text-sm font-medium text-black dark:text-white"
-          >
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             Поиск
           </label>
-          <input
-            v-model="filters.search"
-            type="text"
-            placeholder="ФИО, телефон, организация..."
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input"
-            @input="debouncedSearch"
-          />
+          <div class="relative">
+            <input
+              v-model="filters.search"
+              type="text"
+              placeholder="ФИО, телефон, организация..."
+              class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
+              @input="debouncedSearch"
+            />
+            <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          </div>
         </div>
 
         <!-- Статус -->
         <div>
-          <label
-            class="mb-2 block text-sm font-medium text-black dark:text-white"
-          >
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             Статус
           </label>
-          <select
-            v-model="filters.status"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input"
-            @change="loadRepresentatives"
-          >
-            <option value="">Все статусы</option>
-            <option value="pending">Ожидают одобрения</option>
-            <option value="approved">Одобрены</option>
-            <option value="blocked">Заблокированы</option>
-          </select>
+          <div class="relative">
+            <select
+              v-model="filters.status"
+              class="w-full appearance-none rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm text-slate-700 dark:text-slate-300"
+              @change="loadRepresentatives"
+            >
+              <option value="">Все статусы</option>
+              <option value="pending">Ожидают одобрения</option>
+              <option value="approved">Одобрены</option>
+              <option value="blocked">Заблокированы</option>
+            </select>
+            <ChevronDown class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
         </div>
 
         <!-- Организация -->
         <div>
-          <label
-            class="mb-2 block text-sm font-medium text-black dark:text-white"
-          >
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             Организация
           </label>
-          <select
-            v-model="filters.organizationId"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input"
-            @change="loadRepresentatives"
-          >
-            <option value="">Все организации</option>
-            <option v-for="org in organizations" :key="org.id" :value="org.id">
-              {{ org.name }}
-            </option>
-          </select>
+          <div class="relative">
+            <select
+              v-model="filters.organizationId"
+              class="w-full appearance-none rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm text-slate-700 dark:text-slate-300"
+              @change="loadRepresentatives"
+            >
+              <option value="">Все организации</option>
+              <option v-for="org in organizations" :key="org.id" :value="org.id">
+                {{ org.name }}
+              </option>
+            </select>
+            <Building2 class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Таблица представителей -->
-    <RepresentativesRepresentativeTable
-      :representatives="representatives"
-      :loading="loading"
-      @view="handleView"
-      @approve="handleApprove"
-      @block="handleBlock"
-      @unblock="handleUnblock"
-      @delete="handleDelete"
-    />
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+      <RepresentativesRepresentativeTable
+        :representatives="representatives"
+        :loading="loading"
+        @view="handleView"
+        @approve="handleApprove"
+        @block="handleBlock"
+        @unblock="handleUnblock"
+        @delete="handleDelete"
+      />
 
-    <!-- Пагинация -->
-    <div v-if="totalPages > 1" class="mt-6 flex justify-center">
-      <nav class="flex gap-2">
-        <button
-          v-for="page in totalPages"
-          :key="page"
-          @click="changePage(page)"
-          :class="[
-            'px-4 py-2 rounded-lg font-medium transition-colors',
-            currentPage === page
-              ? 'bg-primary text-white'
-              : 'bg-white dark:bg-boxdark text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4',
-          ]"
-        >
-          {{ page }}
-        </button>
-      </nav>
+      <!-- Пагинация -->
+      <div v-if="totalPages > 1" class="px-6 py-4 bg-slate-50/30 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex justify-center">
+        <nav class="flex gap-2">
+          <button
+            v-for="page in totalPages"
+            :key="page"
+            @click="changePage(page)"
+            :class="[
+              'px-4 py-2 rounded-lg font-bold transition-all text-sm',
+              currentPage === page
+                ? 'bg-primary text-white shadow-md shadow-primary/20'
+                : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700',
+            ]"
+          >
+            {{ page }}
+          </button>
+        </nav>
+      </div>
     </div>
 
     <!-- Модальные окна -->
@@ -174,8 +201,16 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
+import { Users, Clock, CheckCircle, Search, Filter, ChevronDown, Building2 } from "lucide-vue-next";
 
 // Типы
+interface RepresentativePermissions {
+  can_view_students: boolean;
+  can_view_schedule: boolean;
+  can_view_certificates: boolean;
+  can_request_certificates: boolean;
+}
+
 interface Representative {
   id: string;
   organizationId: string;
@@ -186,6 +221,7 @@ interface Representative {
   telegramUsername: string | null;
   status: "pending" | "approved" | "blocked";
   accessGroups: string[] | null;
+  permissions?: RepresentativePermissions;
   notificationsEnabled: boolean;
   lastActivityAt: Date | null;
   approvedBy: string | null;

@@ -1,83 +1,76 @@
 <template>
   <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Заголовок страницы -->
-    <div
-      class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div>
-        <h2 class="text-title-md2 font-bold text-black dark:text-white">
-          Управление пользователями
-        </h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Создание и управление учётными записями
-        </p>
+    <!-- Header Section -->
+    <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div class="space-y-2">
+          <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+            Управление пользователями
+          </h1>
+          <p class="text-slate-500 font-medium">
+            Создание и управление учётными записями, назначение ролей
+          </p>
+        </div>
       </div>
     </div>
 
-    <!-- Вкладки -->
-    <div class="flex flex-col gap-6">
-      <!-- Tabs Navigation -->
-      <div class="rounded-lg bg-gray-50 p-1 dark:bg-gray-800">
+    <!-- Navigation Tabs -->
+    <div class="mb-8 overflow-x-auto custom-scrollbar pb-2">
+      <div class="inline-flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800">
         <nav class="flex gap-1" aria-label="Tabs">
           <button
             v-for="tab in visibleTabs"
             :key="tab.id"
             @click="changeTab(tab.id)"
             :class="[
-              'flex-1 rounded-md px-4 py-3 text-sm font-medium transition-all duration-200 relative',
-              activeTab === tab.id
-                ? 'bg-primary text-white shadow-sm'
-                : 'text-gray-600 hover:bg-white hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white',
+              'flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap',
+              activeTab === tab.id 
+                ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white' 
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
             ]"
           >
-            <span class="flex items-center justify-center gap-2">
-              {{ tab.label }}
-            </span>
+            <component :is="getTabIcon(tab.id)" class="h-4 w-4" />
+            {{ tab.label }}
           </button>
         </nav>
       </div>
+    </div>
 
-      <!-- Tab Content -->
-      <div
-        class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark"
-      >
-        <!-- Администраторы Tab (только для ADMIN) -->
-        <div v-if="isAdmin" v-show="activeTab === 'admin'" class="p-6">
-          <UsersUserManagementPanel :role="UserRole.ADMIN" />
-        </div>
+    <!-- Tab Content Container -->
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm animate-in fade-in duration-500">
+      <!-- Администраторы Tab (только для ADMIN) -->
+      <div v-if="isAdmin" v-show="activeTab === 'admin'" class="p-6">
+        <UsersUserManagementPanel :role="UserRole.ADMIN" />
+      </div>
 
-        <!-- Модераторы Tab (только для ADMIN) -->
-        <div v-if="isAdmin" v-show="activeTab === 'manager'" class="p-6">
-          <UsersUserManagementPanel :role="UserRole.MANAGER" />
-        </div>
+      <!-- Модераторы Tab (только для ADMIN) -->
+      <div v-if="isAdmin" v-show="activeTab === 'manager'" class="p-6">
+        <UsersUserManagementPanel :role="UserRole.MANAGER" />
+      </div>
 
-        <!-- Инструкторы Tab (для ADMIN и MANAGER) -->
-        <div v-show="activeTab === 'instructors'" class="p-6">
-          <UsersInstructorManagementPanel />
-        </div>
+      <!-- Инструкторы Tab (для ADMIN и MANAGER) -->
+      <div v-show="activeTab === 'instructors'" class="p-6">
+        <UsersInstructorManagementPanel />
+      </div>
 
-        <!-- Студенты Tab (для ADMIN и MANAGER) -->
-        <div v-show="activeTab === 'students'" class="p-6">
-          <DatabaseStudentManagementPanel />
-        </div>
+      <!-- Студенты Tab (для ADMIN и MANAGER) -->
+      <div v-show="activeTab === 'students'" class="p-6">
+        <DatabaseStudentManagementPanel />
+      </div>
 
-        <!-- Представители Tab (только для ADMIN) -->
-        <div
-          v-if="isAdmin"
-          v-show="activeTab === 'representatives'"
-          class="p-6"
-        >
-          <RepresentativesRepresentativeManagementPanel />
-        </div>
+      <!-- Представители Tab (только для ADMIN) -->
+      <div v-if="isAdmin" v-show="activeTab === 'representatives'" class="p-6">
+        <RepresentativesRepresentativeManagementPanel />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { UserRole } from "~/types/auth";
+import { Shield, UserCog, GraduationCap, Users, Briefcase } from "lucide-vue-next";
 
 // Определяем мета-данные страницы
 definePageMeta({
@@ -100,26 +93,31 @@ const allTabs = [
     id: "admin",
     label: "Администраторы",
     roles: ["ADMIN"], // Видна только админам
+    icon: Shield
   },
   {
     id: "manager",
     label: "Модераторы",
     roles: ["ADMIN"], // Видна только админам
+    icon: UserCog
   },
   {
     id: "instructors",
     label: "Инструкторы",
     roles: ["ADMIN", "MANAGER"], // Видна админам и модераторам
+    icon: GraduationCap
   },
   {
     id: "students",
     label: "Студенты",
     roles: ["ADMIN", "MANAGER"], // Видна админам и модераторам
+    icon: Users
   },
   {
     id: "representatives",
     label: "Представители",
     roles: ["ADMIN"], // Видна только админам
+    icon: Briefcase
   },
 ];
 
@@ -128,6 +126,12 @@ const visibleTabs = computed(() => {
   const userRole = user.value?.role || "";
   return allTabs.filter((tab) => tab.roles.includes(userRole));
 });
+
+// Получить иконку для вкладки
+const getTabIcon = (id: string) => {
+  const tab = allTabs.find(t => t.id === id);
+  return tab ? tab.icon : Users;
+};
 
 // Активная вкладка
 const activeTab = ref<string>("");
@@ -139,7 +143,7 @@ const syncTabWithUrl = () => {
     activeTab.value = tab;
   } else if (visibleTabs.value.length > 0 && !activeTab.value) {
     // Если таб не указан, берем первый доступный
-    activeTab.value = visibleTabs.value[0].id;
+    activeTab.value = visibleTabs.value[0]?.id || "";
   }
 };
 

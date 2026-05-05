@@ -36,6 +36,11 @@ import * as fixTestingSystemSchema from "./migrations/20260317_025_fix_testing_s
 import * as gradesTestColumns from "./migrations/20260319_026_grades_test_columns";
 import * as changeBookPublishedAtToYear from "./migrations/20260407_027_change_book_published_at_to_year";
 import * as addCourseTypeToCourses from "./migrations/20260407_028_add_course_type_to_courses";
+import * as instructorQualification from "./migrations/20260504_029_add_instructor_qualification_fields";
+import * as updateFileCategories from "./migrations/20260504_030_update_file_categories";
+import * as instructorPersonalFields from "./migrations/20260505_031_add_instructor_personal_fields";
+import * as studentPersonalFields from "./migrations/20260505_032_add_student_personal_fields";
+import * as updateActivityLogsEnums from "./migrations/20260505_033_update_activity_logs_enums";
 
 /**
  * ============================================================================
@@ -311,6 +316,51 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: addCourseTypeToCourses.up,
     down: addCourseTypeToCourses.down,
     description: addCourseTypeToCourses.description,
+  },
+  // ============================================================
+  // Миграция 029: Add qualification fields to instructors table
+  // ============================================================
+  {
+    name: "20260504_029_add_instructor_qualification_fields",
+    up: instructorQualification.up,
+    down: instructorQualification.down,
+    description: instructorQualification.description,
+  },
+  // ============================================================
+  // Миграция 030: Update file categories ENUM
+  // ============================================================
+  {
+    name: "20260504_030_update_file_categories",
+    up: updateFileCategories.up,
+    down: updateFileCategories.down,
+    description: updateFileCategories.description,
+  },
+  // ============================================================
+  // Миграция 031: Add personal fields to instructors
+  // ============================================================
+  {
+    name: "20260505_031_add_instructor_personal_fields",
+    up: instructorPersonalFields.up,
+    down: instructorPersonalFields.down,
+    description: instructorPersonalFields.description,
+  },
+  // ============================================================
+  // Миграция 032: Add personal fields (birth_date, photo_base64) to students table
+  // ============================================================
+  {
+    name: "20260505_032_add_student_personal_fields",
+    up: studentPersonalFields.up,
+    down: studentPersonalFields.down,
+    description: studentPersonalFields.description,
+  },
+  // ============================================================
+  // Миграция 033: Update activity_logs enums
+  // ============================================================
+  {
+    name: "20260505_033_update_activity_logs_enums",
+    up: updateActivityLogsEnums.up,
+    down: updateActivityLogsEnums.down,
+    description: updateActivityLogsEnums.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

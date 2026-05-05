@@ -1,647 +1,466 @@
 <template>
   <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Навигация назад -->
-    <div class="mb-6">
-      <NuxtLink
-        to="/users?tab=students"
-        class="inline-flex items-center gap-2 text-primary hover:underline"
-      >
-        <ArrowLeft class="h-4 w-4" />
-        Назад к списку
-      </NuxtLink>
-    </div>
-
     <!-- Состояние загрузки -->
-    <div v-if="loading" class="flex justify-center items-center py-20">
-      <div class="flex flex-col items-center gap-4">
-        <div
-          class="h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"
-        ></div>
-        <p class="text-gray-600 dark:text-gray-400">
-          Загрузка данных студента...
-        </p>
+    <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
+      <div class="text-center">
+        <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">Загрузка информации о слушателе...</p>
       </div>
     </div>
 
     <!-- Ошибка -->
-    <div
-      v-else-if="error"
-      class="rounded-lg border border-danger/30 bg-danger/5 p-8 text-center"
-    >
-      <AlertCircle class="mx-auto h-12 w-12 text-danger" />
-      <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
-        Ошибка загрузки
-      </h3>
-      <p class="mt-2 text-gray-600 dark:text-gray-400">
-        {{ error }}
-      </p>
-      <UiButton variant="primary" class="mt-4" @click="fetchStudent">
-        Попробовать снова
-      </UiButton>
+    <div v-else-if="error || !student" class="flex items-center justify-center min-h-[400px]">
+      <div class="text-center max-w-md">
+        <div class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6 text-slate-400">
+          <UserIcon class="w-12 h-12" />
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">{{ error || 'Слушатель не найден' }}</h3>
+        <UiButton class="mt-8 shadow-lg" @click="$router.push('/users?tab=students')">К списку слушателей</UiButton>
+      </div>
     </div>
 
-    <!-- Карточка студента -->
-    <template v-else-if="student">
-      <!-- Header с градиентом -->
-      <div
-        class="bg-white dark:bg-boxdark rounded-2xl shadow-lg overflow-hidden mb-6"
-      >
-        <!-- Фоновый фон -->
-        <div class="h-32 bg-white dark:bg-boxdark relative"></div>
+    <template v-else>
+      <!-- Header Section -->
+      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+        <!-- Breadcrumbs -->
+        <div class="mb-6">
+          <NuxtLink to="/users?tab=students" class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors">
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors">
+              <ArrowLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            </div>
+            Назад к списку
+          </NuxtLink>
+        </div>
 
-        <!-- Основная информация -->
-        <div class="relative px-8 pb-8">
-          <!-- Аватар -->
-          <div class="flex flex-col sm:flex-row items-end gap-6 -mt-16 mb-6">
+        <div class="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <!-- Profile Main Info -->
+          <div class="flex flex-col sm:flex-row items-center gap-6">
             <div class="relative">
-              <div
-                class="h-32 w-32 rounded-2xl bg-white dark:bg-boxdark shadow-xl flex items-center justify-center border-4 border-white dark:border-boxdark"
-              >
-                <span class="text-5xl font-bold text-primary">
-                  {{ getInitials(student.fullName) }}
-                </span>
+              <div class="w-32 h-32 rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-900 shadow-2xl">
+                <img v-if="student.photo_base64" :src="student.photo_base64" class="w-full h-full object-cover" />
+                <div v-else class="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
+                  <span class="text-4xl font-black">{{ getInitials(student.fullName) }}</span>
+                </div>
               </div>
-              <div
-                class="absolute -bottom-2 -right-2 h-10 w-10 bg-success rounded-full border-4 border-white dark:border-boxdark flex items-center justify-center"
-              >
-                <svg
-                  class="w-5 h-5 text-white"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
+              <div class="absolute -bottom-1 -right-1 h-8 w-8 bg-success rounded-xl border-4 border-white dark:border-slate-900 flex items-center justify-center shadow-lg">
+                <CheckIcon class="w-4 h-4 text-white" />
               </div>
             </div>
 
-            <div class="flex-1 pb-2 text-center sm:text-left">
-              <h1 class="text-3xl font-bold text-black dark:text-white mb-2">
-                {{ student.fullName }}
-              </h1>
-              <p class="text-lg text-gray-600 dark:text-gray-400">
-                {{ student.position }}
-              </p>
+            <div class="space-y-3 text-center sm:text-left">
+              <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                  {{ student.fullName }}
+                </h1>
+              </div>
+              
+              <div class="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2 text-sm font-bold text-slate-500">
+                <div class="flex items-center gap-2">
+                  <BuildingIcon class="w-4 h-4 text-slate-400" />
+                  {{ student.organization }}
+                </div>
+                <div class="flex items-center gap-2">
+                  <BriefcaseIcon class="w-4 h-4 text-slate-400" />
+                  {{ student.position }}
+                </div>
+              </div>
             </div>
+          </div>
 
-            <!-- Кнопки действий -->
-            <div
-              class="flex gap-3 pb-2 w-full sm:w-auto justify-center sm:justify-end"
+          <!-- Actions -->
+          <div class="flex flex-wrap items-center justify-center lg:justify-end gap-2">
+            <UiButton
+              variant="primary"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold shadow-lg shadow-primary/20"
+              @click="exportTranscript"
             >
-              <UiButton
-                v-if="canEditStudents"
-                variant="primary"
-                @click="openEditModal"
-                class="flex items-center gap-2"
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-                Редактировать
-              </UiButton>
-              <UiButton
-                v-if="canDeleteStudents"
-                variant="danger"
-                @click="handleDelete"
-                class="flex items-center gap-2"
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16"
-                  />
-                </svg>
-                Удалить
-              </UiButton>
-            </div>
+              <FileDownIcon class="w-4 h-4" />
+              Экспорт справки
+            </UiButton>
+
+            <UiButton
+              v-if="canEditStudents"
+              variant="outline"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold"
+              @click="openEditModal"
+            >
+              <SettingsIcon class="w-4 h-4" />
+              Редактировать
+            </UiButton>
+
+            <UiButton
+              v-if="canDeleteStudents"
+              variant="outline"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold text-danger border-danger/20 hover:bg-danger/5"
+              @click="handleDelete"
+            >
+              <Trash2Icon class="w-4 h-4" />
+              Удалить
+            </UiButton>
           </div>
         </div>
       </div>
 
-      <!-- Tabs -->
-      <div class="flex flex-col gap-6">
-        <!-- Tabs Navigation -->
-        <div class="rounded-lg bg-gray-50 p-1 dark:bg-gray-800">
+      <!-- Bento Box Metrics Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <!-- Certificates Card -->
+        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Сертификаты</p>
+              <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                {{ student.certificates?.length || 0 }}
+              </h3>
+            </div>
+            <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
+              <AwardIcon class="w-6 h-6" />
+            </div>
+          </div>
+          <div class="mt-4">
+            <span class="text-xs text-slate-400 font-medium">Всего получено</span>
+          </div>
+        </div>
+
+        <!-- Courses Card -->
+        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Курсы</p>
+              <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                {{ studentCourses.length }}
+              </h3>
+            </div>
+            <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
+              <BookOpenIcon class="w-6 h-6" />
+            </div>
+          </div>
+          <div class="mt-4">
+            <span class="text-xs text-slate-400 font-medium">{{ activeCourses.length }} активных сейчас</span>
+          </div>
+        </div>
+
+        <!-- Attendance Card -->
+        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Посещаемость</p>
+              <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                {{ averageProgress }}%
+              </h3>
+            </div>
+            <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
+              <ActivityIcon class="w-6 h-6" />
+            </div>
+          </div>
+          <div class="mt-4">
+            <div class="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800">
+              <div 
+                class="h-full rounded-full bg-success transition-all duration-500"
+                :style="{ width: `${averageProgress}%` }"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Registration Card -->
+        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">В системе</p>
+              <h3 class="mt-1 text-xl font-bold text-slate-900 dark:text-white">
+                {{ registrationDays }}
+              </h3>
+            </div>
+            <div class="rounded-xl bg-info/10 p-3 text-info transition-transform group-hover:rotate-12">
+              <CalendarIcon class="w-6 h-6" />
+            </div>
+          </div>
+          <div class="mt-4">
+            <span class="text-xs text-slate-400 font-medium">С {{ formatDateShort(student.created_at) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs Navigation -->
+      <div class="mb-8 overflow-x-auto custom-scrollbar pb-2">
+        <div class="inline-flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800">
           <nav class="flex gap-1" aria-label="Tabs">
             <button
               v-for="tab in availableTabs"
               :key="tab.id"
               @click="activeTab = tab.id"
               :class="[
-                'flex-1 rounded-md px-4 py-3 text-sm font-medium transition-all duration-200',
+                'flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap',
                 activeTab === tab.id
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-white hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white',
+                  ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
               ]"
             >
-              <span class="flex items-center justify-center gap-2">
-                <component :is="tab.icon" class="h-5 w-5" />
-                {{ tab.label }}
-              </span>
+              <component :is="tab.icon" class="h-4 w-4" />
+              {{ tab.label }}
             </button>
           </nav>
         </div>
+      </div>
 
-        <!-- Tab Content -->
-
-        <div v-show="activeTab === 'info'">
-          <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <!-- Личные данные -->
-            <div
-              class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-6"
-            >
-              <h3
-                class="mb-4 text-xl font-semibold text-gray-900 dark:text-white"
-              >
-                Личные данные
-              </h3>
-              <div class="space-y-3">
-                <div
-                  class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-                >
-                  <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                    ПИНФЛ
-                  </p>
+      <!-- Tab Content -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Main Content Area (8 cols) -->
+        <div class="lg:col-span-8 space-y-8">
+          
+          <!-- INFO TAB -->
+          <div v-show="activeTab === 'info'" class="space-y-8 animate-in fade-in duration-500">
+            <!-- Personal Info -->
+            <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm">
+              <div class="flex items-center gap-3 mb-8">
+                <div class="p-2 rounded-xl bg-info/10 text-info">
+                  <UserIcon class="w-5 h-5" />
+                </div>
+                <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Персональные данные</h3>
+              </div>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <div class="space-y-1">
+                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">ПИНФЛ</p>
                   <div class="flex items-center gap-2">
-                    <p
-                      class="font-medium text-gray-900 dark:text-white font-mono flex-1"
-                    >
-                      {{ student.pinfl }}
-                    </p>
-                    <button
-                      @click="copyToClipboard(student.pinfl)"
-                      class="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
-                      title="Копировать"
-                    >
-                      <svg
-                        class="w-4 h-4 text-gray-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                        />
-                      </svg>
+                    <p class="text-lg font-bold text-slate-900 dark:text-white font-mono">{{ student.pinfl }}</p>
+                    <button @click="copyToClipboard(student.pinfl)" class="p-1 text-slate-400 hover:text-primary transition-colors">
+                      <CopyIcon class="w-4 h-4" />
                     </button>
                   </div>
                 </div>
-                <div
-                  class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-                >
-                  <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                    Дата регистрации
-                  </p>
-                  <p class="font-medium text-gray-900 dark:text-white">
-                    {{ formatDate(student.created_at) }}
-                  </p>
+                <div class="space-y-1">
+                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Дата рождения</p>
+                  <p class="text-lg font-bold text-slate-900 dark:text-white">{{ formatDate(student.birthDate) }}</p>
                 </div>
-                <div
-                  class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-                >
-                  <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                    Последнее обновление
-                  </p>
-                  <p class="font-medium text-gray-900 dark:text-white">
-                    {{ formatDate(student.updated_at) }}
-                  </p>
+                <div class="space-y-1">
+                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Дата регистрации</p>
+                  <p class="text-lg font-bold text-slate-900 dark:text-white">{{ formatDate(student.created_at) }}</p>
                 </div>
               </div>
             </div>
 
-            <!-- Место работы -->
-            <div
-              class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-6"
-            >
-              <h3
-                class="mb-4 text-xl font-semibold text-gray-900 dark:text-white"
-              >
-                Рабочая информация
-              </h3>
-              <div class="space-y-3">
-                <div
-                  class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-                >
-                  <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                    Организация
-                  </p>
-                  <p class="font-medium text-gray-900 dark:text-white">
-                    {{ student.organization }}
-                  </p>
+            <!-- Work Info -->
+            <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm">
+              <div class="flex items-center gap-3 mb-8">
+                <div class="p-2 rounded-xl bg-primary/10 text-primary">
+                  <BuildingIcon class="w-5 h-5" />
                 </div>
-                <div
-                  class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-                >
-                  <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                    Должность
-                  </p>
-                  <p class="font-medium text-gray-900 dark:text-white">
-                    {{ student.position }}
-                  </p>
+                <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Место работы</h3>
+              </div>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <div class="sm:col-span-2 space-y-1">
+                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Организация</p>
+                  <p class="text-lg font-bold text-slate-900 dark:text-white">{{ student.organization }}</p>
                 </div>
-                <div
-                  v-if="student.department"
-                  class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
-                >
-                  <p class="mb-1 text-sm text-gray-600 dark:text-gray-400">
-                    Служба/Отдел
-                  </p>
-                  <p class="font-medium text-gray-900 dark:text-white">
-                    {{ student.department }}
-                  </p>
+                <div class="space-y-1">
+                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Подразделение</p>
+                  <p class="text-lg font-bold text-slate-900 dark:text-white">{{ student.department || '—' }}</p>
+                </div>
+                <div class="space-y-1">
+                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Должность</p>
+                  <p class="text-lg font-bold text-slate-900 dark:text-white">{{ student.position }}</p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div v-show="activeTab === 'courses'">
-          <div
-            class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-6"
-          >
-            <div class="flex items-center justify-between mb-6">
-              <div>
-                <h2 class="text-xl font-bold text-black dark:text-white">
-                  Курсы слушателя
-                </h2>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  Всего: {{ studentCourses.length }}
-                </p>
-              </div>
+          <!-- COURSES TAB -->
+          <div v-show="activeTab === 'courses'" class="space-y-6 animate-in fade-in duration-500">
+            <div v-if="coursesLoading" class="flex justify-center py-20">
+              <div class="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             </div>
-
-            <!-- Состояние загрузки -->
-            <div
-              v-if="coursesLoading"
-              class="flex justify-center items-center py-12"
-            >
-              <div
-                class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"
-              ></div>
-            </div>
-
-            <!-- Список курсов -->
-            <div v-else-if="studentCourses.length > 0" class="space-y-4">
-              <!-- Активные курсы -->
+            
+            <template v-else-if="studentCourses.length > 0">
+              <!-- Active Courses -->
               <div v-if="activeCourses.length > 0">
-                <h3
-                  class="text-lg font-semibold text-black dark:text-white mb-3"
-                >
-                  Активные курсы
+                <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-4 flex items-center gap-2">
+                  <div class="h-2 w-2 rounded-full bg-success animate-pulse"></div>
+                  Текущее обучение
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div
-                    v-for="course in activeCourses"
+                  <div 
+                    v-for="course in activeCourses" 
                     :key="course.group_id"
-                    class="border border-gray-200 dark:border-strokedark rounded-xl p-4 hover:border-primary dark:hover:border-primary hover:shadow-md transition-all cursor-pointer bg-linear-to-br from-primary/5 to-transparent"
                     @click="openCourseDetailModal(course)"
+                    class="group p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-primary/30 transition-all hover:shadow-xl cursor-pointer relative overflow-hidden"
                   >
-                    <div class="flex items-start justify-between gap-4 mb-3">
-                      <div class="flex-1">
-                        <h4
-                          class="font-semibold text-black dark:text-white mb-1"
-                        >
-                          {{ course.course_name }}
-                        </h4>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">
-                          Группа: {{ course.group_name }}
-                        </p>
-                      </div>
-                      <span
-                        class="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-xs font-medium text-success"
-                      >
-                        <span class="h-2 w-2 rounded-full bg-success"></span>
-                        Активен
-                      </span>
+                    <div class="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ArrowRightIcon class="w-5 h-5 text-primary" />
                     </div>
-
-                    <!-- Прогресс -->
-                    <div class="mb-3">
-                      <div class="flex justify-between items-center mb-1">
-                        <span class="text-xs text-gray-600 dark:text-gray-400"
-                          >Прогресс</span
-                        >
-                        <span class="text-xs font-medium text-primary"
-                          >{{ course.progress }}%</span
-                        >
+                    <h4 class="font-bold text-slate-900 dark:text-white mb-1 pr-8">{{ course.course_name }}</h4>
+                    <p class="text-xs text-slate-500 mb-6">Группа: {{ course.group_name }}</p>
+                    
+                    <div class="space-y-4">
+                      <div class="flex justify-between items-end mb-1">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Прогресс</span>
+                        <span class="text-sm font-black text-primary">{{ course.progress }}%</span>
                       </div>
-                      <div
-                        class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden"
-                      >
-                        <div
-                          class="h-2 rounded-full bg-linear-to-r from-primary to-purple-500 transition-all duration-500"
-                          :style="{ width: `${course.progress}%` }"
-                        ></div>
+                      <div class="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-primary rounded-full transition-all duration-1000" :style="{ width: `${course.progress}%` }"></div>
                       </div>
-                    </div>
-
-                    <!-- Детали -->
-                    <div class="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span class="text-gray-500 dark:text-gray-400"
-                          >Начало:</span
-                        >
-                        <span class="ml-2 text-black dark:text-white">{{
-                          formatShortDate(course.start_date)
-                        }}</span>
-                      </div>
-                      <div>
-                        <span class="text-gray-500 dark:text-gray-400"
-                          >Окончание:</span
-                        >
-                        <span class="ml-2 text-black dark:text-white">{{
-                          formatShortDate(course.end_date)
-                        }}</span>
-                      </div>
-                      <div>
-                        <span class="text-gray-500 dark:text-gray-400"
-                          >Занятий:</span
-                        >
-                        <span
-                          class="ml-2 font-medium text-black dark:text-white"
-                          >{{ course.attended_lessons }}/{{
-                            course.total_lessons
-                          }}</span
-                        >
+                      
+                      <div class="grid grid-cols-2 gap-4 pt-2">
+                        <div>
+                          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Период</p>
+                          <p class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ formatShortDate(course.start_date) }} - {{ formatShortDate(course.end_date) }}</p>
+                        </div>
+                        <div>
+                          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Занятия</p>
+                          <p class="text-xs font-bold text-slate-700 dark:text-slate-300">{{ course.attended_lessons }}/{{ course.total_lessons }} ач</p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Завершенные курсы -->
-              <div v-if="completedCourses.length > 0" class="mt-6">
-                <h3
-                  class="text-lg font-semibold text-black dark:text-white mb-3"
-                >
-                  Завершенные курсы
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div
-                    v-for="course in completedCourses"
+              <!-- Completed Courses -->
+              <div v-if="completedCourses.length > 0" :class="{ 'mt-10': activeCourses.length > 0 }">
+                <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight mb-4">История обучения</h3>
+                <div class="grid grid-cols-1 gap-3">
+                  <div 
+                    v-for="course in completedCourses" 
                     :key="course.group_id"
-                    class="border border-gray-200 dark:border-strokedark rounded-xl p-4 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all cursor-pointer bg-gray-50 dark:bg-gray-800/50"
                     @click="openCourseDetailModal(course)"
+                    class="group flex items-center justify-between p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer"
                   >
-                    <div class="flex items-start justify-between gap-4 mb-3">
-                      <div class="flex-1">
-                        <h4
-                          class="font-semibold text-black dark:text-white mb-1"
-                        >
-                          {{ course.course_name }}
-                        </h4>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">
-                          Группа: {{ course.group_name }}
-                        </p>
+                    <div class="flex items-center gap-4">
+                      <div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                        <CheckIcon class="w-5 h-5 text-success" />
                       </div>
-                      <span
-                        class="inline-flex items-center gap-1.5 rounded-full bg-gray-200 dark:bg-gray-700 px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-300"
-                      >
-                        <svg
-                          class="w-3 h-3"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fill-rule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clip-rule="evenodd"
-                          />
-                        </svg>
-                        Завершен
-                      </span>
+                      <div>
+                        <h4 class="text-sm font-bold text-slate-900 dark:text-white">{{ course.course_name }}</h4>
+                        <p class="text-[10px] text-slate-500">Завершен {{ formatShortDate(course.end_date) }} • {{ course.total_lessons }} ач</p>
+                      </div>
                     </div>
-
-                    <div class="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span class="text-gray-500 dark:text-gray-400"
-                          >Начало:</span
-                        >
-                        <span class="ml-2 text-black dark:text-white">{{
-                          formatShortDate(course.start_date)
-                        }}</span>
+                    <div class="flex items-center gap-6">
+                      <div class="text-right hidden sm:block">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Результат</p>
+                        <p class="text-xs font-bold text-slate-900 dark:text-white">{{ course.progress }}%</p>
                       </div>
-                      <div>
-                        <span class="text-gray-500 dark:text-gray-400"
-                          >Окончание:</span
-                        >
-                        <span class="ml-2 text-black dark:text-white">{{
-                          formatShortDate(course.end_date)
-                        }}</span>
-                      </div>
-                      <div>
-                        <span class="text-gray-500 dark:text-gray-400"
-                          >Посещаемость:</span
-                        >
-                        <span
-                          class="ml-2 font-medium text-black dark:text-white"
-                          >{{ course.progress }}%</span
-                        >
-                      </div>
+                      <ArrowRightIcon class="w-4 h-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </template>
 
-            <!-- Пустое состояние -->
-            <div v-else class="text-center py-12">
-              <svg
-                class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-              </svg>
-              <p class="text-gray-500 dark:text-gray-400 text-lg">
-                У студента пока нет курсов
-              </p>
+            <div v-else class="text-center py-20 bg-slate-50 dark:bg-slate-800/30 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+              <BookOpenIcon class="w-12 h-12 text-slate-200 dark:text-slate-700 mx-auto mb-4" />
+              <p class="text-slate-500 font-medium">История обучения отсутствует</p>
             </div>
           </div>
-        </div>
 
-        <div v-show="activeTab === 'certificates'">
-          <div
-            class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark p-6"
-          >
-            <div class="flex items-center justify-between mb-6">
-              <div>
-                <h2 class="text-xl font-bold text-black dark:text-white">
-                  Сертификаты
-                </h2>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  Всего: {{ student.certificates.length }}
-                </p>
-              </div>
-              <UiButton
-                variant="primary"
-                @click="openCertificatesModal"
-                class="flex items-center gap-2"
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-                Управление сертификатами
+          <!-- CERTIFICATES TAB -->
+          <div v-show="activeTab === 'certificates'" class="space-y-6 animate-in fade-in duration-500">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Выданные документы</h3>
+              <UiButton v-if="canEditStudents" variant="outline" size="sm" @click="openCertificatesModal" class="h-9 gap-2">
+                <PlusIcon class="w-4 h-4" /> Добавить
               </UiButton>
             </div>
 
-            <!-- Список сертификатов -->
-            <div v-if="student.certificates.length > 0" class="space-y-4">
-              <div
-                v-for="certificate in student.certificates"
-                :key="certificate.id"
-                class="border border-gray-200 dark:border-strokedark rounded-xl p-4 hover:border-primary dark:hover:border-primary hover:shadow-md transition-all cursor-pointer relative"
-                @click="openCertificateDetailModal(certificate)"
+            <div v-if="student.certificates?.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div 
+                v-for="cert in student.certificates" 
+                :key="cert.id"
+                @click="openCertificateDetailModal(cert)"
+                class="group p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-xl transition-all cursor-pointer relative overflow-hidden"
               >
-                <div class="flex items-start justify-between gap-4">
-                  <div class="flex-1">
-                    <h3 class="font-semibold text-black dark:text-white mb-2">
-                      {{ certificate.courseName }}
-                    </h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span class="text-gray-500 dark:text-gray-400"
-                          >Номер:</span
-                        >
-                        <span
-                          class="ml-2 font-mono text-black dark:text-white"
-                          >{{ certificate.certificateNumber }}</span
-                        >
-                      </div>
-                      <div>
-                        <span class="text-gray-500 dark:text-gray-400"
-                          >Дата выдачи:</span
-                        >
-                        <span class="ml-2 text-black dark:text-white">{{
-                          formatDate(certificate.issueDate)
-                        }}</span>
-                      </div>
-                      <div v-if="certificate.expiryDate">
-                        <span class="text-gray-500 dark:text-gray-400"
-                          >Срок действия:</span
-                        >
-                        <span
-                          class="ml-2 font-medium"
-                          :class="getExpiryStatusClass(certificate.expiryDate)"
-                        >
-                          {{ formatDate(certificate.expiryDate) }}
-                          <span
-                            v-if="
-                              getExpiryStatus(certificate.expiryDate) !==
-                              'valid'
-                            "
-                            class="ml-1 text-xs px-1.5 py-0.5 rounded-full"
-                            :class="getExpiryBadgeClass(certificate.expiryDate)"
-                          >
-                            {{ getExpiryLabel(certificate.expiryDate) }}
-                          </span>
-                        </span>
-                      </div>
-                      <div v-else>
-                        <span class="text-gray-500 dark:text-gray-400"
-                          >Срок действия:</span
-                        >
-                        <span class="ml-2 text-success font-medium"
-                          >Бессрочный</span
-                        >
-                      </div>
-                    </div>
+                <div class="absolute -top-4 -right-4 h-24 w-24 bg-warning/5 rounded-full blur-2xl group-hover:bg-warning/10 transition-colors"></div>
+                
+                <div class="flex justify-between items-start mb-6">
+                  <div class="h-12 w-12 rounded-2xl bg-warning/10 flex items-center justify-center text-warning">
+                    <AwardIcon class="w-6 h-6" />
                   </div>
-                  <div v-if="certificate.fileUrl" class="shrink-0">
-                    <a
-                      v-if="certificate.id"
-                      :href="`/api/certificates/download/${certificate.id}`"
-                      target="_blank"
-                      class="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                  <div v-if="cert.fileUrl">
+                    <a 
+                      :href="`/api/certificates/download/${cert.id}`" 
+                      target="_blank" 
                       @click.stop
+                      class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:bg-primary/10 hover:text-primary transition-colors"
                     >
-                      <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                      Скачать
+                      <DownloadIcon class="w-5 h-5" />
                     </a>
+                  </div>
+                </div>
+
+                <h4 class="font-bold text-slate-900 dark:text-white mb-2 line-clamp-2 min-h-[40px]">{{ cert.courseName }}</h4>
+                
+                <div class="space-y-3 pt-4 border-t border-slate-50 dark:border-slate-800">
+                  <div class="flex justify-between items-center text-[10px]">
+                    <span class="font-black uppercase tracking-widest text-slate-400">Номер</span>
+                    <span class="font-bold text-slate-900 dark:text-white font-mono">{{ cert.certificateNumber }}</span>
+                  </div>
+                  <div class="flex justify-between items-center text-[10px]">
+                    <span class="font-black uppercase tracking-widest text-slate-400">Выдан</span>
+                    <span class="font-bold text-slate-900 dark:text-white">{{ formatDateShort(cert.issueDate) }}</span>
+                  </div>
+                  <div class="flex justify-between items-center text-[10px]">
+                    <span class="font-black uppercase tracking-widest text-slate-400">Статус</span>
+                    <span 
+                      class="px-2 py-0.5 rounded-md font-black uppercase tracking-tighter"
+                      :class="getExpiryBadgeClass(cert.expiryDate)"
+                    >
+                      {{ getExpiryLabel(cert.expiryDate) }}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Пустое состояние -->
-            <div v-else class="text-center py-12">
-              <svg
-                class="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <p class="text-gray-500 dark:text-gray-400 text-lg">
-                У студента пока нет сертификатов
-              </p>
-              <p class="text-gray-400 dark:text-gray-500 text-sm mt-2">
-                Нажмите "Управление сертификатами" чтобы добавить
-              </p>
+            <div v-else class="text-center py-20 bg-slate-50 dark:bg-slate-800/30 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+              <AwardIcon class="w-12 h-12 text-slate-200 dark:text-slate-700 mx-auto mb-4" />
+              <p class="text-slate-500 font-medium">Сертификаты не найдены</p>
             </div>
+          </div>
+        </div>
+
+        <!-- Sidebar (4 cols) -->
+        <div class="lg:col-span-4 space-y-6">
+          <!-- Timeline / Stats -->
+          <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+            <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Системная информация</h4>
+            <div class="space-y-6">
+              <div class="flex items-start gap-4">
+                <div class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800">
+                  <ClockIcon class="w-5 h-5 text-slate-500" />
+                </div>
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Создан</p>
+                  <p class="text-sm font-bold text-slate-900 dark:text-white">{{ formatDate(student.created_at) }}</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-4">
+                <div class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800">
+                  <RefreshCwIcon class="w-5 h-5 text-slate-500" />
+                </div>
+                <div>
+                  <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Обновлен</p>
+                  <p class="text-sm font-bold text-slate-900 dark:text-white">{{ formatDate(student.updated_at) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Tips / Help -->
+          <div class="rounded-3xl bg-primary/5 border border-primary/10 p-6">
+            <h4 class="text-xs font-black uppercase tracking-widest text-primary mb-4">Подсказка</h4>
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Вы можете скачать полную справку о слушателе в формате PDF, нажав на кнопку «Экспорт справки» в верхней части страницы. В справку будут включены все пройденные курсы и выданные сертификаты.
+            </p>
           </div>
         </div>
       </div>
     </template>
 
-    <!-- Модальные окна -->
+    <!-- Modals -->
     <DatabaseStudentFormModal
       v-if="isEditModalOpen && student"
       :student="student"
@@ -658,7 +477,6 @@
       @refresh="fetchStudent"
     />
 
-    <!-- Модальное окно деталей сертификата (Read-only) -->
     <DatabaseCertificateDetailModal
       v-if="isCertificateDetailModalOpen && selectedCertificate"
       :certificate="selectedCertificate"
@@ -666,7 +484,6 @@
       @close="closeCertificateDetailModal"
     />
 
-    <!-- Модальное окно деталей курса -->
     <DatabaseStudentCourseDetailModal
       v-if="isCourseDetailModalOpen && selectedCourse"
       :course="selectedCourse"
@@ -674,13 +491,12 @@
       @close="closeCourseDetailModal"
     />
 
-    <!-- Модальное окно подтверждения удаления -->
     <UiConfirmModal
       :is-open="isDeleteModalOpen"
-      title="Удаление студента"
-      message="Вы уверены, что хотите удалить этого студента?"
+      title="Удаление слушателя"
+      message="Вы уверены, что хотите удалить этого слушателя? Это действие безвозвратно удалит все связанные данные."
       :item-name="student?.fullName"
-      warning="Это действие нельзя отменить. Все данные студента будут удалены."
+      warning="Это действие нельзя отменить."
       :loading="isDeleting"
       @confirm="confirmDelete"
       @cancel="closeDeleteModal"
@@ -690,39 +506,49 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import type {
-  Student,
-  UpdateStudentData,
-  StudentCertificate,
-} from "~/types/student";
-import { User, BookOpen, Award, ArrowLeft, AlertCircle } from "lucide-vue-next";
+import type { Student, UpdateStudentData, StudentCertificate } from "~/types/student";
+import { 
+  User as UserIcon, 
+  ArrowLeft, 
+  Check as CheckIcon, 
+  Building as BuildingIcon, 
+  Briefcase as BriefcaseIcon,
+  FileDown as FileDownIcon,
+  Settings as SettingsIcon,
+  Trash2 as Trash2Icon,
+  Award as AwardIcon,
+  BookOpen as BookOpenIcon,
+  Activity as ActivityIcon,
+  Calendar as CalendarIcon,
+  ArrowRight as ArrowRightIcon,
+  Clock as ClockIcon,
+  RefreshCw as RefreshCwIcon,
+  Copy as CopyIcon,
+  Plus as PlusIcon,
+  Download as DownloadIcon
+} from "lucide-vue-next";
+import { usePDFExport } from "~/composables/usePDFExport";
 
-// Получаем ID студента из маршрута
 const route = useRoute();
 const router = useRouter();
 const studentId = route.params.id as string;
-
-// Используем authFetch для авторизованных запросов
 const { authFetch } = useAuthFetch();
 const notification = useNotification();
-
-// Проверка прав доступа
 const { canEditStudents, canDeleteStudents } = usePermissions();
 
-// Состояние
+// State
 const student = ref<Student | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
 const isEditModalOpen = ref(false);
 const isDeleteModalOpen = ref(false);
 const isDeleting = ref(false);
-
 const activeTab = ref("info");
 
 const availableTabs = [
-  { id: "info", label: "Информация", icon: User },
-  { id: "courses", label: "Курсы", icon: BookOpen },
-  { id: "certificates", label: "Сертификаты", icon: Award },
+  { id: "info", label: "Профиль", icon: UserIcon },
+  { id: "courses", label: "Обучение", icon: BookOpenIcon },
+  { id: "certificates", label: "Сертификаты", icon: AwardIcon },
 ];
 
 /**
@@ -740,164 +566,99 @@ interface CourseRecord {
   progress: number;
   status: "active" | "completed" | "dropped";
   teacher_name: string | null;
-  days_schedule?: { day: string; time: string }[];
-  schedule_events?: any[];
 }
 
 const studentCourses = ref<CourseRecord[]>([]);
 const coursesLoading = ref(false);
-
 const isCourseDetailModalOpen = ref(false);
 const selectedCourse = ref<CourseRecord | null>(null);
 
-const activeCourses = computed(() =>
-  studentCourses.value.filter((c) => c.status === "active"),
-);
-const completedCourses = computed(() =>
-  studentCourses.value.filter((c) => c.status === "completed"),
-);
+const activeCourses = computed(() => studentCourses.value.filter(c => c.status === "active"));
+const completedCourses = computed(() => studentCourses.value.filter(c => c.status === "completed"));
 
-const fetchStudentCourses = async () => {
-  coursesLoading.value = true;
-  try {
-    // В реальном приложении здесь был бы API вызов
-    // Например: const response = await authFetch(`/api/students/${studentId}/courses`);
-    // Сейчас используем мок-данные или текущую реализацию если есть
+// Вычисляемые метрики
+const averageProgress = computed(() => {
+  if (studentCourses.value.length === 0) return 0;
+  const sum = studentCourses.value.reduce((acc, c) => acc + c.progress, 0);
+  return Math.round(sum / studentCourses.value.length);
+});
 
-    const response = await authFetch<{
-      success: boolean;
-      courses: CourseRecord[];
-    }>(`/api/students/${studentId}/courses`);
+const registrationDays = computed(() => {
+  if (!student.value?.created_at) return '—';
+  const created = new Date(student.value.created_at);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - created.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 30) return `${diffDays} дн.`;
+  const months = Math.floor(diffDays / 30);
+  if (months < 12) return `${months} мес.`;
+  return `${Math.floor(months / 12)} г. ${months % 12} мес.`;
+});
 
-    if (response.success) {
-      studentCourses.value = response.courses;
-    }
-  } catch (err) {
-    console.error("Failed to load courses:", err);
-    // Не блокируем основной интерфейс ошибкой курсов
-  } finally {
-    coursesLoading.value = false;
-  }
-};
-
-const openCourseDetailModal = (course: CourseRecord) => {
-  selectedCourse.value = course;
-  isCourseDetailModalOpen.value = true;
-};
-
-const closeCourseDetailModal = () => {
-  isCourseDetailModalOpen.value = false;
-  selectedCourse.value = null;
-};
-
-/**
- * Инициалы для аватара
- */
-const getInitials = (name: string) => {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-};
-
-// Форматирование даты
-const formatDate = (dateString?: string | Date) => {
-  if (!dateString) return "—";
-  return new Date(dateString).toLocaleDateString("ru-RU", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
-
-const formatShortDate = (dateString?: string | Date) => {
-  if (!dateString) return "—";
-  return new Date(dateString).toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-  });
-};
-
-// Загрузка данных
+// Методы
 const fetchStudent = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const response = await authFetch<{ success: boolean; student: Student }>(
-      `/api/students/${studentId}`,
-    );
+    const response = await authFetch<{ success: boolean; student: Student }>(`/api/students/${studentId}`);
     if (response.success) {
       student.value = response.student;
-      // После успешной загрузки студента, грузим курсы
       fetchStudentCourses();
     } else {
       error.value = "Не удалось загрузить данные";
     }
   } catch (e: any) {
-    error.value = e.message || "Ошибка соединения с сервером";
+    error.value = e.message || "Ошибка загрузки";
   } finally {
     loading.value = false;
   }
 };
 
-// Модальное окно редактирования
-const openEditModal = () => {
-  isEditModalOpen.value = true;
+const fetchStudentCourses = async () => {
+  coursesLoading.value = true;
+  try {
+    const response = await authFetch<{ success: boolean; courses: CourseRecord[] }>(`/api/students/${studentId}/courses`);
+    if (response.success) {
+      studentCourses.value = response.courses;
+    }
+  } catch (err) {
+    console.error("Failed to load courses:", err);
+  } finally {
+    coursesLoading.value = false;
+  }
 };
 
-const closeEditModal = () => {
-  isEditModalOpen.value = false;
-};
+const openEditModal = () => isEditModalOpen.value = true;
+const closeEditModal = () => isEditModalOpen.value = false;
 
 const handleUpdate = async (data: UpdateStudentData) => {
   try {
-    const response = await authFetch<{ success: boolean; student: Student }>(
-      `/api/students/${studentId}`,
-      {
-        method: "PUT",
-        body: data,
-      },
-    );
+    const response = await authFetch<{ success: boolean; student: Student }>(`/api/students/${studentId}`, {
+      method: "PUT",
+      body: data,
+    });
 
     if (response.success) {
       student.value = response.student;
       closeEditModal();
-      notification.success("Данные студента обновлены");
+      notification.success("Данные слушателя обновлены");
     }
   } catch (e) {
-    console.error("Error updating student:", e);
     notification.error("Ошибка при обновлении данных");
   }
 };
 
-// Копирование в буфер
-const copyToClipboard = (text: string) => {
-  navigator.clipboard.writeText(text);
-  notification.success("Скопировано в буфер обмена");
-};
-
-// Удаление
-const handleDelete = () => {
-  isDeleteModalOpen.value = true;
-};
-
-const closeDeleteModal = () => {
-  isDeleteModalOpen.value = false;
-};
+const handleDelete = () => isDeleteModalOpen.value = true;
+const closeDeleteModal = () => isDeleteModalOpen.value = false;
 
 const confirmDelete = async () => {
   isDeleting.value = true;
   try {
-    await authFetch(`/api/students/${studentId}`, {
-      method: "DELETE",
-    });
+    await authFetch(`/api/students/${studentId}`, { method: "DELETE" });
+    notification.success("Слушатель удален");
     router.push("/users?tab=students");
-    notification.success("Студент удален");
   } catch (e) {
-    console.error("Error deleting student:", e);
     notification.error("Ошибка удаления");
   } finally {
     isDeleting.value = false;
@@ -905,24 +666,52 @@ const confirmDelete = async () => {
   }
 };
 
+const copyToClipboard = (text: string) => {
+  navigator.clipboard.writeText(text);
+  notification.success("ПИНФЛ скопирован");
+};
+
+const exportTranscript = async () => {
+  if (!student.value) return;
+  notification.info("Формирование справки...");
+  try {
+    const { exportStudentProfile } = usePDFExport();
+    await exportStudentProfile(student.value, studentCourses.value);
+    notification.success("Справка успешно сформирована");
+  } catch (e) {
+    notification.error("Ошибка при экспорте PDF");
+  }
+};
+
+const getInitials = (name: string) => {
+  return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+};
+
+const formatDate = (date?: string | Date | null) => {
+  if (!date) return "—";
+  return new Date(date).toLocaleDateString("ru-RU", { year: "numeric", month: "long", day: "numeric" });
+};
+
+const formatDateShort = (date?: string | Date | null) => {
+  if (!date) return "—";
+  return new Date(date).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" });
+};
+
+const formatShortDate = (date?: string | Date | null) => {
+  if (!date) return "—";
+  return new Date(date).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+};
+
 // Сертификаты
 const isCertificatesModalOpen = ref(false);
 const isCertificateDetailModalOpen = ref(false);
-const selectedCertificate = ref<any>(null); // Полная информация о сертификате
+const selectedCertificate = ref<any>(null);
 
-const openCertificatesModal = () => {
-  isCertificatesModalOpen.value = true;
-};
-
-const closeCertificatesModal = () => {
-  isCertificatesModalOpen.value = false;
-};
+const openCertificatesModal = () => isCertificatesModalOpen.value = true;
+const closeCertificatesModal = () => isCertificatesModalOpen.value = false;
 
 const openCertificateDetailModal = (cert: StudentCertificate) => {
   if (!student.value) return;
-
-  // Формируем объект сертификата для модального окна, добавляя данные студента из текущего контекста
-  // Так как мы уже получили расширенные данные сертификата из репозитория, доп. запрос не нужен
   selectedCertificate.value = {
     ...cert,
     student: {
@@ -942,58 +731,55 @@ const closeCertificateDetailModal = () => {
   selectedCertificate.value = null;
 };
 
-// Хелперы для статусов сертификатов
-const getExpiryStatus = (
-  expiryDate?: string | Date | null,
-): "valid" | "expiring" | "expired" => {
+const openCourseDetailModal = (course: CourseRecord) => {
+  selectedCourse.value = course;
+  isCourseDetailModalOpen.value = true;
+};
+
+const closeCourseDetailModal = () => {
+  isCourseDetailModalOpen.value = false;
+  selectedCourse.value = null;
+};
+
+const getExpiryStatus = (expiryDate?: string | Date | null) => {
   if (!expiryDate) return "valid";
   const now = new Date();
   const expiry = new Date(expiryDate);
   const diffTime = expiry.getTime() - now.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
   if (diffDays < 0) return "expired";
   if (diffDays <= 30) return "expiring";
   return "valid";
 };
 
-const getExpiryStatusClass = (expiryDate?: string | Date | null) => {
-  const status = getExpiryStatus(expiryDate);
-  switch (status) {
-    case "expired":
-      return "text-danger";
-    case "expiring":
-      return "text-warning";
-    default:
-      return "text-black dark:text-white";
-  }
-};
-
 const getExpiryBadgeClass = (expiryDate?: string | Date | null) => {
   const status = getExpiryStatus(expiryDate);
-  switch (status) {
-    case "expired":
-      return "bg-danger/10 text-danger";
-    case "expiring":
-      return "bg-warning/10 text-warning";
-    default:
-      return "bg-success/10 text-success";
-  }
+  if (status === "expired") return "bg-danger/10 text-danger";
+  if (status === "expiring") return "bg-warning/10 text-warning";
+  return "bg-success/10 text-success";
 };
 
 const getExpiryLabel = (expiryDate?: string | Date | null) => {
   const status = getExpiryStatus(expiryDate);
-  switch (status) {
-    case "expired":
-      return "Истек";
-    case "expiring":
-      return "Истекает скоро";
-    default:
-      return "Действителен";
-  }
+  if (status === "expired") return "Истек";
+  if (status === "expiring") return "Истекает";
+  return "Активен";
 };
 
 onMounted(() => {
   fetchStudent();
 });
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+</style>

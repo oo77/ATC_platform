@@ -27,7 +27,7 @@
     <!-- Profile Content -->
     <div v-else-if="profile">
       <!-- Профиль Header -->
-      <div class="mb-6 rounded-lg border border-gray-200 dark:border-gray-700 bg-white shadow-md dark:bg-boxdark">
+      <div class="mb-6 rounded-3xl border border-gray-200 dark:border-gray-700 bg-white shadow-md dark:bg-boxdark">
         <!-- Cover Image -->
         <div class="relative h-48 overflow-hidden rounded-t-lg bg-primary/10 dark:bg-boxdark-2">
         </div>
@@ -123,7 +123,7 @@
       <!-- Tabs -->
       <div class="flex flex-col gap-6">
         <!-- Tabs Navigation -->
-        <div class="rounded-lg bg-gray-50 p-1 dark:bg-gray-800">
+        <div class="rounded-3xl bg-gray-50 p-1 dark:bg-gray-800">
           <nav class="flex gap-1" aria-label="Tabs">
             <button
               v-for="tab in visibleTabs"
@@ -145,7 +145,7 @@
         </div>
 
         <!-- Tab Content -->
-        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white shadow-md dark:bg-boxdark">
+        <div class="rounded-3xl border border-gray-200 dark:border-gray-700 bg-white shadow-md dark:bg-boxdark">
           <!-- Обзор -->
           <div v-show="activeTab === 'overview'" class="p-6">
             <!-- Личная информация -->

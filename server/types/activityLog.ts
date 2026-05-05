@@ -94,6 +94,7 @@ export interface ActivityLogPaginationParams {
   entityType?: EntityType;
   startDate?: Date | string;
   endDate?: Date | string;
+  search?: string;
 }
 
 /**

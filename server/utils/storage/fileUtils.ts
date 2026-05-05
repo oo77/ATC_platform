@@ -50,6 +50,14 @@ function getCategoryFolder(category: FileCategory): string {
       return path.join('groups', 'files');
     case 'assignment':
       return 'assignments';
+    case 'instructor_diploma':
+      return path.join('instructors', 'diplomas');
+    case 'instructor_certificate':
+      return path.join('certificates', 'instructors');
+    case 'instructor_photo':
+      return path.join('instructors', 'photos');
+    case 'instructor_additional':
+      return path.join('instructors', 'additional');
     case 'other':
     default:
       return 'other';

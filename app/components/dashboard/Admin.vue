@@ -30,7 +30,7 @@
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
       <!-- Контингент -->
       <div
-        class="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700/60 cursor-pointer"
+        class="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700/60 cursor-pointer"
         @click="navigateTo('/users?tab=students')"
       >
         <div class="absolute top-0 right-0 p-4 opacity-10 transition-opacity group-hover:opacity-20">
@@ -61,7 +61,7 @@
 
       <!-- Инструкторы / Преподаватели -->
       <div
-        class="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700/60 cursor-pointer"
+        class="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700/60 cursor-pointer"
         @click="navigateTo('/users?tab=instructors')"
       >
         <div class="absolute top-0 right-0 p-4 opacity-10 transition-opacity group-hover:opacity-20">
@@ -89,7 +89,7 @@
 
       <!-- Активные группы -->
       <div
-        class="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700/60 cursor-pointer"
+        class="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700/60 cursor-pointer"
         @click="navigateTo('/groups')"
       >
         <div class="absolute top-0 right-0 p-4 opacity-10 transition-opacity group-hover:opacity-20">
@@ -117,7 +117,7 @@
 
       <!-- Сертификаты -->
       <div
-        class="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700/60 cursor-pointer"
+        class="group relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm border border-slate-100 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700/60 cursor-pointer"
         @click="navigateTo('/certificates')"
       >
         <div class="absolute top-0 right-0 p-4 opacity-10 transition-opacity group-hover:opacity-20">

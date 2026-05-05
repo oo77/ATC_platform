@@ -28,6 +28,8 @@ export interface Student {
   organization: string; // Организация (обязательно)
   department?: string | null; // Служба/отдел (не обязательно)
   position: string; // Должность (обязательно)
+  birthDate?: Date | string | null; // Дата рождения
+  photo_base64?: string | null; // Фото в формате base64
   certificates: StudentCertificate[]; // История сертификатов
   created_at: Date | string;
   updated_at: Date | string;
@@ -40,6 +42,8 @@ export interface CreateStudentData {
   organization: string;
   department?: string;
   position: string;
+  birthDate?: Date | string | null;
+  photo_base64?: string | null;
 }
 
 // Данные для обновления студента
@@ -49,6 +53,8 @@ export interface UpdateStudentData {
   organization?: string;
   department?: string;
   position?: string;
+  birthDate?: Date | string | null;
+  photo_base64?: string | null;
 }
 
 // Данные для создания сертификата

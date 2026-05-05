@@ -134,6 +134,15 @@ export class LocalStorage implements IStorage {
       case "group_file":
         return "Groups";
       case "assignment":
+        return "Assignments";
+      case "instructor_diploma":
+        return "Instructors/Diplomas";
+      case "instructor_certificate":
+        return "Instructors/Certificates";
+      case "instructor_photo":
+        return "Instructors/Photos";
+      case "instructor_additional":
+        return "Instructors/Additional";
       case "other":
       default:
         return "Misc";

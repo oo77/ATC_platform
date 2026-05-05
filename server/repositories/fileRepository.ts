@@ -1,5 +1,5 @@
 /**
- * Репозиторий для работы с файлами в MySQL
+ * Р РµРїРѕР·РёС‚РѕСЂРёР№ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ С„Р°Р№Р»Р°РјРё РІ MySQL
  */
 
 import { executeQuery } from "../utils/db";
@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { FileCategory } from "../utils/storage";
 
 // ============================================================================
-// ИНТЕРФЕЙСЫ
+// РРќРўР•Р Р¤Р•Р™РЎР«
 // ============================================================================
 
 export type FileAccessLevel = "public" | "authenticated" | "owner" | "admin";
@@ -24,14 +24,14 @@ export interface FileRecord {
   storagePath: string;
   fullPath: string;
   category: FileCategory;
-  userId: number | null;
+  userId: string | null;
   courseId: number | null;
-  groupId: number | null;
+  groupId: string | null;
   assignmentId: number | null;
   metadata: Record<string, any> | null;
   isPublic: boolean;
   accessLevel: FileAccessLevel;
-  uploadedBy: number;
+  uploadedBy: string;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -48,14 +48,14 @@ export interface CreateFileInput {
   fullPath: string;
   category: FileCategory;
   folderId?: number | null;
-  userId?: number | null;
+  userId?: string | null;
   courseId?: number | null;
-  groupId?: number | null;
+  groupId?: string | null;
   assignmentId?: number | null;
   metadata?: Record<string, any> | null;
   isPublic?: boolean;
   accessLevel?: FileAccessLevel;
-  uploadedBy: number;
+  uploadedBy: string;
 }
 
 export interface PaginationParams {
@@ -63,10 +63,10 @@ export interface PaginationParams {
   limit?: number;
   search?: string;
   category?: FileCategory;
-  userId?: number;
+  userId?: string;
   courseId?: number;
-  groupId?: number;
-  uploadedBy?: number;
+  groupId?: string;
+  uploadedBy?: string;
 }
 
 export interface PaginatedResult<T> {
@@ -77,7 +77,7 @@ export interface PaginatedResult<T> {
   totalPages: number;
 }
 
-// Row types для MySQL
+// Row types РґР»СЏ MySQL
 interface FileRow extends RowDataPacket {
   id: number;
   uuid: string;
@@ -89,14 +89,14 @@ interface FileRow extends RowDataPacket {
   storage_path: string;
   full_path: string;
   category: FileCategory;
-  user_id: number | null;
+  user_id: string | null;
   course_id: number | null;
-  group_id: number | null;
+  group_id: string | null;
   assignment_id: number | null;
   metadata: string | null;
   is_public: boolean;
   access_level: FileAccessLevel;
-  uploaded_by: number;
+  uploaded_by: string;
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;
@@ -107,7 +107,7 @@ interface CountRow extends RowDataPacket {
 }
 
 // ============================================================================
-// МАППИНГ БД -> МОДЕЛЬ
+// РњРђРџРџРРќР“ Р‘Р” -> РњРћР”Р•Р›Р¬
 // ============================================================================
 
 function mapRowToFile(row: FileRow): FileRecord {
@@ -137,11 +137,11 @@ function mapRowToFile(row: FileRow): FileRecord {
 }
 
 // ============================================================================
-// ОСНОВНЫЕ ОПЕРАЦИИ
+// РћРЎРќРћР’РќР«Р• РћРџР•Р РђР¦РР
 // ============================================================================
 
 /**
- * Проверить существование файла в папке (по имени)
+ * РџСЂРѕРІРµСЂРёС‚СЊ СЃСѓС‰РµСЃС‚РІРѕРІР°РЅРёРµ С„Р°Р№Р»Р° РІ РїР°РїРєРµ (РїРѕ РёРјРµРЅРё)
  */
 export async function checkFileExists(
   folderId: number,
@@ -160,7 +160,7 @@ export async function checkFileExists(
 }
 
 /**
- * Создать запись о файле
+ * РЎРѕР·РґР°С‚СЊ Р·Р°РїРёСЃСЊ Рѕ С„Р°Р№Р»Рµ
  */
 export async function createFile(data: CreateFileInput): Promise<FileRecord> {
   const now = new Date();
@@ -197,7 +197,7 @@ export async function createFile(data: CreateFileInput): Promise<FileRecord> {
     ]
   );
 
-  // Возвращаем созданный файл
+  // Р’РѕР·РІСЂР°С‰Р°РµРј СЃРѕР·РґР°РЅРЅС‹Р№ С„Р°Р№Р»
   const file = await getFileByUuid(data.uuid);
   if (!file) {
     throw new Error("Failed to create file record");
@@ -207,7 +207,7 @@ export async function createFile(data: CreateFileInput): Promise<FileRecord> {
 }
 
 /**
- * Получить файл по UUID
+ * РџРѕР»СѓС‡РёС‚СЊ С„Р°Р№Р» РїРѕ UUID
  */
 export async function getFileByUuid(uuid: string): Promise<FileRecord | null> {
   const rows = await executeQuery<FileRow[]>(
@@ -223,7 +223,7 @@ export async function getFileByUuid(uuid: string): Promise<FileRecord | null> {
 }
 
 /**
- * Получить файлы с пагинацией и фильтрацией
+ * РџРѕР»СѓС‡РёС‚СЊ С„Р°Р№Р»С‹ СЃ РїР°РіРёРЅР°С†РёРµР№ Рё С„РёР»СЊС‚СЂР°С†РёРµР№
  */
 export async function getFilesPaginated(
   params: PaginationParams = {}
@@ -239,41 +239,41 @@ export async function getFilesPaginated(
     uploadedBy,
   } = params;
 
-  // Строим WHERE условия
+  // РЎС‚СЂРѕРёРј WHERE СѓСЃР»РѕРІРёСЏ
   const conditions: string[] = ["deleted_at IS NULL"];
   const queryParams: any[] = [];
 
-  // Универсальный поиск по имени файла
+  // РЈРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РїРѕРёСЃРє РїРѕ РёРјРµРЅРё С„Р°Р№Р»Р°
   if (search) {
     conditions.push("filename LIKE ?");
     queryParams.push(`%${search}%`);
   }
 
-  // Фильтр по категории
+  // Р¤РёР»СЊС‚СЂ РїРѕ РєР°С‚РµРіРѕСЂРёРё
   if (category) {
     conditions.push("category = ?");
     queryParams.push(category);
   }
 
-  // Фильтр по пользователю
+  // Р¤РёР»СЊС‚СЂ РїРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ
   if (userId) {
     conditions.push("user_id = ?");
     queryParams.push(userId);
   }
 
-  // Фильтр по курсу
+  // Р¤РёР»СЊС‚СЂ РїРѕ РєСѓСЂСЃСѓ
   if (courseId) {
     conditions.push("course_id = ?");
     queryParams.push(courseId);
   }
 
-  // Фильтр по группе
+  // Р¤РёР»СЊС‚СЂ РїРѕ РіСЂСѓРїРїРµ
   if (groupId) {
     conditions.push("group_id = ?");
     queryParams.push(groupId);
   }
 
-  // Фильтр по загрузившему
+  // Р¤РёР»СЊС‚СЂ РїРѕ Р·Р°РіСЂСѓР·РёРІС€РµРјСѓ
   if (uploadedBy) {
     conditions.push("uploaded_by = ?");
     queryParams.push(uploadedBy);
@@ -282,12 +282,12 @@ export async function getFilesPaginated(
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  // Получаем общее количество
+  // РџРѕР»СѓС‡Р°РµРј РѕР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ
   const countQuery = `SELECT COUNT(*) as total FROM files ${whereClause}`;
   const countResult = await executeQuery<CountRow[]>(countQuery, queryParams);
   const total = countResult[0]?.total || 0;
 
-  // Получаем данные с пагинацией
+  // РџРѕР»СѓС‡Р°РµРј РґР°РЅРЅС‹Рµ СЃ РїР°РіРёРЅР°С†РёРµР№
   const offset = (page - 1) * limit;
   const dataQuery = `
     SELECT * FROM files 
@@ -310,7 +310,7 @@ export async function getFilesPaginated(
 }
 
 /**
- * Удалить файл (soft delete)
+ * РЈРґР°Р»РёС‚СЊ С„Р°Р№Р» (soft delete)
  */
 export async function deleteFile(uuid: string): Promise<boolean> {
   const now = new Date();
@@ -324,11 +324,11 @@ export async function deleteFile(uuid: string): Promise<boolean> {
 }
 
 /**
- * Получить файлы по связанной сущности
+ * РџРѕР»СѓС‡РёС‚СЊ С„Р°Р№Р»С‹ РїРѕ СЃРІСЏР·Р°РЅРЅРѕР№ СЃСѓС‰РЅРѕСЃС‚Рё
  */
 export async function getFilesByRelatedEntity(
   entityType: "user" | "course" | "group" | "assignment",
-  entityId: number
+  entityId: string | number
 ): Promise<FileRecord[]> {
   let column: string;
 
@@ -356,7 +356,7 @@ export async function getFilesByRelatedEntity(
 }
 
 /**
- * Получить файлы по категории
+ * РџРѕР»СѓС‡РёС‚СЊ С„Р°Р№Р»С‹ РїРѕ РєР°С‚РµРіРѕСЂРёРё
  */
 export async function getFilesByCategory(
   category: FileCategory
@@ -370,7 +370,7 @@ export async function getFilesByCategory(
 }
 
 /**
- * Обновить файл
+ * РћР±РЅРѕРІРёС‚СЊ С„Р°Р№Р»
  */
 export async function updateFile(
   id: number,
@@ -399,4 +399,19 @@ export async function updateFile(
   const result = await executeQuery<ResultSetHeader>(query, values);
 
   return result.affectedRows > 0;
+}
+
+/**
+ * Получить список файлов по UUID
+ */
+export async function getFilesByUuids(uuids: string[]): Promise<FileRecord[]> {
+  if (!uuids || uuids.length === 0) return [];
+
+  const placeholders = uuids.map(() => "?").join(", ");
+  const rows = await executeQuery<FileRow[]>(
+    `SELECT * FROM files WHERE uuid IN (${placeholders}) AND deleted_at IS NULL`,
+    uuids
+  );
+
+  return rows.map(mapRowToFile);
 }

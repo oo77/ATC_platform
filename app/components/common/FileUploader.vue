@@ -140,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import type { FileCategory, FileRecord } from '~/types/file';
 
 // Props
@@ -153,6 +153,7 @@ interface FileUploaderProps {
   multiple?: boolean;
   showPreview?: boolean;
   metadata?: Record<string, any>;
+  initialFiles?: FileRecord[];
 }
 
 const props = withDefaults(defineProps<FileUploaderProps>(), {
@@ -177,7 +178,14 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const isDragging = ref(false);
 const isUploading = ref(false);
 const uploadProgress = ref(0);
-const uploadedFiles = ref<FileRecord[]>([]);
+const uploadedFiles = ref<FileRecord[]>(props.initialFiles || []);
+
+// Watch for initial files changes
+watch(() => props.initialFiles, (newFiles) => {
+  if (newFiles) {
+    uploadedFiles.value = [...newFiles];
+  }
+}, { deep: true });
 
 // Methods
 const triggerFileInput = () => {

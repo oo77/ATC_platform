@@ -57,6 +57,8 @@ export interface StudentRow extends RowDataPacket {
   name_ru?: string | null;
   department: string | null;
   position: string;
+  birth_date: Date | null;
+  photo_base64: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -119,6 +121,8 @@ function mapRowToStudent(
     organizationRu: row.name_ru,
     department: row.department,
     position: row.position,
+    birthDate: row.birth_date,
+    photo_base64: row.photo_base64,
     certificates,
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -622,8 +626,8 @@ export async function createStudent(
   });
 
   await executeQuery(
-    `INSERT INTO students (id, full_name, pinfl, organization, organization_id, department, position, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO students (id, full_name, pinfl, organization, organization_id, department, position, birth_date, photo_base64, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.fullName,
@@ -632,6 +636,8 @@ export async function createStudent(
       org.id,
       data.department || null,
       data.position,
+      data.birthDate || null,
+      data.photo_base64 || null,
       now,
       now,
     ],
@@ -691,6 +697,14 @@ export async function updateStudent(
   if (data.position !== undefined) {
     updates.push("position = ?");
     params.push(data.position);
+  }
+  if (data.birthDate !== undefined) {
+    updates.push("birth_date = ?");
+    params.push(data.birthDate || null);
+  }
+  if (data.photo_base64 !== undefined) {
+    updates.push("photo_base64 = ?");
+    params.push(data.photo_base64 || null);
   }
 
   if (updates.length === 0) {

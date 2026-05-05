@@ -24,37 +24,40 @@
         >
           <div
             v-if="isVisible"
-            class="w-full max-w-3xl rounded-lg bg-white dark:bg-boxdark shadow-xl"
+            class="w-full max-w-3xl rounded-2xl bg-white dark:bg-boxdark shadow-2xl overflow-hidden"
             @click.stop
           >
             <!-- Заголовок -->
-            <div class="border-b border-stroke px-6 py-4 dark:border-strokedark flex items-center justify-between">
-              <h3 class="text-xl font-semibold text-black dark:text-white">
-                {{ isEditMode ? 'Редактировать' : 'Добавить' }} {{ roleLabel.toLowerCase() }}а
-              </h3>
+            <div class="border-b border-stroke px-8 py-5 dark:border-strokedark flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+              <div class="flex items-center gap-3">
+                <div class="p-2 rounded-xl bg-primary/10 text-primary">
+                  <User class="w-6 h-6" />
+                </div>
+                <h3 class="text-xl font-bold text-black dark:text-white uppercase tracking-tight">
+                  {{ isEditMode ? 'Редактировать' : 'Добавить' }} {{ roleLabel.toLowerCase() }}а
+                </h3>
+              </div>
               <button
                 @click="handleClose"
-                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-gray-400 hover:text-gray-600 transition-all"
               >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X class="w-6 h-6" />
               </button>
             </div>
 
             <!-- Форма -->
-            <form @submit.prevent="handleSubmit" class="p-6">
+            <form @submit.prevent="handleSubmit" class="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
               <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <!-- Имя -->
                 <div class="sm:col-span-2">
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Полное имя <span class="text-danger">*</span>
                   </label>
                   <input
                     v-model="formData.name"
                     type="text"
                     placeholder="Введите полное имя"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                     :class="{ 'border-danger': errors.name }"
                     required
                   />
@@ -65,14 +68,14 @@
 
                 <!-- Email -->
                 <div>
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Email <span class="text-danger">*</span>
                   </label>
                   <input
                     v-model="formData.email"
                     type="email"
                     placeholder="email@example.com"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                     :class="{ 'border-danger': errors.email }"
                     :disabled="isEditMode"
                     required
@@ -84,14 +87,14 @@
 
                 <!-- Телефон -->
                 <div>
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Телефон
                   </label>
                   <input
                     v-model="formData.phone"
                     type="tel"
                     placeholder="+998901234567"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                     :class="{ 'border-danger': errors.phone }"
                   />
                   <p v-if="errors.phone" class="mt-1 text-sm text-danger">
@@ -104,14 +107,14 @@
 
                 <!-- Пароль (только при создании) -->
                 <div v-if="!isEditMode">
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Пароль <span class="text-danger">*</span>
                   </label>
                   <input
                     v-model="formData.password"
                     type="password"
                     placeholder="Минимум 6 символов"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                     :class="{ 'border-danger': errors.password }"
                     :required="!isEditMode"
                   />
@@ -125,14 +128,14 @@
 
                 <!-- Подтверждение пароля (только при создании) -->
                 <div v-if="!isEditMode">
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Подтвердите пароль <span class="text-danger">*</span>
                   </label>
                   <input
                     v-model="formData.confirmPassword"
                     type="password"
                     placeholder="Повторите пароль"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                     :class="{ 'border-danger': errors.confirmPassword }"
                     :required="!isEditMode"
                   />
@@ -143,14 +146,14 @@
 
                 <!-- Место работы -->
                 <div>
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Место работы
                   </label>
                   <input
                     v-model="formData.workplace"
                     type="text"
                     placeholder="Название организации"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                     :class="{ 'border-danger': errors.workplace }"
                   />
                   <p v-if="errors.workplace" class="mt-1 text-sm text-danger">
@@ -160,14 +163,14 @@
 
                 <!-- Должность -->
                 <div>
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Должность
                   </label>
                   <input
                     v-model="formData.position"
                     type="text"
                     placeholder="Должность"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                     :class="{ 'border-danger': errors.position }"
                   />
                   <p v-if="errors.position" class="mt-1 text-sm text-danger">
@@ -177,7 +180,7 @@
 
                 <!-- ПИНФЛ -->
                 <div class="sm:col-span-2">
-                  <label class="mb-3 block text-sm font-medium text-black dark:text-white">
+                  <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     ПИНФЛ
                   </label>
                   <input
@@ -185,7 +188,7 @@
                     type="text"
                     placeholder="14 цифр"
                     maxlength="14"
-                    class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
+                    class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
                     :class="{ 'border-danger': errors.pinfl }"
                   />
                   <p v-if="errors.pinfl" class="mt-1 text-sm text-danger">
@@ -198,11 +201,12 @@
               </div>
 
               <!-- Кнопки -->
-              <div class="mt-6 flex justify-end gap-4">
+              <div class="mt-8 flex justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
                 <UiButton
-                  variant="danger"
+                  variant="outline"
                   @click="handleClose"
                   :disabled="loading"
+                  class="h-11 px-8 rounded-xl font-bold"
                 >
                   Отмена
                 </UiButton>
@@ -210,8 +214,9 @@
                   variant="success"
                   type="submit"
                   :loading="loading"
+                  class="h-11 px-8 rounded-xl font-bold shadow-lg shadow-success/20"
                 >
-                  {{ isEditMode ? 'Сохранить' : 'Создать' }}
+                  {{ isEditMode ? 'Сохранить изменения' : 'Создать' }}
                 </UiButton>
               </div>
             </form>
@@ -225,6 +230,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue';
 import type { UserRole, UserPublic } from '~/types/auth';
+import { User, X } from 'lucide-vue-next';
 
 interface Props {
   user: UserPublic | null;

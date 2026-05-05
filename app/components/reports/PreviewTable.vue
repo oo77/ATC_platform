@@ -106,11 +106,12 @@
             <th
               v-for="col in columns"
               :key="col"
-              class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 border-b border-stroke dark:border-strokedark whitespace-nowrap cursor-pointer select-none group transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/60"
+              class="relative px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 border-b border-stroke dark:border-strokedark whitespace-nowrap cursor-pointer select-none group transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/60 max-w-[300px]"
+              :style="colWidths[col] ? { width: colWidths[col] + 'px', minWidth: colWidths[col] + 'px', maxWidth: colWidths[col] + 'px' } : {}"
               @click="toggleSort(col)"
             >
-              <div class="flex items-center gap-1.5">
-                <span class="uppercase tracking-wide">{{ col }}</span>
+              <div class="flex items-center gap-1.5 overflow-hidden">
+                <span class="uppercase tracking-wide truncate">{{ col }}</span>
                 <!-- Иконки сортировки -->
                 <span
                   class="flex flex-col shrink-0 opacity-40 group-hover:opacity-100 transition-opacity"
@@ -142,6 +143,12 @@
                   </svg>
                 </span>
               </div>
+              <!-- Resizer handle -->
+              <div 
+                class="absolute right-0 top-0 w-2 h-full cursor-col-resize hover:bg-primary/50 transition-colors z-20"
+                @click.stop
+                @mousedown.prevent="startResize(col, $event)"
+              ></div>
             </th>
           </tr>
         </thead>
@@ -154,7 +161,9 @@
             <td
               v-for="col in columns"
               :key="col"
-              class="px-4 py-2.5 text-gray-700 dark:text-gray-300 whitespace-nowrap text-sm"
+              class="px-4 py-2.5 text-gray-700 dark:text-gray-300 whitespace-nowrap text-sm truncate max-w-[300px]"
+              :style="colWidths[col] ? { width: colWidths[col] + 'px', minWidth: colWidths[col] + 'px', maxWidth: colWidths[col] + 'px' } : {}"
+              :title="formatValue(row[col])"
             >
               {{ formatValue(row[col]) }}
             </td>
@@ -167,7 +176,9 @@
             <td
               v-for="col in columns"
               :key="col"
-              class="px-4 py-3 text-sm font-bold whitespace-nowrap border-t-2 border-primary/40"
+              class="px-4 py-3 text-sm font-bold whitespace-nowrap border-t-2 border-primary/40 truncate max-w-[300px]"
+              :style="colWidths[col] ? { width: colWidths[col] + 'px', minWidth: colWidths[col] + 'px', maxWidth: colWidths[col] + 'px' } : {}"
+              :title="totalRow[col] !== undefined && totalRow[col] !== null && col !== columns[0] ? formatValue(totalRow[col]) : ''"
             >
               <template v-if="col === columns[0]">
                 <span class="flex items-center gap-2 text-primary">
@@ -239,6 +250,29 @@ const props = defineProps<{
 defineEmits<{
   (e: "page-change", page: number): void;
 }>();
+
+// ── Ресайз столбцов ───────────────────────────────────────────────────
+const colWidths = ref<Record<string, number>>({});
+
+const startResize = (col: string, event: MouseEvent) => {
+  event.stopPropagation();
+  const startX = event.clientX;
+  const target = event.target as HTMLElement;
+  const th = target.closest('th');
+  const startWidth = colWidths.value[col] || th?.offsetWidth || 200;
+  
+  const onMouseMove = (e: MouseEvent) => {
+    colWidths.value[col] = Math.max(80, startWidth + (e.clientX - startX));
+  };
+  
+  const onMouseUp = () => {
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
+  };
+  
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+};
 
 // ── Локальная сортировка (клиент-сайд по текущей странице) ─────────────
 const localSort = ref<{ col: string | null; dir: "asc" | "desc" }>({

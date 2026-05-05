@@ -1,14 +1,14 @@
 <template>
   <div class="flex flex-col gap-6">
-    <!-- Заголовок и кнопки действий -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <!-- Header & Actions -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
       <div>
-        <h3 class="text-xl font-semibold text-black dark:text-white">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           Управление студентами
         </h3>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
           Всего студентов: {{ pagination.total }}
-          <span v-if="hasActiveFilters" class="text-primary">
+          <span v-if="hasActiveFilters" class="text-primary font-bold">
             (отфильтровано)
           </span>
         </p>
@@ -16,63 +16,38 @@
       <div class="flex flex-wrap items-center gap-3">
         <NuxtLink
           to="/database/import"
-          class="inline-flex items-center gap-2 rounded-lg border-2 border-primary bg-transparent px-4 py-2 text-sm font-medium text-primary transition-all duration-200 hover:bg-primary hover:text-white"
+          class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-primary bg-transparent text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white hover:shadow-md hover:shadow-primary/20"
         >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
+          <Upload class="w-4 h-4" />
           Импорт студентов
         </NuxtLink>
-        <UiButton
-          variant="primary"
+        <button
           @click="openCreateModal"
-          class="flex items-center gap-2"
+          class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-md shadow-primary/20 hover:bg-primary/90 hover:shadow-lg transition-all whitespace-nowrap"
         >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
+          <Plus class="w-4 h-4" />
           Добавить студента
-        </UiButton>
+        </button>
       </div>
     </div>
 
-    <!-- Панель фильтрации -->
-    <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
+    <!-- Filters Section -->
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Filter class="w-5 h-5" />
+          </div>
+          <h4 class="text-lg font-bold text-slate-900 dark:text-white">
+            Фильтры
+          </h4>
         </div>
-        <h4 class="text-lg font-semibold text-black dark:text-white">Фильтры</h4>
         <button
           v-if="hasActiveFilters"
           @click="clearFilters"
-          class="ml-auto text-sm text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+          class="text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <RotateCcw class="w-4 h-4" />
           Сбросить фильтры
         </button>
       </div>
@@ -80,7 +55,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Поиск по ФИО -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             Поиск по ФИО
           </label>
           <div class="relative">
@@ -88,18 +63,16 @@
               v-model="filters.fullName"
               type="text"
               placeholder="Введите имя..."
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+              class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
               @input="debouncedFetch"
             />
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           </div>
         </div>
 
         <!-- Поиск по ПИНФЛ -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             Поиск по ПИНФЛ
           </label>
           <div class="relative">
@@ -107,18 +80,16 @@
               v-model="filters.pinfl"
               type="text"
               placeholder="Введите ПИНФЛ..."
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+              class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
               @input="debouncedFetch"
             />
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-            </svg>
+            <CreditCard class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           </div>
         </div>
 
         <!-- Поиск по организации -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             Организация
           </label>
           <div class="relative">
@@ -126,18 +97,16 @@
               v-model="filters.organization"
               type="text"
               placeholder="Введите организацию..."
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+              class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
               @input="debouncedFetch"
             />
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
+            <Building2 class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           </div>
         </div>
 
         <!-- Поиск по должности -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
             Должность
           </label>
           <div class="relative">
@@ -145,42 +114,54 @@
               v-model="filters.position"
               type="text"
               placeholder="Введите должность..."
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+              class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
               @input="debouncedFetch"
             />
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
+            <Briefcase class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           </div>
         </div>
       </div>
 
       <!-- Дополнительные фильтры -->
-      <div class="mt-4 flex flex-wrap gap-3">
-        <label class="inline-flex items-center gap-2 cursor-pointer">
-          <input
-            v-model="filters.hasCertificates"
-            type="checkbox"
-            class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-            @change="handleFilterChange"
-          />
-          <span class="text-sm text-gray-700 dark:text-gray-300">Только с сертификатами</span>
+      <div class="mt-6 flex flex-wrap gap-4">
+        <label class="inline-flex items-center gap-2.5 cursor-pointer group">
+          <div class="relative flex items-center">
+            <input
+              v-model="filters.hasCertificates"
+              type="checkbox"
+              class="peer sr-only"
+              @change="handleFilterChange"
+            />
+            <div class="h-5 w-5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 transition-all peer-checked:bg-primary peer-checked:border-primary group-hover:border-primary/50 flex items-center justify-center">
+              <svg class="h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+          <span class="text-sm font-medium text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Только с сертификатами</span>
         </label>
 
-        <label class="inline-flex items-center gap-2 cursor-pointer">
-          <input
-            v-model="filters.noCertificates"
-            type="checkbox"
-            class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
-            @change="handleFilterChange"
-          />
-          <span class="text-sm text-gray-700 dark:text-gray-300">Только без сертификатов</span>
+        <label class="inline-flex items-center gap-2.5 cursor-pointer group">
+          <div class="relative flex items-center">
+            <input
+              v-model="filters.noCertificates"
+              type="checkbox"
+              class="peer sr-only"
+              @change="handleFilterChange"
+            />
+            <div class="h-5 w-5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 transition-all peer-checked:bg-primary peer-checked:border-primary group-hover:border-primary/50 flex items-center justify-center">
+              <svg class="h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+          <span class="text-sm font-medium text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Только без сертификатов</span>
         </label>
       </div>
     </div>
 
     <!-- Таблица студентов -->
-    <div class="bg-white dark:bg-boxdark rounded-xl shadow-md overflow-hidden">
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
       <DatabaseStudentTable
         :students="students"
         :loading="loading"
@@ -237,6 +218,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import type { Student, CreateStudentData, UpdateStudentData } from '~/types/student';
+import { Search, Plus, Filter, RotateCcw, Upload, CreditCard, Building2, Briefcase } from "lucide-vue-next";
 
 // Используем authFetch для авторизованных запросов
 const { authFetch } = useAuthFetch();

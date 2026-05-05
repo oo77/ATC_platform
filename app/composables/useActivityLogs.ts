@@ -10,6 +10,7 @@ export interface ActivityLogFilter {
   entityType?: string;
   startDate?: string;
   endDate?: string;
+  search?: string;
   page?: number;
   limit?: number;
 }
@@ -62,6 +63,7 @@ export function useActivityLogs() {
       if (filters.entityType) params.append('entityType', filters.entityType);
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
+      if (filters.search) params.append('search', filters.search);
       params.append('page', String(filters.page || currentPage.value));
       params.append('limit', String(filters.limit || pageSize.value));
 
@@ -140,6 +142,10 @@ export function useActivityLogs() {
       RESET_PASSWORD: 'Сброс пароля',
       ASSIGN: 'Назначение',
       UNASSIGN: 'Снятие назначения',
+      ARCHIVE: 'Архивация',
+      RESTORE: 'Восстановление',
+      UPLOAD: 'Загрузка',
+      DOWNLOAD: 'Скачивание',
     };
     return labels[actionType] || actionType;
   };
@@ -153,6 +159,8 @@ export function useActivityLogs() {
       STUDENT: 'Студент',
       CERTIFICATE: 'Сертификат',
       CERTIFICATE_TEMPLATE: 'Шаблон сертификата',
+      CERTIFICATE_TEMPLATE_BACKGROUND: 'Фон шаблона',
+      CERTIFICATE_TEMPLATE_IMAGE: 'Изображение шаблона',
       ISSUED_CERTIFICATE: 'Выданный сертификат',
       COURSE: 'Курс',
       DISCIPLINE: 'Дисциплина',
@@ -167,6 +175,8 @@ export function useActivityLogs() {
       ATTENDANCE: 'Посещаемость',
       GRADE: 'Оценка',
       SYSTEM: 'Система',
+      GROUP_REPORT: 'Отчет группы',
+      TRAINING_REQUEST: 'Заявка на обучение',
     };
     return labels[entityType] || entityType;
   };
@@ -193,6 +203,10 @@ export function useActivityLogs() {
       RESET_PASSWORD: 'text-yellow-600 dark:text-yellow-400',
       ASSIGN: 'text-blue-600 dark:text-blue-400',
       UNASSIGN: 'text-gray-600 dark:text-gray-400',
+      ARCHIVE: 'text-orange-600',
+      RESTORE: 'text-green-600',
+      UPLOAD: 'text-indigo-600',
+      DOWNLOAD: 'text-indigo-600',
     };
     return colors[actionType] || 'text-gray-600 dark:text-gray-400';
   };

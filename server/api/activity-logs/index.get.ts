@@ -37,6 +37,7 @@ export default defineEventHandler(async (event) => {
     const entityType = query.entityType as EntityType | undefined;
     const startDate = query.startDate as string | undefined;
     const endDate = query.endDate as string | undefined;
+    const search = query.search as string | undefined;
 
     const result = await getActivityLogsPaginated({
       page,
@@ -46,6 +47,7 @@ export default defineEventHandler(async (event) => {
       entityType,
       startDate,
       endDate,
+      search,
     });
 
     return {

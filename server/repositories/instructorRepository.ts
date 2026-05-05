@@ -11,6 +11,12 @@ import { getAcademicHourMinutes } from "../utils/academicHours";
 // ИНТЕРФЕЙСЫ
 // ============================================================================
 
+export interface InstructorCertificate {
+  name: string;
+  date: string;
+  fileId?: string;
+}
+
 export interface Instructor {
   id: string;
   fullName: string;
@@ -22,6 +28,21 @@ export interface Instructor {
   usedHours?: number; // Количество отработанных часов
   isActive: boolean;
   userId?: string | null; // ID связанной учётной записи пользователя
+  
+  // Qualification fields
+  birthDate?: Date | null;
+  passportData?: string | null;
+  education?: string | null;
+  university?: string | null;
+  diploma_file_ids?: string[] | null;
+  specialty?: string | null;
+  academic_degree?: string | null;
+  academic_rank?: string | null;
+  certificates?: InstructorCertificate[] | null;
+  languages?: string[] | null;
+  photo_base64?: string | null;
+  additional_files?: string[] | null;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -53,6 +74,19 @@ export interface CreateInstructorInput {
   contractInfo?: string;
   maxHours?: number;
   isActive?: boolean;
+  
+  birthDate?: Date | string;
+  passportData?: string;
+  education?: string;
+  university?: string;
+  diploma_file_ids?: string[];
+  specialty?: string;
+  academic_degree?: string;
+  academic_rank?: string;
+  certificates?: InstructorCertificate[];
+  languages?: string[];
+  photo_base64?: string;
+  additional_files?: string[];
 }
 
 export interface UpdateInstructorInput {
@@ -63,6 +97,19 @@ export interface UpdateInstructorInput {
   contractInfo?: string | null;
   maxHours?: number;
   isActive?: boolean;
+  
+  birthDate?: Date | string | null;
+  passportData?: string | null;
+  education?: string | null;
+  university?: string | null;
+  diploma_file_ids?: string[] | null;
+  specialty?: string | null;
+  academic_degree?: string | null;
+  academic_rank?: string | null;
+  certificates?: InstructorCertificate[] | null;
+  languages?: string[] | null;
+  photo_base64?: string | null;
+  additional_files?: string[] | null;
 }
 
 // ============================================================================
@@ -80,6 +127,20 @@ interface InstructorRow extends RowDataPacket {
   used_hours?: number; // Количество отработанных часов
   is_active: boolean;
   user_id: string | null; // ID связанной учётной записи пользователя
+  
+  birth_date: Date | null;
+  passport_data: string | null;
+  education: string | null;
+  university: string | null;
+  diploma_file_ids: any | null; // JSON
+  specialty: string | null;
+  academic_degree: string | null;
+  academic_rank: string | null;
+  certificates: any | null; // JSON
+  languages: any | null; // JSON
+  photo_base64: string | null;
+  additional_files: any | null; // JSON
+
   created_at: Date;
   updated_at: Date;
   discipline_count?: number;
@@ -96,6 +157,19 @@ interface CountRow extends RowDataPacket {
 function mapRowToInstructor(
   row: InstructorRow,
 ): Instructor & { disciplineCount?: number } {
+  const parseJson = (val: any) => {
+    if (!val) return null;
+    if (typeof val === 'string') {
+      try {
+        return JSON.parse(val);
+      } catch (e) {
+        console.error('Error parsing JSON from database:', e, val);
+        return null;
+      }
+    }
+    return val;
+  };
+
   return {
     id: row.id,
     fullName: row.full_name,
@@ -107,6 +181,20 @@ function mapRowToInstructor(
     usedHours: row.used_hours !== undefined ? Number(row.used_hours) : undefined,
     isActive: Boolean(row.is_active),
     userId: row.user_id, // ID связанной учётной записи
+    
+    education: row.education,
+    university: row.university,
+    diploma_file_ids: parseJson(row.diploma_file_ids),
+    specialty: row.specialty,
+    academic_degree: row.academic_degree,
+    academic_rank: row.academic_rank,
+    certificates: parseJson(row.certificates),
+    languages: parseJson(row.languages),
+    photo_base64: row.photo_base64,
+    additional_files: parseJson(row.additional_files),
+    birthDate: row.birth_date,
+    passportData: row.passport_data,
+
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     disciplineCount: row.discipline_count,
@@ -239,8 +327,12 @@ export async function createInstructor(
   }
 
   await executeQuery(
-    `INSERT INTO instructors (id, full_name, email, phone, hire_date, contract_info, max_hours, is_active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO instructors (
+      id, full_name, email, phone, hire_date, contract_info, max_hours, is_active, 
+      birth_date, passport_data, education, university, diploma_file_ids, specialty, academic_degree, academic_rank, 
+      certificates, languages, photo_base64, additional_files,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.fullName,
@@ -250,6 +342,18 @@ export async function createInstructor(
       data.contractInfo || null,
       data.maxHours || 0,
       data.isActive !== false,
+      data.birthDate || null,
+      data.passportData || null,
+      data.education || null,
+      data.university || null,
+      data.diploma_file_ids ? JSON.stringify(data.diploma_file_ids) : null,
+      data.specialty || null,
+      data.academic_degree || null,
+      data.academic_rank || null,
+      data.certificates ? JSON.stringify(data.certificates) : null,
+      data.languages ? JSON.stringify(data.languages) : null,
+      data.photo_base64 || null,
+      data.additional_files ? JSON.stringify(data.additional_files) : null,
       now,
       now,
     ],
@@ -304,12 +408,60 @@ export async function updateInstructor(
     updates.push("is_active = ?");
     params.push(data.isActive);
   }
+  if (data.birthDate !== undefined) {
+    updates.push("birth_date = ?");
+    params.push(data.birthDate || null);
+  }
+  if (data.passportData !== undefined) {
+    updates.push("passport_data = ?");
+    params.push(data.passportData || null);
+  }
+  if (data.education !== undefined) {
+    updates.push("education = ?");
+    params.push(data.education ?? null);
+  }
+  if (data.university !== undefined) {
+    updates.push("university = ?");
+    params.push(data.university ?? null);
+  }
+  if (data.diploma_file_ids !== undefined) {
+    updates.push("diploma_file_ids = ?");
+    params.push(data.diploma_file_ids ? JSON.stringify(data.diploma_file_ids) : null);
+  }
+  if (data.specialty !== undefined) {
+    updates.push("specialty = ?");
+    params.push(data.specialty ?? null);
+  }
+  if (data.academic_degree !== undefined) {
+    updates.push("academic_degree = ?");
+    params.push(data.academic_degree ?? null);
+  }
+  if (data.academic_rank !== undefined) {
+    updates.push("academic_rank = ?");
+    params.push(data.academic_rank ?? null);
+  }
+  if (data.certificates !== undefined) {
+    updates.push("certificates = ?");
+    params.push(data.certificates ? JSON.stringify(data.certificates) : null);
+  }
+  if (data.languages !== undefined) {
+    updates.push("languages = ?");
+    params.push(data.languages ? JSON.stringify(data.languages) : null);
+  }
+  if (data.photo_base64 !== undefined) {
+    updates.push("photo_base64 = ?");
+    params.push(data.photo_base64 ?? null);
+  }
+  if (data.additional_files !== undefined) {
+    updates.push("additional_files = ?");
+    params.push(data.additional_files ? JSON.stringify(data.additional_files) : null);
+  }
 
   if (updates.length === 0) return existing;
 
   params.push(id);
   await executeQuery(
-    `UPDATE instructors SET ${updates.join(", ")} WHERE id = ?`,
+    `UPDATE instructors SET ${updates.join(", ")}, updated_at = NOW(3) WHERE id = ?`,
     params,
   );
 

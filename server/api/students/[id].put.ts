@@ -75,6 +75,8 @@ export default defineEventHandler(async (event) => {
     if (body.organization !== undefined) updateData.organization = body.organization.trim();
     if (body.department !== undefined) updateData.department = body.department?.trim() || undefined;
     if (body.position !== undefined) updateData.position = body.position.trim();
+    if (body.birthDate !== undefined) updateData.birthDate = body.birthDate;
+    if (body.photo_base64 !== undefined) updateData.photo_base64 = body.photo_base64;
 
     const student = await updateStudent(id, updateData);
 

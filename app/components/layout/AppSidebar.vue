@@ -487,6 +487,12 @@ const allMenuGroups: MenuGroup[] = [
         path: "/reports",
         hideForRoles: ["STUDENT", "TEACHER"],
       },
+      {
+        icon: History,
+        name: "Журнал аудита",
+        path: "/activity-logs",
+        permission: Permission.LOGS_VIEW,
+      },
     ],
   },
 

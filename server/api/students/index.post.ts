@@ -22,6 +22,8 @@ const studentSchema = z.object({
   position: z.string().min(1, 'Должность обязательна'),
   // Опциональный пароль (если не указан — используется ПИНФЛ)
   accountPassword: z.string().min(8, 'Пароль должен быть минимум 8 символов').optional(),
+  birthDate: z.string().optional().nullable(),
+  photo_base64: z.string().optional().nullable(),
 });
 
 export default defineEventHandler(async (event) => {
@@ -101,6 +103,8 @@ export default defineEventHandler(async (event) => {
       organization: data.organization.trim(),
       department: data.department?.trim() || undefined,
       position: data.position.trim(),
+      birthDate: body.birthDate || undefined,
+      photo_base64: body.photo_base64 || undefined,
     });
 
     // Если создали пользователя, связываем со студентом

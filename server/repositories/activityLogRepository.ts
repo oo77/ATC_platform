@@ -131,6 +131,7 @@ export async function getActivityLogsPaginated(
     entityType,
     startDate,
     endDate,
+    search,
   } = params;
 
   // Строим WHERE условия
@@ -164,13 +165,20 @@ export async function getActivityLogsPaginated(
     queryParams.push(date);
   }
 
+  if (search) {
+    conditions.push("(u.name LIKE ? OR u.email LIKE ? OR al.entity_name LIKE ?)");
+    const searchPattern = `%${search}%`;
+    queryParams.push(searchPattern, searchPattern, searchPattern);
+  }
+
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  // Получаем общее количество
+  // Получаем общее количество (нужен JOIN если есть поиск)
   const countQuery = `
     SELECT COUNT(*) as total 
     FROM activity_logs al
+    ${search ? "LEFT JOIN users u ON al.user_id = u.id" : ""}
     ${whereClause}
   `;
   const countResult = await executeQuery<CountRow[]>(countQuery, queryParams);
@@ -295,6 +303,7 @@ export async function getUserActivityStats(userId: string): Promise<{
     ARCHIVE: 0,
     RESTORE: 0,
     UPLOAD: 0,
+    DOWNLOAD: 0,
   };
 
   for (const row of actionRows) {

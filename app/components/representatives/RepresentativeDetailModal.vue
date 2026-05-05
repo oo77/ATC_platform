@@ -22,38 +22,29 @@
         >
           <div
             v-if="isVisible"
-            class="w-full max-w-3xl rounded-lg bg-white dark:bg-boxdark shadow-xl max-h-[90vh] overflow-y-auto"
+            class="w-full max-w-3xl rounded-2xl bg-white dark:bg-boxdark shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             @click.stop
           >
             <!-- Заголовок -->
-            <div
-              class="sticky top-0 z-10 border-b border-stroke px-6 py-4 dark:border-strokedark flex items-center justify-between bg-white dark:bg-boxdark"
-            >
-              <h3 class="text-xl font-semibold text-black dark:text-white">
-                Детали представителя
-              </h3>
+            <div class="border-b border-stroke px-8 py-5 dark:border-strokedark flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10">
+              <div class="flex items-center gap-3">
+                <div class="p-2 rounded-xl bg-primary/10 text-primary">
+                  <User class="w-6 h-6" />
+                </div>
+                <h3 class="text-xl font-bold text-black dark:text-white uppercase tracking-tight">
+                  Детали представителя
+                </h3>
+              </div>
               <button
                 @click="handleClose"
-                class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 text-gray-400 hover:text-gray-600 transition-all"
               >
-                <svg
-                  class="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                <X class="w-6 h-6" />
               </button>
             </div>
 
             <!-- Контент -->
-            <div class="p-6 space-y-6">
+            <div class="p-8 overflow-y-auto custom-scrollbar flex-1 space-y-8">
               <!-- Статус -->
               <div class="flex items-center justify-between">
                 <span
@@ -106,12 +97,12 @@
 
               <!-- Основная информация -->
               <div
-                class="rounded-lg border border-stroke dark:border-strokedark p-4"
+                class="rounded-xl border border-slate-200 bg-slate-50/50 p-6 dark:border-slate-700 dark:bg-slate-800/50"
               >
-                <h4 class="font-medium text-black dark:text-white mb-4">
+                <h4 class="mb-4 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                   Основная информация
                 </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400">ФИО</p>
                     <p class="font-medium text-black dark:text-white">
@@ -139,12 +130,12 @@
 
               <!-- Telegram -->
               <div
-                class="rounded-lg border border-stroke dark:border-strokedark p-4"
+                class="rounded-xl border border-slate-200 bg-slate-50/50 p-6 dark:border-slate-700 dark:bg-slate-800/50"
               >
-                <h4 class="font-medium text-black dark:text-white mb-4">
+                <h4 class="mb-4 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                   Telegram
                 </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <p class="text-sm text-gray-600 dark:text-gray-400">
                       Username
@@ -158,9 +149,7 @@
                     </p>
                   </div>
                   <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                      Chat ID
-                    </p>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Chat ID</p>
                     <p class="font-medium text-black dark:text-white font-mono">
                       {{ representative.telegramChatId || "Не указан" }}
                     </p>
@@ -170,79 +159,84 @@
 
               <!-- Доступ -->
               <div
-                class="rounded-lg border border-stroke dark:border-strokedark p-4"
+                class="rounded-xl border border-slate-200 bg-slate-50/50 p-6 dark:border-slate-700 dark:bg-slate-800/50"
               >
-                <h4 class="font-medium text-black dark:text-white mb-4">
+                <h4 class="mb-4 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                   Настройки доступа
                 </h4>
-                <div class="space-y-3">
-                  <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                      Доступ к группам
-                    </p>
-                    <p class="font-medium text-black dark:text-white">
-                      {{
-                        representative.accessGroups
-                          ? `${representative.accessGroups.length} групп`
-                          : "Все группы организации"
-                      }}
-                    </p>
-                  </div>
-                  <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                      Уведомления
-                    </p>
-                    <span
-                      :class="[
-                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium',
-                        representative.notificationsEnabled
-                          ? 'bg-success/10 text-success'
-                          : 'bg-gray-100 text-gray-600 dark:bg-meta-4 dark:text-gray-400',
-                      ]"
-                    >
-                      {{
-                        representative.notificationsEnabled
-                          ? "Включены"
-                          : "Выключены"
-                      }}
-                    </span>
+                <div class="space-y-4">
+                  <div class="flex justify-between items-center">
+                    <div>
+                      <p class="text-xs font-bold text-slate-400 uppercase mb-1">
+                        Доступ к группам
+                      </p>
+                      <p class="font-medium text-black dark:text-white">
+                        {{
+                          representative.accessGroups
+                            ? `${representative.accessGroups.length} групп`
+                            : "Все группы организации"
+                        }}
+                      </p>
+                    </div>
+                    <div>
+                      <p class="text-xs font-bold text-slate-400 uppercase mb-1 text-right">
+                        Уведомления
+                      </p>
+                      <span
+                        :class="[
+                          'inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-black uppercase tracking-widest border',
+                          representative.notificationsEnabled
+                            ? 'bg-success/5 text-success border-success/20'
+                            : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700',
+                        ]"
+                      >
+                        {{
+                          representative.notificationsEnabled
+                            ? "Включены"
+                            : "Выключены"
+                        }}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <!-- Разрешения -->
               <div
-                class="rounded-lg border border-stroke dark:border-strokedark p-4"
+                class="rounded-xl border border-slate-200 bg-slate-50/50 p-6 dark:border-slate-700 dark:bg-slate-800/50"
               >
-                <div class="flex items-center justify-between mb-4">
-                  <h4 class="font-medium text-black dark:text-white">
+                <div class="flex items-center justify-between mb-6">
+                  <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Разрешения Telegram-бота
                   </h4>
                   <UiButton
                     v-if="permissionsChanged"
-                    variant="primary"
+                    variant="success"
                     size="sm"
                     @click="savePermissions"
                     :disabled="isSaving"
+                    class="h-8 rounded-lg px-4 font-bold text-xs uppercase tracking-wider"
                   >
                     {{ isSaving ? "Сохранение..." : "Сохранить" }}
                   </UiButton>
                 </div>
-                <div class="space-y-3">
+                <div class="space-y-6">
                   <!-- Просмотр слушателей -->
-                  <label class="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      v-model="localPermissions.can_view_students"
-                      class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
-                    />
+                  <label class="flex items-start gap-4 cursor-pointer group">
+                    <div class="relative flex items-center pt-1">
+                      <input
+                        type="checkbox"
+                        v-model="localPermissions.can_view_students"
+                        class="w-5 h-5 rounded-lg border-slate-300 text-primary focus:ring-primary/20 cursor-pointer transition-all"
+                      />
+                    </div>
                     <div class="flex-1">
                       <p
-                        class="font-medium text-black dark:text-white group-hover:text-primary transition-colors"
+                        class="font-bold text-slate-800 dark:text-white group-hover:text-primary transition-colors"
                       >
                         Просмотр списка слушателей
                       </p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400">
+                      <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
                         Команда /students - показывает список всех слушателей
                         организации
                       </p>
@@ -250,19 +244,21 @@
                   </label>
 
                   <!-- Просмотр расписания -->
-                  <label class="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      v-model="localPermissions.can_view_schedule"
-                      class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
-                    />
+                  <label class="flex items-start gap-4 cursor-pointer group">
+                    <div class="relative flex items-center pt-1">
+                      <input
+                        type="checkbox"
+                        v-model="localPermissions.can_view_schedule"
+                        class="w-5 h-5 rounded-lg border-slate-300 text-primary focus:ring-primary/20 cursor-pointer transition-all"
+                      />
+                    </div>
                     <div class="flex-1">
                       <p
-                        class="font-medium text-black dark:text-white group-hover:text-primary transition-colors"
+                        class="font-bold text-slate-800 dark:text-white group-hover:text-primary transition-colors"
                       >
                         Просмотр расписания
                       </p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400">
+                      <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
                         Команда /schedule - показывает расписание занятий на
                         неделю
                       </p>
@@ -270,19 +266,21 @@
                   </label>
 
                   <!-- Просмотр сертификатов -->
-                  <label class="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      v-model="localPermissions.can_view_certificates"
-                      class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
-                    />
+                  <label class="flex items-start gap-4 cursor-pointer group">
+                    <div class="relative flex items-center pt-1">
+                      <input
+                        type="checkbox"
+                        v-model="localPermissions.can_view_certificates"
+                        class="w-5 h-5 rounded-lg border-slate-300 text-primary focus:ring-primary/20 cursor-pointer transition-all"
+                      />
+                    </div>
                     <div class="flex-1">
                       <p
-                        class="font-medium text-black dark:text-white group-hover:text-primary transition-colors"
+                        class="font-bold text-slate-800 dark:text-white group-hover:text-primary transition-colors"
                       >
                         Просмотр сертификатов
                       </p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400">
+                      <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
                         Команда /certificates - показывает список выданных
                         сертификатов
                       </p>
@@ -290,20 +288,23 @@
                   </label>
 
                   <!-- Запрос файлов сертификатов -->
-                  <label class="flex items-center gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      v-model="localPermissions.can_request_certificates"
-                      :disabled="!localPermissions.can_view_certificates"
-                      class="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    />
+                  <label class="flex items-start gap-4 cursor-pointer group">
+                    <div class="relative flex items-center pt-1">
+                      <input
+                        type="checkbox"
+                        v-model="localPermissions.can_request_certificates"
+                        :disabled="!localPermissions.can_view_certificates"
+                        class="w-5 h-5 rounded-lg border-slate-300 text-primary focus:ring-primary/20 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
                     <div class="flex-1">
                       <p
-                        class="font-medium text-black dark:text-white group-hover:text-primary transition-colors"
+                        class="font-bold text-slate-800 dark:text-white group-hover:text-primary transition-colors"
+                        :class="{ 'opacity-50': !localPermissions.can_view_certificates }"
                       >
                         Запрос файлов сертификатов
                       </p>
-                      <p class="text-sm text-gray-600 dark:text-gray-400">
+                      <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
                         Возможность скачивать PDF файлы сертификатов через бота
                       </p>
                       <p
@@ -323,24 +324,20 @@
                   representative.status === 'approved' &&
                   representative.approvedBy
                 "
-                class="rounded-lg border border-stroke dark:border-strokedark p-4"
+                class="rounded-xl border border-slate-200 bg-slate-50/50 p-6 dark:border-slate-700 dark:bg-slate-800/50"
               >
-                <h4 class="font-medium text-black dark:text-white mb-4">
+                <h4 class="mb-4 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                   Информация об одобрении
                 </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                      Одобрил
-                    </p>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Одобрил</p>
                     <p class="font-medium text-black dark:text-white">
                       {{ representative.approvedByName || "Неизвестно" }}
                     </p>
                   </div>
                   <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                      Дата одобрения
-                    </p>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Дата одобрения</p>
                     <p class="font-medium text-black dark:text-white">
                       {{ formatDate(representative.approvedAt) }}
                     </p>
@@ -354,34 +351,30 @@
                   representative.status === 'blocked' &&
                   representative.blockedReason
                 "
-                class="rounded-lg border border-danger/20 bg-danger/5 p-4"
+                class="rounded-xl border border-danger/20 bg-danger/5 p-6 dark:bg-danger/10"
               >
-                <h4 class="font-medium text-danger mb-2">Причина блокировки</h4>
-                <p class="text-sm text-gray-700 dark:text-gray-300">
+                <h4 class="mb-2 text-xs font-black uppercase tracking-widest text-danger">Причина блокировки</h4>
+                <p class="text-sm font-medium text-danger/80">
                   {{ representative.blockedReason }}
                 </p>
               </div>
 
               <!-- Активность -->
               <div
-                class="rounded-lg border border-stroke dark:border-strokedark p-4"
+                class="rounded-xl border border-slate-200 bg-slate-50/50 p-6 dark:border-slate-700 dark:bg-slate-800/50"
               >
-                <h4 class="font-medium text-black dark:text-white mb-4">
+                <h4 class="mb-4 text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                   Активность
                 </h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                      Дата регистрации
-                    </p>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Дата регистрации</p>
                     <p class="font-medium text-black dark:text-white">
                       {{ formatDate(representative.createdAt) }}
                     </p>
                   </div>
                   <div>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">
-                      Последняя активность
-                    </p>
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Последняя активность</p>
                     <p class="font-medium text-black dark:text-white">
                       {{
                         representative.lastActivityAt
@@ -396,16 +389,16 @@
               <!-- Журнал запросов Telegram-бота -->
               <div
                 v-if="representative.status === 'approved'"
-                class="rounded-lg border border-stroke dark:border-strokedark p-4"
+                class="rounded-xl border border-slate-200 bg-slate-50/50 p-6 dark:border-slate-700 dark:bg-slate-800/50"
               >
-                <div class="flex items-center justify-between mb-4">
-                  <h4 class="font-medium text-black dark:text-white">
+                <div class="flex items-center justify-between mb-6">
+                  <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                     Журнал запросов к боту
                   </h4>
                   <button
                     v-if="!showRequestHistory"
                     @click="loadRequestHistory"
-                    class="text-sm text-primary hover:underline"
+                    class="text-xs font-bold text-primary hover:text-primary/80 uppercase tracking-wider transition-colors"
                   >
                     Показать историю
                   </button>
@@ -414,37 +407,29 @@
                 <!-- Статистика -->
                 <div
                   v-if="requestStats"
-                  class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4"
+                  class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
                 >
-                  <div class="rounded-lg bg-gray-50 dark:bg-meta-4 p-3">
-                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                      Всего запросов
-                    </p>
-                    <p class="text-lg font-bold text-black dark:text-white">
+                  <div class="rounded-xl bg-white dark:bg-slate-800 p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Всего</p>
+                    <p class="text-xl font-black text-slate-900 dark:text-white">
                       {{ requestStats.total }}
                     </p>
                   </div>
-                  <div class="rounded-lg bg-success/10 p-3">
-                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                      Успешных
-                    </p>
-                    <p class="text-lg font-bold text-success">
+                  <div class="rounded-xl bg-success/5 p-4 border border-success/10 shadow-sm">
+                    <p class="text-[10px] font-black text-success/60 uppercase tracking-widest mb-1">Успешных</p>
+                    <p class="text-xl font-black text-success">
                       {{ requestStats.success }}
                     </p>
                   </div>
-                  <div class="rounded-lg bg-danger/10 p-3">
-                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                      Ошибок
-                    </p>
-                    <p class="text-lg font-bold text-danger">
+                  <div class="rounded-xl bg-danger/5 p-4 border border-danger/10 shadow-sm">
+                    <p class="text-[10px] font-black text-danger/60 uppercase tracking-widest mb-1">Ошибок</p>
+                    <p class="text-xl font-black text-danger">
                       {{ requestStats.error }}
                     </p>
                   </div>
-                  <div class="rounded-lg bg-warning/10 p-3">
-                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                      Отказано
-                    </p>
-                    <p class="text-lg font-bold text-warning">
+                  <div class="rounded-xl bg-warning/5 p-4 border border-warning/10 shadow-sm">
+                    <p class="text-[10px] font-black text-warning/60 uppercase tracking-widest mb-1">Отказано</p>
+                    <p class="text-xl font-black text-warning">
                       {{ requestStats.denied }}
                     </p>
                   </div>
@@ -452,61 +437,63 @@
 
                 <!-- История запросов -->
                 <div v-if="showRequestHistory">
-                  <div v-if="loadingRequests" class="text-center py-4">
-                    <p class="text-sm text-gray-500">Загрузка...</p>
+                  <div v-if="loadingRequests" class="text-center py-8">
+                    <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-t-transparent"></div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Загрузка...</p>
                   </div>
 
                   <div
                     v-else-if="requestHistory.length === 0"
-                    class="text-center py-4"
+                    class="text-center py-8"
                   >
-                    <p class="text-sm text-gray-500">Нет запросов</p>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Нет запросов</p>
                   </div>
 
-                  <div v-else class="space-y-2 max-h-96 overflow-y-auto">
+                  <div v-else class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar pr-2">
                     <div
                       v-for="request in requestHistory"
                       :key="request.id"
-                      class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-meta-4"
+                      class="flex items-start gap-4 p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-primary/20 transition-all group"
                     >
                       <div
                         :class="[
-                          'mt-1 h-2 w-2 rounded-full shrink-0',
-                          request.status === 'success' && 'bg-success',
-                          request.status === 'error' && 'bg-danger',
-                          request.status === 'denied' && 'bg-warning',
+                          'mt-1.5 h-2 w-2 rounded-full shrink-0 shadow-sm',
+                          request.status === 'success' && 'bg-success shadow-success/20',
+                          request.status === 'error' && 'bg-danger shadow-danger/20',
+                          request.status === 'denied' && 'bg-warning shadow-warning/20',
                         ]"
                       ></div>
                       <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2 mb-1">
+                        <div class="flex items-center gap-3 mb-1.5">
                           <span
-                            class="font-medium text-black dark:text-white font-mono text-sm"
+                            class="font-bold text-slate-900 dark:text-white font-mono text-sm group-hover:text-primary transition-colors"
                           >
                             {{ request.command }}
                           </span>
                           <span
                             :class="[
-                              'text-xs px-2 py-0.5 rounded-full',
+                              'text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-widest border',
                               request.requestType === 'command' &&
-                                'bg-primary/10 text-primary',
+                                'bg-primary/5 text-primary border-primary/10',
                               request.requestType === 'callback' &&
-                                'bg-info/10 text-info',
+                                'bg-info/5 text-info border-info/10',
                               request.requestType === 'message' &&
-                                'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+                                'bg-slate-50 text-slate-500 border-slate-100',
                             ]"
                           >
                             {{ request.requestType }}
                           </span>
                         </div>
-                        <p class="text-xs text-gray-600 dark:text-gray-400">
-                          {{ formatDate(request.createdAt) }}
-                          <span v-if="request.responseTimeMs" class="ml-2">
-                            • {{ request.responseTimeMs }}ms
+                        <div class="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <span>{{ formatDate(request.createdAt) }}</span>
+                          <span v-if="request.responseTimeMs" class="flex items-center gap-1">
+                            <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+                            {{ request.responseTimeMs }}ms
                           </span>
-                        </p>
+                        </div>
                         <p
                           v-if="request.errorMessage"
-                          class="text-xs text-danger mt-1"
+                          class="text-xs font-medium text-danger mt-2 p-2 rounded-lg bg-danger/5 border border-danger/10"
                         >
                           {{ request.errorMessage }}
                         </p>
@@ -517,7 +504,7 @@
                   <button
                     v-if="requestHistory.length > 0"
                     @click="showRequestHistory = false"
-                    class="mt-3 text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                    class="mt-4 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors"
                   >
                     Скрыть историю
                   </button>
@@ -527,10 +514,10 @@
 
             <!-- Футер -->
             <div
-              class="sticky bottom-0 border-t border-stroke px-6 py-4 dark:border-strokedark bg-white dark:bg-boxdark"
+              class="sticky bottom-0 border-t border-slate-100 px-8 py-5 dark:border-slate-800 bg-white dark:bg-boxdark z-10"
             >
-              <div class="flex justify-end">
-                <UiButton variant="secondary" @click="handleClose">
+              <div class="flex justify-end gap-3">
+                <UiButton variant="outline" @click="handleClose" class="h-11 px-8 rounded-xl font-bold">
                   Закрыть
                 </UiButton>
               </div>
@@ -544,6 +531,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
+import { User, X } from 'lucide-vue-next';
 
 interface RepresentativePermissions {
   can_view_students: boolean;
@@ -562,7 +550,7 @@ interface Representative {
   telegramUsername: string | null;
   status: "pending" | "approved" | "blocked";
   accessGroups: string[] | null;
-  permissions: RepresentativePermissions;
+  permissions?: RepresentativePermissions;
   notificationsEnabled: boolean;
   lastActivityAt: Date | null;
   approvedBy: string | null;
@@ -609,6 +597,7 @@ const localPermissions = ref<RepresentativePermissions>({
 // Проверка изменений
 const permissionsChanged = computed(() => {
   const original = props.representative.permissions;
+  if (!original) return false;
   const local = localPermissions.value;
 
   return (

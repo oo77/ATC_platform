@@ -32,6 +32,25 @@ const updateInstructorSchema = z.object({
   contractInfo: z.string().nullable().optional(),
   maxHours: z.number().min(0, 'Часы не могут быть отрицательными').optional(),
   isActive: z.boolean().optional(),
+  
+  // Qualification fields
+  birthDate: z.string().nullable().optional(),
+  passportData: z.string().nullable().optional(),
+  education: z.string().nullable().optional(),
+  university: z.string().nullable().optional(),
+  diploma_file_ids: z.array(z.string()).nullable().optional(),
+  specialty: z.string().nullable().optional(),
+  academic_degree: z.string().nullable().optional(),
+  academic_rank: z.string().nullable().optional(),
+  certificates: z.array(z.object({
+    name: z.string(),
+    date: z.string(),
+    fileId: z.string().optional(),
+  })).nullable().optional(),
+  languages: z.array(z.string()).nullable().optional(),
+  photo_base64: z.string().nullable().optional(),
+  additional_files: z.array(z.string()).nullable().optional(),
+
   // Поля для смены пароля
   changePassword: z.boolean().optional(),
   newPassword: z.string().min(8, 'Пароль должен быть минимум 8 символов').optional(),
@@ -174,6 +193,20 @@ export default defineEventHandler(async (event) => {
     if (data.contractInfo !== undefined) updateData.contractInfo = data.contractInfo ?? null;
     if (data.maxHours !== undefined) updateData.maxHours = data.maxHours ?? 0;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
+
+    // Qualification fields
+    if (data.birthDate !== undefined) updateData.birthDate = data.birthDate;
+    if (data.passportData !== undefined) updateData.passportData = data.passportData;
+    if (data.education !== undefined) updateData.education = data.education;
+    if (data.university !== undefined) updateData.university = data.university;
+    if (data.diploma_file_ids !== undefined) updateData.diploma_file_ids = data.diploma_file_ids;
+    if (data.specialty !== undefined) updateData.specialty = data.specialty;
+    if (data.academic_degree !== undefined) updateData.academic_degree = data.academic_degree;
+    if (data.academic_rank !== undefined) updateData.academic_rank = data.academic_rank;
+    if (data.certificates !== undefined) updateData.certificates = data.certificates;
+    if (data.languages !== undefined) updateData.languages = data.languages;
+    if (data.photo_base64 !== undefined) updateData.photo_base64 = data.photo_base64;
+    if (data.additional_files !== undefined) updateData.additional_files = data.additional_files;
 
     const instructor = await updateInstructor(id, updateData);
 

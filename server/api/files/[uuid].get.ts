@@ -17,8 +17,12 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    console.log(`[files API] Requesting file with uuid: ${uuid}`);
+
     // Получение метаданных файла из БД
     const fileRecord = await getFileByUuid(uuid);
+    
+    console.log(`[files API] fileRecord from DB:`, fileRecord);
 
     if (!fileRecord) {
       throw createError({

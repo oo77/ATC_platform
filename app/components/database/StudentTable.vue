@@ -1,23 +1,23 @@
 <template>
   <div class="overflow-x-auto">
-    <table class="w-full table-auto">
+    <table class="w-full text-left border-collapse">
       <thead>
-        <tr class="bg-gray-2 text-left dark:bg-meta-4">
-          <th class="min-w-[250px] px-4 py-4 font-medium text-black dark:text-white xl:pl-11">
+        <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider xl:pl-11">
             Ф.И.О
           </th>
-          <th class="min-w-[200px] px-4 py-4 font-medium text-black dark:text-white">
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
             Организация
           </th>
-          <th class="min-w-[180px] px-4 py-4 font-medium text-black dark:text-white">
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
             Должность
           </th>
-          <th class="px-4 py-4 font-medium text-black dark:text-white text-center">
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">
             Действия
           </th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         <!-- Загрузка -->
         <tr v-if="loading">
           <td colspan="4" class="text-center py-12">
@@ -40,74 +40,52 @@
           v-for="student in students"
           :key="student.id"
           @click="navigateToStudent(student.id)"
-          class="border-b border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors cursor-pointer"
+          class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
         >
-          <td class="px-4 py-5 pl-9 xl:pl-11">
-            <div class="flex items-center gap-3">
-              <div class="flex-shrink-0">
-                <div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span class="text-primary font-medium text-lg">
+          <td class="px-6 py-4 xl:pl-11">
+            <div class="flex items-center gap-3 group">
+              <div class="shrink-0">
+                <div class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center transition-colors group-hover:bg-primary/20">
+                  <span class="text-primary font-bold text-sm">
                     {{ getInitials(student.fullName) }}
                   </span>
                 </div>
               </div>
               <div>
-                <h5 class="font-medium text-black dark:text-white">
+                <h5 class="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
                   {{ student.fullName }}
                 </h5>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
+                <p class="text-xs font-bold text-slate-500 mt-0.5">
                   ПИНФЛ: {{ student.pinfl }}
                 </p>
               </div>
             </div>
           </td>
-          <td class="px-4 py-5">
-            <p class="text-black dark:text-white">{{ student.organization }}</p>
+          <td class="px-6 py-4">
+            <p class="font-medium text-slate-700 dark:text-slate-300">{{ student.organization }}</p>
           </td>
-          <td class="px-4 py-5">
-            <p class="text-black dark:text-white">{{ student.position }}</p>
+          <td class="px-6 py-4">
+            <p class="font-medium text-slate-700 dark:text-slate-300">{{ student.position }}</p>
           </td>
-          <td class="px-4 py-5">
+          <td class="px-6 py-4">
             <div class="flex items-center justify-center gap-2">
               <UiButton
                 variant="primary"
                 size="sm"
                 @click.stop="$emit('edit', student)"
                 title="Редактировать"
+                class="h-8 w-8 p-0! flex items-center justify-center rounded-lg"
               >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
+                <Edit2 class="w-4 h-4" />
               </UiButton>
               <UiButton
                 variant="danger"
                 size="sm"
                 @click.stop="$emit('delete', student.id)"
                 title="Удалить"
+                class="h-8 w-8 p-0! flex items-center justify-center rounded-lg"
               >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16"
-                  />
-                </svg>
+                <Trash2 class="w-4 h-4" />
               </UiButton>
             </div>
           </td>
@@ -119,6 +97,7 @@
 
 <script setup lang="ts">
 import type { Student } from '~/types/student';
+import { Edit2, Trash2 } from 'lucide-vue-next';
 
 interface Props {
   students: Student[];

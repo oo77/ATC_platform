@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'outline'
+type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'warning' | 'outline' | 'ghost'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 interface ButtonProps {
@@ -75,6 +75,8 @@ const variantClasses = {
   warning: 'bg-warning text-white hover:bg-opacity-90 focus:ring-warning',
   outline:
     'bg-white text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700 dark:hover:bg-white/[0.03] dark:hover:text-gray-300',
+  ghost:
+    'bg-transparent text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-800 focus:ring-gray-400',
 }
 
 const handleClick = (event: MouseEvent) => {

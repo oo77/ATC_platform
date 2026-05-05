@@ -23,6 +23,24 @@ const instructorSchema = z.object({
   maxHours: z.number().min(0, 'Часы не могут быть отрицательными').optional(),
   isActive: z.boolean().optional(),
 
+  // Qualification fields
+  birthDate: z.string().nullable().optional(),
+  passportData: z.string().nullable().optional(),
+  education: z.string().nullable().optional(),
+  university: z.string().nullable().optional(),
+  diploma_file_ids: z.array(z.string()).nullable().optional(),
+  specialty: z.string().nullable().optional(),
+  academic_degree: z.string().nullable().optional(),
+  academic_rank: z.string().nullable().optional(),
+  certificates: z.array(z.object({
+    name: z.string(),
+    date: z.string(),
+    fileId: z.string().optional(),
+  })).nullable().optional(),
+  languages: z.array(z.string()).nullable().optional(),
+  photo_base64: z.string().nullable().optional(),
+  additional_files: z.array(z.string()).nullable().optional(),
+
   // Поля для создания учётной записи
   createAccount: z.boolean().optional().default(false),
   accountEmail: z.string().email('Некорректный email для аккаунта').optional(),

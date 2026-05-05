@@ -1,68 +1,63 @@
 <template>
   <div class="flex flex-col gap-6">
-    <!-- Заголовок и кнопка добавления -->
-    <div class="flex items-center justify-between">
+    <!-- Header & Actions -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
       <div>
-        <h3 class="text-xl font-semibold text-black dark:text-white">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           Инструкторы
         </h3>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
           Управление инструкторами учебного центра
         </p>
       </div>
-      <UiButton
-        variant="success"
-        size="md"
+      <button 
         @click="openCreateModal"
+        class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-md shadow-primary/20 hover:bg-primary/90 hover:shadow-lg transition-all whitespace-nowrap"
       >
-        <template #iconLeft>
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-        </template>
+        <Plus class="w-4 h-4" />
         Добавить инструктора
-      </UiButton>
+      </button>
     </div>
 
-    <!-- Фильтры и поиск -->
-    <div class="flex flex-col sm:flex-row gap-4">
-      <div class="flex-1">
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Поиск по ФИО, email, телефону..."
-          class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-          @input="debouncedFetch"
-        />
-      </div>
-      <div class="sm:w-48">
-        <select
-          v-model="statusFilter"
-          class="w-full rounded-lg border border-stroke bg-transparent py-3 px-5 outline-none focus:border-primary dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-          @change="handleFilterChange"
-        >
-          <option value="all">Все статусы</option>
-          <option value="active">Активные</option>
-          <option value="inactive">Неактивные</option>
-        </select>
+    <!-- Filters Section -->
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-4">
+      <div class="flex flex-col sm:flex-row gap-4">
+        <!-- Search -->
+        <div class="relative flex-1">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Поиск по ФИО, email, телефону..."
+            class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
+            @input="debouncedFetch"
+          />
+          <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        </div>
+        
+        <!-- Status Filter -->
+        <div class="sm:w-56">
+          <div class="relative">
+            <select
+              v-model="statusFilter"
+              class="w-full appearance-none rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm text-slate-700 dark:text-slate-300"
+              @change="handleFilterChange"
+            >
+              <option value="all">Все статусы</option>
+              <option value="active">Активные</option>
+              <option value="inactive">Неактивные</option>
+            </select>
+            <Filter class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Таблица инструкторов -->
-    <div class="rounded-sm border border-stroke bg-white shadow-default dark:border-strokedark dark:bg-boxdark overflow-hidden">
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
       <UsersInstructorTable
         :instructors="instructors"
         :loading="loading"
+        @edit="handleEdit"
       />
       <!-- Пагинация -->
       <UiPagination
@@ -90,6 +85,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import type { Instructor } from '~/types/instructor';
+import { Search, Plus, Filter } from "lucide-vue-next";
 
 const { authFetch } = useAuthFetch();
 
@@ -186,6 +182,11 @@ const handleLimitChange = (limit: number) => {
 
 const openCreateModal = () => {
   selectedInstructor.value = null;
+  showModal.value = true;
+};
+
+const handleEdit = (instructor: Instructor) => {
+  selectedInstructor.value = { ...instructor };
   showModal.value = true;
 };
 

@@ -13,6 +13,10 @@ export type FileCategory =
   | 'group_gallery'
   | 'group_file'
   | 'assignment'
+  | 'instructor_diploma'
+  | 'instructor_certificate'
+  | 'instructor_photo'
+  | 'instructor_additional'
   | 'other';
 
 export interface UploadedFile {
