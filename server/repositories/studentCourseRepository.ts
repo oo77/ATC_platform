@@ -135,12 +135,12 @@ export async function getStudentCourses(
       (SELECT i.full_name FROM schedule_events se 
         JOIN instructors i ON se.instructor_id = i.id 
         WHERE se.group_id = sg.id LIMIT 1) as teacher_name,
-      (SELECT COUNT(*) FROM schedule_events se WHERE se.group_id = sg.id) as total_lessons,
+      c.total_hours as total_lessons,
       COALESCE((
-        SELECT COUNT(*) 
+        SELECT SUM(a.hours_attended) 
         FROM attendance a
         JOIN schedule_events se ON a.schedule_event_id = se.id
-        WHERE a.student_id = ? AND se.group_id = sg.id AND a.hours_attended > 0
+        WHERE a.student_id = ? AND se.group_id = sg.id
       ), 0) as attended_lessons
     FROM students s
     JOIN study_group_students sgs ON s.id = sgs.student_id
@@ -201,7 +201,7 @@ export async function getStudentCourseDetails(
       (SELECT i.full_name FROM schedule_events se 
         JOIN instructors i ON se.instructor_id = i.id 
         WHERE se.group_id = sg.id LIMIT 1) as teacher_name,
-      (SELECT COUNT(*) FROM schedule_events se WHERE se.group_id = sg.id) as total_lessons
+      c.total_hours as total_lessons
     FROM students s
     JOIN study_group_students sgs ON s.id = sgs.student_id
     JOIN study_groups sg ON sgs.group_id = sg.id
@@ -221,16 +221,16 @@ export async function getStudentCourseDetails(
 
   // Считаем прогресс
   const attendanceCountQuery = `
-    SELECT COUNT(*) as count 
+    SELECT SUM(a.hours_attended) as hours 
     FROM attendance a
     JOIN schedule_events se ON a.schedule_event_id = se.id
-    WHERE a.student_id = ? AND se.group_id = ? AND a.hours_attended > 0
+    WHERE a.student_id = ? AND se.group_id = ?
   `;
   const attRows = await executeQuery<RowDataPacket[]>(attendanceCountQuery, [
     studentId,
     groupId,
   ]);
-  const attendedCount = attRows[0]?.count || 0;
+  const attendedCount = Number(attRows[0]?.hours || 0);
 
   let progress = 0;
   if (courseRow.total_lessons > 0) {
