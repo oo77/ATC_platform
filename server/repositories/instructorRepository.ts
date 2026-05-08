@@ -14,7 +14,25 @@ import { getAcademicHourMinutes } from "../utils/academicHours";
 export interface InstructorCertificate {
   name: string;
   date: string;
+  certificate_number?: string;
   fileId?: string;
+}
+
+export interface EducationEntry {
+  education: string;
+  university: string;
+  specialty: string;
+  diploma_series?: string;
+  diploma_number?: string;
+  date_start?: string;
+  date_end?: string;
+  diploma_file_ids?: string[] | null;
+}
+
+export interface WorkExperienceEntry {
+  employer: string;
+  position: string;
+  period: string;
 }
 
 export interface Instructor {
@@ -38,6 +56,8 @@ export interface Instructor {
   specialty?: string | null;
   academic_degree?: string | null;
   academic_rank?: string | null;
+  education_history?: EducationEntry[] | null;
+  work_experience?: WorkExperienceEntry[] | null;
   certificates?: InstructorCertificate[] | null;
   languages?: string[] | null;
   photo_base64?: string | null;
@@ -83,6 +103,8 @@ export interface CreateInstructorInput {
   specialty?: string;
   academic_degree?: string;
   academic_rank?: string;
+  education_history?: EducationEntry[];
+  work_experience?: WorkExperienceEntry[];
   certificates?: InstructorCertificate[];
   languages?: string[];
   photo_base64?: string;
@@ -106,6 +128,8 @@ export interface UpdateInstructorInput {
   specialty?: string | null;
   academic_degree?: string | null;
   academic_rank?: string | null;
+  education_history?: EducationEntry[] | null;
+  work_experience?: WorkExperienceEntry[] | null;
   certificates?: InstructorCertificate[] | null;
   languages?: string[] | null;
   photo_base64?: string | null;
@@ -136,6 +160,8 @@ interface InstructorRow extends RowDataPacket {
   specialty: string | null;
   academic_degree: string | null;
   academic_rank: string | null;
+  education_history: any | null; // JSON
+  work_experience: any | null; // JSON
   certificates: any | null; // JSON
   languages: any | null; // JSON
   photo_base64: string | null;
@@ -188,6 +214,8 @@ function mapRowToInstructor(
     specialty: row.specialty,
     academic_degree: row.academic_degree,
     academic_rank: row.academic_rank,
+    education_history: parseJson(row.education_history),
+    work_experience: parseJson(row.work_experience),
     certificates: parseJson(row.certificates),
     languages: parseJson(row.languages),
     photo_base64: row.photo_base64,
@@ -330,9 +358,9 @@ export async function createInstructor(
     `INSERT INTO instructors (
       id, full_name, email, phone, hire_date, contract_info, max_hours, is_active, 
       birth_date, passport_data, education, university, diploma_file_ids, specialty, academic_degree, academic_rank, 
-      certificates, languages, photo_base64, additional_files,
+      education_history, work_experience, certificates, languages, photo_base64, additional_files,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.fullName,
@@ -350,6 +378,8 @@ export async function createInstructor(
       data.specialty || null,
       data.academic_degree || null,
       data.academic_rank || null,
+      data.education_history ? JSON.stringify(data.education_history) : null,
+      data.work_experience ? JSON.stringify(data.work_experience) : null,
       data.certificates ? JSON.stringify(data.certificates) : null,
       data.languages ? JSON.stringify(data.languages) : null,
       data.photo_base64 || null,
@@ -439,6 +469,14 @@ export async function updateInstructor(
   if (data.academic_rank !== undefined) {
     updates.push("academic_rank = ?");
     params.push(data.academic_rank ?? null);
+  }
+  if (data.education_history !== undefined) {
+    updates.push("education_history = ?");
+    params.push(data.education_history ? JSON.stringify(data.education_history) : null);
+  }
+  if (data.work_experience !== undefined) {
+    updates.push("work_experience = ?");
+    params.push(data.work_experience ? JSON.stringify(data.work_experience) : null);
   }
   if (data.certificates !== undefined) {
     updates.push("certificates = ?");

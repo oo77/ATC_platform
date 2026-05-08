@@ -229,102 +229,219 @@
 
               <!-- TAB 2: Квалификация -->
               <div v-show="activeFormTab === 'qualification'" class="space-y-6 animate-in fade-in duration-300">
-                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                  <!-- Образование -->
-                  <div class="sm:col-span-2">
-                    <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Образование
-                    </label>
-                    <select
-                      v-model="formData.education"
-                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800/50"
-                    >
-                      <option value="">Выберите уровень</option>
-                      <option value="Высшее">Высшее</option>
-                      <option value="Магистратура">Магистратура</option>
-                      <option value="Средне-специальное">Средне-специальное</option>
-                      <option value="Доктор философии (PhD)">Доктор философии (PhD)</option>
-                    </select>
+                <div class="flex items-center justify-between">
+                  <h4 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Образование и квалификация</h4>
+                  <UiButton variant="outline" size="sm" @click="addEducationRow" class="h-9 gap-2">
+                    <PlusIcon class="w-4 h-4" /> Добавить ВУЗ
+                  </UiButton>
+                </div>
+
+                <div v-if="formData.education_history.length === 0" class="text-center py-10 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-2xl">
+                  <SchoolIcon class="w-12 h-12 text-slate-200 mx-auto mb-2" />
+                  <p class="text-sm text-slate-400">Сведения об образовании пока не добавлены</p>
+                </div>
+
+                <div v-else class="space-y-6">
+                  <div v-for="(edu, index) in formData.education_history" :key="index" class="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 relative">
+                    <button @click="removeEducationRow(index)" class="absolute top-4 right-4 p-1 text-slate-400 hover:text-danger transition-colors">
+                      <Trash2Icon class="w-4 h-4" />
+                    </button>
+                    
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                      <!-- Уровень образования -->
+                      <div>
+                        <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          Уровень образования
+                        </label>
+                        <select
+                          v-model="edu.education"
+                          class="w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800"
+                        >
+                          <option value="">Выберите уровень</option>
+                          <option value="Высшее">Высшее</option>
+                          <option value="Магистратура">Магистратура</option>
+                          <option value="Средне-специальное">Средне-специальное</option>
+                          <option value="Доктор философии (PhD)">Доктор философии (PhD)</option>
+                        </select>
+                      </div>
+
+                      <!-- ВУЗ -->
+                      <div>
+                        <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          Учебное заведение
+                        </label>
+                        <input
+                          v-model="edu.university"
+                          type="text"
+                          placeholder="Название ВУЗа"
+                          class="w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800"
+                        />
+                      </div>
+
+                      <!-- Специальность -->
+                      <div class="sm:col-span-2">
+                        <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          Специальность
+                        </label>
+                        <input
+                          v-model="edu.specialty"
+                          type="text"
+                          placeholder="По диплому"
+                          class="w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800"
+                        />
+                      </div>
+
+                      <!-- Серия и Номер диплома -->
+                      <div class="grid grid-cols-2 gap-4 sm:col-span-2">
+                        <div>
+                          <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            Серия диплома
+                          </label>
+                          <input
+                            v-model="edu.diploma_series"
+                            type="text"
+                            placeholder="Напр: B"
+                            class="w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            Номер диплома
+                          </label>
+                          <input
+                            v-model="edu.diploma_number"
+                            type="text"
+                            placeholder="Напр: 123456"
+                            class="w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Годы обучения -->
+                      <div class="grid grid-cols-2 gap-4 sm:col-span-2">
+                        <div>
+                          <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            Год начала
+                          </label>
+                          <input
+                            v-model.number="edu.year_start"
+                            type="number"
+                            min="1950"
+                            :max="new Date().getFullYear()"
+                            placeholder="2010"
+                            class="w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            Год окончания
+                          </label>
+                          <input
+                            v-model.number="edu.year_end"
+                            type="number"
+                            min="1950"
+                            :max="new Date().getFullYear() + 10"
+                            placeholder="2015"
+                            class="w-full rounded-xl border border-slate-200 bg-white py-2.5 px-4 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800"
+                          />
+                        </div>
+                      </div>
+
+                      <!-- Диплом (Файлы) -->
+                      <div class="sm:col-span-2">
+                        <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          Сканы диплома
+                        </label>
+                        <FileUploader
+                          category="instructor_diploma"
+                          :multiple="true"
+                          @uploaded="(file) => handleDiplomaUpload(index, file)"
+                          @deleted="(uuid: string) => edu.diploma_file_ids = (edu.diploma_file_ids || []).filter((id: string) => id !== uuid)"
+                          :initial-files="getInitialEduFiles(edu)"
+                          class="mt-1"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <!-- ВУЗ -->
-                  <div>
-                    <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Окончил ВУЗ
-                    </label>
-                    <input
-                      v-model="formData.university"
-                      type="text"
-                      placeholder="Название учебного заведения"
-                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800/50"
-                    />
-                  </div>
+                  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 pt-6 border-t border-slate-100 dark:border-slate-800">
+                    <!-- Учёная степень -->
+                    <div>
+                      <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        Учёная степень
+                      </label>
+                      <input
+                        v-model="formData.academic_degree"
+                        type="text"
+                        placeholder="Например: Кандидат техн. наук"
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800/50"
+                      />
+                    </div>
 
-                  <!-- Специальность -->
-                  <div>
-                    <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Специальность
-                    </label>
-                    <input
-                      v-model="formData.specialty"
-                      type="text"
-                      placeholder="По диплому"
-                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800/50"
-                    />
-                  </div>
+                    <!-- Учёное звание -->
+                    <div>
+                      <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        Учёное звание
+                      </label>
+                      <input
+                        v-model="formData.academic_rank"
+                        type="text"
+                        placeholder="Например: Доцент"
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800/50"
+                      />
+                    </div>
 
-                  <!-- Учёная степень -->
-                  <div>
-                    <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Учёная степень
-                    </label>
-                    <input
-                      v-model="formData.academic_degree"
-                      type="text"
-                      placeholder="Например: Кандидат техн. наук"
-                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800/50"
-                    />
+                    <!-- Языки -->
+                    <div class="sm:col-span-2">
+                      <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        Знание языков
+                      </label>
+                      <UiMultiSelect
+                        v-model="formData.languages"
+                        :options="languageOptions"
+                        placeholder="Выберите языки"
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-1 px-5 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800/50"
+                      />
+                    </div>
                   </div>
+                </div>
+              </div>
 
-                  <!-- Учёное звание -->
-                  <div>
-                    <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Учёное звание
-                    </label>
-                    <input
-                      v-model="formData.academic_rank"
-                      type="text"
-                      placeholder="Например: Доцент"
-                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800/50"
-                    />
-                  </div>
 
-                  <!-- Языки -->
-                  <div class="sm:col-span-2">
-                    <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Знание языков
-                    </label>
-                    <UiMultiSelect
-                      v-model="formData.languages"
-                      :options="languageOptions"
-                      placeholder="Выберите языки"
-                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-1 px-5 text-sm outline-none focus:border-primary dark:border-slate-700 dark:bg-slate-800/50"
-                    />
-                  </div>
 
-                  <!-- Диплом (Файл) -->
-                  <div class="sm:col-span-2">
-                    <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      Сканы дипломов
-                    </label>
-                    <FileUploader
-                      category="instructor_diploma"
-                      @uploaded="(file) => formData.diploma_file_ids.push(file.uuid)"
-                      @deleted="(uuid) => formData.diploma_file_ids = formData.diploma_file_ids.filter(id => id !== uuid)"
-                      :multiple="true"
-                      :initial-files="diplomaFiles"
-                      class="mt-1"
-                    />
+              <!-- TAB: Опыт работы -->
+              <div v-show="activeFormTab === 'experience'" class="space-y-6 animate-in fade-in duration-300">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-sm font-bold text-slate-900 dark:text-white">Опыт работы</h4>
+                  <UiButton variant="outline" size="sm" @click="addExperienceRow" class="h-9 gap-2">
+                    <PlusIcon class="w-4 h-4" /> Добавить место работы
+                  </UiButton>
+                </div>
+
+                <div v-if="formData.work_experience.length === 0" class="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl">
+                  <BookOpenIcon class="w-12 h-12 text-slate-200 mx-auto mb-2" />
+                  <p class="text-sm text-slate-400">Опыт работы пока не указан</p>
+                </div>
+
+                <div v-else class="space-y-4">
+                  <div v-for="(exp, index) in formData.work_experience" :key="index" class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 relative">
+                    <button @click="removeExperienceRow(index)" class="absolute top-4 right-4 p-1 text-slate-400 hover:text-danger">
+                      <Trash2Icon class="w-4 h-4" />
+                    </button>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div class="sm:col-span-2">
+                        <label class="text-xs font-bold text-slate-500 mb-1.5 block">Организация / Работодатель</label>
+                        <input v-model="exp.employer" type="text" placeholder="Название компании" class="w-full rounded-xl border border-slate-200 py-2.5 px-4 text-sm" />
+                      </div>
+                      <div>
+                        <label class="text-xs font-bold text-slate-500 mb-1.5 block">Должность</label>
+                        <input v-model="exp.position" type="text" placeholder="Ваша роль" class="w-full rounded-xl border border-slate-200 py-2.5 px-4 text-sm" />
+                      </div>
+                      <div>
+                        <label class="text-xs font-bold text-slate-500 mb-1.5 block">Период работы / Годы</label>
+                        <input v-model="exp.period" type="text" placeholder="Напр: 2018 - 2022 или 5 лет" class="w-full rounded-xl border border-slate-200 py-2.5 px-4 text-sm" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -349,9 +466,17 @@
                       <XIcon class="w-4 h-4" />
                     </button>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
+                      <div class="sm:col-span-2">
                         <label class="text-xs font-bold text-slate-500 mb-1.5 block">Название сертификата</label>
                         <input v-model="cert.name" type="text" class="w-full rounded-xl border border-slate-200 py-2.5 px-4 text-sm" />
+                      </div>
+                      <div>
+                        <label class="text-xs font-bold text-slate-500 mb-1.5 block">Серия сертификата</label>
+                        <input v-model="cert.series" type="text" placeholder="Напр: AT" class="w-full rounded-xl border border-slate-200 py-2.5 px-4 text-sm" />
+                      </div>
+                      <div>
+                        <label class="text-xs font-bold text-slate-500 mb-1.5 block">Номер сертификата</label>
+                        <input v-model="cert.certificate_number" type="text" placeholder="Напр: 00123" class="w-full rounded-xl border border-slate-200 py-2.5 px-4 text-sm" />
                       </div>
                       <div>
                         <label class="text-xs font-bold text-slate-500 mb-1.5 block">Дата получения</label>
@@ -383,7 +508,7 @@
                     category="instructor_additional"
                     :multiple="true"
                     @uploaded="handleAdditionalFileUpload"
-                    @deleted="(uuid) => formData.additional_files = formData.additional_files.filter(id => id !== uuid)"
+                    @deleted="(uuid: string) => formData.additional_files = formData.additional_files.filter((id: string) => id !== uuid)"
                     :initial-files="additionalFilesList"
                     class="mt-1"
                   />
@@ -429,7 +554,8 @@ import {
   Trash2 as Trash2Icon,
   BookOpen as BookOpenIcon,
   GraduationCap as GraduationCapIcon,
-  FileText as FileTextIcon
+  FileText as FileTextIcon,
+  School as SchoolIcon
 } from 'lucide-vue-next';
 import FileUploader from '~/components/common/FileUploader.vue';
 import UiSwitch from '~/components/ui/Switch.vue';
@@ -456,13 +582,14 @@ const notification = useNotification();
 const { getFilesByUuids } = useFileManager();
 
 // Файлы для предпросмотра
-const diplomaFiles = ref<any[]>([]);
 const additionalFilesList = ref<any[]>([]);
 const certificateFilesMap = ref<Record<string, any>>({});
+const educationFilesMap = ref<Record<string, any>>({});
 
 const formTabs = [
   { id: 'general', label: 'Основные' },
   { id: 'qualification', label: 'Квалификация' },
+  { id: 'experience', label: 'Опыт работы' },
   { id: 'certificates', label: 'Сертификаты' },
   { id: 'files', label: 'Файлы' }
 ];
@@ -493,6 +620,8 @@ const formData = reactive({
   specialty: '',
   academic_degree: '',
   academic_rank: '',
+  education_history: [] as any[],
+  work_experience: [] as any[],
   certificates: [] as InstructorCertificate[],
   languages: [] as string[],
   photo_base64: null as string | null,
@@ -544,7 +673,7 @@ const handlePhotoUpload = (event: Event) => {
 };
 
 const addCertificateRow = () => {
-  formData.certificates.push({ name: '', date: '', fileId: '' });
+  formData.certificates.push({ name: '', date: '', series: '', certificate_number: '', fileId: '' });
 };
 
 const removeCertificateRow = (index: number) => {
@@ -555,6 +684,44 @@ const handleAdditionalFileUpload = (file: any) => {
   formData.additional_files.push(file.uuid);
 };
 
+const addEducationRow = () => {
+  formData.education_history.push({ 
+    education: '', 
+    university: '', 
+    specialty: '', 
+    diploma_series: '',
+    diploma_number: '',
+    year_start: null,
+    year_end: null,
+    diploma_file_ids: [] 
+  });
+};
+
+const removeEducationRow = (index: number) => {
+  formData.education_history.splice(index, 1);
+};
+
+const addExperienceRow = () => {
+  formData.work_experience.push({ employer: '', position: '', period: '' });
+};
+
+const removeExperienceRow = (index: number) => {
+  formData.work_experience.splice(index, 1);
+};
+
+const handleDiplomaUpload = (index: number, file: any) => {
+  if (!formData.education_history[index].diploma_file_ids) {
+    formData.education_history[index].diploma_file_ids = [];
+  }
+  formData.education_history[index].diploma_file_ids.push(file.uuid);
+  educationFilesMap.value[file.uuid] = file;
+};
+
+const getInitialEduFiles = (edu: any) => {
+  if (!edu.diploma_file_ids?.length) return [];
+  return edu.diploma_file_ids.map((uuid: string) => educationFilesMap.value[uuid]).filter(Boolean);
+};
+
 const getInitialCertFile = (cert: InstructorCertificate) => {
   if (!cert.fileId) return [];
   const file = certificateFilesMap.value[cert.fileId];
@@ -563,8 +730,9 @@ const getInitialCertFile = (cert: InstructorCertificate) => {
 
 // Загрузка метаданных файлов
 const fetchFileMetadata = async () => {
+  const educationFileIds = formData.education_history.flatMap(edu => edu.diploma_file_ids || []);
   const allUuids = [
-    ...(formData.diploma_file_ids || []),
+    ...educationFileIds,
     ...(formData.additional_files || []),
     ...(formData.certificates?.map(c => c.fileId).filter(Boolean) as string[] || [])
   ];
@@ -575,12 +743,14 @@ const fetchFileMetadata = async () => {
     const files = await getFilesByUuids(allUuids);
     
     // Распределяем файлы
-    diplomaFiles.value = files.filter(f => formData.diploma_file_ids?.includes(f.uuid));
     additionalFilesList.value = files.filter(f => formData.additional_files?.includes(f.uuid));
     
     // Карта для сертификатов
     files.forEach(f => {
       certificateFilesMap.value[f.uuid] = f;
+      if (educationFileIds.includes(f.uuid)) {
+        educationFilesMap.value[f.uuid] = f;
+      }
     });
   } catch (error) {
     console.error('Error fetching file metadata:', error);
@@ -635,7 +805,13 @@ const handleSubmit = async () => {
       specialty: formData.specialty || null,
       academic_degree: formData.academic_degree || null,
       academic_rank: formData.academic_rank || null,
-      certificates: formData.certificates.length > 0 ? formData.certificates : null,
+      education_history: formData.education_history.filter(e => e.education || e.university).length > 0 
+        ? formData.education_history.filter(e => e.education || e.university) 
+        : null,
+      work_experience: formData.work_experience.filter(e => e.employer || e.position).length > 0 
+        ? formData.work_experience.filter(e => e.employer || e.position) 
+        : null,
+      certificates: formData.certificates.filter(c => c.name).length > 0 ? formData.certificates.filter(c => c.name) : null,
       languages: formData.languages.length > 0 ? formData.languages : null,
       photo_base64: formData.photo_base64 || null,
       additional_files: formData.additional_files.length > 0 ? formData.additional_files : null,
@@ -678,7 +854,7 @@ const handleSubmit = async () => {
 onMounted(() => {
   setTimeout(() => {
     isVisible.value = true;
-  }, 10);
+  }, 50);
 
   if (props.instructor) {
     formData.fullName = props.instructor.fullName;
@@ -687,7 +863,7 @@ onMounted(() => {
     formData.hireDate = props.instructor.hireDate 
       ? (typeof props.instructor.hireDate === 'string' 
         ? props.instructor.hireDate.split('T')[0]!
-        : formatDateForInputLocal(props.instructor.hireDate))
+        : formatDateForInputLocal(new Date(props.instructor.hireDate)))
       : '';
     formData.contractInfo = props.instructor.contractInfo || '';
     formData.maxHours = props.instructor.maxHours || 0;
@@ -706,6 +882,33 @@ onMounted(() => {
     formData.specialty = props.instructor.specialty || '';
     formData.academic_degree = props.instructor.academic_degree || '';
     formData.academic_rank = props.instructor.academic_rank || '';
+    
+    // Initialize education history
+    if (Array.isArray(props.instructor.education_history) && props.instructor.education_history.length > 0) {
+      formData.education_history = props.instructor.education_history.map((edu: any) => ({
+        ...edu,
+        // migrate old date_start/date_end to year format
+        year_start: edu.year_start ?? (edu.date_start ? new Date(edu.date_start).getFullYear() : null),
+        year_end: edu.year_end ?? (edu.date_end ? new Date(edu.date_end).getFullYear() : null),
+      }));
+    } else if (props.instructor.education || props.instructor.university) {
+      // Fallback for legacy data
+      formData.education_history = [{
+        education: props.instructor.education || '',
+        university: props.instructor.university || '',
+        specialty: props.instructor.specialty || '',
+        diploma_series: '',
+        diploma_number: '',
+        year_start: null,
+        year_end: null,
+        diploma_file_ids: Array.isArray(props.instructor.diploma_file_ids) ? [...props.instructor.diploma_file_ids] : []
+      }];
+    } else {
+      formData.education_history = [];
+    }
+
+    formData.work_experience = Array.isArray(props.instructor.work_experience) ? [...props.instructor.work_experience] : [];
+
     formData.certificates = Array.isArray(props.instructor.certificates) ? [...props.instructor.certificates] : [];
     formData.languages = Array.isArray(props.instructor.languages) ? [...props.instructor.languages] : [];
     formData.photo_base64 = props.instructor.photo_base64 || null;

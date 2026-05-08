@@ -5,8 +5,26 @@
 export interface InstructorCertificate {
   name: string;
   date: string;
+  certificate_number?: string;
   fileId?: string;
   fileUrl?: string; // Optional URL for viewing
+}
+
+export interface EducationEntry {
+  education: string;
+  university: string;
+  specialty: string;
+  diploma_series?: string;
+  diploma_number?: string;
+  date_start?: string;
+  date_end?: string;
+  diploma_file_ids?: string[] | null;
+}
+
+export interface WorkExperienceEntry {
+  employer: string;
+  position: string;
+  period: string;
 }
 
 export interface Instructor {
@@ -24,12 +42,14 @@ export interface Instructor {
   // Qualification fields
   birthDate?: string | null;
   passportData?: string | null;
-  education?: string | null;
+  education?: string | null; // Keep for legacy if needed, or remove
   university?: string | null;
   diploma_file_ids?: string[] | null;
   specialty?: string | null;
   academic_degree?: string | null;
   academic_rank?: string | null;
+  education_history?: EducationEntry[] | null; // New field for multiple entries
+  work_experience?: WorkExperienceEntry[] | null; // New field for work history
   certificates?: InstructorCertificate[] | null;
   languages?: string[] | null;
   photo_base64?: string | null;
@@ -56,6 +76,8 @@ export interface CreateInstructorInput {
   specialty?: string;
   academic_degree?: string;
   academic_rank?: string;
+  education_history?: EducationEntry[];
+  work_experience?: WorkExperienceEntry[];
   certificates?: InstructorCertificate[];
   languages?: string[];
   photo_base64?: string;
@@ -79,6 +101,8 @@ export interface UpdateInstructorInput {
   specialty?: string | null;
   academic_degree?: string | null;
   academic_rank?: string | null;
+  education_history?: EducationEntry[] | null;
+  work_experience?: WorkExperienceEntry[] | null;
   certificates?: InstructorCertificate[] | null;
   languages?: string[] | null;
   photo_base64?: string | null;

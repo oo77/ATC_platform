@@ -175,7 +175,7 @@
                   <div class="relative w-24 h-24 flex items-center justify-center mb-6">
                     <div class="absolute inset-0 rounded-full border-4 border-slate-100 dark:border-slate-800"></div>
                     <div v-if="isProcessing" class="absolute inset-0 rounded-full border-4 border-purple-500 border-t-transparent animate-spin"></div>
-                    <div class="bg-purple-50 dark:bg-purple-900/20 rounded-full h-16 w-16 w-full h-full flex items-center justify-center relative z-10 m-3">
+                    <div class="bg-purple-50 dark:bg-purple-900/20 rounded-full h-16 w-16 flex items-center justify-center relative z-10 m-3">
                       <BrainCircuit class="h-8 w-8 text-purple-600 dark:text-purple-400" :class="{ 'animate-pulse': isProcessing }" />
                     </div>
                   </div>

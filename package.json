@@ -71,15 +71,20 @@
     "zod": "^4.2.0"
   },
   "devDependencies": {
+    "@fontsource/montserrat": "^5.2.8",
     "@types/adm-zip": "^0.5.7",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node-fetch": "^2.6.13",
     "@types/uuid": "^10.0.0",
+    "@typopro/web-montserrat": "^3.7.5",
     "adm-zip": "^0.5.16",
     "cross-env": "^10.1.0",
     "node-fetch": "^3.3.2",
+    "opentype.js": "^2.0.0",
     "tsx": "^4.21.0",
+    "ttf2woff": "^3.0.0",
+    "typeface-montserrat": "^1.1.13",
     "vitest": "^4.0.18"
   }
 }

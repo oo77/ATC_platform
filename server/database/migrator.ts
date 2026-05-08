@@ -41,6 +41,8 @@ import * as updateFileCategories from "./migrations/20260504_030_update_file_cat
 import * as instructorPersonalFields from "./migrations/20260505_031_add_instructor_personal_fields";
 import * as studentPersonalFields from "./migrations/20260505_032_add_student_personal_fields";
 import * as updateActivityLogsEnums from "./migrations/20260505_033_update_activity_logs_enums";
+import * as instructorEducationHistory from "./migrations/20260507_034_add_instructor_education_history";
+import * as instructorWorkExperience from "./migrations/20260507_035_add_instructor_work_experience";
 
 /**
  * ============================================================================
@@ -361,6 +363,21 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: updateActivityLogsEnums.up,
     down: updateActivityLogsEnums.down,
     description: updateActivityLogsEnums.description,
+  },
+  {
+    name: "20260507_034_add_instructor_education_history",
+    up: instructorEducationHistory.up,
+    down: instructorEducationHistory.down,
+    description: instructorEducationHistory.description,
+  },
+  // ============================================================
+  // Миграция 035: Add work_experience to instructors table
+  // ============================================================
+  {
+    name: "20260507_035_add_instructor_work_experience",
+    up: instructorWorkExperience.up,
+    down: instructorWorkExperience.down,
+    description: instructorWorkExperience.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

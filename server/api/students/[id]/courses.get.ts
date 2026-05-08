@@ -66,6 +66,7 @@ export default defineEventHandler(async (event) => {
         sg.id as group_id, 
         c.id as course_id, 
         c.name as course_name, 
+        c.code as course_code,
         sg.code as group_name,
         CASE 
           WHEN sg.end_date < NOW() THEN 'completed' 
@@ -104,6 +105,7 @@ export default defineEventHandler(async (event) => {
         group_id: row.group_id,
         course_id: row.course_id,
         course_name: row.course_name,
+        course_code: row.course_code || '—',
         group_name: row.group_name,
         status: row.status,
         start_date: row.start_date,

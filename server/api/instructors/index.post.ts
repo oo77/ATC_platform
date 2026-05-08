@@ -32,9 +32,22 @@ const instructorSchema = z.object({
   specialty: z.string().nullable().optional(),
   academic_degree: z.string().nullable().optional(),
   academic_rank: z.string().nullable().optional(),
+  education_history: z.array(z.object({
+    education: z.string(),
+    university: z.string(),
+    specialty: z.string(),
+    diploma_number: z.string().optional(),
+    diploma_file_ids: z.array(z.string()).nullable().optional(),
+  })).nullable().optional(),
+  work_experience: z.array(z.object({
+    employer: z.string(),
+    position: z.string(),
+    period: z.string(),
+  })).nullable().optional(),
   certificates: z.array(z.object({
     name: z.string(),
     date: z.string(),
+    certificate_number: z.string().optional(),
     fileId: z.string().optional(),
   })).nullable().optional(),
   languages: z.array(z.string()).nullable().optional(),

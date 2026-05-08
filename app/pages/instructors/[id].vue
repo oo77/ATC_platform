@@ -3,19 +3,32 @@
     <!-- Загрузка -->
     <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
       <div class="text-center">
-        <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">Загрузка информации об инструкторе...</p>
+        <div
+          class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+        ></div>
+        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
+          Загрузка информации об инструкторе...
+        </p>
       </div>
     </div>
 
     <!-- Ошибка -->
-    <div v-else-if="error || !instructor" class="flex items-center justify-center min-h-[400px]">
+    <div
+      v-else-if="error || !instructor"
+      class="flex items-center justify-center min-h-[400px]"
+    >
       <div class="text-center max-w-md">
-        <div class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6 text-slate-400">
+        <div
+          class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6 text-slate-400"
+        >
           <UserIcon class="w-12 h-12" />
         </div>
-        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">{{ error || 'Инструктор не найден' }}</h3>
-        <UiButton class="mt-8 shadow-lg" @click="$router.push('/users')">К списку пользователей</UiButton>
+        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">
+          {{ error || "Инструктор не найден" }}
+        </h3>
+        <UiButton class="mt-8 shadow-lg" @click="$router.push('/users')"
+          >К списку пользователей</UiButton
+        >
       </div>
     </div>
 
@@ -24,194 +37,153 @@
       <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
         <!-- Breadcrumbs -->
         <div class="mb-6">
-          <NuxtLink to="/users" class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors">
-              <ArrowLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <NuxtLink
+            to="/users"
+            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
+          >
+            <div
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
+            >
+              <ArrowLeft
+                class="w-4 h-4 transition-transform group-hover:-translate-x-1"
+              />
             </div>
             Назад к списку
           </NuxtLink>
         </div>
 
-        <div class="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-          <!-- Profile Main Info -->
-          <div class="flex flex-col sm:flex-row items-center gap-6">
-            <div class="relative">
-              <div class="w-32 h-32 rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-900 shadow-2xl">
+        <div
+          class="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between"
+        >
+          <!-- Profile Main Info — compact -->
+          <div class="flex items-center gap-4">
+            <div class="relative shrink-0">
+              <div class="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 shadow-xl">
                 <img v-if="instructor.photo_base64" :src="instructor.photo_base64" class="w-full h-full object-cover" />
                 <div v-else class="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
-                  <span class="text-4xl font-black">{{ getInitials(instructor.fullName) }}</span>
+                  <span class="text-2xl font-black">{{ getInitials(instructor.fullName) }}</span>
                 </div>
               </div>
-              <div v-if="instructor.isActive" class="absolute -bottom-1 -right-1 h-8 w-8 bg-success rounded-xl border-4 border-white dark:border-slate-900 flex items-center justify-center shadow-lg">
-                <CheckIcon class="w-4 h-4 text-white" />
+              <div v-if="instructor.isActive" class="absolute -bottom-1 -right-1 h-5 w-5 bg-success rounded-lg border-2 border-white dark:border-slate-900 flex items-center justify-center shadow">
+                <CheckIcon class="w-3 h-3 text-white" />
               </div>
             </div>
-
-            <div class="space-y-3 text-center sm:text-left">
-              <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                  {{ instructor.fullName }}
-                </h1>
-                <div 
-                  class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border"
-                  :class="instructor.isActive ? 'border-success/20 bg-success/5 text-success' : 'border-danger/20 bg-danger/5 text-danger'"
-                >
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">{{ instructor.fullName }}</h1>
+                <div class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border" :class="instructor.isActive ? 'border-success/20 bg-success/5 text-success' : 'border-danger/20 bg-danger/5 text-danger'">
                   {{ instructor.isActive ? 'Активен' : 'Неактивен' }}
                 </div>
               </div>
-              
-              <div class="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2 text-sm font-bold text-slate-500">
-                <div class="flex items-center gap-2">
-                  <MailIcon class="w-4 h-4 text-slate-400" />
-                  {{ instructor.email || 'Email не указан' }}
-                </div>
-                <div class="flex items-center gap-2">
-                  <PhoneIcon class="w-4 h-4 text-slate-400" />
-                  {{ instructor.phone || 'Телефон не указан' }}
-                </div>
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
+                <div class="flex items-center gap-1.5"><MailIcon class="w-3.5 h-3.5 text-slate-400" />{{ instructor.email || 'Email не указан' }}</div>
+                <div class="flex items-center gap-1.5"><PhoneIcon class="w-3.5 h-3.5 text-slate-400" />{{ instructor.phone || 'Телефон не указан' }}</div>
               </div>
             </div>
           </div>
 
           <!-- Actions -->
-          <div class="flex flex-wrap items-center justify-center lg:justify-end gap-2">
-            <UiButton
-              variant="primary"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold shadow-lg shadow-primary/20"
-              @click="exportCertificate"
-            >
-              <FileDownIcon class="w-4 h-4" />
-              Экспорт справки
+          <div
+            class="flex flex-wrap items-center justify-center lg:justify-end gap-2"
+          >
+            <UiButton variant="primary" size="sm" class="h-9 px-3 gap-1.5 font-bold shadow-lg shadow-primary/20" @click="exportCertificate">
+              <FileDownIcon class="w-3.5 h-3.5" /> Карточку PDF
             </UiButton>
-
-            <UiButton
-              v-if="canEditInstructors"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold"
-              @click="isEditModalOpen = true"
-            >
-              <SettingsIcon class="w-4 h-4" />
-              Редактировать
+            <UiButton v-if="canEditInstructors" variant="outline" size="sm" class="h-9 px-3 gap-1.5 font-bold" @click="isEditModalOpen = true">
+              <SettingsIcon class="w-3.5 h-3.5" /> Изменить
             </UiButton>
-
-            <UiButton
-              v-if="canDeleteInstructors"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold text-danger border-danger/20 hover:bg-danger/5"
-              @click="isDeleteModalOpen = true"
-            >
-              <Trash2Icon class="w-4 h-4" />
-              Удалить
+            <UiButton v-if="canDeleteInstructors" variant="outline" size="sm" class="h-9 px-3 gap-1.5 font-bold text-danger border-danger/20 hover:bg-danger/5" @click="isDeleteModalOpen = true">
+              <Trash2Icon class="w-3.5 h-3.5" /> Удалить
             </UiButton>
           </div>
         </div>
       </div>
 
-      <!-- Bento Box Metrics Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <!-- Bento Box Metrics Grid — compact -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
         <!-- Qualification Card -->
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
+        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
           <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Квалификация</p>
-              <h3 class="mt-1 text-xl font-bold text-slate-900 dark:text-white truncate max-w-[180px]">
-                {{ instructor.academic_degree || instructor.education || 'Не указана' }}
+            <div class="min-w-0">
+              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Квалификация</p>
+              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white truncate">
+                {{ instructor.academic_degree || instructor.education || "Не указана" }}
               </h3>
+              <span class="text-[10px] text-slate-400">{{ instructor.academic_rank || '—' }}</span>
             </div>
-            <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
-              <GraduationCapIcon class="w-6 h-6" />
+            <div class="rounded-lg bg-primary/10 p-2 text-primary ml-2 shrink-0">
+              <GraduationCapIcon class="w-4 h-4" />
             </div>
-          </div>
-          <div class="mt-4 flex items-center gap-2">
-            <span class="text-xs text-slate-400 font-medium">{{ instructor.academic_rank || 'Без ученого звания' }}</span>
           </div>
         </div>
 
         <!-- Teaching Hours Card -->
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
+        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Загрузка часов</p>
-              <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Загрузка часов</p>
+              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">
                 {{ instructor.usedHours || 0 }} / {{ instructor.maxHours || '∞' }}
               </h3>
             </div>
-            <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
-              <ClockIcon class="w-6 h-6" />
+            <div class="rounded-lg bg-success/10 p-2 text-success ml-2 shrink-0">
+              <ClockIcon class="w-4 h-4" />
             </div>
           </div>
-          <div class="mt-4">
-            <div class="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800">
-              <div 
-                class="h-full rounded-full bg-success transition-all duration-500"
-                :style="{ width: `${Math.min((instructor.usedHours || 0) / (instructor.maxHours || 1) * 100, 100)}%` }"
-              ></div>
-            </div>
+          <div class="mt-2 h-1 w-full rounded-full bg-slate-100 dark:bg-slate-800">
+            <div class="h-full rounded-full bg-success transition-all duration-500" :style="{ width: `${Math.min(((instructor.usedHours || 0) / (instructor.maxHours || 1)) * 100, 100)}%` }"></div>
           </div>
         </div>
 
         <!-- Experience Card -->
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
+        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Стаж в центре</p>
-              <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-                {{ experienceText }}
-              </h3>
+              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Стаж в центре</p>
+              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ experienceText }}</h3>
+              <span class="text-[10px] text-slate-400">С {{ formatDate(instructor.hireDate) }}</span>
             </div>
-            <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
-              <CalendarIcon class="w-6 h-6" />
+            <div class="rounded-lg bg-warning/10 p-2 text-warning ml-2 shrink-0">
+              <CalendarIcon class="w-4 h-4" />
             </div>
-          </div>
-          <div class="mt-4">
-            <span class="text-xs text-slate-400 font-medium">С {{ formatDate(instructor.hireDate) }}</span>
           </div>
         </div>
 
         <!-- Languages Card -->
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
+        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Знание языков</p>
-              <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-                {{ instructor.languages?.length || 0 }}
-              </h3>
+              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Языки</p>
+              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ instructor.languages?.length || 0 }}</h3>
             </div>
-            <div class="rounded-xl bg-info/10 p-3 text-info transition-transform group-hover:rotate-12">
-              <GlobeIcon class="w-6 h-6" />
+            <div class="rounded-lg bg-info/10 p-2 text-info ml-2 shrink-0">
+              <GlobeIcon class="w-4 h-4" />
             </div>
           </div>
-          <div class="mt-4 flex flex-wrap gap-1">
-            <span 
-              v-for="lang in instructor.languages" 
-              :key="lang"
-              class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase tracking-tight text-slate-600 dark:text-slate-400"
-            >
+          <div class="mt-1 flex flex-wrap gap-1">
+            <span v-for="lang in instructor.languages" :key="lang" class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-bold uppercase tracking-tight text-slate-500">
               {{ languageMap[lang] || lang }}
             </span>
           </div>
         </div>
       </div>
 
-      <!-- Tabs Navigation -->
-      <div class="mb-8 overflow-x-auto custom-scrollbar pb-2">
-        <div class="inline-flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800">
-          <nav class="flex gap-1" aria-label="Tabs">
+      <!-- Tabs Navigation — compact -->
+      <div class="mb-5 overflow-x-auto custom-scrollbar pb-1">
+        <div class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+          <nav class="flex gap-0.5" aria-label="Tabs">
             <button
               v-for="tab in availableTabs"
               :key="tab.id"
               @click="activeTab = tab.id"
               :class="[
-                'flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap',
+                'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-300 whitespace-nowrap',
                 activeTab === tab.id
                   ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white'
                   : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
               ]"
             >
-              <component :is="tab.icon" class="h-4 w-4" />
+              <component :is="tab.icon" class="h-3.5 w-3.5" />
               {{ tab.label }}
             </button>
           </nav>
@@ -219,123 +191,153 @@
       </div>
 
       <!-- Tab Content -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <!-- Main Content Area (8 cols) -->
-        <div class="lg:col-span-8 space-y-8">
-          
+        <div class="lg:col-span-8 space-y-4">
           <!-- INFO TAB -->
-          <div v-show="activeTab === 'info'" class="space-y-8 animate-in fade-in duration-500">
-            <!-- Personal Info -->
-            <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm">
-              <div class="flex items-center gap-3 mb-8">
-                <div class="p-2 rounded-xl bg-info/10 text-info">
-                  <UserIcon class="w-5 h-5" />
-                </div>
-                <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Персональные данные</h3>
+          <div
+            v-show="activeTab === 'info'"
+            class="space-y-4 animate-in fade-in duration-500"
+          >
+            <!-- Personal Info — compact row list -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <UserIcon class="w-4 h-4 text-info" />
+                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Данные инструктора</h3>
               </div>
-              
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                <div class="space-y-1">
-                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Дата рождения</p>
-                  <p class="text-lg font-bold text-slate-900 dark:text-white">{{ formatDate(instructor.birthDate) }}</p>
+              <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Дата рождения</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ formatDate(instructor.birthDate) }}</span>
                 </div>
-                <div class="space-y-1">
-                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Паспортные данные</p>
-                  <p class="text-lg font-bold text-slate-900 dark:text-white">{{ instructor.passportData || '—' }}</p>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Паспортные данные</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.passportData || '—' }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Учёная степень</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.academic_degree || '—' }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Учёное звание</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.academic_rank || '—' }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Языки</span>
+                  <div class="flex flex-wrap gap-1 justify-end">
+                    <span v-if="!instructor.languages?.length" class="text-sm font-bold text-slate-400">—</span>
+                    <span
+                      v-for="lang in instructor.languages"
+                      :key="lang"
+                      class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase tracking-tight text-slate-600 dark:text-slate-400"
+                    >{{ languageMap[lang] || lang }}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Education Detail -->
-            <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-sm">
-              <div class="flex items-center gap-3 mb-8">
-                <div class="p-2 rounded-xl bg-primary/10 text-primary">
-                  <SchoolIcon class="w-5 h-5" />
-                </div>
-                <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Образование и квалификация</h3>
+            <!-- Education — compact rows -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <SchoolIcon class="w-4 h-4 text-primary" />
+                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Образование</h3>
               </div>
-              
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                <div class="space-y-1">
-                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Уровень образования</p>
-                  <p class="text-lg font-bold text-slate-900 dark:text-white">{{ instructor.education || '—' }}</p>
-                </div>
-                <div class="space-y-1">
-                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Учебное заведение</p>
-                  <p class="text-lg font-bold text-slate-900 dark:text-white">{{ instructor.university || '—' }}</p>
-                </div>
-                <div class="space-y-1">
-                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Специальность</p>
-                  <p class="text-lg font-bold text-slate-900 dark:text-white">{{ instructor.specialty || '—' }}</p>
-                </div>
-                <div class="space-y-1">
-                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Учёная степень / звание</p>
-                  <p class="text-lg font-bold text-slate-900 dark:text-white">
-                    {{ instructor.academic_degree || '—' }} 
-                    <span v-if="instructor.academic_degree && instructor.academic_rank" class="text-slate-300 mx-2">|</span>
-                    {{ instructor.academic_rank }}
-                  </p>
-                </div>
-                <div class="sm:col-span-2 space-y-4">
-                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Сканы дипломов</p>
-                  <div v-if="diplomaFiles.length" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div 
-                      v-for="file in diplomaFiles" 
-                      :key="file.uuid"
-                      class="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 group hover:border-primary/30 transition-all"
-                    >
-                      <div class="flex items-center gap-3 overflow-hidden">
-                        <FileTextIcon class="w-5 h-5 text-primary shrink-0" />
-                        <span class="text-sm font-bold text-slate-700 dark:text-slate-300 truncate">{{ file.filename }}</span>
+              <div
+                v-if="!instructor.education_history?.length && !instructor.education && !instructor.university"
+                class="px-4 py-6 text-center text-xs text-slate-400"
+              >
+                Сведения об образовании не указаны
+              </div>
+              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+                <div
+                  v-for="(edu, index) in ((instructor.education_history?.length ? instructor.education_history : [{ education: instructor.education, university: instructor.university, specialty: instructor.specialty, diploma_file_ids: instructor.diploma_file_ids }]) as any[])"
+                  :key="index"
+                  class="px-4 py-3"
+                >
+                  <div class="flex items-start justify-between gap-3 mb-1">
+                    <div class="flex items-start gap-2 min-w-0">
+                      <div class="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                        <SchoolIcon class="w-3.5 h-3.5" />
                       </div>
-                      <div class="flex items-center gap-1">
-                        <button @click="previewFile(file.uuid, file.filename)" class="p-2 text-slate-400 hover:text-primary transition-colors">
-                          <EyeIcon class="w-4 h-4" />
-                        </button>
-                        <button @click="downloadFile(file.uuid, file.filename)" class="p-2 text-slate-400 hover:text-success transition-colors">
-                          <DownloadIcon class="w-4 h-4" />
-                        </button>
+                      <div class="min-w-0">
+                        <p class="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight">{{ edu.university || '—' }}</p>
+                        <p v-if="edu.education" class="text-[10px] font-semibold text-primary mt-0.5 uppercase tracking-wide">{{ edu.education }}</p>
                       </div>
                     </div>
+                    <span v-if="edu.year_start || edu.year_end || edu.date_start || edu.date_end" class="text-xs font-bold text-slate-500 shrink-0 whitespace-nowrap">
+                      {{ edu.year_start || (edu.date_start ? new Date(edu.date_start).getFullYear() : '?') }} – {{ edu.year_end || (edu.date_end ? new Date(edu.date_end).getFullYear() : '?') }}
+                    </span>
                   </div>
-                  <p v-else class="text-slate-400 font-medium">Файлы не прикреплены</p>
+                  <div class="flex items-center justify-between gap-2 ml-8">
+                    <span class="text-xs text-slate-500 truncate">{{ edu.specialty || '' }}</span>
+                    <span v-if="edu.diploma_series || edu.diploma_number" class="text-[10px] font-bold text-slate-400 shrink-0 whitespace-nowrap">
+                      Диплом: {{ [edu.diploma_series, edu.diploma_number].filter(Boolean).join(' ') }}
+                    </span>
+                  </div>
+                  <div v-if="edu.diploma_file_ids?.length" class="flex flex-wrap gap-1.5 mt-2 ml-8">
+                    <div
+                      v-for="fileId in edu.diploma_file_ids"
+                      :key="fileId"
+                      @click="allEducationFilesMap[fileId] && previewFile(fileId, allEducationFilesMap[fileId].filename)"
+                      class="flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-primary/5 hover:border-primary/30 transition-all"
+                    >
+                      <FileTextIcon class="w-3 h-3 text-primary" />
+                      <span class="text-[10px] font-bold text-slate-500">{{ allEducationFilesMap[fileId]?.filename || 'Документ' }}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Certificates List -->
-            <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8">
-              <div class="flex items-center gap-3 mb-8">
-                <div class="p-2 rounded-xl bg-warning/10 text-warning">
-                  <AwardIcon class="w-5 h-5" />
-                </div>
-                <h3 class="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Сертификаты и достижения</h3>
+            <!-- Work Experience — compact -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <BookOpenIcon class="w-4 h-4 text-info" />
+                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Опыт работы</h3>
               </div>
-
-              <div v-if="!instructor.certificates?.length" class="text-center py-12">
-                <AwardIcon class="w-12 h-12 text-slate-100 mx-auto mb-4" />
-                <p class="text-slate-400">Список сертификатов пуст</p>
-              </div>
-
-              <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div 
-                  v-for="(cert, index) in instructor.certificates" 
+              <div v-if="!instructor.work_experience?.length" class="px-4 py-6 text-center text-xs text-slate-400">Опыт работы не указан</div>
+              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+                <div
+                  v-for="(exp, index) in instructor.work_experience"
                   :key="index"
-                  class="group p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 transition-all hover:shadow-lg"
+                  class="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
                 >
-                  <div class="flex justify-between items-start mb-2">
-                    <h4 class="font-bold text-slate-900 dark:text-white">{{ cert.name }}</h4>
-                    <AwardIcon class="w-4 h-4 text-warning" />
+                  <div class="min-w-0">
+                    <p class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{{ exp.employer }}</p>
+                    <p class="text-[10px] font-semibold text-info uppercase tracking-wide mt-0.5">{{ exp.position }}</p>
                   </div>
-                  <p class="text-xs text-slate-500 mb-4">{{ formatDate(cert.date) }}</p>
-                  <div v-if="cert.fileId" class="flex items-center gap-2 mt-4">
-                    <UiButton variant="outline" size="sm" @click="previewFile(cert.fileId, cert.name)" class="h-8 flex-1 gap-2">
-                      <EyeIcon class="w-4 h-4" /> Просмотреть
-                    </UiButton>
-                    <UiButton variant="ghost" size="sm" @click="downloadFile(cert.fileId, cert.name)" class="h-8 w-8 p-0 text-slate-400 hover:text-success">
-                      <DownloadIcon class="w-4 h-4" />
-                    </UiButton>
+                  <span class="text-xs font-bold text-slate-400 shrink-0 whitespace-nowrap">{{ exp.period }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Certificates — compact list with series+number+date -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <AwardIcon class="w-4 h-4 text-warning" />
+                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Сертификаты</h3>
+              </div>
+              <div v-if="!instructor.certificates?.length" class="px-4 py-6 text-center text-xs text-slate-400">Список сертификатов пуст</div>
+              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+                <div
+                  v-for="(cert, index) in instructor.certificates"
+                  :key="index"
+                  class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
+                >
+                  <div class="w-7 h-7 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+                    <AwardIcon class="w-3.5 h-3.5 text-warning" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate leading-tight">{{ cert.name }}</p>
+                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span v-if="(cert as any).series" class="text-[10px] font-semibold text-slate-400">Серия: <span class="text-slate-600 dark:text-slate-300">{{ (cert as any).series }}</span></span>
+                      <span v-if="cert.certificate_number" class="text-[10px] font-semibold text-slate-400">№ <span class="text-slate-600 dark:text-slate-300">{{ cert.certificate_number }}</span></span>
+                      <span v-if="cert.date" class="text-[10px] font-semibold text-slate-400">{{ formatDate(cert.date) }}</span>
+                    </div>
+                  </div>
+                  <div v-if="cert.fileId" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button @click="previewFile(cert.fileId, cert.name)" class="p-1.5 text-slate-400 hover:text-primary transition-colors"><EyeIcon class="w-3.5 h-3.5" /></button>
+                    <button @click="downloadFile(cert.fileId, cert.name)" class="p-1.5 text-slate-400 hover:text-success transition-colors"><DownloadIcon class="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               </div>
@@ -343,7 +345,10 @@
           </div>
 
           <!-- HOURS TAB -->
-          <div v-show="activeTab === 'hours'" class="animate-in fade-in duration-500">
+          <div
+            v-show="activeTab === 'hours'"
+            class="animate-in fade-in duration-500"
+          >
             <InstructorsHoursStats
               v-if="instructor"
               :instructor-id="instructor.id"
@@ -353,7 +358,10 @@
           </div>
 
           <!-- HISTORY TAB -->
-          <div v-show="activeTab === 'history'" class="animate-in fade-in duration-500">
+          <div
+            v-show="activeTab === 'history'"
+            class="animate-in fade-in duration-500"
+          >
             <InstructorsCourseHistory
               v-if="instructor"
               :instructor-id="instructor.id"
@@ -364,59 +372,48 @@
         </div>
 
         <!-- Sidebar / Additional Info (4 cols) -->
-        <div class="lg:col-span-4 space-y-6">
-          <!-- Employment Info -->
-          <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
-            <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Сведения о трудоустройстве</h4>
-            
-            <div class="space-y-6">
-              <div class="flex items-start gap-4">
-                <div class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800">
-                  <CalendarIcon class="w-5 h-5 text-slate-500" />
-                </div>
-                <div>
-                  <p class="text-xs text-slate-400 mb-1">Дата приема</p>
-                  <p class="font-bold text-slate-900 dark:text-white">{{ formatDate(instructor.hireDate) }}</p>
-                </div>
+        <div class="lg:col-span-4 space-y-4">
+          <!-- Employment Info — compact -->
+          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <CalendarIcon class="w-4 h-4 text-slate-500" />
+              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Трудоустройство</h4>
+            </div>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+              <div class="flex items-center justify-between px-4 py-2.5">
+                <span class="text-xs font-semibold text-slate-400">Дата приёма</span>
+                <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ formatDate(instructor.hireDate) }}</span>
               </div>
-
-              <div class="flex items-start gap-4">
-                <div class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800">
-                  <FileTextIcon class="w-5 h-5 text-slate-500" />
-                </div>
-                <div>
-                  <p class="text-xs text-slate-400 mb-1">Контрактные данные</p>
-                  <p class="text-sm font-bold text-slate-900 dark:text-white line-clamp-3">{{ instructor.contractInfo || '—' }}</p>
-                </div>
+              <div class="px-4 py-2.5">
+                <span class="text-xs font-semibold text-slate-400 block mb-1">Контрактные данные</span>
+                <span class="text-sm font-bold text-slate-700 dark:text-slate-300 leading-snug">{{ instructor.contractInfo || '—' }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Files List -->
-          <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-            <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Прикрепленные документы</h4>
-            
-            <div v-if="!additionalFilesList.length" class="text-center py-6 text-slate-400 text-sm">
-              Нет дополнительных файлов
+          <!-- Files List — compact -->
+          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <FileTextIcon class="w-4 h-4 text-slate-500" />
+              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Документы</h4>
             </div>
-            <div v-else class="space-y-2">
-              <div 
-                v-for="file in additionalFilesList" 
+            <div v-if="!additionalFilesList.length" class="px-4 py-5 text-center text-xs text-slate-400">Нет дополнительных файлов</div>
+            <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+              <div
+                v-for="file in additionalFilesList"
                 :key="file.uuid"
-                class="group flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-100 dark:hover:border-slate-700 transition-all hover:shadow-md"
+                class="group flex items-center justify-between px-4 py-2.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
               >
-                <div class="flex items-center gap-3 overflow-hidden">
-                  <div class="p-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-500 shrink-0">
-                    <FileTextIcon class="w-4 h-4" />
-                  </div>
-                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{{ file.filename }}</span>
+                <div class="flex items-center gap-2 min-w-0">
+                  <FileTextIcon class="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate">{{ file.filename }}</span>
                 </div>
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                   <button @click="previewFile(file.uuid, file.filename)" class="p-1.5 text-slate-400 hover:text-primary transition-colors">
-                    <EyeIcon class="w-4 h-4" />
+                    <EyeIcon class="w-3.5 h-3.5" />
                   </button>
                   <button @click="downloadFile(file.uuid, file.filename)" class="p-1.5 text-slate-400 hover:text-success transition-colors">
-                    <DownloadIcon class="w-4 h-4" />
+                    <DownloadIcon class="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -455,9 +452,9 @@
       <template #footer>
         <div class="flex justify-end gap-3">
           <UiButton variant="outline" @click="closePreview">Закрыть</UiButton>
-          <UiButton 
-            v-if="instructor && previewingFileId" 
-            variant="primary" 
+          <UiButton
+            v-if="instructor && previewingFileId"
+            variant="primary"
             @click="downloadFile(previewingFileId, previewingFileName)"
             class="gap-2"
           >
@@ -468,7 +465,9 @@
 
       <div v-if="loadingPreview" class="flex items-center justify-center py-12">
         <div class="text-center">
-          <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+          <div
+            class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+          ></div>
           <p class="mt-4 text-sm text-gray-500">Загрузка документа...</p>
         </div>
       </div>
@@ -490,11 +489,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from "vue";
 import type { Instructor, UpdateInstructorInput } from "~/types/instructor";
-import { 
-  ArrowLeft, 
-  User as UserIcon, 
-  Clock as ClockIcon, 
-  History as HistoryIcon, 
+import {
+  ArrowLeft,
+  User as UserIcon,
+  Clock as ClockIcon,
+  History as HistoryIcon,
   AlertCircle as AlertCircleIcon,
   GraduationCap as GraduationCapIcon,
   Calendar as CalendarIcon,
@@ -510,7 +509,9 @@ import {
   Plus as PlusIcon,
   FileDown as FileDownIcon,
   Eye as EyeIcon,
-  Download as DownloadIcon
+  Download as DownloadIcon,
+  Search as SearchIcon,
+  BookOpen as BookOpenIcon,
 } from "lucide-vue-next";
 import InstructorsHoursStats from "~/components/instructors/HoursStats.vue";
 import InstructorsCourseHistory from "~/components/instructors/CourseHistory.vue";
@@ -527,10 +528,10 @@ const { canEditInstructors, canDeleteInstructors } = usePermissions();
 const { getFilesByUuids } = useFileManager();
 
 const languageMap: Record<string, string> = {
-  uz: 'Узбекский',
-  ru: 'Русский',
-  en: 'Английский',
-  de: 'Немецкий'
+  uz: "Узбекский",
+  ru: "Русский",
+  en: "Английский",
+  de: "Немецкий",
 };
 
 // State
@@ -550,8 +551,8 @@ const previewingFileName = ref("");
 const previewingFileId = ref("");
 
 // Файлы для предпросмотра
-const diplomaFiles = ref<any[]>([]);
 const additionalFilesList = ref<any[]>([]);
+const allEducationFilesMap = ref<Record<string, any>>({});
 
 const activeTab = ref("info");
 
@@ -563,12 +564,12 @@ const availableTabs = [
 
 // Computed
 const experienceText = computed(() => {
-  if (!instructor.value?.hireDate) return '—';
+  if (!instructor.value?.hireDate) return "—";
   const hireDate = new Date(instructor.value.hireDate);
   const now = new Date();
   const diffTime = Math.abs(now.getTime() - hireDate.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays < 30) return `${diffDays} дн.`;
   const diffMonths = Math.floor(diffDays / 30);
   if (diffMonths < 12) return `${diffMonths} мес.`;
@@ -588,7 +589,7 @@ const getInitials = (name: string) => {
 };
 
 const formatDate = (dateString?: string | Date | null) => {
-  if (!dateString) return '—';
+  if (!dateString) return "—";
   return new Date(dateString).toLocaleDateString("ru-RU", {
     year: "numeric",
     month: "long",
@@ -596,7 +597,7 @@ const formatDate = (dateString?: string | Date | null) => {
   });
 };
 
-const previewFile = async (fileId: string, fileName: string = 'Документ') => {
+const previewFile = async (fileId: string, fileName: string = "Документ") => {
   try {
     previewingFileName.value = fileName;
     previewingFileId.value = fileId;
@@ -632,7 +633,7 @@ const previewFile = async (fileId: string, fileName: string = 'Документ'
   }
 };
 
-const downloadFile = async (fileId: string, fileName: string = 'document') => {
+const downloadFile = async (fileId: string, fileName: string = "document") => {
   try {
     const token = document.cookie
       .split("; ")
@@ -676,21 +677,42 @@ const closePreview = () => {
 
 const fetchFileMetadata = async () => {
   if (!instructor.value) return;
-  
+
+  const educationFileIds =
+    instructor.value.education_history?.flatMap(
+      (edu) => edu.diploma_file_ids || [],
+    ) || [];
+  const legacyDiplomaIds = instructor.value.diploma_file_ids || [];
+
   const allUuids = [
-    ...(instructor.value.diploma_file_ids || []),
+    ...educationFileIds,
+    ...legacyDiplomaIds,
     ...(instructor.value.additional_files || []),
-    ...(instructor.value.certificates?.map(c => c.fileId).filter(Boolean) as string[] || [])
+    ...((instructor.value.certificates
+      ?.map((c) => c.fileId)
+      .filter(Boolean) as string[]) || []),
   ];
 
   if (allUuids.length === 0) return;
 
   try {
     const files = await getFilesByUuids(allUuids);
-    diplomaFiles.value = files.filter(f => instructor.value?.diploma_file_ids?.includes(f.uuid));
-    additionalFilesList.value = files.filter(f => instructor.value?.additional_files?.includes(f.uuid));
+
+    // Map education files
+    files.forEach((f) => {
+      if (
+        educationFileIds.includes(f.uuid) ||
+        legacyDiplomaIds.includes(f.uuid)
+      ) {
+        allEducationFilesMap.value[f.uuid] = f;
+      }
+    });
+
+    additionalFilesList.value = files.filter((f) =>
+      instructor.value?.additional_files?.includes(f.uuid),
+    );
   } catch (error) {
-    console.error('Error fetching file metadata:', error);
+    console.error("Error fetching file metadata:", error);
   }
 };
 
@@ -736,7 +758,7 @@ const confirmDelete = async () => {
 const exportCertificate = async () => {
   if (!instructor.value) return;
   notification.info("Подготовка справки к экспорту...");
-  
+
   try {
     const { exportInstructorProfile } = usePDFExport();
     await exportInstructorProfile(instructor.value);
