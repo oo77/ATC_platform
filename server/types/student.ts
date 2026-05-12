@@ -32,6 +32,7 @@ export interface Student {
   position: string;
   birthDate?: Date | null;
   photo_base64?: string | null;
+  userId?: string | null;
   certificates: StudentCertificate[];
   created_at: Date;
   updated_at: Date;

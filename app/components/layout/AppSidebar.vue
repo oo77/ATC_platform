@@ -496,13 +496,13 @@ const allMenuGroups: MenuGroup[] = [
     ],
   },
 
-  {
-    title: "Сервис",
-    items: [
-      { icon: HelpCircle, name: "Поддержка", path: "/support" },
-      { icon: BookOpen, name: "Документация", path: "/docs" },
-    ],
-  },
+  // {
+  //   title: "Сервис",
+  //   items: [
+  //     { icon: HelpCircle, name: "Поддержка", path: "/support" },
+  //     { icon: BookOpen, name: "Документация", path: "/docs" },
+  //   ],
+  // },
 ];
 
 const menuGroups = computed(() => {

@@ -24,6 +24,8 @@ const ROLE_PROTECTED_ROUTES: Record<string, UserRole[]> = {
   "/api/admin": [UserRole.ADMIN],
   "/api/users": [UserRole.ADMIN, UserRole.MANAGER],
   "/api/teachers": [UserRole.ADMIN, UserRole.MANAGER],
+  "/api/instructors/": [UserRole.TEACHER, UserRole.ADMIN, UserRole.MANAGER],
+  "/api/instructors": [UserRole.ADMIN, UserRole.MANAGER],
   "/api/students/my-courses": [
     UserRole.STUDENT,
     UserRole.ADMIN,
@@ -37,6 +39,12 @@ const ROLE_PROTECTED_ROUTES: Record<string, UserRole[]> = {
     UserRole.TEACHER,
   ],
   "/api/students/dashboard": [
+    UserRole.STUDENT,
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.TEACHER,
+  ],
+  "/api/students/": [
     UserRole.STUDENT,
     UserRole.ADMIN,
     UserRole.MANAGER,

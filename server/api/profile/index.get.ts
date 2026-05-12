@@ -24,6 +24,8 @@ export default defineEventHandler(async (event) => {
         workplace,
         position,
         pinfl,
+        student_id,
+        instructor_id,
         created_at,
         updated_at
       FROM users
@@ -39,7 +41,12 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const user = users[0];
+    const row = users[0];
+    const user = {
+      ...row,
+      studentId: row.student_id,
+      instructorId: row.instructor_id,
+    };
 
     return {
       success: true,

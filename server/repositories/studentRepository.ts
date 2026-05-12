@@ -59,6 +59,7 @@ export interface StudentRow extends RowDataPacket {
   position: string;
   birth_date: Date | null;
   photo_base64: string | null;
+  user_id: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -123,6 +124,7 @@ function mapRowToStudent(
     position: row.position,
     birthDate: row.birth_date,
     photo_base64: row.photo_base64,
+    userId: row.user_id,
     certificates,
     created_at: row.created_at,
     updated_at: row.updated_at,

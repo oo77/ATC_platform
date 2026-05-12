@@ -4,10 +4,12 @@
  */
 
 import { getStudentById } from '../../repositories/studentRepository';
+import { UserRole } from '../../types/auth';
 
 export default defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, 'id');
+    const authUser = event.context.user;
 
     if (!id) {
       return {
@@ -23,6 +25,18 @@ export default defineEventHandler(async (event) => {
         success: false,
         message: 'Студент не найден',
       };
+    }
+
+    // Проверка прав доступа для роли STUDENT
+    if (authUser && authUser.role === UserRole.STUDENT) {
+      // Студент может запрашивать только свои данные
+      if (student.userId !== authUser.id) {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Forbidden',
+          message: 'У вас нет прав для просмотра данных этого студента',
+        });
+      }
     }
 
     return {
