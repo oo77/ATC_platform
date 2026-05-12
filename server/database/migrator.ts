@@ -43,6 +43,7 @@ import * as studentPersonalFields from "./migrations/20260505_032_add_student_pe
 import * as updateActivityLogsEnums from "./migrations/20260505_033_update_activity_logs_enums";
 import * as instructorEducationHistory from "./migrations/20260507_034_add_instructor_education_history";
 import * as instructorWorkExperience from "./migrations/20260507_035_add_instructor_work_experience";
+import * as certificateVerificationLogs from "./migrations/20260512_036_certificate_verification_logs";
 
 /**
  * ============================================================================
@@ -378,6 +379,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: instructorWorkExperience.up,
     down: instructorWorkExperience.down,
     description: instructorWorkExperience.description,
+  },
+  // ============================================================
+  // Миграция 036: Таблица логов публичной верификации сертификатов
+  // ============================================================
+  {
+    name: "20260512_036_certificate_verification_logs",
+    up: certificateVerificationLogs.up,
+    down: certificateVerificationLogs.down,
+    description: certificateVerificationLogs.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

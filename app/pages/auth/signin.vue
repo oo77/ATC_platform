@@ -387,6 +387,19 @@
         </div>
 
         <div class="mt-8 text-center">
+          <!-- Ссылка на публичный аудит -->
+          <NuxtLink
+            to="/verify"
+            id="signin-goto-verify"
+            class="inline-flex items-center justify-center gap-2 w-full py-3 px-6 mb-4 rounded-xl border border-slate-600/50 text-slate-300 hover:text-white hover:border-slate-400/70 hover:bg-white/5 text-sm font-medium transition-all duration-200 group"
+          >
+            <svg class="w-4 h-4 text-slate-400 group-hover:text-blue-400 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
+            Проверить подлинность сертификата
+          </NuxtLink>
+
           <p class="text-sm text-slate-500/80">
             &copy; {{ new Date().getFullYear() }} АТЦ Платформа
             <span class="text-xs ml-1 opacity-70">v1.0</span><br />

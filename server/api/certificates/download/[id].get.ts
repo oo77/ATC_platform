@@ -10,13 +10,22 @@ import { getIssuedCertificateById } from "../../../repositories/certificateTempl
 const STORAGE_ROOT = path.join(process.cwd(), "storage");
 
 export default defineEventHandler(async (event) => {
+  // Проверяем авторизацию — скачивание только для аутентифицированных пользователей
+  const user = event.context.user;
+  if (!user) {
+    throw createError({
+      statusCode: 401,
+      message: "Для скачивания сертификата необходимо войти в систему",
+    });
+  }
+
   try {
     const id = getRouterParam(event, "id");
     const query = getQuery(event);
     const requestedFormat = (query.format as string) || "pdf";
 
     console.log(
-      `[DOWNLOAD] Запрос скачивания сертификата ${id}, формат: ${requestedFormat}`,
+      `[DOWNLOAD] user=${user.id} role=${user.role} cert=${id} format=${requestedFormat}`,
     );
 
     if (!id) {
@@ -46,7 +55,7 @@ export default defineEventHandler(async (event) => {
     let extension = requestedFormat;
 
     // Для сертификатов, импортированных через AI, используем original_file_url
-    if (certificate.sourceType === "ai_scan" && certificate.originalFileUrl) {
+    if (certificate.sourceType === "import" && (certificate as any).importSource === "ai" && certificate.originalFileUrl) {
       console.log(
         `[DOWNLOAD] AI-сертификат, используем original_file_url: ${certificate.originalFileUrl}`,
       );
@@ -148,7 +157,7 @@ export default defineEventHandler(async (event) => {
       );
 
       // Для AI-сертификатов ищем в uploads/certificates
-      if (certificate.sourceType === "ai_scan") {
+      if (certificate.sourceType === "import" && (certificate as any).importSource === "ai") {
         const uploadRoot = path.join(STORAGE_ROOT, "uploads", "certificates");
         const found = findFileRecursively(uploadRoot, fileName);
         if (found) {

@@ -7,6 +7,11 @@ import type { RowDataPacket } from "mysql2/promise";
  *
  * Не требует авторизации — предназначен для сканирования QR-кода.
  * Возвращает только публичные данные (без внутренних ID, ПИНФЛ и т.п.)
+ *
+ * Безопасность:
+ *  - Rate limiting: middleware/publicRateLimiter.ts (20 req/min per IP)
+ *  - UUID сертификата НЕ возвращается (убрали, чтобы нельзя было использовать /download/:id анонимно)
+ *  - Все обращения логируются в certificate_verification_logs
  */
 
 interface CertificateVerifyRow extends RowDataPacket {
@@ -37,6 +42,26 @@ interface CertificateVerifyRow extends RowDataPacket {
   issued_at: Date | null;
 }
 
+/** Записываем факт верификации в таблицу логов */
+async function logVerification(
+  certNumber: string,
+  ip: string,
+  userAgent: string,
+  result: "found" | "not_found",
+): Promise<void> {
+  try {
+    await executeQuery(
+      `INSERT INTO certificate_verification_logs
+         (cert_number, ip_address, user_agent, result)
+       VALUES (?, ?, ?, ?)`,
+      [certNumber, ip, userAgent.slice(0, 500), result],
+    );
+  } catch (err) {
+    // Ошибка логирования не должна прерывать верификацию
+    console.error("[verify] Failed to write verification log:", err);
+  }
+}
+
 export default defineEventHandler(async (event) => {
   const number = getRouterParam(event, "number");
 
@@ -46,6 +71,9 @@ export default defineEventHandler(async (event) => {
       message: "Номер сертификата не указан",
     });
   }
+
+  const ip        = getRequestIP(event, { xForwardedFor: true }) ?? "unknown";
+  const userAgent = getHeader(event, "user-agent") ?? "";
 
   try {
     const query = `
@@ -83,6 +111,9 @@ export default defineEventHandler(async (event) => {
     const rows = await executeQuery<CertificateVerifyRow[]>(query, [number]);
 
     if (!rows || rows.length === 0) {
+      // Логируем «не найден»
+      await logVerification(number, ip, userAgent, "not_found");
+
       throw createError({
         statusCode: 404,
         message: "Сертификат не найден",
@@ -92,7 +123,7 @@ export default defineEventHandler(async (event) => {
     const row = rows[0];
 
     // Определяем фактический статус с учётом срока действия
-    const now = new Date();
+    const now       = new Date();
     const isExpired = row.expiry_date ? new Date(row.expiry_date) < now : false;
 
     let verificationStatus: "valid" | "expired" | "revoked" = "valid";
@@ -102,41 +133,43 @@ export default defineEventHandler(async (event) => {
       verificationStatus = "expired";
     }
 
-    // Логируем факт верификации (без записи в activity_logs, т.к. запрос анонимный)
+    // Логируем «найден»
+    await logVerification(number, ip, userAgent, "found");
+
     console.log(
-      `[verify] Certificate ${number} checked — status: ${verificationStatus},` +
-        ` ip: ${getRequestIP(event, { xForwardedFor: true }) ?? "unknown"}`,
+      `[verify] cert=${number} status=${verificationStatus} ip=${ip}`,
     );
 
     return {
       success: true,
       verificationStatus,
       certificate: {
-        id: row.id,
-        number: row.certificate_number,
-        issueDate: row.issue_date,
-        expiryDate: row.expiry_date,
-        issuedAt: row.issued_at,
-        revokedAt: row.revoked_at,
+        // ⚠️ id намеренно НЕ возвращается — UUID не должен быть публичным
+        number:      row.certificate_number,
+        issueDate:   row.issue_date,
+        expiryDate:  row.expiry_date,
+        issuedAt:    row.issued_at,
+        revokedAt:   row.revoked_at,
         revokeReason: row.revoke_reason,
         student: {
-          fullName: row.student_name,
+          fullName:     row.student_name,
           organization: row.student_organization,
-          position: row.student_position,
+          position:     row.student_position,
         },
         group: {
-          code: row.group_code || row.standalone_group_code || null,
+          code:      row.group_code || row.standalone_group_code || null,
           startDate: row.standalone_group_start_date,
-          endDate: row.standalone_group_end_date,
+          endDate:   row.standalone_group_end_date,
         },
         course: {
-          name: row.course_name || row.standalone_course_name || null,
-          code: row.course_code || row.standalone_course_code || null,
+          name:  row.course_name || row.standalone_course_name || null,
+          code:  row.course_code || row.standalone_course_code || null,
           hours: row.standalone_course_hours,
         },
         issuer: {
           organizationName: row.org_name,
         },
+        previewUrl: `/api/public/cert-preview-${row.certificate_number}`,
       },
     };
   } catch (error: any) {
