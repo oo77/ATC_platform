@@ -471,12 +471,8 @@
                         <input v-model="cert.name" type="text" class="w-full rounded-xl border border-slate-200 py-2.5 px-4 text-sm" />
                       </div>
                       <div>
-                        <label class="text-xs font-bold text-slate-500 mb-1.5 block">Серия сертификата</label>
-                        <input v-model="cert.series" type="text" placeholder="Напр: AT" class="w-full rounded-xl border border-slate-200 py-2.5 px-4 text-sm" />
-                      </div>
-                      <div>
-                        <label class="text-xs font-bold text-slate-500 mb-1.5 block">Номер сертификата</label>
-                        <input v-model="cert.certificate_number" type="text" placeholder="Напр: 00123" class="w-full rounded-xl border border-slate-200 py-2.5 px-4 text-sm" />
+                        <label class="text-xs font-bold text-slate-500 mb-1.5 block">Серия и номер сертификата</label>
+                        <input v-model="cert.certificate_number" type="text" placeholder="Напр: AT 00123" class="w-full rounded-xl border border-slate-200 py-2.5 px-4 text-sm" />
                       </div>
                       <div>
                         <label class="text-xs font-bold text-slate-500 mb-1.5 block">Дата получения</label>
@@ -673,7 +669,7 @@ const handlePhotoUpload = (event: Event) => {
 };
 
 const addCertificateRow = () => {
-  formData.certificates.push({ name: '', date: '', series: '', certificate_number: '', fileId: '' });
+  formData.certificates.push({ name: '', date: '', certificate_number: '', fileId: '' });
 };
 
 const removeCertificateRow = (index: number) => {
@@ -909,7 +905,17 @@ onMounted(() => {
 
     formData.work_experience = Array.isArray(props.instructor.work_experience) ? [...props.instructor.work_experience] : [];
 
-    formData.certificates = Array.isArray(props.instructor.certificates) ? [...props.instructor.certificates] : [];
+    formData.certificates = Array.isArray(props.instructor.certificates) 
+      ? props.instructor.certificates.map(c => {
+          const certCopy = { ...c };
+          const series = (c as any).series;
+          if (series && !certCopy.certificate_number?.includes(series)) {
+            certCopy.certificate_number = [series, certCopy.certificate_number].filter(Boolean).join(' ');
+            delete (certCopy as any).series;
+          }
+          return certCopy;
+        })
+      : [];
     formData.languages = Array.isArray(props.instructor.languages) ? [...props.instructor.languages] : [];
     formData.photo_base64 = props.instructor.photo_base64 || null;
     formData.additional_files = Array.isArray(props.instructor.additional_files) ? [...props.instructor.additional_files] : [];

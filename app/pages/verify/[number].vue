@@ -1,162 +1,172 @@
 <template>
   <div class="verify-layout">
-    <!-- Шапка (компактная) -->
-    <header class="verify-header">
-      <div class="verify-header-inner">
-        <img src="/logo.png" alt="ATC Platform" class="verify-logo" />
-        <div class="verify-header-info">
-          <span class="verify-header-title">Система верификации ATC</span>
-          <span v-if="cert" class="verify-header-number">№ {{ cert.number }}</span>
-        </div>
+    <!-- Загрузка -->
+    <div v-if="pending" class="verify-loading-screen">
+      <div class="verify-spinner"></div>
+      <p>Загрузка документа...</p>
+    </div>
+
+    <!-- Ошибка -->
+    <div v-else-if="error || !data" class="verify-error-screen">
+      <div class="verify-error-box">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <h3>Сертификат не найден</h3>
+        <p>
+          Документ с номером <strong>{{ number }}</strong> не зарегистрирован в
+          системе.
+        </p>
       </div>
-      <div class="verify-header-actions">
-        <button @click="copyPageLink" class="verify-action-btn" :title="linkCopied ? 'Скопировано!' : 'Копировать ссылку'">
-          <svg v-if="!linkCopied" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-          </svg>
-          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-green-500">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-          <span class="d-none d-sm-inline">{{ linkCopied ? 'Скопировано' : 'Поделиться' }}</span>
-        </button>
-      </div>
-    </header>
+    </div>
 
-    <main class="verify-container">
-      <!-- ЛЕВАЯ ПАНЕЛЬ: ИНФОРМАЦИЯ -->
-      <aside class="verify-sidebar">
-        <div class="verify-sidebar-scroll">
-          <!-- Загрузка -->
-          <div v-if="pending" class="verify-info-loading">
-            <div class="verify-spinner"></div>
-            <p>Проверка подлинности...</p>
-          </div>
-
-          <!-- Ошибка -->
-          <div v-else-if="error || !data" class="verify-status-box verify-status-box--error">
-            <div class="verify-status-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-            </div>
-            <h3>Сертификат не найден</h3>
-            <p>Документ с номером <strong>{{ number }}</strong> не зарегистрирован в системе.</p>
-          </div>
-
-          <!-- Успех / Статусы -->
-          <template v-else>
-            <!-- Статус блок -->
-            <div 
-              class="verify-status-box" 
-              :class="{
-                'verify-status-box--valid':   data.verificationStatus === 'valid',
-                'verify-status-box--expired': data.verificationStatus === 'expired',
-                'verify-status-box--revoked': data.verificationStatus === 'revoked'
-              }"
+    <!-- Показ сертификата -->
+    <div v-else class="verify-preview-screen">
+      <!-- Верхняя панель управления -->
+      <header class="verify-topbar">
+        <div class="verify-topbar-info">
+          <NuxtLink to="/verify" class="verify-back-btn" title="Вернуться назад">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </NuxtLink>
+          <img src="/logo.png" alt="ATC Platform" class="verify-logo" />
+          <div class="verify-topbar-text">
+            <h1 class="verify-title">Сертификат № {{ cert?.number }}</h1>
+            <span
+              class="verify-status"
+              :class="'status-' + data.verificationStatus"
             >
-              <div class="verify-status-icon">
-                <svg v-if="data.verificationStatus === 'valid'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <svg v-else-if="data.verificationStatus === 'expired'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-                </svg>
-                <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-                </svg>
-              </div>
-              <div class="verify-status-text">
-                <h3 v-if="data.verificationStatus === 'valid'">Сертификат действителен</h3>
-                <h3 v-else-if="data.verificationStatus === 'expired'">Срок действия истёк</h3>
-                <h3 v-else>Сертификат отозван</h3>
-                <p v-if="cert?.revokedAt && data.verificationStatus === 'revoked'" class="text-xs mt-1">
-                  Дата отзыва: {{ formatDate(cert.revokedAt) }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Детали -->
-            <div v-if="cert" class="verify-data-sections">
-              <div class="verify-data-group">
-                <label>Владелец</label>
-                <div class="verify-data-value verify-data-value--highlight">{{ cert.student.fullName }}</div>
-                <div v-if="cert.student.organization" class="verify-data-subvalue">{{ cert.student.organization }}</div>
-              </div>
-
-              <div class="verify-data-group">
-                <label>Курс / Программа</label>
-                <div class="verify-data-value">{{ cert.course.name }}</div>
-                <div v-if="cert.course.hours" class="verify-data-subvalue">{{ cert.course.hours }} ак. часов</div>
-              </div>
-
-              <div class="verify-data-grid">
-                <div class="verify-data-group">
-                  <label>Выдан</label>
-                  <div class="verify-data-value">{{ formatDate(cert.issuedAt) }}</div>
-                </div>
-                <div class="verify-data-group">
-                  <label>Действует до</label>
-                  <div class="verify-data-value" :class="{ 'verify-text-expired': data.verificationStatus === 'expired' }">
-                    {{ cert.expiryDate ? formatDate(cert.expiryDate) : 'Бессрочно' }}
-                  </div>
-                </div>
-              </div>
-
-              <div class="verify-data-group">
-                <label>Организация</label>
-                <div class="verify-data-value">{{ cert.issuer.organizationName || 'ATC Platform' }}</div>
-              </div>
-            </div>
-          </template>
-
-          <footer class="verify-sidebar-footer">
-            <p>© {{ new Date().getFullYear() }} ATC Platform</p>
-            <p>ID: {{ number }}</p>
-          </footer>
+              {{ statusText }}
+            </span>
+          </div>
         </div>
-      </aside>
 
-      <!-- ПРАВАЯ ПАНЕЛЬ: ДОКУМЕНТ -->
-      <section class="verify-content">
-        <div v-if="cert?.previewUrl" class="verify-preview-frame">
+        <div class="verify-topbar-actions">
+          <button @click="copyPageLink" class="verify-btn btn-secondary">
+            <svg
+              v-if="!linkCopied"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+            <svg
+              v-else
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="icon-success"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+            <span class="d-none d-sm-inline">{{
+              linkCopied ? "Скопировано" : "Поделиться"
+            }}</span>
+          </button>
+
+          <a
+            v-if="cert?.number"
+            :href="'/api/public/cert-download-' + cert.number"
+            class="verify-btn btn-primary"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
+            </svg>
+            <span class="d-none d-sm-inline">Скачать сертификат</span>
+          </a>
+        </div>
+      </header>
+
+      <!-- Подробная информация (Сверху) -->
+      <section v-if="cert" class="verify-details-banner">
+        <div class="verify-details-inner">
+          <div class="verify-detail-item">
+            <span class="detail-label">Владелец</span>
+            <span class="detail-value highlight">{{ cert.student.fullName }}</span>
+            <span v-if="cert.student.organization" class="detail-sub">{{ cert.student.organization }}</span>
+          </div>
+          
+          <div class="verify-detail-item">
+            <span class="detail-label">Курс / Программа</span>
+            <span class="detail-value">{{ cert.course.name || '—' }}</span>
+            <span v-if="cert.course.hours" class="detail-sub">{{ cert.course.hours }} ак. часов</span>
+          </div>
+          
+          <div class="verify-detail-item">
+            <span class="detail-label">Период действия</span>
+            <span class="detail-value">
+              {{ formatDate(cert.issuedAt || cert.issueDate) }} — 
+              <span :class="{'text-expired': data.verificationStatus === 'expired'}">
+                {{ cert.expiryDate ? formatDate(cert.expiryDate) : 'Бессрочно' }}
+              </span>
+            </span>
+            <span class="detail-sub">Выдан: {{ cert.issuer.organizationName || 'ATC Platform' }}</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Сам сертификат -->
+      <main class="verify-main-content">
+        <div v-if="cert?.previewUrl" class="verify-frame-container">
           <iframe
             :src="cert.previewUrl"
             class="verify-iframe"
             frameborder="0"
             allowfullscreen
           ></iframe>
-          
-          <div class="verify-preview-actions">
-            <a :href="cert.previewUrl" target="_blank" class="verify-preview-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              На весь экран
-            </a>
-          </div>
         </div>
-        <div v-else class="verify-preview-placeholder">
-          <div v-if="pending" class="verify-preview-loading">
-            <div class="verify-pulse"></div>
-            <span>Загрузка документа...</span>
-          </div>
-          <div v-else class="verify-preview-empty">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p>Файл сертификата недоступен для предварительного просмотра</p>
-          </div>
+        <div v-else class="verify-empty-preview">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <p>Файл сертификата недоступен для показа</p>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 definePageMeta({
   layout: "blank",
+  auth: false, // Отключаем проверку авторизации
 });
 
 const route = useRoute();
@@ -165,16 +175,19 @@ const number = computed(() => route.params.number as string);
 useHead({
   title: `Верификация сертификата ${number.value}`,
   meta: [
-    { name: "description", content: `Проверка подлинности сертификата № ${number.value}` },
+    {
+      name: "description",
+      content: `Проверка подлинности сертификата № ${number.value}`,
+    },
     { name: "robots", content: "noindex, nofollow" },
   ],
+  link: [
+    {
+      rel: "stylesheet",
+      href: "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap",
+    },
+  ],
 });
-
-type CertificateVerifyResponse = {
-  success: boolean;
-  verificationStatus: 'valid' | 'expired' | 'revoked';
-  certificate: CertificatePublic;
-}
 
 type CertificatePublic = {
   number: string;
@@ -200,15 +213,31 @@ type CertificatePublic = {
   };
   issuer: { organizationName: string | null };
   previewUrl: string;
-}
+};
+
+type CertificateVerifyResponse = {
+  success: boolean;
+  verificationStatus: "valid" | "expired" | "revoked";
+  certificate: CertificatePublic;
+};
 
 const certNum = number.value;
 const { data, pending, error } = await useAsyncData(
   `verify-${certNum}`,
-  () => ($fetch as any)(`/api/certificates/verify/${certNum}`) as Promise<CertificateVerifyResponse>
+  () =>
+    ($fetch as any)(
+      `/api/certificates/verify/${certNum}`,
+    ) as Promise<CertificateVerifyResponse>,
 );
 
 const cert = computed(() => data.value?.certificate);
+
+const statusText = computed(() => {
+  if (data.value?.verificationStatus === "valid") return "Действителен";
+  if (data.value?.verificationStatus === "expired") return "Истёк срок";
+  if (data.value?.verificationStatus === "revoked") return "Отозван";
+  return "";
+});
 
 const formatDate = (dateStr: string | Date | null | undefined): string => {
   if (!dateStr) return "—";
@@ -235,7 +264,9 @@ async function copyPageLink() {
     document.body.removeChild(el);
   }
   linkCopied.value = true;
-  setTimeout(() => { linkCopied.value = false; }, 2500);
+  setTimeout(() => {
+    linkCopied.value = false;
+  }, 2500);
 }
 </script>
 
@@ -244,16 +275,81 @@ async function copyPageLink() {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f8fafc;
+  background: #0f172a; /* Темный премиальный фон */
+  font-family: "Montserrat", -apple-system, sans-serif;
   overflow: hidden;
-  font-family: 'Inter', -apple-system, sans-serif;
 }
 
-/* Header */
-.verify-header {
-  height: 64px;
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+/* Loading & Error */
+.verify-loading-screen,
+.verify-error-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.verify-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.verify-error-box {
+  background: #1e293b;
+  padding: 32px;
+  border-radius: 16px;
+  text-align: center;
+  max-width: 400px;
+  border: 1px solid #334155;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.verify-error-box svg {
+  width: 48px;
+  height: 48px;
+  color: #ef4444;
+  margin-bottom: 16px;
+}
+
+.verify-error-box h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.verify-error-box p {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Main Preview Layout */
+.verify-preview-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.verify-topbar {
+  height: 72px;
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -262,10 +358,32 @@ async function copyPageLink() {
   z-index: 10;
 }
 
-.verify-header-inner {
+.verify-topbar-info {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
+}
+
+.verify-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.verify-back-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.verify-back-btn svg {
+  width: 18px;
+  height: 18px;
 }
 
 .verify-logo {
@@ -273,156 +391,116 @@ async function copyPageLink() {
   width: auto;
 }
 
-.verify-header-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.verify-header-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.verify-header-number {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.verify-action-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #f1f5f9;
-  border-radius: 8px;
-  color: #475569;
-  font-size: 13px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  border: none;
-  cursor: pointer;
-}
-
-.verify-action-btn:hover {
-  background: #e2e8f0;
-  color: #1e293b;
-}
-
-.verify-action-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* Container */
-.verify-container {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 400px 1fr;
-  overflow: hidden;
-}
-
-/* Sidebar */
-.verify-sidebar {
-  background: #fff;
-  border-right: 1px solid #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.verify-sidebar-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* Status Box */
-.verify-status-box {
-  padding: 24px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  text-align: left;
-}
-
-.verify-status-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.verify-status-icon svg {
-  width: 24px;
-  height: 24px;
-}
-
-.verify-status-box h3 {
-  font-size: 16px;
-  font-weight: 700;
-  margin: 0;
-}
-
-.verify-status-box p {
-  font-size: 13px;
-  margin: 4px 0 0 0;
-  line-height: 1.5;
-}
-
-/* Status Variations */
-.verify-status-box--valid {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-.verify-status-box--valid .verify-status-icon { background: #dcfce7; color: #16a34a; }
-
-.verify-status-box--expired {
-  background: #fffbeb;
-  color: #92400e;
-  border: 1px solid #fef3c7;
-}
-.verify-status-box--expired .verify-status-icon { background: #fef3c7; color: #d97706; }
-
-.verify-status-box--revoked {
-  background: #fff1f2;
-  color: #991b1b;
-  border: 1px solid #ffe4e6;
-}
-.verify-status-box--revoked .verify-status-icon { background: #ffe4e6; color: #dc2626; }
-
-.verify-status-box--error {
-  background: #f8fafc;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-}
-.verify-status-box--error .verify-status-icon { background: #f1f5f9; color: #64748b; }
-
-/* Data Sections */
-.verify-data-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.verify-data-group {
+.verify-topbar-text {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.verify-data-group label {
+.verify-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+}
+
+.verify-status {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-valid {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+.status-expired {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+.status-revoked {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.verify-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.verify-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: "Montserrat", sans-serif;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+
+.verify-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.icon-success {
+  color: #4ade80;
+}
+
+/* Banner details */
+.verify-details-banner {
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  padding: 20px 24px;
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+.verify-details-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.verify-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-label {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -430,165 +508,102 @@ async function copyPageLink() {
   letter-spacing: 0.05em;
 }
 
-.verify-data-value {
+.detail-value {
   font-size: 15px;
   font-weight: 600;
-  color: #1e293b;
+  color: #f8fafc;
   line-height: 1.4;
 }
 
-.verify-data-value--highlight {
-  font-size: 20px;
-  font-weight: 800;
-  color: #0f172a;
+.detail-value.highlight {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
 }
 
-.verify-data-subvalue {
+.text-expired {
+  color: #fbbf24;
+}
+
+.detail-sub {
   font-size: 13px;
-  color: #64748b;
+  color: #cbd5e1;
 }
 
-.verify-data-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.verify-text-expired {
-  color: #b45309;
-}
-
-/* Preview Area */
-.verify-content {
-  background: #f1f5f9;
+/* Content */
+.verify-main-content {
+  flex: 1;
+  padding: 24px;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 40px;
-  position: relative;
+  align-items: center;
+  overflow: hidden;
+  background: #0f172a;
 }
 
-.verify-preview-frame {
+.verify-frame-container {
   width: 100%;
   height: 100%;
-  background: #fff;
+  max-width: 1100px;
+  background: #1e293b;
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  position: relative;
   overflow: hidden;
-  max-width: 900px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  display: flex;
 }
 
 .verify-iframe {
+  flex: 1;
   width: 100%;
   height: 100%;
   border: none;
+  background: #f1f5f9;
 }
 
-.verify-preview-actions {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 5;
-}
-
-.verify-preview-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(8px);
-  color: #fff;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.2s;
-}
-
-.verify-preview-btn:hover {
-  background: rgba(15, 23, 42, 1);
-}
-
-.verify-preview-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* Placeholders */
-.verify-preview-empty {
-  text-align: center;
-  color: #94a3b8;
-}
-
-.verify-preview-empty svg {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 12px;
-}
-
-.verify-preview-empty p {
-  font-size: 14px;
-  max-width: 280px;
-}
-
-.verify-preview-loading {
+.verify-empty-preview {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
   color: #64748b;
 }
 
-.verify-pulse {
-  width: 40px;
-  height: 40px;
-  background: #3b82f6;
-  border-radius: 50%;
-  animation: pulse 1.5s infinite;
+.verify-empty-preview svg {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
 }
 
-@keyframes pulse {
-  0% { transform: scale(0.95); opacity: 0.5; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-  100% { transform: scale(0.95); opacity: 0.5; }
+.verify-empty-preview p {
+  font-size: 16px;
+  font-family: "Montserrat", sans-serif;
 }
 
-.verify-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #e2e8f0;
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Footer */
-.verify-sidebar-footer {
-  margin-top: auto;
-  padding-top: 32px;
-  border-top: 1px solid #f1f5f9;
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.verify-sidebar-footer p { margin: 2px 0; }
-
-/* Mobile */
-@media (max-width: 1024px) {
-  .verify-layout { height: auto; overflow: auto; }
-  .verify-container { grid-template-columns: 1fr; height: auto; overflow: visible; }
-  .verify-sidebar { border-right: none; border-bottom: 1px solid #e2e8f0; }
-  .verify-content { height: 600px; padding: 20px; }
+@media (max-width: 768px) {
+  .verify-details-inner {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
 }
 
 @media (max-width: 640px) {
-  .verify-header { padding: 0 16px; }
-  .d-none { display: none; }
-  .verify-sidebar-scroll { padding: 24px 16px; }
-  .verify-content { height: 500px; }
+  .verify-topbar {
+    padding: 0 16px;
+  }
+  .verify-logo {
+    display: none;
+  }
+  .verify-main-content {
+    padding: 0;
+  }
+  .verify-frame-container {
+    border-radius: 0;
+  }
+  .d-none {
+    display: none;
+  }
+  .verify-btn {
+    padding: 10px;
+  }
 }
 </style>

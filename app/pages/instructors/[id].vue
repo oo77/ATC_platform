@@ -330,8 +330,9 @@
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate leading-tight">{{ cert.name }}</p>
                     <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span v-if="(cert as any).series" class="text-[10px] font-semibold text-slate-400">Серия: <span class="text-slate-600 dark:text-slate-300">{{ (cert as any).series }}</span></span>
-                      <span v-if="cert.certificate_number" class="text-[10px] font-semibold text-slate-400">№ <span class="text-slate-600 dark:text-slate-300">{{ cert.certificate_number }}</span></span>
+                      <span v-if="(cert as any).series || cert.certificate_number" class="text-[10px] font-semibold text-slate-400">
+                        № <span class="text-slate-600 dark:text-slate-300">{{ [(cert as any).series, cert.certificate_number].filter(Boolean).join(' ') }}</span>
+                      </span>
                       <span v-if="cert.date" class="text-[10px] font-semibold text-slate-400">{{ formatDate(cert.date) }}</span>
                     </div>
                   </div>

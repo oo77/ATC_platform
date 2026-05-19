@@ -121,9 +121,9 @@ export default defineEventHandler(async (event) => {
   const ext = path.extname(filePath).toLowerCase().slice(1);
   const contentType = mimeTypes[ext] || "application/octet-stream";
 
-  // Отдаем файл
+  // Отдаем файл с Content-Disposition: attachment для принудительного скачивания!
   setResponseHeader(event, "Content-Type", contentType);
-  // Не ставим Content-Disposition: attachment, чтобы браузер мог отобразить в iframe/img
+  setResponseHeader(event, "Content-Disposition", `attachment; filename="certificate_${number}.${ext}"`);
   
   return fs.readFileSync(filePath);
 });

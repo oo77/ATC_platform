@@ -252,23 +252,29 @@ export const usePDFExport = () => {
             margin: { left: margin, right: margin },
             head: [[
                 { content: 'Наименование курса / Course names', styles: { halign: 'center' } },
-                { content: 'Серия / Series', styles: { halign: 'center' } },
-                { content: '№ сертификата / No.', styles: { halign: 'center' } },
+                { content: 'Серия и № сертификата / Series and No.', styles: { halign: 'center' } },
                 { content: 'Дата / Date', styles: { halign: 'center' } },
             ]],
-            body: (instructor.certificates?.length ? (instructor.certificates as any[]) : [{ name: '—', date: '', series: '', certificate_number: '' }]).map(cert => [
-                cert.name || '—',
-                cert.series || '—',
-                cert.certificate_number ? `№ ${cert.certificate_number}` : '—',
-                formatDate(cert.date) || '—',
-            ]),
+            body: (instructor.certificates?.length ? (instructor.certificates as any[]) : [{ name: '—', date: '', series: '', certificate_number: '' }]).map(cert => {
+                let docNumber = [cert.series, cert.certificate_number].filter(Boolean).join(' ');
+                if (docNumber) {
+                    docNumber = `№ ${docNumber}`;
+                } else {
+                    docNumber = '—';
+                }
+                
+                return [
+                    cert.name || '—',
+                    docNumber,
+                    formatDate(cert.date) || '—',
+                ];
+            }),
             theme: 'grid',
             styles: { font: 'Montserrat', fontSize: 8, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.1, halign: 'left', cellPadding: 2.5 },
             headStyles: { fillColor: [255, 255, 255], font: 'Montserrat', fontStyle: 'bold', halign: 'center', fontSize: 8 },
             columnStyles: {
-                1: { cellWidth: 22, halign: 'center' },
-                2: { cellWidth: 28, halign: 'center' },
-                3: { cellWidth: 30, halign: 'center' },
+                1: { cellWidth: 50, halign: 'center' },
+                2: { cellWidth: 30, halign: 'center' },
             }
         });
 
