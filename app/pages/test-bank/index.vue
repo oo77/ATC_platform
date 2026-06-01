@@ -1,433 +1,344 @@
 <template>
   <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Заголовок страницы -->
-    <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h2 class="text-title-md2 font-bold text-black dark:text-white">
-          Банк тестов
-        </h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Управление банками вопросов и шаблонами тестов
-        </p>
-      </div>
-      <div class="flex gap-3">
-        <UiButton 
-          v-if="canManageTestBanks"
-          variant="outline"
-          @click="navigateTo('/test-bank/templates')"
-          class="flex items-center gap-2"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Шаблоны тестов
-        </UiButton>
-        <UiButton 
-          v-if="canManageTestBanks"
-          @click="openCreateModal"
-          class="flex items-center gap-2"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-          </svg>
-          Создать банк вопросов
-        </UiButton>
+    <!-- Header Section -->
+    <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+      <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div class="space-y-2">
+          <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+            Банк тестов
+          </h1>
+          <p class="text-slate-500 font-medium">
+            Управление банками вопросов и шаблонами тестов
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <UiButton
+            v-if="canManageTestBanks"
+            variant="primary"
+            size="sm"
+            class="h-10 px-4 gap-2 font-bold shadow-sm"
+            @click="openCreateModal"
+          >
+            <Plus class="w-4 h-4" />
+            Создать банк
+          </UiButton>
+        </div>
       </div>
     </div>
 
-    <!-- Статистика -->
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-4 mb-6">
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-          </div>
+    <!-- Bento Box Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Всего банков</h3>
-            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.totalBanks }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Всего банков</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.totalBanks }}</h3>
+          </div>
+          <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
+            <Library class="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
-            <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Активных банков</h3>
-            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.activeBanks }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Активных</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.activeBanks }}</h3>
+          </div>
+          <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
+            <CheckCircle class="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
-            <svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Всего вопросов</h3>
-            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.totalQuestions }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Вопросов</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.totalQuestions }}</h3>
+          </div>
+          <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
+            <HelpCircle class="w-6 h-6" />
           </div>
         </div>
       </div>
 
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-full bg-info/10">
-            <svg class="w-6 h-6 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-            </svg>
-          </div>
+      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
+        <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">Категорий</h3>
-            <p class="text-2xl font-bold text-black dark:text-white">{{ stats.totalCategories }}</p>
+            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Категорий</p>
+            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.totalCategories }}</h3>
+          </div>
+          <div class="rounded-xl bg-info/10 p-3 text-info transition-transform group-hover:rotate-12">
+            <Tags class="w-6 h-6" />
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs (связанные подразделы test-bank) -->
+    <div class="mb-8 overflow-x-auto custom-scrollbar pb-2">
+      <div class="inline-flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800">
+        <nav class="flex gap-1" aria-label="Tabs">
+          <button
+            @click="navigateTo('/test-bank')"
+            :class="['flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap', $route.path === '/test-bank' ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200']"
+          >
+            <Library class="h-4 w-4" />
+            Банки вопросов
+          </button>
+          <button
+            @click="navigateTo('/test-templates')"
+            :class="['flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap', $route.path === '/test-templates' ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200']"
+          >
+            <FileText class="h-4 w-4" />
+            Шаблоны тестов
+          </button>
+        </nav>
       </div>
     </div>
 
     <!-- Фильтры и поиск -->
-    <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6 mb-6">
-      <div class="flex items-center gap-3 mb-4">
-        <div class="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-          <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6 mb-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Filter class="w-5 h-5" />
+          </div>
+          <h4 class="text-lg font-bold text-slate-900 dark:text-white">
+            Фильтры
+          </h4>
         </div>
-        <h4 class="text-lg font-semibold text-black dark:text-white">Фильтры</h4>
         <button
           v-if="hasActiveFilters"
           @click="resetFilters"
-          class="ml-auto text-sm text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+          class="text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <RotateCcw class="w-4 h-4" />
           Сбросить фильтры
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="flex flex-col gap-6">
         <!-- Поиск -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Поиск
-          </label>
-          <div class="relative">
-            <input
-              v-model="filters.search"
-              type="text"
-              placeholder="Название, код банка..."
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-10 pr-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-              @input="handleFilterChange"
-            />
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
+        <div class="relative max-w-xl">
+          <input
+            v-model="filters.search"
+            type="text"
+            placeholder="Поиск по названию, коду банка..."
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium"
+            @input="handleFilterChange"
+          />
+          <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
         </div>
 
-        <!-- Категория -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Категория
-          </label>
-          <div class="relative">
-            <select
-              v-model="filters.category"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
-              @change="handleFilterChange"
-            >
-              <option value="">Все категории</option>
-              <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-            </select>
-            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Категория -->
+          <div class="space-y-3">
+            <label class="flex text-xs font-bold text-slate-400 uppercase tracking-widest items-center gap-2">
+              <Tags class="w-3.5 h-3.5" />
+              Категория
+            </label>
+            <div class="relative">
+              <select
+                v-model="filters.category"
+                class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 appearance-none font-medium text-sm"
+                @change="handleFilterChange"
+              >
+                <option value="">Все категории</option>
+                <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+              </select>
+              <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            </div>
           </div>
-        </div>
 
-        <!-- Статус -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Статус
-          </label>
-          <div class="relative">
-            <select
-              v-model="filters.isActive"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
-              @change="handleFilterChange"
-            >
-              <option :value="undefined">Все</option>
-              <option :value="true">Активные</option>
-              <option :value="false">Неактивные</option>
-            </select>
-            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
+          <!-- Статус -->
+          <div class="space-y-3">
+            <label class="flex text-xs font-bold text-slate-400 uppercase tracking-widest items-center gap-2">
+              <Activity class="w-3.5 h-3.5" />
+              Статус
+            </label>
+            <div class="flex flex-wrap gap-2">
+              <button
+                @click="filters.isActive = undefined; handleFilterChange()"
+                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+                :class="filters.isActive === undefined ? 'bg-slate-800 text-white shadow-md dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
+              >
+                Все
+              </button>
+              <button
+                @click="filters.isActive = true; handleFilterChange()"
+                class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5"
+                :class="filters.isActive === true ? 'bg-success text-white shadow-md shadow-success/20' : 'bg-success/5 text-success hover:bg-success/10 border border-success/20'"
+              >
+                <span v-if="filters.isActive === true" class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                Активные
+              </button>
+              <button
+                @click="filters.isActive = false; handleFilterChange()"
+                class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5"
+                :class="filters.isActive === false ? 'bg-slate-500 text-white shadow-md dark:bg-slate-400 dark:text-slate-900' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'"
+              >
+                Неактивные
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Список банков -->
-    <div class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden">
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+      <!-- Загрузка -->
       <div v-if="loading" class="p-12 text-center">
         <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        <p class="mt-4 text-gray-600 dark:text-gray-400">Загрузка банков вопросов...</p>
+        <p class="mt-4 text-slate-500 font-medium tracking-wide">
+          Загрузка банков вопросов...
+        </p>
       </div>
 
-      <div v-else-if="banks.length === 0" class="p-12 text-center text-gray-500 dark:text-gray-400">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-        </svg>
-        <p class="mt-4 text-lg font-medium">Банки вопросов не найдены</p>
-        <template v-if="canManageTestBanks">
-          <p class="mt-2">Создайте первый банк вопросов для хранения вопросов тестов</p>
-          <UiButton 
-            @click="openCreateModal"
-            class="mt-4 inline-flex items-center gap-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Создать банк вопросов
-          </UiButton>
-        </template>
-        <p v-else class="mt-2">Банки вопросов пока не созданы</p>
+      <!-- Пустой список -->
+      <div
+        v-else-if="banks.length === 0"
+        class="py-20 px-6 text-center text-slate-500 dark:text-slate-400"
+      >
+        <div class="bg-slate-50 dark:bg-slate-800/50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Library class="h-10 w-10 text-slate-400" />
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Банки вопросов не найдены</h3>
+        <p class="max-w-md mx-auto text-slate-500">
+          Создайте первый банк вопросов, нажав кнопку "Создать банк" в правом верхнем углу
+        </p>
       </div>
 
-      <div v-else>
-        <!-- Табличное отображение на десктопе -->
-        <div class="hidden md:block overflow-x-auto">
-          <table class="w-full">
-            <thead>
-              <tr class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Банк вопросов
-                </th>
-                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Код
-                </th>
-                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Категория
-                </th>
-                <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Вопросов
-                </th>
-                <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Шаблонов
-                </th>
-                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Статус
-                </th>
-                <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Действия
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              <tr
-                v-for="bank in banks"
-                :key="bank.id"
-                class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <td class="px-6 py-4">
-                  <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div class="font-medium text-gray-900 dark:text-white">{{ bank.name }}</div>
-                      <div v-if="bank.description" class="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">
-                        {{ bank.description }}
-                      </div>
-                    </div>
+      <!-- Таблица -->
+      <div v-else class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Банк</th>
+              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Код</th>
+              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Категория</th>
+              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Вопросов</th>
+              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Шаблонов</th>
+              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Статус</th>
+              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Действия</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+            <tr
+              v-for="bank in banks"
+              :key="bank.id"
+              class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+            >
+              <td class="px-6 py-4 align-middle">
+                <div class="flex items-center gap-4">
+                  <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold shadow-inner border border-primary/10">
+                    <Library class="w-5 h-5" />
                   </div>
-                </td>
-                <td class="px-6 py-4">
-                  <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:text-gray-200">
-                    {{ bank.code }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                  {{ bank.category || '—' }}
-                </td>
-                <td class="px-6 py-4 text-center">
-                  <span class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                    {{ bank.questions_count || 0 }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-center">
-                  <span class="inline-flex items-center rounded-full bg-info/10 px-2.5 py-0.5 text-xs font-medium text-info">
-                    {{ bank.templates_count || 0 }}
-                  </span>
-                </td>
-                <td class="px-6 py-4">
-                  <span
-                    :class="[
-                      'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                      bank.is_active
-                        ? 'bg-success/10 text-success'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    ]"
+                  <div>
+                    <h5 class="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
+                      {{ bank.name }}
+                    </h5>
+                    <p v-if="bank.description" class="text-sm text-slate-500 line-clamp-1 max-w-xs">
+                      {{ bank.description }}
+                    </p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 align-middle">
+                <span class="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {{ bank.code }}
+                </span>
+              </td>
+              <td class="px-6 py-4 align-middle">
+                <span v-if="bank.category" class="inline-flex items-center rounded-full bg-info/10 px-2.5 py-1 text-xs font-bold text-info">
+                  {{ bank.category }}
+                </span>
+                <span v-else class="text-slate-400 font-medium">—</span>
+              </td>
+              <td class="px-6 py-4 align-middle text-center">
+                <span class="inline-flex items-center justify-center min-w-10 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-bold text-primary">
+                  {{ bank.questions_count || 0 }}
+                </span>
+              </td>
+              <td class="px-6 py-4 align-middle text-center">
+                <span class="inline-flex items-center justify-center min-w-10 rounded-full bg-info/10 px-2.5 py-1 text-sm font-bold text-info">
+                  {{ bank.templates_count || 0 }}
+                </span>
+              </td>
+              <td class="px-6 py-4 align-middle text-right">
+                <span
+                  :class="[
+                    'inline-flex items-center rounded-full px-3 py-1 text-xs font-bold tracking-wide uppercase',
+                    bank.is_active
+                      ? 'bg-success/10 text-success'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
+                  ]"
+                >
+                  {{ bank.is_active ? 'Активен' : 'Неактивен' }}
+                </span>
+              </td>
+              <td class="px-6 py-4 align-middle text-right">
+                <div class="flex items-center justify-end gap-1">
+                  <button
+                    @click="viewBank(bank)"
+                    class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-colors"
+                    title="Просмотр"
                   >
-                    {{ bank.is_active ? 'Активен' : 'Неактивен' }}
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-right">
-                  <div class="flex items-center justify-end gap-2">
-                    <button
-                      @click="viewBank(bank)"
-                      class="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                      title="Просмотр вопросов"
-                    >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    </button>
-                    <button
-                      v-if="canManageTestBanks"
-                      @click="openEditModal(bank)"
-                      class="p-2 text-gray-500 hover:text-warning hover:bg-warning/10 rounded-lg transition-colors"
-                      title="Редактировать"
-                    >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button
-                      v-if="canManageTestBanks"
-                      @click="confirmDelete(bank)"
-                      class="p-2 text-gray-500 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
-                      title="Удалить"
-                    >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Карточки на мобильных -->
-        <div class="md:hidden divide-y divide-gray-200 dark:divide-gray-700">
-          <div
-            v-for="bank in banks"
-            :key="bank.id"
-            class="p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-          >
-            <div class="flex items-start justify-between mb-3">
-              <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
+                    <Eye class="w-5 h-5" />
+                  </button>
+                  <button
+                    v-if="canManageTestBanks"
+                    @click="openEditModal(bank)"
+                    class="p-2 text-slate-500 hover:text-warning hover:bg-warning/10 rounded-xl transition-colors"
+                    title="Редактировать"
+                  >
+                    <Pencil class="w-5 h-5" />
+                  </button>
+                  <button
+                    v-if="canManageTestBanks"
+                    @click="confirmDelete(bank)"
+                    class="p-2 text-slate-500 hover:text-danger hover:bg-danger/10 rounded-xl transition-colors"
+                    title="Удалить"
+                  >
+                    <Trash2 class="w-5 h-5" />
+                  </button>
                 </div>
-                <div>
-                  <div class="font-medium text-gray-900 dark:text-white">{{ bank.name }}</div>
-                  <span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs font-medium text-gray-800 dark:text-gray-200">
-                    {{ bank.code }}
-                  </span>
-                </div>
-              </div>
-              <span
-                :class="[
-                  'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                  bank.is_active
-                    ? 'bg-success/10 text-success'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                ]"
-              >
-                {{ bank.is_active ? 'Активен' : 'Неактивен' }}
-              </span>
-            </div>
-
-            <div class="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
-              <span class="flex items-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {{ bank.questions_count || 0 }} вопросов
-              </span>
-              <span class="flex items-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                {{ bank.templates_count || 0 }} шаблонов
-              </span>
-            </div>
-
-            <div class="flex items-center justify-end gap-2">
-              <button
-                @click="viewBank(bank)"
-                class="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              </button>
-              <button
-                v-if="canManageTestBanks"
-                @click="openEditModal(bank)"
-                class="p-2 text-gray-500 hover:text-warning hover:bg-warning/10 rounded-lg transition-colors"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </button>
-              <button
-                v-if="canManageTestBanks"
-                @click="confirmDelete(bank)"
-                class="p-2 text-gray-500 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <!-- Пагинация -->
-      <div v-if="pagination.totalPages > 1" class="border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+      <div
+        v-if="pagination.totalPages > 1"
+        class="border-t border-slate-200 dark:border-slate-800 px-6 py-4 bg-slate-50/30 dark:bg-slate-800/30"
+      >
         <div class="flex items-center justify-between">
-          <div class="text-sm text-gray-700 dark:text-gray-300">
-            Показано <span class="font-medium">{{ ((pagination.page - 1) * pagination.limit) + 1 }}</span>
+          <div class="text-sm font-medium text-slate-500">
+            Показано
+            <span class="font-bold text-slate-900 dark:text-white">{{ (pagination.page - 1) * pagination.limit + 1 }}</span>
             -
-            <span class="font-medium">{{ Math.min(pagination.page * pagination.limit, pagination.total) }}</span>
+            <span class="font-bold text-slate-900 dark:text-white">{{ Math.min(pagination.page * pagination.limit, pagination.total) }}</span>
             из
-            <span class="font-medium">{{ pagination.total }}</span>
-            банков
+            <span class="font-bold text-slate-900 dark:text-white">{{ pagination.total }}</span>
           </div>
           <div class="flex gap-2">
             <button
               @click="changePage(pagination.page - 1)"
               :disabled="pagination.page === 1"
-              class="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+              class="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all"
             >
               Назад
             </button>
             <button
               @click="changePage(pagination.page + 1)"
               :disabled="pagination.page >= pagination.totalPages"
-              class="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+              class="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all"
             >
               Вперёд
             </button>
@@ -446,38 +357,38 @@
       <form @submit.prevent="saveBank" class="space-y-4">
         <!-- Название -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
             Название <span class="text-danger">*</span>
           </label>
           <input
             v-model="form.name"
             type="text"
             placeholder="Например: Охрана труда - Базовый уровень"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
-            :class="{ 'border-danger': formErrors.name }"
+            class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium"
+            :class="{ 'border-danger ring-2 ring-danger/10': formErrors.name }"
           />
-          <p v-if="formErrors.name" class="mt-1 text-sm text-danger">{{ formErrors.name }}</p>
+          <p v-if="formErrors.name" class="mt-1 text-sm text-danger font-medium">{{ formErrors.name }}</p>
         </div>
 
         <!-- Код -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
             Код <span class="text-danger">*</span>
           </label>
           <input
             v-model="form.code"
             type="text"
             placeholder="Например: OT-BASE"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary uppercase"
-            :class="{ 'border-danger': formErrors.code }"
+            class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium uppercase"
+            :class="{ 'border-danger ring-2 ring-danger/10': formErrors.code }"
           />
-          <p v-if="formErrors.code" class="mt-1 text-sm text-danger">{{ formErrors.code }}</p>
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Уникальный код для идентификации банка</p>
+          <p v-if="formErrors.code" class="mt-1 text-sm text-danger font-medium">{{ formErrors.code }}</p>
+          <p class="mt-1 text-xs text-slate-500 font-medium">Уникальный код для идентификации банка</p>
         </div>
 
         <!-- Категория -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
             Категория
           </label>
           <div class="relative">
@@ -486,39 +397,39 @@
               type="text"
               placeholder="Например: Охрана труда"
               list="categories-list"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium"
             />
             <datalist id="categories-list">
               <option v-for="cat in categories" :key="cat" :value="cat" />
             </datalist>
           </div>
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Для группировки банков вопросов</p>
+          <p class="mt-1 text-xs text-slate-500 font-medium">Для группировки банков вопросов</p>
         </div>
 
         <!-- Описание -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
             Описание
           </label>
           <textarea
             v-model="form.description"
             rows="3"
             placeholder="Краткое описание банка вопросов..."
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary resize-none"
+            class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium resize-none"
           ></textarea>
         </div>
 
         <!-- Активность -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
           <label class="relative inline-flex items-center cursor-pointer">
             <input
               v-model="form.is_active"
               type="checkbox"
               class="sr-only peer"
             />
-            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 dark:peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
           </label>
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span class="text-sm font-bold text-slate-700 dark:text-slate-300">
             Банк активен
           </span>
         </div>
@@ -562,6 +473,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { Plus, Library, CheckCircle, HelpCircle, Tags, Filter, RotateCcw, Search, ChevronDown, Activity, Eye, Pencil, Trash2, FileText } from 'lucide-vue-next';
 
 // Определяем мета-данные страницы
 definePageMeta({
@@ -571,6 +483,8 @@ definePageMeta({
 // Используем authFetch для авторизованных запросов
 const { authFetch } = useAuthFetch();
 const { canManageTestBanks } = usePermissions();
+const router = useRouter();
+const route = useRoute();
 
 // Состояние
 const loading = ref(false);
@@ -603,7 +517,9 @@ const stats = computed(() => {
 
 // Проверка активных фильтров
 const hasActiveFilters = computed(() => {
-  return filters.value.search !== '' || filters.value.category !== '' || filters.value.isActive !== undefined;
+  return filters.value.search !== '' ||
+    filters.value.category !== '' ||
+    filters.value.isActive !== undefined;
 });
 
 // Модальные окна
@@ -656,7 +572,7 @@ const loadBanks = async () => {
     }
 
     const response = await authFetch(`/api/test-bank/banks?${params.toString()}`);
-    
+
     if (response.success) {
       banks.value = response.banks;
       pagination.value.total = response.total;

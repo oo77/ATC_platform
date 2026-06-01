@@ -191,7 +191,7 @@
           <UiButton
             v-if="isPreviewMode"
             class="flex-1"
-            @click="navigateTo('/test-bank/templates')"
+            @click="navigateTo('/test-templates')"
           >
             <svg
               class="w-5 h-5 mr-2"
@@ -262,7 +262,7 @@
               variant="white"
               size="xs"
               class="text-amber-600! py-1!"
-              @click="navigateTo('/test-bank/templates')"
+              @click="navigateTo('/test-templates')"
             >
               Выйти из режима
             </UiButton>
