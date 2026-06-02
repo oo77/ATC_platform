@@ -462,7 +462,8 @@
                             <th class="pb-3 font-medium text-slate-500 text-xs text-center">Балл</th>
                             <th class="pb-3 font-medium text-slate-500 text-xs text-center">Статус</th>
                             <th class="pb-3 font-medium text-slate-500 text-xs text-center">Время</th>
-                            <th class="pb-3 px-4 font-medium text-slate-500 text-xs">Дата</th>
+                            <th class="pb-3 font-medium text-slate-500 text-xs">Дата</th>
+                            <th class="pb-3 pr-4 font-medium text-slate-500 text-xs text-right">Ответы</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
@@ -488,9 +489,18 @@
                             </td>
                             <td class="py-3 text-center text-slate-500 text-xs">{{ formatDuration(session.timeSpentSeconds) }}</td>
                             <td class="py-3 px-4 text-slate-500 text-xs">{{ formatDate(session.completedAt) }}</td>
+                            <td class="py-3 pr-4 text-right">
+                              <button
+                                @click="viewSessionDetails(session.sessionId)"
+                                class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 active:scale-95"
+                              >
+                                <ClipboardListIcon class="w-3 h-3 group-hover:rotate-6 transition-transform" />
+                                Ответы
+                              </button>
+                            </td>
                           </tr>
                           <tr v-if="filteredSessions.length === 0">
-                            <td colspan="5" class="py-8 text-center text-sm text-slate-400">Нет записей</td>
+                            <td colspan="6" class="py-8 text-center text-sm text-slate-400">Нет записей</td>
                           </tr>
                         </tbody>
                       </table>
@@ -618,6 +628,7 @@ import {
   ArrowLeft,
   FileText as FileTextIcon,
   Eye as EyeIcon,
+  ClipboardList as ClipboardListIcon,
   Folder as FolderIcon,
   Settings as SettingsIcon,
   HelpCircle as HelpCircleIcon,

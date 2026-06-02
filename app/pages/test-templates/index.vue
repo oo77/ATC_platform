@@ -345,121 +345,270 @@
     <UiModal
       :is-open="modalOpen"
       :title="editingTemplate ? 'Редактировать шаблон' : 'Создать шаблон'"
-      size="lg"
+      size="2xl"
       @close="closeModal"
     >
-      <form @submit.prevent="saveTemplate" class="space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Название <span class="text-danger">*</span>
-            </label>
-            <input
-              v-model="form.name"
-              type="text"
-              placeholder="Например: Тест по охране труда"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium"
-              :class="{ 'border-danger ring-2 ring-danger/10': formErrors.name }"
-            />
-            <p v-if="formErrors.name" class="mt-1 text-sm text-danger font-medium">{{ formErrors.name }}</p>
-          </div>
+      <form @submit.prevent="saveTemplate" class="space-y-6">
+        <!-- Basic Info -->
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4">
+          <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+            <FileText class="w-4 h-4" />
+            Основная информация
+          </h4>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Название <span class="text-danger">*</span>
+              </label>
+              <input
+                v-model="form.name"
+                type="text"
+                placeholder="Например: Тест по охране труда"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-sm font-medium"
+                :class="{ 'border-danger ring-2 ring-danger/10': formErrors.name }"
+              />
+              <p v-if="formErrors.name" class="mt-1 text-xs text-danger font-medium">{{ formErrors.name }}</p>
+            </div>
 
-          <div>
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Код <span class="text-danger">*</span>
-            </label>
-            <input
-              v-model="form.code"
-              type="text"
-              placeholder="Например: OT-TEST-001"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium uppercase"
-              :class="{ 'border-danger ring-2 ring-danger/10': formErrors.code }"
-            />
-            <p v-if="formErrors.code" class="mt-1 text-sm text-danger font-medium">{{ formErrors.code }}</p>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Код <span class="text-danger">*</span>
+              </label>
+              <input
+                v-model="form.code"
+                type="text"
+                placeholder="Например: OT-TEST-001"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-sm font-medium uppercase"
+                :class="{ 'border-danger ring-2 ring-danger/10': formErrors.code }"
+              />
+              <p v-if="formErrors.code" class="mt-1 text-xs text-danger font-medium">{{ formErrors.code }}</p>
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Банк вопросов <span class="text-danger">*</span>
+              </label>
+              <div class="relative">
+                <select
+                  v-model="form.bank_id"
+                  class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
+                  :class="{ 'border-danger ring-2 ring-danger/10': formErrors.bank_id }"
+                >
+                  <option value="">Выберите банк вопросов</option>
+                  <option v-for="bank in banks" :key="bank.id" :value="bank.id">{{ bank.name }} ({{ bank.code }})</option>
+                </select>
+                <Library class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+              <p v-if="formErrors.bank_id" class="mt-1 text-xs text-danger font-medium">{{ formErrors.bank_id }}</p>
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Описание
+              </label>
+              <textarea
+                v-model="form.description"
+                rows="2"
+                placeholder="Краткое описание шаблона теста..."
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-sm font-medium resize-none"
+              ></textarea>
+            </div>
           </div>
         </div>
 
-        <div>
-          <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-            Банк вопросов <span class="text-danger">*</span>
-          </label>
-          <div class="relative">
-            <select
-              v-model="form.bank_id"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 appearance-none font-medium"
-              :class="{ 'border-danger ring-2 ring-danger/10': formErrors.bank_id }"
-            >
-              <option value="">Выберите банк вопросов</option>
-              <option v-for="bank in banks" :key="bank.id" :value="bank.id">{{ bank.name }} ({{ bank.code }})</option>
-            </select>
-            <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        <!-- Test Settings -->
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4">
+          <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+            <Settings class="w-4 h-4" />
+            Настройки теста
+          </h4>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Режим вопросов
+              </label>
+              <div class="relative">
+                <select
+                  v-model="form.questions_mode"
+                  class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary transition-all text-sm font-medium appearance-none"
+                >
+                  <option value="all">Все вопросы</option>
+                  <option value="random">Случайные</option>
+                  <option value="manual">Вручную</option>
+                </select>
+                <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
+
+            <div v-if="form.questions_mode !== 'all'">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Количество
+              </label>
+              <input
+                v-model.number="form.questions_count"
+                type="number"
+                min="1"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary transition-all text-sm font-medium"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Время (мин)
+              </label>
+              <input
+                v-model.number="form.time_limit_minutes"
+                type="number"
+                min="0"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary transition-all text-sm font-medium"
+              />
+              <p class="mt-1 text-[10px] text-slate-400">0 = без лимита</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Проходной балл
+              </label>
+              <div class="relative">
+                <input
+                  v-model.number="form.passing_score"
+                  type="number"
+                  min="1"
+                  max="100"
+                  class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-3 pr-8 outline-none focus:border-primary transition-all text-sm font-medium"
+                />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Макс попыток
+              </label>
+              <input
+                v-model.number="form.max_attempts"
+                type="number"
+                min="1"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary transition-all text-sm font-medium"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Вопросов на стр.
+              </label>
+              <input
+                v-model.number="form.questions_per_page"
+                type="number"
+                min="0"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary transition-all text-sm font-medium"
+              />
+              <p class="mt-1 text-[10px] text-slate-400">0 = все сразу</p>
+            </div>
           </div>
-          <p v-if="formErrors.bank_id" class="mt-1 text-sm text-danger font-medium">{{ formErrors.bank_id }}</p>
         </div>
 
-        <div>
-          <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-            Описание
-          </label>
-          <textarea
-            v-model="form.description"
-            rows="2"
-            placeholder="Краткое описание шаблона теста..."
-            class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium resize-none"
-          ></textarea>
-        </div>
+        <!-- Display & Behavior Settings -->
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4">
+          <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+            <Eye class="w-4 h-4" />
+            Отображение и поведение
+          </h4>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                Показ результатов
+              </label>
+              <div class="relative">
+                <select
+                  v-model="form.show_results"
+                  class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary transition-all text-sm font-medium appearance-none"
+                >
+                  <option value="immediately">Сразу</option>
+                  <option value="after_deadline">После дедлайна</option>
+                  <option value="manual">Вручную</option>
+                  <option value="never">Никогда</option>
+                </select>
+                <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
 
-        <div class="grid grid-cols-4 gap-4">
-          <div>
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Время (мин)
-            </label>
-            <input
-              v-model.number="form.time_limit_minutes"
-              type="number"
-              min="0"
-              placeholder="0"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 outline-none focus:border-primary dark:border-slate-700 font-medium"
-            />
-            <p class="mt-1 text-xs text-slate-500 font-medium">0 = без лимита</p>
-          </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                Возврат к вопросам
+              </label>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input v-model="form.allow_back" type="checkbox" class="sr-only peer" />
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <span class="ml-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {{ form.allow_back ? 'Разрешён' : 'Запрещён' }}
+                </span>
+              </label>
+            </div>
 
-          <div>
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Проходной балл %
-            </label>
-            <input
-              v-model.number="form.passing_score"
-              type="number"
-              min="1"
-              max="100"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 outline-none focus:border-primary dark:border-slate-700 font-medium"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Макс попыток
-            </label>
-            <input
-              v-model.number="form.max_attempts"
-              type="number"
-              min="1"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 outline-none focus:border-primary dark:border-slate-700 font-medium"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Активен
-            </label>
-            <div class="flex items-center h-full pt-2">
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+                Активен
+              </label>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input v-model="form.is_active" type="checkbox" class="sr-only peer" />
                 <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <span class="ml-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {{ form.is_active ? 'Да' : 'Нет' }}
+                </span>
               </label>
             </div>
           </div>
+        </div>
+
+        <!-- Shuffle Settings -->
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4">
+          <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+            <Shuffle class="w-4 h-4" />
+            Перемешивание
+          </h4>
+          <div class="flex flex-wrap gap-6">
+            <div class="flex items-center gap-3">
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input v-model="form.shuffle_questions" type="checkbox" class="sr-only peer" />
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Перемешивать вопросы</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input v-model="form.shuffle_options" type="checkbox" class="sr-only peer" />
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Перемешивать варианты</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Languages -->
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4">
+          <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+            <Globe class="w-4 h-4" />
+            Языки тестирования
+          </h4>
+          <div class="flex flex-wrap gap-3">
+            <button
+              v-for="lang in availableLanguages"
+              :key="lang.value"
+              type="button"
+              @click="toggleLanguage(lang.value)"
+              :class="[
+                'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border-2',
+                form.allowed_languages?.includes(lang.value)
+                  ? 'bg-primary/10 border-primary text-primary dark:bg-primary/20'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-primary/50'
+              ]"
+            >
+              <span class="text-lg">{{ lang.flag }}</span>
+              {{ lang.label }}
+            </button>
+          </div>
+          <p class="mt-2 text-xs text-slate-400">Выберите языки, доступные для прохождения теста. Если не выбрано - все языки.</p>
         </div>
       </form>
 
@@ -499,7 +648,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { Plus, FileText, Library, CheckCircle, Globe, Filter, RotateCcw, Search, ChevronDown, Activity, Eye, Pencil, Trash2 } from 'lucide-vue-next';
+import { Plus, FileText, Library, CheckCircle, Globe, Filter, RotateCcw, Search, ChevronDown, Activity, Eye, Pencil, Trash2, Settings, Shuffle } from 'lucide-vue-next';
 
 definePageMeta({
   layout: 'default',
@@ -553,6 +702,12 @@ const deleteModalOpen = ref(false);
 const editingTemplate = ref(null);
 const deletingTemplate = ref(null);
 
+const availableLanguages = [
+  { value: 'ru', label: 'Русский', flag: '🇷🇺' },
+  { value: 'uz', label: "O'zbek", flag: '🇺🇿' },
+  { value: 'en', label: 'English', flag: '🇬🇧' },
+];
+
 const form = ref({
   name: '',
   code: '',
@@ -562,6 +717,14 @@ const form = ref({
   passing_score: 70,
   max_attempts: 3,
   is_active: true,
+  questions_mode: 'all',
+  questions_count: 10,
+  questions_per_page: 0,
+  shuffle_questions: false,
+  shuffle_options: false,
+  show_results: 'immediately',
+  allow_back: true,
+  allowed_languages: [],
 });
 
 const formErrors = ref({
@@ -569,6 +732,16 @@ const formErrors = ref({
   code: '',
   bank_id: '',
 });
+
+const toggleLanguage = (lang) => {
+  if (!form.value.allowed_languages) form.value.allowed_languages = [];
+  const idx = form.value.allowed_languages.indexOf(lang);
+  if (idx === -1) {
+    form.value.allowed_languages.push(lang);
+  } else {
+    form.value.allowed_languages.splice(idx, 1);
+  }
+};
 
 const notification = ref({
   show: false,
@@ -655,6 +828,14 @@ const openCreateModal = () => {
     passing_score: 70,
     max_attempts: 3,
     is_active: true,
+    questions_mode: 'all',
+    questions_count: 10,
+    questions_per_page: 0,
+    shuffle_questions: false,
+    shuffle_options: false,
+    show_results: 'immediately',
+    allow_back: true,
+    allowed_languages: [],
   };
   formErrors.value = { name: '', code: '', bank_id: '' };
   modalOpen.value = true;
@@ -671,6 +852,14 @@ const openEditModal = (template) => {
     passing_score: template.passing_score || 70,
     max_attempts: template.max_attempts || 3,
     is_active: template.is_active,
+    questions_mode: template.questions_mode || 'all',
+    questions_count: template.questions_count || 10,
+    questions_per_page: template.questions_per_page || 0,
+    shuffle_questions: template.shuffle_questions || false,
+    shuffle_options: template.shuffle_options || false,
+    show_results: template.show_results || 'immediately',
+    allow_back: template.allow_back !== false,
+    allowed_languages: template.allowed_languages || [],
   };
   formErrors.value = { name: '', code: '', bank_id: '' };
   modalOpen.value = true;
@@ -725,6 +914,14 @@ const saveTemplate = async () => {
       passing_score: form.value.passing_score || 70,
       max_attempts: form.value.max_attempts || 3,
       is_active: form.value.is_active,
+      questions_mode: form.value.questions_mode || 'all',
+      questions_count: form.value.questions_count || 10,
+      questions_per_page: form.value.questions_per_page || 0,
+      shuffle_questions: form.value.shuffle_questions || false,
+      shuffle_options: form.value.shuffle_options || false,
+      show_results: form.value.show_results || 'immediately',
+      allow_back: form.value.allow_back !== false,
+      allowed_languages: form.value.allowed_languages?.length > 0 ? form.value.allowed_languages : undefined,
     };
 
     let response;
