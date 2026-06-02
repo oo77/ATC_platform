@@ -92,24 +92,7 @@
 
       <!-- Navigation Tabs -->
       <div class="mb-8 overflow-x-auto custom-scrollbar pb-2">
-        <div class="inline-flex rounded-2xl bg-slate-100 dark:bg-slate-800 p-1.5">
-          <nav class="flex gap-1" aria-label="Tabs">
-            <button
-              @click="navigateTo('/test-bank')"
-              :class="['flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap', $route.path === '/test-bank' || $route.path.startsWith('/test-bank/') ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200']"
-            >
-              <Library class="h-4 w-4" />
-              Банки вопросов
-            </button>
-            <button
-              @click="navigateTo('/test-templates')"
-              :class="['flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap', $route.path === '/test-templates' ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200']"
-            >
-              <FileText class="h-4 w-4" />
-              Шаблоны тестов
-            </button>
-          </nav>
-        </div>
+        
       </div>
 
       <!-- Bento Box Metrics -->
