@@ -1,140 +1,84 @@
-@ -1,1708 +0,0 @@
 <template>
   <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
     <!-- Загрузка -->
-    <div v-if="loading" class="flex items-center justify-center h-64">
-      <div
-        class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-      ></div>
+    <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
+      <div class="text-center">
+        <div
+          class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+        ></div>
+        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
+          Загрузка шаблона теста...
+        </p>
+      </div>
     </div>
 
     <!-- Ошибка -->
-    <div v-else-if="error" class="text-center py-12">
-      <svg
-        class="mx-auto h-12 w-12 text-danger"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-        />
-      </svg>
-      <p class="mt-4 text-lg font-medium text-danger">{{ error }}</p>
-      <UiButton class="mt-4" @click="navigateTo('/test-bank/templates')">
-        Вернуться к списку
-      </UiButton>
+    <div
+      v-else-if="error || !template"
+      class="flex items-center justify-center min-h-[400px]"
+    >
+      <div class="text-center max-w-md">
+        <div
+          class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6 text-slate-400"
+        >
+          <FileTextIcon class="w-12 h-12" />
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">
+          {{ error || "Шаблон теста не найден" }}
+        </h3>
+        <UiButton class="mt-8 shadow-lg" @click="$router.push('/test-bank/templates')"
+          >К списку шаблонов</UiButton
+        >
+      </div>
     </div>
 
-    <template v-else-if="template">
-      <!-- Хлебные крошки и заголовок -->
-      <div class="mb-6">
-        <nav
-          class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-4"
-        >
-          <NuxtLink
-            to="/test-bank"
-            class="hover:text-primary transition-colors"
-          >
-            Банк тестов
-          </NuxtLink>
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
+    <template v-else>
+      <!-- Header Section -->
+      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+        <!-- Breadcrumbs -->
+        <div class="mb-6">
           <NuxtLink
             to="/test-bank/templates"
-            class="hover:text-primary transition-colors"
+            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
           >
-            Шаблоны тестов
+            <div
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
+            >
+              <ArrowLeft
+                class="w-4 h-4 transition-transform group-hover:-translate-x-1"
+              />
+            </div>
+            Назад к списку
           </NuxtLink>
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-          <span class="text-black dark:text-white">{{ template.name }}</span>
-        </nav>
+        </div>
 
         <div
-          class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+          class="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between"
         >
+          <!-- Template Main Info -->
           <div class="flex items-center gap-4">
-            <div
-              class="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10"
-            >
-              <svg
-                class="w-7 h-7 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
+            <div class="shrink-0">
+              <div class="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                <FileTextIcon class="w-10 h-10 text-primary" />
+              </div>
             </div>
             <div>
-              <div class="flex items-center gap-3">
-                <h2 class="text-title-md2 font-bold text-black dark:text-white">
-                  {{ template.name }}
-                </h2>
-                <span
-                  :class="[
-                    'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                    template.is_active
-                      ? 'bg-success/10 text-success'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
-                  ]"
-                >
-                  {{ template.is_active ? "Активен" : "Неактивен" }}
-                </span>
+              <div class="flex items-center gap-2 mb-1">
+                <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">{{ template.name }}</h1>
+                <div class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border" :class="template.is_active ? 'border-success/20 bg-success/5 text-success' : 'border-slate-300 bg-slate-100 text-slate-500'">
+                  {{ template.is_active ? 'Активен' : 'Неактивен' }}
+                </div>
               </div>
-              <div class="flex items-center gap-3 mt-1">
-                <span
-                  class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-medium text-gray-800 dark:text-gray-200"
-                >
-                  {{ template.code }}
-                </span>
-                <span class="text-sm text-gray-600 dark:text-gray-400">
-                  Банк:
-                  <NuxtLink
-                    :to="`/test-bank/${template.bank_id}`"
-                    class="text-primary hover:underline"
-                    >{{ template.bank_name }}</NuxtLink
-                  >
-                </span>
-                <!-- Бейджи языков -->
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
+                <div class="flex items-center gap-1.5">
+                  <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono">{{ template.code }}</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <FolderIcon class="w-3.5 h-3.5 text-slate-400" />
+                  <NuxtLink :to="`/test-bank/${template.bank_id}`" class="hover:text-primary transition-colors">{{ template.bank_name }}</NuxtLink>
+                </div>
                 <div class="flex items-center gap-1 ml-2">
-                  <template
-                    v-if="
-                      template.allowed_languages &&
-                      template.allowed_languages.length > 0
-                    "
-                  >
+                  <template v-if="template.allowed_languages && template.allowed_languages.length > 0">
                     <span
                       v-for="lang in template.allowed_languages"
                       :key="lang"
@@ -144,1176 +88,505 @@
                       {{ languageFlags[lang] }}
                     </span>
                   </template>
-                  <span
-                    v-else
-                    class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
-                  >
-                    🌐 Все языки
+                  <span v-else class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
+                    🌐 Все
                   </span>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="flex gap-3">
-            <UiButton
-              variant="outline"
-              @click="previewTest"
-              class="flex items-center gap-2"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
-              </svg>
-              Предпросмотр
+          <!-- Actions -->
+          <div
+            class="flex flex-wrap items-center justify-center lg:justify-end gap-2"
+          >
+            <UiButton variant="outline" size="sm" class="h-9 px-3 gap-1.5 font-bold" @click="previewTest">
+              <EyeIcon class="w-3.5 h-3.5" /> Предпросмотр
             </UiButton>
           </div>
         </div>
       </div>
 
-      <!-- Основной контент в виде карточек -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Левая колонка - настройки -->
-        <div class="lg:col-span-2 space-y-6">
-          <!-- Основные настройки -->
-          <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-            <h3
-              class="text-lg font-semibold text-black dark:text-white mb-4 flex items-center gap-2"
-            >
-              <svg
-                class="w-5 h-5 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-              Основные настройки
-            </h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700"
-              >
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Режим вопросов</span
-                >
-                <span class="font-medium text-gray-900 dark:text-white">{{
-                  questionsModeLabels[template.questions_mode]
-                }}</span>
-              </div>
-
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700"
-              >
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Количество вопросов</span
-                >
-                <span class="font-medium text-gray-900 dark:text-white">
-                  {{
-                    template.questions_mode === "all"
-                      ? template.questions_total
-                      : template.questions_count
-                  }}
-                </span>
-              </div>
-
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700"
-              >
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Лимит времени</span
-                >
-                <span class="font-medium text-gray-900 dark:text-white">
-                  {{
-                    template.time_limit_minutes
-                      ? `${template.time_limit_minutes} минут`
-                      : "Без лимита"
-                  }}
-                </span>
-              </div>
-
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700"
-              >
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Проходной балл</span
-                >
-                <span class="font-medium text-gray-900 dark:text-white"
-                  >{{ template.passing_score }}%</span
-                >
-              </div>
-
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700"
-              >
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Максимум попыток</span
-                >
-                <span class="font-medium text-gray-900 dark:text-white">{{
-                  template.max_attempts
-                }}</span>
-              </div>
-
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700"
-              >
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Вопросов на странице</span
-                >
-                <span class="font-medium text-gray-900 dark:text-white">
-                  {{
-                    template.questions_per_page === 0
-                      ? "Все сразу"
-                      : template.questions_per_page
-                  }}
-                </span>
-              </div>
-
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700"
-              >
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Показ результатов</span
-                >
-                <span class="font-medium text-gray-900 dark:text-white">{{
-                  showResultsLabels[template.show_results]
-                }}</span>
-              </div>
-
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700"
-              >
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Возврат к вопросам</span
-                >
-                <span
-                  :class="[
-                    'font-medium',
-                    template.allow_back ? 'text-success' : 'text-danger',
-                  ]"
-                >
-                  {{ template.allow_back ? "Разрешён" : "Запрещён" }}
-                </span>
-              </div>
+      <!-- Bento Box Metrics Grid -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <!-- Questions Card -->
+        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
+          <div class="flex items-center justify-between">
+            <div class="min-w-0">
+              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Вопросов в банке</p>
+              <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">{{ template.questions_total }}</h3>
             </div>
-          </div>
-
-          <!-- Перемешивание -->
-          <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-            <h3
-              class="text-lg font-semibold text-black dark:text-white mb-4 flex items-center gap-2"
-            >
-              <svg
-                class="w-5 h-5 text-warning"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              Перемешивание
-            </h3>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div
-                class="flex items-center gap-3 p-3 rounded-lg"
-                :class="
-                  template.shuffle_questions
-                    ? 'bg-success/10'
-                    : 'bg-gray-100 dark:bg-gray-800'
-                "
-              >
-                <svg
-                  :class="[
-                    'w-5 h-5',
-                    template.shuffle_questions
-                      ? 'text-success'
-                      : 'text-gray-400',
-                  ]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    v-if="template.shuffle_questions"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                  <path
-                    v-else
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                <span class="text-gray-900 dark:text-white"
-                  >Перемешивать вопросы</span
-                >
-              </div>
-
-              <div
-                class="flex items-center gap-3 p-3 rounded-lg"
-                :class="
-                  template.shuffle_options
-                    ? 'bg-success/10'
-                    : 'bg-gray-100 dark:bg-gray-800'
-                "
-              >
-                <svg
-                  :class="[
-                    'w-5 h-5',
-                    template.shuffle_options ? 'text-success' : 'text-gray-400',
-                  ]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    v-if="template.shuffle_options"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                  <path
-                    v-else
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                <span class="text-gray-900 dark:text-white"
-                  >Перемешивать варианты ответов</span
-                >
-              </div>
-            </div>
-          </div>
-
-          <!-- Антипрокторинг -->
-          <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3
-                class="text-lg font-semibold text-black dark:text-white flex items-center gap-2"
-              >
-                <svg
-                  class="w-5 h-5 text-danger"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                Антипрокторинг
-              </h3>
-              <span
-                :class="[
-                  'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                  template.proctoring_enabled
-                    ? 'bg-success/10 text-success'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
-                ]"
-              >
-                {{ template.proctoring_enabled ? "Включён" : "Отключён" }}
-              </span>
-            </div>
-
-            <div
-              v-if="template.proctoring_enabled && template.proctoring_settings"
-              class="grid grid-cols-1 md:grid-cols-3 gap-4"
-            >
-              <div
-                class="flex items-center gap-3 p-3 rounded-lg"
-                :class="
-                  template.proctoring_settings.blockTabSwitch
-                    ? 'bg-danger/10'
-                    : 'bg-gray-100 dark:bg-gray-800'
-                "
-              >
-                <svg
-                  :class="[
-                    'w-5 h-5',
-                    template.proctoring_settings.blockTabSwitch
-                      ? 'text-danger'
-                      : 'text-gray-400',
-                  ]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                  />
-                </svg>
-                <span class="text-sm text-gray-900 dark:text-white"
-                  >Блокировка вкладок</span
-                >
-              </div>
-
-              <div
-                class="flex items-center gap-3 p-3 rounded-lg"
-                :class="
-                  template.proctoring_settings.blockCopyPaste
-                    ? 'bg-danger/10'
-                    : 'bg-gray-100 dark:bg-gray-800'
-                "
-              >
-                <svg
-                  :class="[
-                    'w-5 h-5',
-                    template.proctoring_settings.blockCopyPaste
-                      ? 'text-danger'
-                      : 'text-gray-400',
-                  ]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-                <span class="text-sm text-gray-900 dark:text-white"
-                  >Блокировка копирования</span
-                >
-              </div>
-
-              <div
-                class="flex items-center gap-3 p-3 rounded-lg"
-                :class="
-                  template.proctoring_settings.blockRightClick
-                    ? 'bg-danger/10'
-                    : 'bg-gray-100 dark:bg-gray-800'
-                "
-              >
-                <svg
-                  :class="[
-                    'w-5 h-5',
-                    template.proctoring_settings.blockRightClick
-                      ? 'text-danger'
-                      : 'text-gray-400',
-                  ]"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
-                  />
-                </svg>
-                <span class="text-sm text-gray-900 dark:text-white"
-                  >Блокировка правого клика</span
-                >
-              </div>
-            </div>
-
-            <p v-else class="text-gray-500 dark:text-gray-400 text-sm">
-              Антипрокторинг отключён. Студенты смогут свободно переключаться
-              между вкладками во время теста.
-            </p>
-          </div>
-
-          <!-- Языки тестирования -->
-          <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-            <h3
-              class="text-lg font-semibold text-black dark:text-white mb-4 flex items-center gap-2"
-            >
-              <svg
-                class="w-5 h-5 text-info"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
-                />
-              </svg>
-              Языки тестирования
-            </h3>
-
-            <div
-              v-if="
-                template.allowed_languages &&
-                template.allowed_languages.length > 0
-              "
-            >
-              <div class="flex flex-wrap gap-3 mb-4">
-                <div
-                  v-for="lang in template.allowed_languages"
-                  :key="lang"
-                  class="flex items-center gap-2 px-4 py-2 rounded-lg"
-                  :class="languageCardClasses[lang]"
-                >
-                  <span class="text-xl">{{ languageFlags[lang] }}</span>
-                  <span class="font-medium">{{ languageLabels[lang] }}</span>
-                </div>
-              </div>
-
-              <!-- Статистика вопросов по языкам -->
-              <div
-                v-if="languageStats.length > 0"
-                class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700"
-              >
-                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Вопросов в банке по языкам:
-                </p>
-                <div class="space-y-2">
-                  <div
-                    v-for="stat in languageStats"
-                    :key="stat.language"
-                    class="flex items-center justify-between"
-                  >
-                    <div class="flex items-center gap-2">
-                      <span>{{ languageFlags[stat.language] }}</span>
-                      <span class="text-sm text-gray-700 dark:text-gray-300">{{
-                        languageLabels[stat.language]
-                      }}</span>
-                    </div>
-                    <span class="font-medium text-gray-900 dark:text-white">{{
-                      stat.count
-                    }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p v-else class="text-gray-500 dark:text-gray-400">
-              Доступны все языки (ограничения не установлены)
-            </p>
-          </div>
-
-          <!-- Предпросмотр вопросов -->
-          <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-            <div class="flex items-center justify-between mb-4">
-              <h3
-                class="text-lg font-semibold text-black dark:text-white flex items-center gap-2"
-              >
-                <svg
-                  class="w-5 h-5 text-info"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                Вопросы для теста
-              </h3>
-              <NuxtLink
-                :to="`/test-bank/${template.bank_id}`"
-                class="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
-              >
-                Перейти к банку
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-              </NuxtLink>
-            </div>
-
-            <div
-              v-if="questionsLoading"
-              class="flex items-center justify-center py-8"
-            >
-              <div
-                class="inline-block h-6 w-6 animate-spin rounded-full border-3 border-solid border-primary border-r-transparent"
-              ></div>
-            </div>
-
-            <div
-              v-else-if="questions.length === 0"
-              class="text-center py-8 text-gray-500 dark:text-gray-400"
-            >
-              <p>Банк вопросов пуст</p>
-            </div>
-
-            <div v-else class="space-y-3 max-h-96 overflow-y-auto">
-              <div
-                v-for="(question, index) in questions.slice(0, 10)"
-                :key="question.id"
-                class="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
-              >
-                <span
-                  class="shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary"
-                >
-                  {{ index + 1 }}
-                </span>
-                <div class="grow min-w-0">
-                  <p class="text-sm text-gray-900 dark:text-white line-clamp-2">
-                    {{ question.question_text }}
-                  </p>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span
-                      :class="[
-                        'inline-flex items-center rounded-full px-1.5 py-0.5 text-xs',
-                        difficultyClasses[question.difficulty],
-                      ]"
-                    >
-                      {{ difficultyLabels[question.difficulty] }}
-                    </span>
-                    <span class="text-xs text-gray-500"
-                      >{{ question.points }} б.</span
-                    >
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="questions.length > 10" class="text-center py-2">
-                <span class="text-sm text-gray-500 dark:text-gray-400">
-                  И ещё {{ questions.length - 10 }} вопросов...
-                </span>
-              </div>
+            <div class="rounded-lg bg-primary/10 p-2 text-primary ml-2 shrink-0">
+              <HelpCircleIcon class="w-4 h-4" />
             </div>
           </div>
         </div>
 
-        <!-- Правая колонка - статистика и быстрые действия -->
-        <div class="space-y-6">
-          <!-- Статистика теста -->
-          <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-            <h3 class="text-lg font-semibold text-black dark:text-white mb-4">
-              Статистика
-            </h3>
-
-            <div class="space-y-4">
-              <div class="flex items-center justify-between">
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Всего вопросов в банке</span
-                >
-                <span class="text-xl font-bold text-primary">{{
-                  template.questions_total
-                }}</span>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Вопросов в тесте</span
-                >
-                <span class="text-xl font-bold text-black dark:text-white">
-                  {{
-                    template.questions_mode === "all"
-                      ? template.questions_total
-                      : template.questions_count
-                  }}
-                </span>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Максимум баллов</span
-                >
-                <span class="text-xl font-bold text-black dark:text-white">{{
-                  totalPoints
-                }}</span>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Для сдачи нужно</span
-                >
-                <span class="text-xl font-bold text-success">{{
-                  Math.ceil((totalPoints * template.passing_score) / 100)
-                }}</span>
-              </div>
+        <!-- Questions in Test Card -->
+        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
+          <div class="flex items-center justify-between">
+            <div class="min-w-0">
+              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Вопросов в тесте</p>
+              <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">
+                {{ template.questions_mode === 'all' ? template.questions_total : template.questions_count }}
+              </h3>
+            </div>
+            <div class="rounded-lg bg-info/10 p-2 text-info ml-2 shrink-0">
+              <ListIcon class="w-4 h-4" />
             </div>
           </div>
+        </div>
 
-          <!-- Информация о банке -->
-          <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-            <h3 class="text-lg font-semibold text-black dark:text-white mb-4">
-              Банк вопросов
-            </h3>
-
-            <div class="space-y-3">
-              <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Название</p>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  {{ template.bank_name }}
-                </p>
-              </div>
-
-              <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">Код</p>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  {{ template.bank_code }}
-                </p>
-              </div>
-
-              <NuxtLink
-                :to="`/test-bank/${template.bank_id}`"
-                class="inline-flex items-center gap-2 text-primary hover:text-primary/80 text-sm mt-2"
-              >
-                Открыть банк
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
-              </NuxtLink>
+        <!-- Max Points Card -->
+        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
+          <div class="flex items-center justify-between">
+            <div class="min-w-0">
+              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Макс. баллов</p>
+              <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">{{ totalPoints }}</h3>
+            </div>
+            <div class="rounded-lg bg-success/10 p-2 text-success ml-2 shrink-0">
+              <AwardIcon class="w-4 h-4" />
             </div>
           </div>
+        </div>
 
-          <!-- Использование шаблона -->
-          <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-            <h3 class="text-lg font-semibold text-black dark:text-white mb-4">
-              Использование
-            </h3>
-
-            <div class="space-y-3 text-sm">
-              <div class="flex items-center justify-between">
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Привязано к дисциплинам</span
-                >
-                <span class="font-medium text-gray-900 dark:text-white">{{
-                  usage.disciplines
-                }}</span>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Назначено тестов</span
-                >
-                <span class="font-medium text-gray-900 dark:text-white">{{
-                  usage.assignments
-                }}</span>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <span class="text-gray-600 dark:text-gray-400"
-                  >Пройдено сессий</span
-                >
-                <span class="font-medium text-gray-900 dark:text-white">{{
-                  usage.sessions
-                }}</span>
-              </div>
+        <!-- Passing Score Card -->
+        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
+          <div class="flex items-center justify-between">
+            <div class="min-w-0">
+              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Проходной балл</p>
+              <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">{{ template.passing_score }}%</h3>
             </div>
-          </div>
-
-          <!-- Мета-информация -->
-          <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-            <h3 class="text-lg font-semibold text-black dark:text-white mb-4">
-              Информация
-            </h3>
-
-            <div class="space-y-3 text-sm">
-              <div>
-                <p class="text-gray-600 dark:text-gray-400">Создан</p>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  {{ formatDate(template.created_at) }}
-                </p>
-              </div>
-
-              <div>
-                <p class="text-gray-600 dark:text-gray-400">Обновлён</p>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  {{ formatDate(template.updated_at) }}
-                </p>
-              </div>
-
-              <div v-if="template.created_by_name">
-                <p class="text-gray-600 dark:text-gray-400">Автор</p>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  {{ template.created_by_name }}
-                </p>
-              </div>
+            <div class="rounded-lg bg-warning/10 p-2 text-warning ml-2 shrink-0">
+              <TargetIcon class="w-4 h-4" />
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Секция аналитики прохождений -->
-      <div class="mt-8 bg-white dark:bg-boxdark rounded-xl shadow-md p-6">
-        <div class="flex items-center justify-between mb-6">
-          <h3
-            class="text-lg font-semibold text-black dark:text-white flex items-center gap-2"
-          >
-            <svg
-              class="w-5 h-5 text-primary"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+      <!-- Tabs Navigation -->
+      <div class="mb-5 overflow-x-auto custom-scrollbar pb-1">
+        <div class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+          <nav class="flex gap-0.5">
+            <button
+              v-for="tab in availableTabs"
+              :key="tab.id"
+              @click="activeTab = tab.id"
+              :class="[
+                'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-300 whitespace-nowrap',
+                activeTab === tab.id
+                  ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white'
+                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
+              ]"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-            Аналитика прохождений
-          </h3>
-          <button
-            v-if="!analyticsLoading && !analytics"
-            @click="loadAnalytics"
-            class="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            Загрузить аналитику
-          </button>
+              <component :is="tab.icon" class="h-3.5 w-3.5" />
+              {{ tab.label }}
+            </button>
+          </nav>
         </div>
+      </div>
 
-        <!-- Loading -->
-        <div
-          v-if="analyticsLoading"
-          class="flex items-center justify-center py-8"
-        >
-          <div class="text-center">
-            <div
-              class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-2"
-            ></div>
-            <p class="text-sm text-gray-500">Загрузка аналитики...</p>
-          </div>
-        </div>
-
-        <!-- Empty state -->
-        <div v-else-if="!analytics" class="text-center py-8">
-          <svg
-            class="mx-auto w-12 h-12 text-gray-300 dark:text-gray-600 mb-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-            />
-          </svg>
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            Нажмите для загрузки статистики прохождений
-          </p>
-          <UiButton variant="outline" size="sm" @click="loadAnalytics">
-            Загрузить аналитику
-          </UiButton>
-        </div>
-
-        <!-- Analytics content -->
-        <div v-else-if="analytics.summary">
-          <!-- Summary stats -->
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div class="text-center p-4 bg-gray-50 dark:bg-meta-4 rounded-lg">
-              <p class="text-2xl font-bold text-primary">
-                {{ analytics.summary.totalSessions }}
-              </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                Прохождений
-              </p>
-            </div>
-            <div class="text-center p-4 bg-gray-50 dark:bg-meta-4 rounded-lg">
-              <p class="text-2xl font-bold text-black dark:text-white">
-                {{ analytics.summary.uniqueStudents }}
-              </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Студентов</p>
-            </div>
-            <div class="text-center p-4 bg-gray-50 dark:bg-meta-4 rounded-lg">
-              <p class="text-2xl font-bold text-warning">
-                {{ analytics.summary.averageScore }}%
-              </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                Средний балл
-              </p>
-            </div>
-            <div class="text-center p-4 bg-gray-50 dark:bg-meta-4 rounded-lg">
-              <p class="text-2xl font-bold text-success">
-                {{ analytics.summary.passRate }}%
-              </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">% сдачи</p>
-            </div>
-            <div class="text-center p-4 bg-gray-50 dark:bg-meta-4 rounded-lg">
-              <p class="text-2xl font-bold text-gray-600 dark:text-gray-300">
-                {{ formatDuration(analytics.summary.averageTimeSeconds) }}
-              </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                Среднее время
-              </p>
-            </div>
-          </div>
-
-          <!-- No data message -->
+      <!-- Tab Content -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Main Content Area (8 cols) -->
+        <div class="lg:col-span-8 space-y-4">
+          <!-- SETTINGS TAB -->
           <div
-            v-if="analytics.summary.totalSessions === 0"
-            class="text-center py-8 text-gray-500"
+            v-show="activeTab === 'settings'"
+            class="space-y-4 animate-in fade-in duration-500"
           >
-            <p>Пока нет данных о прохождениях этого теста</p>
+            <!-- Main Settings -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <SettingsIcon class="w-4 h-4 text-primary" />
+                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Основные настройки</h3>
+              </div>
+              <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Режим вопросов</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ questionsModeLabels[template.questions_mode] }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Лимит времени</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ template.time_limit_minutes ? `${template.time_limit_minutes} мин.` : 'Без лимита' }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Максимум попыток</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ template.max_attempts }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Вопросов на странице</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ template.questions_per_page === 0 ? 'Все сразу' : template.questions_per_page }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Показ результатов</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ showResultsLabels[template.show_results] }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Возврат к вопросам</span>
+                  <span class="text-sm font-bold" :class="template.allow_back ? 'text-success' : 'text-danger'">{{ template.allow_back ? 'Разрешён' : 'Запрещён' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Shuffle Settings -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <ShuffleIcon class="w-4 h-4 text-warning" />
+                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Перемешивание</h3>
+              </div>
+              <div class="p-4 flex flex-wrap gap-3">
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.shuffle_questions ? 'bg-success/10' : 'bg-slate-100 dark:bg-slate-800'">
+                  <component :is="template.shuffle_questions ? CheckIcon : XIcon" class="w-4 h-4" :class="template.shuffle_questions ? 'text-success' : 'text-slate-400'" />
+                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Перемешивать вопросы</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.shuffle_options ? 'bg-success/10' : 'bg-slate-100 dark:bg-slate-800'">
+                  <component :is="template.shuffle_options ? CheckIcon : XIcon" class="w-4 h-4" :class="template.shuffle_options ? 'text-success' : 'text-slate-400'" />
+                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Перемешивать варианты</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Anti-Proctoring -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <ShieldIcon class="w-4 h-4 text-danger" />
+                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Антипрокторинг</h3>
+                <span class="ml-auto text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded" :class="template.proctoring_enabled ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-400'">
+                  {{ template.proctoring_enabled ? 'Включён' : 'Отключён' }}
+                </span>
+              </div>
+              <div v-if="template.proctoring_enabled && template.proctoring_settings" class="p-4 flex flex-wrap gap-3">
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.proctoring_settings.blockTabSwitch ? 'bg-danger/10' : 'bg-slate-100 dark:bg-slate-800'">
+                  <component :is="template.proctoring_settings.blockTabSwitch ? CheckIcon : XIcon" class="w-4 h-4" :class="template.proctoring_settings.blockTabSwitch ? 'text-danger' : 'text-slate-400'" />
+                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Блокировка вкладок</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.proctoring_settings.blockCopyPaste ? 'bg-danger/10' : 'bg-slate-100 dark:bg-slate-800'">
+                  <component :is="template.proctoring_settings.blockCopyPaste ? CheckIcon : XIcon" class="w-4 h-4" :class="template.proctoring_settings.blockCopyPaste ? 'text-danger' : 'text-slate-400'" />
+                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Блокировка копирования</span>
+                </div>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.proctoring_settings.blockRightClick ? 'bg-danger/10' : 'bg-slate-100 dark:bg-slate-800'">
+                  <component :is="template.proctoring_settings.blockRightClick ? CheckIcon : XIcon" class="w-4 h-4" :class="template.proctoring_settings.blockRightClick ? 'text-danger' : 'text-slate-400'" />
+                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Блокировка правого клика</span>
+                </div>
+              </div>
+              <div v-else class="px-4 py-6 text-center text-xs text-slate-400">
+                Антипрокторинг отключён
+              </div>
+            </div>
           </div>
 
-          <!-- Sessions table -->
-          <div v-else>
-            <!-- Поиск и фильтр -->
-            <div class="flex flex-wrap items-center gap-3 mb-4">
-              <div class="relative flex-1 min-w-[200px]">
-                <svg
-                  class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <input
-                  v-model="analyticsSearch"
-                  type="text"
-                  placeholder="Поиск по имени студента..."
-                  class="w-full pl-9 pr-4 py-2 rounded-lg border border-stroke dark:border-strokedark bg-transparent text-sm focus:outline-none focus:border-primary dark:text-white"
-                />
-              </div>
-              <select
-                v-model="analyticsFilter"
-                class="px-3 py-2 rounded-lg border border-stroke dark:border-strokedark bg-white dark:bg-boxdark text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-primary"
-              >
-                <option value="all">Все</option>
-                <option value="passed">Сдали</option>
-                <option value="failed">Не сдали</option>
-              </select>
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                {{ filteredSessions.length }} из {{ analytics.sessions.length }}
-              </span>
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr
-                    class="text-left border-b border-stroke dark:border-strokedark"
-                  >
-                    <th
-                      class="pb-3 font-medium text-gray-600 dark:text-gray-400"
-                    >
-                      Студент
-                    </th>
-                    <th
-                      class="pb-3 font-medium text-gray-600 dark:text-gray-400"
-                    >
-                      Группа
-                    </th>
-                    <th
-                      class="pb-3 font-medium text-gray-600 dark:text-gray-400 text-center"
-                    >
-                      Балл
-                    </th>
-                    <th
-                      class="pb-3 font-medium text-gray-600 dark:text-gray-400 text-center"
-                    >
-                      Статус
-                    </th>
-                    <th
-                      class="pb-3 font-medium text-gray-600 dark:text-gray-400 text-center"
-                    >
-                      Время
-                    </th>
-                    <th
-                      class="pb-3 font-medium text-gray-600 dark:text-gray-400"
-                    >
-                      Дата
-                    </th>
-                    <th
-                      class="pb-3 font-medium text-gray-600 dark:text-gray-400"
-                    ></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="session in paginatedSessions"
-                    :key="session.sessionId"
-                    class="border-b border-stroke/50 dark:border-strokedark/50 hover:bg-gray-50 dark:hover:bg-meta-4 transition-colors"
-                  >
-                    <td class="py-3">
-                      <div>
-                        <p class="font-medium text-gray-900 dark:text-white">
-                          {{ session.studentName }}
-                        </p>
-                        <p
-                          v-if="session.studentPinfl"
-                          class="text-xs text-gray-400"
-                        >
-                          {{ session.studentPinfl }}
-                        </p>
-                      </div>
-                    </td>
-                    <td class="py-3 text-gray-600 dark:text-gray-400">
-                      {{ session.groupCode || "—" }}
-                    </td>
-                    <td class="py-3 text-center">
-                      <span
-                        class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                        :class="
-                          session.passed
-                            ? 'bg-success/10 text-success'
-                            : 'bg-danger/10 text-danger'
-                        "
-                      >
-                        {{ session.score }}%
-                      </span>
-                    </td>
-                    <td class="py-3 text-center">
-                      <svg
-                        v-if="session.passed"
-                        class="w-5 h-5 text-success mx-auto"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <svg
-                        v-else
-                        class="w-5 h-5 text-danger mx-auto"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </td>
-                    <td
-                      class="py-3 text-center text-gray-600 dark:text-gray-400"
-                    >
-                      {{ formatDuration(session.timeSpentSeconds) }}
-                    </td>
-                    <td class="py-3 text-gray-600 dark:text-gray-400">
-                      {{ formatDate(session.completedAt) }}
-                    </td>
-                    <td class="py-3">
-                      <button
-                        @click="viewSessionDetails(session.sessionId)"
-                        class="text-primary hover:text-primary/80 text-xs"
-                      >
-                        Подробнее
-                      </button>
-                    </td>
-                  </tr>
-                  <tr v-if="filteredSessions.length === 0">
-                    <td colspan="7" class="py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
-                      Нет записей, соответствующих фильтру
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Пагинация -->
-            <div
-              v-if="analyticsTotalPages > 1"
-              class="flex items-center justify-between mt-4 pt-4 border-t border-stroke dark:border-strokedark"
-            >
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                Страница {{ analyticsPage }} из {{ analyticsTotalPages }}
-              </p>
-              <div class="flex items-center gap-2">
-                <button
-                  @click="analyticsPage = Math.max(1, analyticsPage - 1)"
-                  :disabled="analyticsPage === 1"
-                  class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                  :class="
-                    analyticsPage === 1
-                      ? 'text-gray-400 cursor-not-allowed'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4'
-                  "
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                  </svg>
-                  Пред.
-                </button>
-
-                <div class="flex items-center gap-1">
-                  <button
-                    v-for="page in paginationRange"
-                    :key="page"
-                    @click="typeof page === 'number' && (analyticsPage = page)"
-                    :class="[
-                      'w-8 h-8 rounded-lg text-sm font-medium transition-colors',
-                      typeof page !== 'number'
-                        ? 'cursor-default text-gray-400'
-                        : analyticsPage === page
-                        ? 'bg-primary text-white'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4',
-                    ]"
-                  >
-                    {{ page }}
-                  </button>
+          <!-- QUESTIONS TAB -->
+          <div
+            v-show="activeTab === 'questions'"
+            class="space-y-4 animate-in fade-in duration-500"
+          >
+            <!-- Questions Preview -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <div class="flex items-center gap-2">
+                  <HelpCircleIcon class="w-4 h-4 text-primary" />
+                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Вопросы для теста</h3>
                 </div>
-
-                <button
-                  @click="analyticsPage = Math.min(analyticsTotalPages, analyticsPage + 1)"
-                  :disabled="analyticsPage === analyticsTotalPages"
-                  class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                  :class="
-                    analyticsPage === analyticsTotalPages
-                      ? 'text-gray-400 cursor-not-allowed'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4'
-                  "
-                >
-                  След.
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                <NuxtLink :to="`/test-bank/${template.bank_id}`" class="text-xs font-semibold text-primary hover:text-primary/80 flex items-center gap-1">
+                  Открыть банк
+                  <ExternalLinkIcon class="w-3 h-3" />
+                </NuxtLink>
               </div>
-            </div>
 
-            <!-- Question stats -->
-            <div
-              v-if="
-                analytics.questionStats && analytics.questionStats.length > 0
-              "
-              class="mt-8"
-            >
-              <h4 class="text-md font-medium text-black dark:text-white mb-4">
-                Статистика по вопросам
-                <span class="text-xs font-normal text-gray-500 ml-2"
-                  >(отсортировано по сложности)</span
-                >
-              </h4>
-              <div class="space-y-2">
+              <div v-if="questionsLoading" class="flex items-center justify-center py-12">
+                <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+              </div>
+
+              <div v-else-if="questions.length === 0" class="px-4 py-12 text-center text-sm text-slate-400">
+                Банк вопросов пуст
+              </div>
+
+              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800 max-h-96 overflow-y-auto">
                 <div
-                  v-for="(q, idx) in analytics.questionStats"
-                  :key="q.questionId"
-                  class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-meta-4 rounded-lg"
+                  v-for="(question, index) in questions.slice(0, 20)"
+                  :key="question.id"
+                  class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
                 >
-                  <span
-                    class="w-6 h-6 rounded-full bg-gray-200 dark:bg-strokedark flex items-center justify-center text-xs font-medium text-gray-600 dark:text-gray-400"
-                  >
-                    {{ idx + 1 }}
+                  <span class="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0 mt-0.5">
+                    {{ index + 1 }}
                   </span>
                   <div class="flex-1 min-w-0">
-                    <p class="text-sm text-gray-900 dark:text-white truncate">
-                      {{ q.questionText }}
-                    </p>
-                  </div>
-                  <div class="flex items-center gap-4 text-xs">
-                    <span
-                      class="px-2 py-1 rounded"
-                      :class="
-                        q.correctRate >= 70
-                          ? 'bg-success/10 text-success'
-                          : q.correctRate >= 40
-                          ? 'bg-warning/10 text-warning'
-                          : 'bg-danger/10 text-danger'
-                      "
-                    >
-                      {{ q.correctRate }}% правильно
-                    </span>
-                    <span class="text-gray-500">
-                      {{ q.totalAnswers }} ответов
-                    </span>
+                    <p class="text-sm font-medium text-slate-800 dark:text-slate-200 line-clamp-2">{{ question.question_text }}</p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span
+                        :class="['px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight', difficultyClasses[question.difficulty]]"
+                      >
+                        {{ difficultyLabels[question.difficulty] }}
+                      </span>
+                      <span class="text-[10px] text-slate-400">{{ question.points }} б.</span>
+                    </div>
                   </div>
                 </div>
+
+                <div v-if="questions.length > 20" class="px-4 py-3 text-center">
+                  <span class="text-xs text-slate-400">Показано 20 из {{ questions.length }} вопросов</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Language Stats -->
+            <div v-if="languageStats.length > 0" class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <GlobeIcon class="w-4 h-4 text-info" />
+                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Языки тестирования</h3>
+              </div>
+              <div class="p-4 space-y-2">
+                <div
+                  v-for="stat in languageStats"
+                  :key="stat.language"
+                  class="flex items-center justify-between"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">{{ languageFlags[stat.language] }}</span>
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ languageLabels[stat.language] }}</span>
+                  </div>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ stat.count }} вопросов</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ANALYTICS TAB -->
+          <div
+            v-show="activeTab === 'analytics'"
+            class="space-y-4 animate-in fade-in duration-500"
+          >
+            <!-- Collapsible Analytics Header -->
+            <div
+              class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden"
+            >
+              <button
+                @click="analyticsExpanded = !analyticsExpanded"
+                class="w-full flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <div class="flex items-center gap-2">
+                  <BarChart3Icon class="w-4 h-4 text-primary" />
+                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Аналитика прохождений</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span v-if="!analytics && !analyticsLoading" class="text-[10px] font-semibold text-slate-400">Нажмите для загрузки</span>
+                  <ChevronDownIcon class="w-4 h-4 text-slate-400 transition-transform duration-300" :class="{ 'rotate-180': analyticsExpanded }" />
+                </div>
+              </button>
+
+              <!-- Collapsible Content -->
+              <div v-show="analyticsExpanded" class="divide-y divide-slate-100 dark:divide-slate-800">
+                <!-- Loading -->
+                <div v-if="analyticsLoading" class="flex items-center justify-center py-12">
+                  <div class="text-center">
+                    <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-2"></div>
+                    <p class="text-xs text-slate-500">Загрузка аналитики...</p>
+                  </div>
+                </div>
+
+                <!-- Empty State -->
+                <div v-else-if="!analytics" class="py-12 text-center">
+                  <BarChart3Icon class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
+                  <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Нажмите для загрузки статистики прохождений</p>
+                  <UiButton variant="outline" size="sm" @click="loadAnalytics">
+                    Загрузить аналитику
+                  </UiButton>
+                </div>
+
+                <!-- Analytics Content -->
+                <template v-else>
+                  <!-- Summary Stats -->
+                  <div class="p-4 bg-slate-50/50 dark:bg-slate-800/30">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div class="text-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <p class="text-2xl font-black text-primary">{{ analytics.summary.totalSessions }}</p>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Прохождений</p>
+                      </div>
+                      <div class="text-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <p class="text-2xl font-black text-slate-900 dark:text-white">{{ analytics.summary.uniqueStudents }}</p>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Студентов</p>
+                      </div>
+                      <div class="text-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <p class="text-2xl font-black text-warning">{{ analytics.summary.averageScore }}%</p>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Средний балл</p>
+                      </div>
+                      <div class="text-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <p class="text-2xl font-black text-success">{{ analytics.summary.passRate }}%</p>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Процент сдачи</p>
+                      </div>
+                      <div class="text-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <p class="text-2xl font-black text-slate-600 dark:text-slate-300">{{ formatDuration(analytics.summary.averageTimeSeconds) }}</p>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Среднее время</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- No Data Message -->
+                  <div v-if="analytics.summary.totalSessions === 0" class="py-8 text-center text-sm text-slate-500">
+                    Пока нет данных о прохождениях этого теста
+                  </div>
+
+                  <!-- Sessions Table -->
+                  <div v-else>
+                    <!-- Search and Filter -->
+                    <div class="px-4 py-3 flex flex-wrap items-center gap-3 border-b border-slate-100 dark:border-slate-800">
+                      <div class="relative flex-1 min-w-[200px]">
+                        <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          v-model="analyticsSearch"
+                          type="text"
+                          placeholder="Поиск по студенту..."
+                          class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                      <select
+                        v-model="analyticsFilter"
+                        class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-primary"
+                      >
+                        <option value="all">Все</option>
+                        <option value="passed">Сдали</option>
+                        <option value="failed">Не сдали</option>
+                      </select>
+                      <span class="text-xs text-slate-500">
+                        {{ filteredSessions.length }} из {{ analytics.sessions.length }}
+                      </span>
+                    </div>
+
+                    <!-- Sessions List -->
+                    <div class="max-h-80 overflow-y-auto">
+                      <table class="w-full text-sm">
+                        <thead class="sticky top-0 bg-white dark:bg-slate-900">
+                          <tr class="text-left border-b border-slate-100 dark:border-slate-800">
+                            <th class="pb-3 px-4 font-medium text-slate-500 text-xs">Студент</th>
+                            <th class="pb-3 font-medium text-slate-500 text-xs text-center">Балл</th>
+                            <th class="pb-3 font-medium text-slate-500 text-xs text-center">Статус</th>
+                            <th class="pb-3 font-medium text-slate-500 text-xs text-center">Время</th>
+                            <th class="pb-3 px-4 font-medium text-slate-500 text-xs">Дата</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
+                          <tr
+                            v-for="session in paginatedSessions"
+                            :key="session.sessionId"
+                            class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                          >
+                            <td class="py-3 px-4">
+                              <p class="font-medium text-slate-800 dark:text-slate-200">{{ session.studentName }}</p>
+                              <p v-if="session.studentPinfl" class="text-[10px] text-slate-400">{{ session.studentPinfl }}</p>
+                            </td>
+                            <td class="py-3 text-center">
+                              <span
+                                class="px-2 py-0.5 rounded text-xs font-bold"
+                                :class="session.passed ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'"
+                              >
+                                {{ session.score }}%
+                              </span>
+                            </td>
+                            <td class="py-3 text-center">
+                              <component :is="session.passed ? CheckCircleIcon : XCircleIcon" class="w-5 h-5 mx-auto" :class="session.passed ? 'text-success' : 'text-danger'" />
+                            </td>
+                            <td class="py-3 text-center text-slate-500 text-xs">{{ formatDuration(session.timeSpentSeconds) }}</td>
+                            <td class="py-3 px-4 text-slate-500 text-xs">{{ formatDate(session.completedAt) }}</td>
+                          </tr>
+                          <tr v-if="filteredSessions.length === 0">
+                            <td colspan="5" class="py-8 text-center text-sm text-slate-400">Нет записей</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div v-if="analyticsTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-800">
+                      <p class="text-xs text-slate-500">Страница {{ analyticsPage }} из {{ analyticsTotalPages }}</p>
+                      <div class="flex gap-1">
+                        <button
+                          v-for="page in paginationRange"
+                          :key="page"
+                          @click="typeof page === 'number' && (analyticsPage = page)"
+                          :class="['w-8 h-8 rounded-lg text-xs font-bold transition-colors', typeof page !== 'number' ? 'text-slate-400 cursor-default' : analyticsPage === page ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800']"
+                        >{{ page }}</button>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar (4 cols) -->
+        <div class="lg:col-span-4 space-y-4">
+          <!-- Test Bank Info -->
+          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <FolderIcon class="w-4 h-4 text-info" />
+              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Банк вопросов</h4>
+            </div>
+            <div class="p-4 space-y-3">
+              <div>
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Название</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ template.bank_name }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Код</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 font-mono mt-0.5">{{ template.bank_code }}</p>
+              </div>
+              <NuxtLink :to="`/test-bank/${template.bank_id}`" class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 mt-2">
+                Открыть банк
+                <ExternalLinkIcon class="w-3 h-3" />
+              </NuxtLink>
+            </div>
+          </div>
+
+          <!-- Usage Stats -->
+          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <BarChart3Icon class="w-4 h-4 text-slate-500" />
+              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Использование</h4>
+            </div>
+            <div class="p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400">Привязано к дисциплинам</span>
+                <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ usage.disciplines }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400">Назначено тестов</span>
+                <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ usage.assignments }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-400">Пройдено сессий</span>
+                <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ usage.sessions }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Meta Info -->
+          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              <InfoIcon class="w-4 h-4 text-slate-500" />
+              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Информация</h4>
+            </div>
+            <div class="p-4 space-y-3">
+              <div>
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Создан</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ formatDate(template.created_at) }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Обновлён</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ formatDate(template.updated_at) }}</p>
+              </div>
+              <div v-if="template.created_by_name">
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Автор</p>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ template.created_by_name }}</p>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- TestResultsModal для просмотра деталей сессии -->
-      <AttendanceTestResultsModal
-        :is-open="showSessionDetails"
-        :session-id="selectedSessionId"
-        @close="showSessionDetails = false"
-      />
     </template>
 
-    <!-- Модалка выбора языка для Preview -->
+    <!-- Language Selection Modal for Preview -->
     <TestsLanguageSelectModal
       :is-open="showLanguageModal"
       :custom-languages="availableLanguagesForModal"
@@ -1321,7 +594,14 @@
       @confirm="handleLanguageConfirm"
     />
 
-    <!-- Уведомления -->
+    <!-- Test Results Modal -->
+    <AttendanceTestResultsModal
+      :is-open="showSessionDetails"
+      :session-id="selectedSessionId"
+      @close="showSessionDetails = false"
+    />
+
+    <!-- Notifications -->
     <UiNotification
       v-if="notification.show"
       :type="notification.type"
@@ -1332,32 +612,79 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
+import {
+  ArrowLeft,
+  FileText as FileTextIcon,
+  Eye as EyeIcon,
+  Folder as FolderIcon,
+  Settings as SettingsIcon,
+  HelpCircle as HelpCircleIcon,
+  List as ListIcon,
+  Award as AwardIcon,
+  Target as TargetIcon,
+  Check as CheckIcon,
+  X as XIcon,
+  Shield as ShieldIcon,
+  Shuffle as ShuffleIcon,
+  Globe as GlobeIcon,
+  BarChart3 as BarChart3Icon,
+  ChevronDown as ChevronDownIcon,
+  Search as SearchIcon,
+  CheckCircle as CheckCircleIcon,
+  XCircle as XCircleIcon,
+  ExternalLink as ExternalLinkIcon,
+  Info as InfoIcon,
+} from "lucide-vue-next";
 
 const route = useRoute();
+const { authFetch } = useAuthFetch();
 
 definePageMeta({
   layout: "default",
 });
 
-const { authFetch } = useAuthFetch();
-
-// Состояние
+// State
 const loading = ref(true);
 const questionsLoading = ref(false);
 const error = ref(null);
 const template = ref(null);
 const questions = ref([]);
 
-// Модалка выбора языка
+// Tabs
+const activeTab = ref("settings");
+const availableTabs = [
+  { id: "settings", label: "Настройки", icon: SettingsIcon },
+  { id: "questions", label: "Вопросы", icon: HelpCircleIcon },
+  { id: "analytics", label: "Аналитика", icon: BarChart3Icon },
+];
+
+// Analytics state
+const analyticsLoading = ref(false);
+const analytics = ref(null);
+const analyticsExpanded = ref(false);
+const showSessionDetails = ref(false);
+const selectedSessionId = ref(null);
+
+// Search/filter/pagination
+const analyticsSearch = ref("");
+const analyticsFilter = ref("all");
+const analyticsPage = ref(1);
+const analyticsPerPage = 10;
+
+// Notification
+const notification = ref({
+  show: false,
+  type: "success",
+  title: "",
+  message: "",
+});
+
+// Language modal
 const showLanguageModal = ref(false);
 const availableLanguagesForModal = computed(() => {
-  if (
-    !template.value?.allowed_languages ||
-    template.value.allowed_languages.length === 0
-  ) {
-    // Если ограничений нет, предлагаем стандартные языки (или все доступные в системе)
+  if (!template.value?.allowed_languages || template.value.allowed_languages.length === 0) {
     return [
       { value: "ru", label: "Русский", flag: "🇷🇺" },
       { value: "uz", label: "O'zbek", flag: "🇺🇿" },
@@ -1371,7 +698,7 @@ const availableLanguagesForModal = computed(() => {
   }));
 });
 
-// Константы
+// Constants
 const questionsModeLabels = {
   all: "Все вопросы",
   random: "Случайные",
@@ -1397,100 +724,115 @@ const difficultyClasses = {
   hard: "bg-danger/10 text-danger",
 };
 
-// Языки
-const languageLabels = {
+const languageLabels: Record<string, string> = {
   ru: "Русский",
   uz: "O'zbek",
   en: "English",
 };
 
-const languageFlags = {
+const languageFlags: Record<string, string> = {
   ru: "🇷🇺",
   uz: "🇺🇿",
   en: "🇬🇧",
 };
 
-const languageBadgeClasses = {
+const languageBadgeClasses: Record<string, string> = {
   ru: "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30",
   uz: "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs bg-green-100 dark:bg-green-900/30",
   en: "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs bg-purple-100 dark:bg-purple-900/30",
 };
 
-const languageCardClasses = {
-  ru: "bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300",
-  uz: "bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-300",
-  en: "bg-purple-50 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300",
-};
-
-// Статистика по языкам
-const languageStats = computed(() => {
-  if (!questions.value.length) return [];
-
-  const stats = {};
-  questions.value.forEach((q) => {
-    const lang = q.language || "ru";
-    stats[lang] = (stats[lang] || 0) + 1;
-  });
-
-  return Object.entries(stats)
-    .map(([language, count]) => ({
-      language,
-      count,
-    }))
-    .sort((a, b) => b.count - a.count);
-});
-
-// Статистика использования (заглушка)
+// Usage (placeholder)
 const usage = ref({
   disciplines: 0,
   assignments: 0,
   sessions: 0,
 });
 
-// Вычисляемые свойства
+// Computed
 const totalPoints = computed(() => {
   if (template.value?.questions_mode === "all") {
     return questions.value.reduce((sum, q) => sum + q.points, 0);
   }
-  // Для random режима - примерное значение
-  const avgPoints =
-    questions.value.length > 0
-      ? questions.value.reduce((sum, q) => sum + q.points, 0) /
-        questions.value.length
-      : 1;
+  const avgPoints = questions.value.length > 0
+    ? questions.value.reduce((sum, q) => sum + q.points, 0) / questions.value.length
+    : 1;
   return Math.round(avgPoints * (template.value?.questions_count || 0));
 });
 
-// Уведомления
-const notification = ref({
-  show: false,
-  type: "success",
-  title: "",
-  message: "",
+const languageStats = computed(() => {
+  if (!questions.value.length) return [];
+  const stats: Record<string, number> = {};
+  questions.value.forEach((q) => {
+    const lang = q.language || "ru";
+    stats[lang] = (stats[lang] || 0) + 1;
+  });
+  return Object.entries(stats)
+    .map(([language, count]) => ({ language, count }))
+    .sort((a, b) => b.count - a.count);
 });
 
-// Утилиты
-const formatDate = (date) => {
+const filteredSessions = computed(() => {
+  if (!analytics.value?.sessions) return [];
+  return analytics.value.sessions.filter((s) => {
+    const matchSearch = !analyticsSearch.value ||
+      s.studentName.toLowerCase().includes(analyticsSearch.value.toLowerCase()) ||
+      s.studentPinfl?.toLowerCase().includes(analyticsSearch.value.toLowerCase()) ||
+      s.groupCode?.toLowerCase().includes(analyticsSearch.value.toLowerCase());
+    const matchFilter = analyticsFilter.value === "all" ||
+      (analyticsFilter.value === "passed" && s.passed) ||
+      (analyticsFilter.value === "failed" && !s.passed);
+    return matchSearch && matchFilter;
+  });
+});
+
+const paginatedSessions = computed(() => {
+  const start = (analyticsPage.value - 1) * analyticsPerPage;
+  return filteredSessions.value.slice(start, start + analyticsPerPage);
+});
+
+const analyticsTotalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredSessions.value.length / analyticsPerPage))
+);
+
+const paginationRange = computed(() => {
+  const total = analyticsTotalPages.value;
+  const current = analyticsPage.value;
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const range: (number | string)[] = [1];
+  if (current > 3) range.push("...");
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+    range.push(i);
+  }
+  if (current < total - 2) range.push("...");
+  range.push(total);
+  return range;
+});
+
+// Methods
+const formatDate = (date: string | Date | null | undefined) => {
   if (!date) return "—";
   return new Date(date).toLocaleDateString("ru-RU", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 };
 
-// Загрузка данных
+const formatDuration = (seconds: number) => {
+  if (!seconds) return "0с";
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins === 0) return `${secs}с`;
+  if (secs === 0) return `${mins}м`;
+  return `${mins}м ${secs}с`;
+};
+
 const loadTemplate = async () => {
   loading.value = true;
   error.value = null;
-
   try {
-    const response = await authFetch(
-      `/api/test-bank/templates/${route.params.id}`
-    );
-
+    const response = await authFetch(`/api/test-bank/templates/${route.params.id}`);
     if (response.success) {
       template.value = response.template;
       await loadQuestions();
@@ -1507,12 +849,9 @@ const loadTemplate = async () => {
 
 const loadQuestions = async () => {
   if (!template.value?.bank_id) return;
-
   questionsLoading.value = true;
   try {
-    const response = await authFetch(
-      `/api/test-bank/questions?bank_id=${template.value.bank_id}`
-    );
+    const response = await authFetch(`/api/test-bank/questions?bank_id=${template.value.bank_id}`);
     if (response.success) {
       questions.value = response.questions;
     }
@@ -1523,159 +862,16 @@ const loadQuestions = async () => {
   }
 };
 
-// Предпросмотр теста
-const previewTest = async () => {
-  if (!template.value) return;
-
-  // Открываем модалку, если не указан конкретный одиночный язык
-  // (т.е. если "Все языки" или выбрано несколько)
-  const allowed = template.value.allowed_languages;
-  const isSingleLanguage = allowed && allowed.length === 1;
-
-  if (!isSingleLanguage) {
-    showLanguageModal.value = true;
-  } else {
-    // В противном случае запускаем с единственным языком
-    await startPreview(allowed[0]);
-  }
-};
-
-const handleLanguageConfirm = async (language) => {
-  showLanguageModal.value = false;
-  await startPreview(language);
-};
-
-const startPreview = async (language = null) => {
-  try {
-    // Создаём preview-сессию
-    const response = await authFetch(
-      `/api/test-bank/templates/${route.params.id}/preview`,
-      {
-        method: "POST",
-        body: { language },
-      }
-    );
-
-    if (response.success && response.session_id) {
-      // Сохраняем информацию о шаблоне в localStorage для использования на странице теста
-      if (response.template) {
-        localStorage.setItem(
-          `preview_template_${response.session_id}`,
-          JSON.stringify(response.template)
-        );
-      }
-      // Переходим на страницу прохождения теста с флагом preview
-      navigateTo(`/tests/take/${response.session_id}?preview=true`);
-    } else {
-      notification.value = {
-        show: true,
-        type: "error",
-        title: "Ошибка",
-        message: response.message || "Не удалось создать preview-сессию",
-      };
-      setTimeout(() => {
-        notification.value.show = false;
-      }, 3000);
-    }
-  } catch (error) {
-    console.error("Ошибка создания preview-сессии:", error);
-    const errorMessage =
-      error.response?._data?.message ||
-      error.message ||
-      "Произошла ошибка при создании preview-сессии";
-
-    notification.value = {
-      show: true,
-      type: "error",
-      title: "Ошибка",
-      message: errorMessage,
-    };
-    setTimeout(() => {
-      notification.value.show = false;
-    }, 5000);
-  }
-};
-
-// ==================
-// АНАЛИТИКА
-// ==================
-
-const analyticsLoading = ref(false);
-const analytics = ref(null);
-const showSessionDetails = ref(false);
-const selectedSessionId = ref(null);
-
-// Поиск и пагинация в аналитике
-const analyticsSearch = ref('');
-const analyticsFilter = ref('all'); // 'all' | 'passed' | 'failed'
-const analyticsPage = ref(1);
-const analyticsPerPage = 15;
-
-// Фильтрованный список сессий
-const filteredSessions = computed(() => {
-  if (!analytics.value?.sessions) return [];
-  return analytics.value.sessions.filter((s) => {
-    const matchSearch = !analyticsSearch.value ||
-      s.studentName.toLowerCase().includes(analyticsSearch.value.toLowerCase()) ||
-      s.studentPinfl?.toLowerCase().includes(analyticsSearch.value.toLowerCase()) ||
-      s.groupCode?.toLowerCase().includes(analyticsSearch.value.toLowerCase());
-    const matchFilter =
-      analyticsFilter.value === 'all' ||
-      (analyticsFilter.value === 'passed' && s.passed) ||
-      (analyticsFilter.value === 'failed' && !s.passed);
-    return matchSearch && matchFilter;
-  });
-});
-
-// Сброс страницы при изменении фильтров
-watch([analyticsSearch, analyticsFilter], () => {
-  analyticsPage.value = 1;
-});
-
-// Пагинированный список
-const paginatedSessions = computed(() => {
-  const start = (analyticsPage.value - 1) * analyticsPerPage;
-  return filteredSessions.value.slice(start, start + analyticsPerPage);
-});
-
-// Общее количество страниц
-const analyticsTotalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredSessions.value.length / analyticsPerPage))
-);
-
-// Диапазон страниц для пагинации
-const paginationRange = computed(() => {
-  const total = analyticsTotalPages.value;
-  const current = analyticsPage.value;
-  const range = [];
-
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-
-  range.push(1);
-  if (current > 3) range.push('...');
-  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
-    range.push(i);
-  }
-  if (current < total - 2) range.push('...');
-  range.push(total);
-
-  return range;
-});
-
-// Загрузка аналитики
 const loadAnalytics = async () => {
+  if (!analyticsExpanded.value) {
+    analyticsExpanded.value = true;
+  }
   analyticsLoading.value = true;
   try {
-    const response = await authFetch(
-      `/api/test-bank/templates/${route.params.id}/analytics`
-    );
+    const response = await authFetch(`/api/test-bank/templates/${route.params.id}/analytics`);
     if (response.success) {
       analytics.value = response;
       analyticsPage.value = 1;
-    } else {
-      console.error("Ошибка загрузки аналитики:", response.message);
     }
   } catch (err) {
     console.error("Ошибка загрузки аналитики:", err);
@@ -1684,26 +880,79 @@ const loadAnalytics = async () => {
   }
 };
 
-// Форматирование длительности
-const formatDuration = (seconds) => {
-  if (!seconds) return "0с";
-
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-
-  if (mins === 0) return `${secs}с`;
-  if (secs === 0) return `${mins}м`;
-  return `${mins}м ${secs}с`;
+const previewTest = async () => {
+  if (!template.value) return;
+  const allowed = template.value.allowed_languages;
+  const isSingleLanguage = allowed && allowed.length === 1;
+  if (!isSingleLanguage) {
+    showLanguageModal.value = true;
+  } else {
+    await startPreview(allowed[0]);
+  }
 };
 
-// Просмотр деталей сессии
-const viewSessionDetails = (sessionId) => {
+const handleLanguageConfirm = async (language: string) => {
+  showLanguageModal.value = false;
+  await startPreview(language);
+};
+
+const startPreview = async (language: string | null = null) => {
+  try {
+    const response = await authFetch(`/api/test-bank/templates/${route.params.id}/preview`, {
+      method: "POST",
+      body: { language },
+    });
+    if (response.success && response.session_id) {
+      if (response.template) {
+        localStorage.setItem(`preview_template_${response.session_id}`, JSON.stringify(response.template));
+      }
+      navigateTo(`/tests/take/${response.session_id}?preview=true`);
+    } else {
+      notification.value = {
+        show: true,
+        type: "error",
+        title: "Ошибка",
+        message: response.message || "Не удалось создать preview-сессию",
+      };
+      setTimeout(() => { notification.value.show = false; }, 3000);
+    }
+  } catch (error) {
+    console.error("Ошибка создания preview-сессии:", error);
+    notification.value = {
+      show: true,
+      type: "error",
+      title: "Ошибка",
+      message: "Произошла ошибка при создании preview-сессии",
+    };
+    setTimeout(() => { notification.value.show = false; }, 5000);
+  }
+};
+
+const viewSessionDetails = (sessionId: string) => {
   selectedSessionId.value = sessionId;
   showSessionDetails.value = true;
 };
 
-// Инициализация
+// Watchers
+watch([analyticsSearch, analyticsFilter], () => {
+  analyticsPage.value = 1;
+});
+
+// Lifecycle
 onMounted(() => {
   loadTemplate();
 });
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+</style>
