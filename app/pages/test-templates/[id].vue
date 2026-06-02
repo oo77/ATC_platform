@@ -38,7 +38,7 @@
         <!-- Breadcrumbs -->
         <div class="mb-6">
           <NuxtLink
-            to="/test-bank/templates"
+            to="/test-templates"
             class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
           >
             <div
@@ -659,9 +659,9 @@ definePageMeta({
 // State
 const loading = ref(true);
 const questionsLoading = ref(false);
-const error = ref(null);
-const template = ref(null);
-const questions = ref([]);
+const error = ref<string | null>(null);
+const template = ref<any>(null);
+const questions = ref<any[]>([]);
 
 // Tabs
 const activeTab = ref("settings");
@@ -673,10 +673,10 @@ const availableTabs = [
 
 // Analytics state
 const analyticsLoading = ref(false);
-const analytics = ref(null);
+const analytics = ref<any>(null);
 const analyticsExpanded = ref(false);
 const showSessionDetails = ref(false);
-const selectedSessionId = ref(null);
+const selectedSessionId = ref<string | null>(null);
 
 // Search/filter/pagination
 const analyticsSearch = ref("");
@@ -685,7 +685,12 @@ const analyticsPage = ref(1);
 const analyticsPerPage = 10;
 
 // Notification
-const notification = ref({
+const notification = ref<{
+  show: boolean;
+  type: "success" | "info" | "error" | "warning";
+  title: string;
+  message: string;
+}>({
   show: false,
   type: "success",
   title: "",
@@ -702,7 +707,7 @@ const availableLanguagesForModal = computed(() => {
       { value: "en", label: "English", flag: "🇬🇧" },
     ];
   }
-  return template.value.allowed_languages.map((lang) => ({
+  return template.value.allowed_languages.map((lang: string) => ({
     value: lang,
     label: languageLabels[lang] || lang,
     flag: languageFlags[lang] || "",
