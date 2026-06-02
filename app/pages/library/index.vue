@@ -181,66 +181,104 @@
       </UiButton>
     </div>
 
-    <!-- Сетка книг (Bento Grid) -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+    <!-- Список книг -->
+    <div v-else class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
+      <!-- Header -->
+      <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-black text-slate-400 uppercase tracking-widest">
+        <div class="col-span-5">Название</div>
+        <div class="col-span-2">Автор</div>
+        <div class="col-span-2 text-center">Язык</div>
+        <div class="col-span-1 text-center">Год</div>
+        <div class="col-span-2 text-right">Прогресс</div>
+      </div>
+
+      <!-- Book Rows -->
       <div
         v-for="book in books"
         :key="book.id"
         @click="openBook(book)"
-        class="group relative flex flex-col bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 cursor-pointer hover:border-primary/50 hover:shadow-xl dark:hover:bg-slate-800/80 transition-all duration-300 overflow-hidden"
+        class="group grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-5 border-b border-slate-100 dark:border-slate-800 last:border-b-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
       >
-        <div class="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity -translate-y-2 group-hover:translate-y-0 duration-300">
-          <div class="bg-primary/10 text-primary p-2.5 rounded-xl">
-            <ArrowUpRight class="w-5 h-5" />
+        <!-- Book Info -->
+        <div class="col-span-5 flex items-center gap-4">
+          <div class="h-12 w-12 shrink-0 rounded-xl bg-linear-to-br from-primary/20 to-primary/5 border border-primary/10 flex items-center justify-center text-primary group-hover:from-primary group-hover:to-primary group-hover:text-white group-hover:shadow-lg group-hover:shadow-primary/30 transition-all duration-300">
+            <BookOpen class="w-6 h-6" />
           </div>
-        </div>
-
-        <div class="flex items-start gap-5 mb-5">
-          <div class="h-16 w-16 shrink-0 rounded-2xl bg-linear-to-br from-primary/20 to-primary/5 border border-primary/10 flex items-center justify-center text-primary group-hover:from-primary group-hover:to-primary group-hover:text-white group-hover:shadow-lg group-hover:shadow-primary/30 transition-all duration-300">
-            <BookOpen class="w-8 h-8" />
-          </div>
-          <div class="flex-1 min-w-0 pt-1">
-            <h4 class="text-lg font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 group-hover:text-primary transition-colors pr-8">
-              {{ book.title }}
-            </h4>
-            <p class="text-sm font-medium text-slate-500 mt-2 truncate flex items-center gap-1.5">
-              <User class="w-3.5 h-3.5 opacity-70" />
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h4 class="text-base font-bold text-slate-900 dark:text-white leading-tight truncate group-hover:text-primary transition-colors">
+                {{ book.title }}
+              </h4>
+              <!-- Continue Reading Badge -->
+              <span 
+                v-if="book.progress && book.progress.current_page > 0"
+                class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider"
+              >
+                <BookCheck class="w-3 h-3" />
+                Продолжить
+              </span>
+            </div>
+            <p class="text-sm text-slate-500 mt-1 truncate md:hidden">
               {{ book.author || "Автор не указан" }}
             </p>
           </div>
         </div>
-        
-        <div class="flex-1"></div>
 
-        <div class="grid grid-cols-2 gap-3 mb-5">
-          <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 flex flex-col justify-center border border-slate-100 dark:border-slate-800">
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Calendar class="w-3 h-3" /> Год</span>
-            <span class="text-sm font-bold text-slate-900 dark:text-white">{{ book.published_year || '—' }}</span>
+        <!-- Author -->
+        <div class="col-span-2 hidden md:flex items-center">
+          <span class="text-sm font-medium text-slate-600 dark:text-slate-400 truncate">
+            {{ book.author || "Автор не указан" }}
+          </span>
+        </div>
+
+        <!-- Language -->
+        <div class="col-span-2 hidden md:flex items-center justify-center">
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400">
+            <Globe class="w-3.5 h-3.5" />
+            {{ getLanguageLabel(book.language) }}
+          </span>
+        </div>
+
+        <!-- Year -->
+        <div class="col-span-1 hidden md:flex items-center justify-center">
+          <span class="text-sm font-medium text-slate-500">
+            {{ book.published_year || "—" }}
+          </span>
+        </div>
+
+        <!-- Progress -->
+        <div class="col-span-2 hidden md:flex items-center justify-end">
+          <div v-if="book.progress && book.progress.current_page > 0" class="flex items-center gap-3">
+            <div class="w-24 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                class="h-full bg-primary rounded-full transition-all duration-700 delay-100 ease-out" 
+                :style="{ width: `${book.progress.percentage}%` }"
+              ></div>
+            </div>
+            <span class="text-xs font-bold text-slate-500 tabular-nums">
+              {{ book.progress.percentage }}%
+            </span>
           </div>
-          
-          <div class="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 flex flex-col justify-center border border-slate-100 dark:border-slate-800">
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Languages class="w-3 h-3" /> Язык</span>
-            <span class="text-sm font-bold text-slate-900 dark:text-white">{{ getLanguageLabel(book.language) }}</span>
+          <div v-else class="flex items-center gap-2 text-xs font-bold text-slate-400">
+            <Clock class="w-3.5 h-3.5" />
+            Не начата
           </div>
         </div>
-        
-        <!-- Progress Bar (Bento style) -->
-        <div class="pt-5 border-t border-slate-100 dark:border-slate-800">
-          <div v-if="book.progress && book.progress.current_page > 0">
-            <div class="flex items-center justify-between text-xs mb-2.5">
-              <span class="font-black text-primary uppercase tracking-wider">{{ book.progress.percentage }}% прочитано</span>
-              <span class="text-slate-500 font-bold border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md">
-                {{ book.progress.current_page }} <span class="text-slate-300 dark:text-slate-600">/</span> {{ book.total_pages }} стр.
-              </span>
+
+        <!-- Mobile Progress -->
+        <div class="col-span-1 md:hidden flex items-center justify-end">
+          <div v-if="book.progress && book.progress.current_page > 0" class="flex items-center gap-2">
+            <div class="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                class="h-full bg-primary rounded-full" 
+                :style="{ width: `${book.progress.percentage}%` }"
+              ></div>
             </div>
-            <div class="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div class="h-full bg-primary rounded-full transition-all duration-700 delay-100 ease-out" :style="{ width: `${book.progress.percentage}%` }"></div>
-            </div>
+            <span class="text-xs font-bold text-primary">
+              {{ book.progress.percentage }}%
+            </span>
           </div>
-          <div v-else class="flex items-center justify-between text-xs font-black text-slate-400 uppercase tracking-widest py-1">
-            <span class="flex items-center gap-1.5"><Clock class="w-3.5 h-3.5" /> Еще не начата</span>
-            <span class="text-slate-900 dark:text-white opacity-40">{{ book.total_pages }} стр.</span>
-          </div>
+          <span v-else class="text-xs text-slate-400">—</span>
         </div>
       </div>
     </div>
@@ -270,8 +308,6 @@ import {
   ChevronDown, 
   BookOpen, 
   BookX, 
-  Calendar, 
-  Languages, 
   Clock, 
   ArrowUpRight,
   BookCheck
@@ -317,7 +353,6 @@ const languageOptions = [
 const router = useRouter();
 const toast = useToast();
 
-// Состояние
 const loading = ref(false);
 const books = ref<Book[]>([]);
 const searchQuery = ref("");
@@ -327,6 +362,7 @@ const authors = ref<string[]>([]);
 
 const showAuthorDropdown = ref(false);
 const showLanguageDropdown = ref(false);
+const isSelectingLanguage = ref(false);
 
 const pagination = ref<Pagination>({
   page: 1,
@@ -334,7 +370,6 @@ const pagination = ref<Pagination>({
   total: 0,
 });
 
-// Computed
 const filteredAuthors = computed(() => {
   if (!authorQuery.value) return authors.value;
   const q = authorQuery.value.toLowerCase();
@@ -346,7 +381,6 @@ const selectedLanguageLabel = computed(() => {
   return opt ? opt.label : "Все языки";
 });
 
-// Методы
 const fetchAuthors = async () => {
   try {
     const res = await $fetch<{ authors: string[] }>("/api/library/catalog/authors");
@@ -386,9 +420,12 @@ const selectAuthor = (author: string) => {
 
 const selectLanguage = (val: string) => {
   selectedLanguage.value = val;
+  isSelectingLanguage.value = true;
   showLanguageDropdown.value = false;
   pagination.value.page = 1;
-  fetchBooks();
+  fetchBooks().finally(() => {
+    isSelectingLanguage.value = false;
+  });
 };
 
 const hideAuthorDropdown = () => {
@@ -396,7 +433,9 @@ const hideAuthorDropdown = () => {
 };
 
 const hideLanguageDropdown = () => {
-  setTimeout(() => { showLanguageDropdown.value = false; }, 200);
+  if (!isSelectingLanguage.value) {
+    showLanguageDropdown.value = false;
+  }
 };
 
 const resetFilters = () => {
@@ -428,11 +467,10 @@ const openBook = (book: Book) => {
 
 const getLanguageLabel = (lang: string | null) => {
   if (!lang) return "—";
-  const labels: Record<string, string> = { ru: "🇷🇺 RU", uz: "🇺🇿 UZ", en: "🇬🇧 EN", kk: "🇰🇿 KK" };
+  const labels: Record<string, string> = { ru: "RU", uz: "UZ", en: "EN", kk: "KK" };
   return labels[lang] || lang.toUpperCase();
 };
 
-// Lifecycle
 onMounted(() => {
   fetchBooks();
   fetchAuthors();

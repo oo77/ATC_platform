@@ -449,7 +449,7 @@ watch(currentPage, (val) => {
   pageInput.value = val;
 });
 
-let progressSaveTimeout: any = null;
+const progressSaveTimeout: any = null;
 const scheduleProgressSave = (pageNum: number) => {
   if (progressSaveTimeout) clearTimeout(progressSaveTimeout);
   progressSaveTimeout = setTimeout(async () => {
@@ -457,7 +457,7 @@ const scheduleProgressSave = (pageNum: number) => {
       const bookId = route.params.id as string;
       await ($fetch as any)(`/api/library/reading/${bookId}/progress`, {
         method: "POST",
-        body: { page: pageNum },
+        body: { lastPageRead: pageNum },
       });
     } catch (err) {}
   }, 2000);
