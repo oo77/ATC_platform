@@ -549,6 +549,7 @@ import {
   Download as DownloadIcon,
   Eye as EyeIcon,
   EyeOff as EyeOffIcon,
+  Info as InfoIcon,
 } from "lucide-vue-next";
 import { usePDFExport } from "~/composables/usePDFExport";
 
