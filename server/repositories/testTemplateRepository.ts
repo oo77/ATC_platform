@@ -352,6 +352,10 @@ export async function updateTestTemplate(
         updates.push('description = ?');
         params.push(data.description || null);
     }
+    if (data.bank_id !== undefined) {
+        updates.push('bank_id = ?');
+        params.push(data.bank_id);
+    }
     if (data.questions_mode !== undefined) {
         updates.push('questions_mode = ?');
         params.push(data.questions_mode);

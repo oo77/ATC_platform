@@ -450,6 +450,7 @@ export interface CreateTestTemplateDTO {
 }
 
 export interface UpdateTestTemplateDTO {
+  bank_id?: string;
   name?: string;
   code?: string;
   description?: string;

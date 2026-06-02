@@ -417,7 +417,7 @@ const allMenuGroups: MenuGroup[] = [
         hideForRoles: ["STUDENT"],
         subItems: [
           { name: "Вопросы", path: "/test-bank" },
-          { name: "Шаблоны", path: "/test-bank/templates" },
+          { name: "Шаблоны", path: "/test-templates" },
         ],
       },
     ],
