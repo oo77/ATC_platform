@@ -29,12 +29,12 @@ export default defineEventHandler(async (event) => {
     const statsQuery = `
       SELECT 
         (SELECT COUNT(*) FROM students) as total_students,
+        (SELECT COUNT(DISTINCT s.id) FROM students s JOIN issued_certificates ic ON ic.student_id = s.id) as total_trained,
         (SELECT COUNT(*) FROM students WHERE created_at >= ?) as students_last_week,
         (SELECT COUNT(*) FROM instructors) as total_instructors,
         (SELECT COUNT(*) FROM study_groups WHERE end_date >= ?) as active_groups,
         (SELECT COUNT(*) FROM issued_certificates 
          WHERE DATE(issue_date) >= ? AND DATE(issue_date) < ?) as certificates_this_month,
-        (SELECT COUNT(*) FROM users) as total_users,
         (SELECT COUNT(*) FROM users WHERE DATE(created_at) = DATE(?)) as today_registrations
     `;
 
@@ -49,11 +49,11 @@ export default defineEventHandler(async (event) => {
 
     const stats = statsRows[0] || {
       total_students: 0,
+      total_trained: 0,
       students_last_week: 0,
       total_instructors: 0,
       active_groups: 0,
       certificates_this_month: 0,
-      total_users: 0,
       today_registrations: 0,
     };
 
@@ -234,6 +234,34 @@ export default defineEventHandler(async (event) => {
       console.error("Failed to get students by organization:", e);
     }
 
+    // 7a. Распределение обученных (с сертификатами) по организациям
+    let trainedByOrganization: { name: string; count: number }[] = [];
+    try {
+      const trainedOrgQuery = `
+        SELECT 
+          COALESCE(o.name, s.organization, 'Не указано') as name,
+          COUNT(DISTINCT s.id) as count
+        FROM students s
+        INNER JOIN issued_certificates ic ON ic.student_id = s.id
+        LEFT JOIN organizations o ON s.organization_id = o.id
+        GROUP BY COALESCE(o.id, s.organization)
+        ORDER BY count DESC
+      `;
+      const allTrainedOrgs = await executeQuery<any[]>(trainedOrgQuery);
+
+      if (allTrainedOrgs.length > 9) {
+        const top9 = allTrainedOrgs.slice(0, 9);
+        const others = allTrainedOrgs.slice(9);
+        const otherCount = others.reduce((sum, item) => sum + Number(item.count), 0);
+
+        trainedByOrganization = [...top9, { name: "Остальные", count: otherCount }];
+      } else {
+        trainedByOrganization = allTrainedOrgs;
+      }
+    } catch (e) {
+      console.error("Failed to get trained by organization:", e);
+    }
+
     // 8. Сертификаты по месяцам (за последние 12 месяцев)
     let certificatesByMonth: { month: string; count: number }[] = [];
     try {
@@ -369,19 +397,20 @@ export default defineEventHandler(async (event) => {
     return {
       isAdmin: true,
       totalStudents: stats.total_students,
+      totalTrained: stats.total_trained,
       studentsTrend,
       totalInstructors: stats.total_instructors,
       activeGroups: stats.active_groups,
       certificatesThisMonth: stats.certificates_this_month,
-      totalUsers: stats.total_users,
       todayRegistrations: stats.today_registrations,
       activeSessions,
       todayLogs,
       systemAlerts,
       recentActivities,
       weeklyActivity,
-      // Новые данные для чартов
+      // Данные для чартов
       studentsByOrganization,
+      trainedByOrganization,
       certificatesByMonth,
       topInstructors,
       topCoursesByGroups,
