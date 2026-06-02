@@ -78,74 +78,87 @@
 
         <!-- Фильтр по автору (Custom Dropdown) -->
         <div class="relative group">
-          <input
-            v-model="authorQuery"
-            type="text"
-            placeholder="Автор произведения..."
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-10 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all cursor-text h-[52px]"
-            @focus="showAuthorDropdown = true"
-            @blur="hideAuthorDropdown"
-            @input="handleSearch"
-          />
-          <User class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
-          <ChevronDown class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none transition-transform duration-300" :class="showAuthorDropdown ? 'rotate-180 text-primary' : ''" />
-          
-          <transition
-            enter-active-class="transition ease-out duration-200"
-            enter-from-class="opacity-0 translate-y-1"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition ease-in duration-150"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 translate-y-1"
+          <div
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 h-[52px] flex items-center cursor-text"
           >
-            <div v-if="showAuthorDropdown && filteredAuthors.length" class="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
-              <div 
-                v-for="author in filteredAuthors" 
-                :key="author"
-                @mousedown.prevent="selectAuthor(author)"
-                class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors"
-                :class="authorQuery === author ? 'bg-primary/5 text-primary dark:text-primary' : ''"
-              >
-                {{ author }}
-              </div>
+            <User class="absolute left-4 w-5 h-5 text-slate-400 pointer-events-none" />
+            <input
+              v-model="authorQuery"
+              type="text"
+              placeholder="Автор произведения..."
+              class="w-full py-3.5 pl-12 pr-10 text-sm font-bold text-slate-900 dark:text-white bg-transparent outline-none"
+              @focus="showAuthorDropdown = true"
+              @input="showAuthorDropdown = true"
+            />
+            <button
+              v-if="authorQuery"
+              @click.stop="clearAuthor"
+              class="absolute right-10 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+            >
+              <X class="w-4 h-4 text-slate-400" />
+            </button>
+            <ChevronDown 
+              class="absolute right-4 w-5 h-5 text-slate-400 transition-transform duration-200" 
+              :class="showAuthorDropdown ? 'rotate-180 text-primary' : ''" 
+            />
+          </div>
+          
+          <div 
+            v-if="showAuthorDropdown && filteredAuthors.length" 
+            class="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+          >
+            <div 
+              v-for="author in filteredAuthors" 
+              :key="author"
+              @click="selectAuthor(author)"
+              class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors"
+              :class="authorQuery === author ? 'bg-primary/5 text-primary dark:text-primary' : ''"
+            >
+              {{ author }}
             </div>
-          </transition>
+          </div>
         </div>
 
         <!-- Язык (Custom Dropdown) -->
         <div class="relative group">
-          <input
-            :value="selectedLanguageLabel"
-            type="text"
-            readonly
-            placeholder="Все языки"
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-10 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all cursor-pointer h-[52px]"
-            @focus="showLanguageDropdown = true"
-            @blur="hideLanguageDropdown"
-          />
-          <Globe class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors pointer-events-none" />
-          <ChevronDown class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none transition-transform duration-300" :class="showLanguageDropdown ? 'rotate-180 text-primary' : ''" />
-
-          <transition
-            enter-active-class="transition ease-out duration-200"
-            enter-from-class="opacity-0 translate-y-1"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition ease-in duration-150"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 translate-y-1"
+          <div
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 h-[52px] flex items-center cursor-pointer"
+            @click="showLanguageDropdown = !showLanguageDropdown"
           >
-            <div v-if="showLanguageDropdown" class="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
-              <div 
-                v-for="lang in languageOptions" 
-                :key="lang.value"
-                @mousedown.prevent="selectLanguage(lang.value)"
-                class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-sm font-bold transition-colors"
-                :class="selectedLanguage === lang.value ? 'bg-primary/5 text-primary dark:text-primary' : 'text-slate-700 dark:text-slate-300'"
-              >
-                {{ lang.label }}
-              </div>
+            <Globe class="absolute left-4 w-5 h-5 text-slate-400 pointer-events-none" />
+            <span 
+              class="pl-12 pr-10 text-sm font-bold text-slate-900 dark:text-white w-full"
+              :class="selectedLanguage ? '' : 'text-slate-400'"
+            >
+              {{ selectedLanguageLabel }}
+            </span>
+            <button
+              v-if="selectedLanguage"
+              @click.stop="clearLanguage"
+              class="absolute right-10 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
+            >
+              <X class="w-4 h-4 text-slate-400" />
+            </button>
+            <ChevronDown 
+              class="absolute right-4 w-5 h-5 text-slate-400 transition-transform duration-200" 
+              :class="showLanguageDropdown ? 'rotate-180 text-primary' : ''" 
+            />
+          </div>
+
+          <div 
+            v-if="showLanguageDropdown" 
+            class="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+          >
+            <div 
+              v-for="lang in languageOptions" 
+              :key="lang.value"
+              @click="selectLanguage(lang.value)"
+              class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-sm font-bold transition-colors"
+              :class="selectedLanguage === lang.value ? 'bg-primary/5 text-primary dark:text-primary' : 'text-slate-700 dark:text-slate-300'"
+            >
+              {{ lang.label }}
             </div>
-          </transition>
+          </div>
         </div>
       </div>
     </div>
@@ -298,7 +311,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { 
   Library, 
@@ -309,7 +322,7 @@ import {
   BookOpen, 
   BookX, 
   Clock, 
-  ArrowUpRight,
+  X,
   BookCheck
 } from "lucide-vue-next";
 import { useToast } from "~/composables/useToast";
@@ -362,7 +375,6 @@ const authors = ref<string[]>([]);
 
 const showAuthorDropdown = ref(false);
 const showLanguageDropdown = ref(false);
-const isSelectingLanguage = ref(false);
 
 const pagination = ref<Pagination>({
   page: 1,
@@ -418,24 +430,25 @@ const selectAuthor = (author: string) => {
   fetchBooks();
 };
 
+const clearAuthor = () => {
+  authorQuery.value = "";
+  showAuthorDropdown.value = false;
+  pagination.value.page = 1;
+  fetchBooks();
+};
+
 const selectLanguage = (val: string) => {
   selectedLanguage.value = val;
-  isSelectingLanguage.value = true;
   showLanguageDropdown.value = false;
   pagination.value.page = 1;
-  fetchBooks().finally(() => {
-    isSelectingLanguage.value = false;
-  });
+  fetchBooks();
 };
 
-const hideAuthorDropdown = () => {
-  setTimeout(() => { showAuthorDropdown.value = false; }, 200);
-};
-
-const hideLanguageDropdown = () => {
-  if (!isSelectingLanguage.value) {
-    showLanguageDropdown.value = false;
-  }
+const clearLanguage = () => {
+  selectedLanguage.value = "";
+  showLanguageDropdown.value = false;
+  pagination.value.page = 1;
+  fetchBooks();
 };
 
 const resetFilters = () => {
@@ -474,7 +487,20 @@ const getLanguageLabel = (lang: string | null) => {
 onMounted(() => {
   fetchBooks();
   fetchAuthors();
+  document.addEventListener('click', closeDropdowns);
 });
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeDropdowns);
+});
+
+const closeDropdowns = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest('.group')) {
+    showAuthorDropdown.value = false;
+    showLanguageDropdown.value = false;
+  }
+};
 </script>
 
 <style scoped>
