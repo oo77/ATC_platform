@@ -1,149 +1,106 @@
 <template>
   <div class="file-uploader">
-    <!-- Drag & Drop Zone -->
-    <div
-      :class="[
-        'relative rounded-lg border-2 border-dashed p-8 transition-all duration-200',
-        isDragging
-          ? 'border-primary bg-primary/5 scale-[1.02]'
-          : 'border-stroke dark:border-strokedark hover:border-primary/50',
-        'cursor-pointer'
-      ]"
-      @drop.prevent="handleDrop"
-      @dragover.prevent="isDragging = true"
-      @dragleave.prevent="isDragging = false"
-      @click="triggerFileInput"
-    >
-      <input
-        ref="fileInput"
-        type="file"
-        :accept="accept"
-        :multiple="multiple"
-        class="hidden"
-        @change="handleFileInput"
-      />
+    <file-pond
+      ref="pond"
+      :label-idle="labelIdle"
+      :accepted-file-types="acceptedFileTypes"
+      :max-file-size="maxFileSize"
+      :allow-multiple="multiple"
+      :initial-files="initialFilesFormatted"
+      :server="serverConfig"
+      :files="pondFiles"
+      :item-insert-source-name="'file'"
+      :item-insert-location="props.multiple ? 'after' : '-1'"
+      :item-remove-element="null"
+      @processfile="handleProcessFile"
+      @removefile="handleRemoveFile"
+      @error="handleError"
+      @init="handleInit"
+      @addfile="handleAddFile"
+      @processfileprogress="handleProgress"
+    />
 
-      <div class="flex flex-col items-center justify-center gap-4 text-center">
-        <!-- Icon -->
-        <div
-          :class="[
-            'flex h-16 w-16 items-center justify-center rounded-full transition-all',
-            isDragging
-              ? 'bg-primary text-white scale-110'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
-          ]"
+    <!-- Upload Progress Overlay -->
+    <div v-if="isUploading" class="upload-overlay">
+      <div class="flex items-center gap-3">
+        <div class="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
+        <span class="text-sm font-medium">Загрузка... {{ uploadProgress }}%</span>
+      </div>
+    </div>
+
+    <!-- Files Preview List -->
+    <div v-if="showPreview && uploadedFiles.length > 0" class="mt-4 space-y-2">
+      <h4 class="text-sm font-medium text-black dark:text-white">
+        Загруженные файлы ({{ uploadedFiles.length }})
+      </h4>
+      <div
+        v-for="file in uploadedFiles"
+        :key="file.uuid"
+        class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      >
+        <div class="shrink-0 h-10 w-10 rounded overflow-hidden bg-gray-200 dark:bg-gray-700">
+          <img
+            v-if="isImage(file.mimeType)"
+            :src="file.url"
+            :alt="file.filename"
+            class="h-full w-full object-cover"
+          />
+          <div v-else class="h-full w-full flex items-center justify-center">
+            <svg class="h-6 w-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-medium text-black dark:text-white truncate">
+            {{ file.filename }}
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            {{ formatFileSize(file.sizeBytes) }}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          @click="handleDelete(file.uuid)"
+          class="shrink-0 p-2 text-red-500 hover:bg-red-500 dark:hover:bg-red-900/20 rounded transition-colors"
+          title="Удалить"
         >
-          <svg
-            class="h-8 w-8"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
               stroke-width="2"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16"
             />
           </svg>
-        </div>
-
-        <!-- Text -->
-        <div>
-          <p class="text-lg font-medium text-black dark:text-white">
-            {{ isDragging ? 'Отпустите файл' : 'Перетащите файл сюда' }}
-          </p>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            или нажмите для выбора
-          </p>
-          <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-            Максимальный размер: {{ maxSizeMb }} MB
-          </p>
-        </div>
-
-        <!-- Upload Progress -->
-        <div v-if="isUploading" class="w-full max-w-md">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm text-gray-600 dark:text-gray-400">Загрузка...</span>
-            <span class="text-sm font-medium text-primary">{{ uploadProgress }}%</span>
-          </div>
-          <div class="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-            <div
-              class="h-full bg-linear-to-r from-primary to-secondary transition-all duration-300"
-              :style="{ width: `${uploadProgress}%` }"
-            ></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Files Preview -->
-    <div v-if="showPreview && uploadedFiles.length > 0" class="mt-4">
-      <h4 class="text-sm font-medium text-black dark:text-white mb-3">
-        Загруженные файлы ({{ uploadedFiles.length }})
-      </h4>
-      <div class="space-y-2">
-        <div
-          v-for="file in uploadedFiles"
-          :key="file.uuid"
-          class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <!-- File Icon/Thumbnail -->
-          <div class="shrink-0 h-10 w-10 rounded overflow-hidden bg-gray-200 dark:bg-gray-700">
-            <img
-              v-if="isImage(file.mimeType)"
-              :src="file.url"
-              :alt="file.filename"
-              class="h-full w-full object-cover"
-            />
-            <div v-else class="h-full w-full flex items-center justify-center">
-              <svg class="h-6 w-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fill-rule="evenodd"
-                  d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
-                  clip-rule="evenodd"
-                />
-              </svg>
-            </div>
-          </div>
-
-          <!-- File Info -->
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium text-black dark:text-white truncate">
-              {{ file.filename }}
-            </p>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              {{ formatFileSize(file.sizeBytes) }}
-            </p>
-          </div>
-
-          <!-- Delete Button -->
-          <button
-            type="button"
-            @click="handleDelete(file.uuid)"
-            class="shrink-0 p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-            title="Удалить"
-          >
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
-          </button>
-        </div>
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import type { FileCategory, FileRecord } from '~/types/file';
+import vueFilePond from 'vue-filepond';
+import FilePondPluginFileValidateType from 'filepond-plugin-file-validate-type';
+import FilePondPluginFileValidateSize from 'filepond-plugin-file-validate-size';
+import FilePondPluginImagePreview from 'filepond-plugin-image-preview';
+import 'filepond/dist/filepond.min.css';
+import 'filepond-plugin-image-preview/dist/filepond-plugin-image-preview.css';
 
-// Props
+const FilePond = vueFilePond(
+  FilePondPluginFileValidateType,
+  FilePondPluginFileValidateSize,
+  FilePondPluginImagePreview
+);
+
 interface FileUploaderProps {
   category: FileCategory;
   folderId?: number | null;
@@ -163,149 +120,191 @@ const props = withDefaults(defineProps<FileUploaderProps>(), {
   showPreview: true,
 });
 
-// Emits
 const emit = defineEmits<{
   uploaded: [file: FileRecord];
   error: [message: string];
   deleted: [uuid: string];
 }>();
 
-// Composables
-const { uploadFile, deleteFile, formatFileSize } = useFileManager();
+const { uploadFile, deleteFile, formatFileSize, getFileUrl } = useFileManager();
 
-// State
-const fileInput = ref<HTMLInputElement | null>(null);
-const isDragging = ref(false);
+const pond = ref<InstanceType<typeof FilePond> | null>(null);
+const pondFiles = ref<any[]>([]);
 const isUploading = ref(false);
-const uploadProgress = ref(0);
 const uploadedFiles = ref<FileRecord[]>(props.initialFiles || []);
 
-// Watch for initial files changes
+const labelIdle = computed(() => `
+  <div class="flex flex-col items-center justify-center gap-4 text-center p-6">
+    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 transition-all">
+      <svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+      </svg>
+    </div>
+    <div>
+      <p class="text-lg font-medium text-black dark:text-white">Перетащите файл сюда</p>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">или нажмите для выбора</p>
+      <p class="mt-2 text-xs text-gray-400 dark:text-gray-500">Максимальный размер: ${props.maxSizeMb} MB</p>
+    </div>
+  </div>
+`);
+
+const acceptedFileTypes = computed(() => {
+  if (props.accept === '*/*') return null;
+  return props.accept.split(',').map(t => t.trim());
+});
+
+const maxFileSize = computed(() => `${props.maxSizeMb}MB`);
+
+const serverConfig = computed(() => ({
+  url: '/api',
+  process: {
+    url: '/files/upload',
+    method: 'POST',
+    withCredentials: false,
+    headers: {
+      'X-Category': props.category,
+      ...(props.folderId ? { 'X-Folder-Id': props.folderId.toString() } : {}),
+      ...(props.relatedId ? { 'X-Related-Id': props.relatedId.toString() } : {}),
+    },
+    ondata: (formData: FormData) => {
+      formData.append('category', props.category);
+      if (props.folderId) formData.append('folderId', props.folderId.toString());
+      if (props.relatedId) formData.append('relatedId', props.relatedId.toString());
+      if (props.metadata) formData.append('metadata', JSON.stringify(props.metadata));
+      return formData;
+    },
+    onload: (response: string) => {
+      try {
+        const data = JSON.parse(response);
+        if (data.success && data.file) {
+          return JSON.stringify(data.file);
+        }
+        return response;
+      } catch {
+        return response;
+      }
+    },
+    onerror: (response: string) => {
+      try {
+        const data = JSON.parse(response);
+        return data.message || 'Ошибка загрузки';
+      } catch {
+        return response;
+      }
+    },
+  },
+  revert: null,
+  restore: null,
+  load: '/api/files/',
+}));
+
+const initialFilesFormatted = computed(() => {
+  if (!props.initialFiles?.length) return [];
+
+  return props.initialFiles.map(file => ({
+    source: file.uuid,
+    options: {
+      type: 'local',
+      file: {
+        name: file.filename,
+        size: file.sizeBytes,
+        type: file.mimeType,
+      },
+      metadata: {
+        url: file.url,
+      },
+    },
+  }));
+});
+
 watch(() => props.initialFiles, (newFiles) => {
   if (newFiles) {
     uploadedFiles.value = [...newFiles];
   }
 }, { deep: true });
 
-// Methods
-const triggerFileInput = () => {
-  if (!isUploading.value) {
-    fileInput.value?.click();
+watch(() => props.folderId, () => {
+  if (pond.value) {
+    pond.value.refresh();
+  }
+});
+
+const handleInit = () => {
+  console.log('FilePond initialized');
+};
+
+const handleAddFile = (error: any, file: any) => {
+  if (error) {
+    console.error('Add file error:', error);
+    emit('error', error.message || 'Ошибка добавления файла');
+    return;
   }
 };
 
-const validateFile = (file: File): boolean => {
-  const maxSizeBytes = props.maxSizeMb * 1024 * 1024;
-
-  if (file.size > maxSizeBytes) {
-    const message = `Файл слишком большой. Максимальный размер: ${props.maxSizeMb}MB`;
-    emit('error', message);
-    alert(message);
-    return false;
+const handleProgress = (file: any, progress: number) => {
+  if (progress < 1) {
+    isUploading.value = true;
   }
-
-  // Проверка типа файла по accept
-  if (props.accept !== '*/*') {
-    const acceptedTypes = props.accept.split(',').map(t => t.trim());
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    const mimeType = file.type;
-
-    const isAccepted = acceptedTypes.some(type => {
-      if (type.startsWith('.')) {
-        return type.toLowerCase() === fileExtension;
-      }
-      if (type.endsWith('/*')) {
-        const baseType = type.split('/')[0];
-        return mimeType.startsWith(baseType + '/');
-      }
-      return type === mimeType;
-    });
-
-    if (!isAccepted) {
-      const message = `Неподдерживаемый тип файла: ${file.name}`;
-      emit('error', message);
-      alert(message);
-      return false;
-    }
-  }
-
-  return true;
 };
 
-const uploadFileToServer = async (file: File) => {
-  if (!validateFile(file)) {
+const handleProcessFile = async (error: any, file: any) => {
+  isUploading.value = false;
+
+  if (error) {
+    console.error('Process file error:', error);
+    emit('error', error.message || 'Ошибка загрузки файла');
     return;
   }
 
-  isUploading.value = true;
-  uploadProgress.value = 0;
-
-  // Симуляция прогресса (в реальности нужен XMLHttpRequest для отслеживания)
-  const progressInterval = setInterval(() => {
-    if (uploadProgress.value < 90) {
-      uploadProgress.value += 10;
-    }
-  }, 100);
-
   try {
-    const uploadedFile = await uploadFile(file, props.category, props.folderId, props.relatedId, props.metadata);
+    let fileRecord: FileRecord | null = null;
 
-    uploadProgress.value = 100;
-
-    // Добавляем в список загруженных
-    if (props.showPreview) {
-      uploadedFiles.value.push(uploadedFile);
+    if (typeof file === 'string') {
+      try {
+        fileRecord = JSON.parse(file);
+      } catch {
+        fileRecord = { uuid: file } as FileRecord;
+      }
+    } else if (file?.uuid) {
+      fileRecord = file;
+    } else if (file?.serverId) {
+      const fullRecord = await getFileRecord(file.serverId);
+      if (fullRecord) {
+        fileRecord = fullRecord;
+      }
     }
 
-    emit('uploaded', uploadedFile);
-
-    // Показываем успешное уведомление
-    // В будущем заменить на toast notification
-    console.log('Файл успешно загружен:', uploadedFile.filename);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Ошибка загрузки файла';
-    emit('error', message);
-    alert(message);
-  } finally {
-    clearInterval(progressInterval);
-    isUploading.value = false;
-    uploadProgress.value = 0;
+    if (fileRecord && fileRecord.uuid) {
+      const fullRecord = await getFileRecord(fileRecord.uuid);
+      if (fullRecord) {
+        if (props.showPreview && !uploadedFiles.value.find(f => f.uuid === fullRecord.uuid)) {
+          uploadedFiles.value.push(fullRecord);
+        }
+        emit('uploaded', fullRecord);
+      }
+    }
+  } catch (e) {
+    console.error('Process file error:', e);
   }
 };
 
-const handleFileInput = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const files = target.files;
-
-  if (files && files.length > 0) {
-    if (props.multiple) {
-      Array.from(files).forEach(uploadFileToServer);
-    } else {
-      const file = files[0];
-      if (file) {
-        uploadFileToServer(file);
-      }
-    }
+const handleRemoveFile = async (error: any, file: any) => {
+  if (error) {
+    console.error('Remove file error:', error);
+    return;
   }
 
-  // Сбрасываем input для возможности повторной загрузки того же файла
-  target.value = '';
+  const source = file?.source;
+  if (source && source !== 'undefined' && typeof source === 'string' && source.length > 10) {
+    await handleDelete(source);
+  }
 };
 
-const handleDrop = (event: DragEvent) => {
-  isDragging.value = false;
-
-  const files = event.dataTransfer?.files;
-  if (files && files.length > 0) {
-    if (props.multiple) {
-      Array.from(files).forEach(uploadFileToServer);
-    } else {
-      const file = files[0];
-      if (file) {
-        uploadFileToServer(file);
-      }
-    }
-  }
+const handleError = (error: any) => {
+  const message = error.body || error.message || 'Ошибка загрузки файла';
+  console.error('FilePond error:', message);
+  emit('error', message);
 };
 
 const handleDelete = async (uuid: string) => {
@@ -324,11 +323,17 @@ const handleDelete = async (uuid: string) => {
   }
 };
 
+const getFileRecord = async (uuid: string): Promise<FileRecord | null> => {
+  try {
+    const response = await $fetch<{ file: FileRecord }>(`/api/files/${uuid}`);
+    return response.file;
+  } catch {
+    return null;
+  }
+};
+
 const isImage = (mimeType: string): boolean => {
-  return mimeType.startsWith('image/');
+  return mimeType?.startsWith('image/') || false;
 };
 </script>
 
-<style scoped>
-/* Стили компонента FileUploader */
-</style>

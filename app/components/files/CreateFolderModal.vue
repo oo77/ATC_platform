@@ -2,100 +2,78 @@
   <Modal
     :is-open="isOpen"
     title="Создать папку"
-    size="md"
-    @close="$emit('close')"
+    @close="emit('close')"
   >
-    <form @submit.prevent="handleSubmit">
-      <div class="mb-4">
-        <label class="mb-2 block text-sm font-medium text-black dark:text-white">
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Название папки
         </label>
         <input
           v-model="folderName"
           type="text"
-          placeholder="Введите название..."
-          class="w-full rounded border border-stroke bg-transparent px-4 py-2.5 text-black outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
-          :disabled="isLoading"
-          required
+          placeholder="Введите название папки"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300"
         />
       </div>
-
-      <div v-if="error" class="mb-4 rounded bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-600 dark:text-red-400">
-        {{ error }}
-      </div>
-
-      <div class="flex justify-end gap-3">
+      <div class="flex justify-end">
         <button
-          type="button"
-          @click="$emit('close')"
-          class="rounded border border-stroke px-4 py-2 text-black transition hover:bg-gray-50 dark:border-strokedark dark:text-white dark:hover:bg-gray-800"
-          :disabled="isLoading"
+          @click="emit('close')"
+          class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           Отмена
         </button>
         <button
-          type="submit"
-          class="rounded bg-primary px-4 py-2 text-white transition hover:bg-opacity-90 disabled:opacity-50"
-          :disabled="isLoading || !folderName.trim()"
+          @click="createFolder"
+          :disabled="!folderName.trim()"
+          class="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 disabled:opacity-50"
         >
           {{ isLoading ? 'Создание...' : 'Создать' }}
         </button>
       </div>
-    </form>
+    </div>
   </Modal>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import Modal from '~/components/ui/Modal.vue';
+import { createFolder } from '~/repositories/folderRepository';
 
-interface CreateFolderModalProps {
+interface Props {
   isOpen: boolean;
-  parentId?: number | null;
+  parentId: number | null;
 }
 
-const props = defineProps<CreateFolderModalProps>();
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
   close: [];
-  created: [folderId: number];
+  created: (folderId: number) => void;
 }>();
-
-const { createFolder } = useFolderManager();
 
 const folderName = ref('');
 const isLoading = ref(false);
-const error = ref('');
 
-const handleSubmit = async () => {
-  // Защита от двойного вызова при быстром клике
-  if (isLoading.value) return;
-  
-  if (!folderName.value.trim()) {
-    error.value = 'Введите название папки';
-    return;
-  }
+const createFolder = async () => {
+  if (!folderName.value.trim()) return;
 
   isLoading.value = true;
-  error.value = '';
-
   try {
-    const folder = await createFolder(folderName.value.trim(), props.parentId || null);
-    folderName.value = '';
+    const folder = await createFolder({
+      name: folderName.value.trim(),
+      parentId: props.parentId,
+    });
+
     emit('created', folder.id);
-    emit('close');
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Ошибка создания папки';
+    folderName.value = '';
+  } catch (error) {
+    console.error('Error creating folder:', error);
   } finally {
     isLoading.value = false;
   }
 };
-
-// Сброс при закрытии
-watch(() => props.isOpen, (isOpen) => {
-  if (!isOpen) {
-    folderName.value = '';
-    error.value = '';
-  }
-});
 </script>
+
+<style scoped>
+</style>

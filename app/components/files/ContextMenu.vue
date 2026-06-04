@@ -121,3 +121,6 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', handleEscape);
 });
 </script>
+
+<style scoped>
+</style>
