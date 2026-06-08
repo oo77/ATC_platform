@@ -475,12 +475,12 @@ const allMenuGroups: MenuGroup[] = [
         path: "/users",
         permission: Permission.USERS_VIEW,
       },
-      {
-        icon: ClipboardList,
-        name: "Запросы посещаемости",
-        path: "/admin/attendance-requests",
-        hideForRoles: ["STUDENT"],
-      },
+      // {
+      //   icon: ClipboardList,
+      //   name: "Запросы посещаемости",
+      //   path: "/admin/attendance-requests",
+      //   hideForRoles: ["STUDENT"],
+      // },
       {
         icon: BarChart3,
         name: "Аналитика",
