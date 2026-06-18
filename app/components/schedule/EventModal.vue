@@ -707,7 +707,7 @@ const loadAllActiveTemplates = async () => {
     const response = await authFetch<{
       success: boolean;
       templates: TestTemplate[];
-    }>("/api/test-bank/templates/select");
+    }>("/api/test-bank/templates?is_active=true&limit=1000");
     if (response.success) {
       allTestTemplates.value = response.templates || [];
     }

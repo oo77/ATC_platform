@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   // Настройка dev-сервера для доступа извне (включая ngrok)
   devServer: {
     host: "localhost", // Слушает все сетевые интерфейсы (необходимо для ngrok и доступа по IP)
-    port: 3000,
+    port: 3001,
   },
 
   // Vite конфигурация для ngrok и pdfjs-dist
@@ -97,6 +97,17 @@ export default defineNuxtConfig({
     // По умолчанию: node-server (для Ahost, VPS, PM2)
     // Для Netlify: установите NITRO_PRESET=netlify
     preset: "node-server",
+
+    // CORS - Allow integration endpoints from any origin
+    routeRules: {
+      "/api/integration/**": {
+        cors: {
+          origin: "*",
+          methods: ["GET", "OPTIONS"],
+          headers: ["Authorization", "Content-Type", "X-Requested-With"],
+        },
+      },
+    },
 
     esbuild: {
       options: {

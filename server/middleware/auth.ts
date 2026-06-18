@@ -16,6 +16,8 @@ const PUBLIC_ROUTES = [
   "/api/certificates/verify/", // Публичная верификация по номеру
   "/api/public/cert-preview-",
   "/api/public/",              // Публичные stats/данные без авторизации
+  "/api/integration",         // Planner integration endpoints
+  "/api/integration/",        // (use their own token auth)
   // ⚠️ /api/certificates/download намеренно УБРАН — скачивание требует авторизации
 ];
 
