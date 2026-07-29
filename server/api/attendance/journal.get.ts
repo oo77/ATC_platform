@@ -186,24 +186,36 @@ export default defineEventHandler(async (event) => {
       });
 
       // Расчёт статистики
-      // Исключаем скрытые ячейки (перездачи для других студентов)
+      // Исключаем скрытые ячейки (пересдачи для других студентов)
+      // и сами пересдачи из общего подсчёта часов программы
       const totalHoursAttended = cells.reduce((sum: number, cell) => {
         if (cell.isHidden) return sum;
+        // Исключаем пересдачи из подсчёта посещённых часов
+        const col = columns.find((c) => c.scheduleEvent.id === cell.scheduleEventId);
+        if (col?.scheduleEvent.isRetake) return sum;
         return sum + (cell.attendance?.hoursAttended || 0);
       }, 0);
 
+
       const totalMaxHours = cells.reduce((sum: number, cell) => {
-        // Пропускаем скрытые ячейки (перездачи для других студентов)
+        // Пропускаем скрытые ячейки (пересдачи для других студентов)
         if (cell.isHidden) return sum;
+
+        // Получаем колонку для этой ячейки
+        const col = columns.find(
+          (c) => c.scheduleEvent.id === cell.scheduleEventId,
+        );
+
+        // ИСКЛЮЧАЕМ пересдачи из максимального количества часов:
+        // пересдача — это дополнительное занятие, которое не входит в план программы
+        if (col?.scheduleEvent.isRetake) return sum;
 
         if (cell.attendance?.maxHours) {
           return sum + cell.attendance.maxHours;
         }
-        const col = columns.find(
-          (c) => c.scheduleEvent.id === cell.scheduleEventId,
-        );
         return sum + (col?.scheduleEvent.academicHours || 0);
       }, 0);
+
 
       // Средняя оценка с учётом связанных пересдач
       // Для каждого "базового" занятия берём только последнюю оценку

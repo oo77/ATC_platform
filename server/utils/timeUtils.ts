@@ -174,3 +174,33 @@ export function parseDateTime(dateTimeStr: string): { date: string; time: string
   
   return { date: datePart, time: timePart };
 }
+
+// =============================================================================
+// ГРАНИЦЫ ДНЯ
+// =============================================================================
+
+/**
+ * Возвращает начало дня (00:00:00) для переданного объекта Date.
+ * Используется для установки времени открытия теста на весь день.
+ *
+ * @param date - Дата
+ * @returns Новый объект Date с временем 00:00:00
+ */
+export function getStartOfDay(date: Date): Date {
+  const result = new Date(date);
+  result.setHours(0, 0, 0, 0);
+  return result;
+}
+
+/**
+ * Возвращает конец дня (23:59:59) для переданного объекта Date.
+ * Используется для установки времени закрытия теста на весь день.
+ *
+ * @param date - Дата
+ * @returns Новый объект Date с временем 23:59:59
+ */
+export function getEndOfDay(date: Date): Date {
+  const result = new Date(date);
+  result.setHours(23, 59, 59, 0);
+  return result;
+}

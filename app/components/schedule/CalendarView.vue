@@ -109,7 +109,7 @@
     <div
       class="bg-white dark:bg-boxdark rounded-lg border border-stroke dark:border-strokedark p-4 mb-6"
     >
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <!-- Фильтр по группе -->
         <div>
           <label
@@ -203,6 +203,41 @@
               >
                 {{ classroom.name }}
               </option>
+            </select>
+            <svg
+              class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Фильтр по типу занятия -->
+        <div>
+          <label
+            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          >
+            Тип занятия
+          </label>
+          <div class="relative">
+            <select
+              v-model="filters.eventType"
+              @change="handleFilterChange"
+              class="w-full rounded-lg border border-stroke bg-transparent py-2 pl-4 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none text-sm"
+            >
+              <option value="">Все типы</option>
+              <option value="theory">Теория</option>
+              <option value="practice">Практика</option>
+              <option value="assessment">Проверка знаний</option>
+              <option value="other">Другое</option>
             </select>
             <svg
               class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
@@ -595,6 +630,7 @@ const filters = ref({
   groupId: "",
   instructorId: "",
   classroomId: "",
+  eventType: "",
 });
 
 // ============ РЕЖИМ МАССОВОГО ВЫБОРА ============
@@ -611,7 +647,8 @@ const hasActiveFilters = computed(() => {
   return (
     filters.value.groupId ||
     filters.value.instructorId ||
-    filters.value.classroomId
+    filters.value.classroomId ||
+    filters.value.eventType
   );
 });
 
@@ -639,6 +676,12 @@ const filteredEvents = computed(() => {
     if (
       filters.value.classroomId &&
       event.classroomId !== filters.value.classroomId
+    ) {
+      return false;
+    }
+    if (
+      filters.value.eventType &&
+      event.eventType !== filters.value.eventType
     ) {
       return false;
     }
@@ -1119,6 +1162,13 @@ const getEventTypeLabel = (eventType: string | undefined): string => {
   return types[eventType || ""] || eventType || "Занятие";
 };
 
+// Вспомогательная функция для очистки всех висящих подсказок в DOM
+const cleanupAllTooltips = () => {
+  if (typeof document === "undefined") return;
+  const tooltips = document.querySelectorAll(".event-tooltip");
+  tooltips.forEach((t) => t.remove());
+};
+
 // Создание tooltip при монтировании события
 const onEventDidMount = (arg: EventMountArg) => {
   const { event, el } = arg;
@@ -1260,6 +1310,8 @@ const onEventDidMount = (arg: EventMountArg) => {
 
   // Добавляем обработчики
   const showTooltip = (e: MouseEvent) => {
+    // Сначала гарантированно очищаем любые предыдущие тултипы
+    cleanupAllTooltips();
     document.body.appendChild(tooltip);
 
     // Позиционируем tooltip с задержкой для корректного расчёта размеров
@@ -1301,6 +1353,9 @@ const onEventDidMount = (arg: EventMountArg) => {
       top = e.clientY - tooltipRect.height - 10;
     }
 
+    left = Math.max(10, left);
+    top = Math.max(10, top);
+
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
   };
@@ -1315,12 +1370,16 @@ const onEventDidMount = (arg: EventMountArg) => {
   el.addEventListener("mouseenter", showTooltip);
   el.addEventListener("mousemove", moveTooltip);
   el.addEventListener("mouseleave", hideTooltip);
+  el.addEventListener("mousedown", hideTooltip);
+  el.addEventListener("click", hideTooltip);
 
   // Сохраняем ссылку для очистки
   (el as any)._tooltipCleanup = () => {
     el.removeEventListener("mouseenter", showTooltip);
     el.removeEventListener("mousemove", moveTooltip);
     el.removeEventListener("mouseleave", hideTooltip);
+    el.removeEventListener("mousedown", hideTooltip);
+    el.removeEventListener("click", hideTooltip);
     hideTooltip();
   };
 };
@@ -1487,12 +1546,33 @@ const calendarOptions = computed<CalendarOptions>(() => {
     // Кастомные метки слотов с номерами пар
     slotLabelContent,
 
-    eventClick: onEventClick,
-    select: onDateSelect,
-    datesSet: onDatesSet,
-    eventDrop: onEventDrop,
-    eventResize: onEventResize,
+    eventClick: (arg: EventClickArg) => {
+      cleanupAllTooltips();
+      onEventClick(arg);
+    },
+    select: (arg: DateSelectArg) => {
+      cleanupAllTooltips();
+      onDateSelect(arg);
+    },
+    datesSet: (arg: DatesSetArg) => {
+      cleanupAllTooltips();
+      onDatesSet(arg);
+    },
+    eventDrop: (info: EventDropArg) => {
+      cleanupAllTooltips();
+      onEventDrop(info);
+    },
+    eventResize: (info: EventResizeDoneArg) => {
+      cleanupAllTooltips();
+      onEventResize(info);
+    },
     eventDidMount: onEventDidMount,
+    eventWillUnmount: (arg: EventMountArg) => {
+      if ((arg.el as any)?._tooltipCleanup) {
+        (arg.el as any)._tooltipCleanup();
+      }
+      cleanupAllTooltips();
+    },
   };
 });
 
@@ -1513,6 +1593,7 @@ const handleToday = () => {
 };
 
 const handleViewChange = (view: string) => {
+  cleanupAllTooltips();
   currentView.value = view;
   const api = calendarRef.value?.getApi();
   api?.changeView(view);
@@ -1546,6 +1627,8 @@ const loadEvents = async (start?: Date, end?: Date) => {
       params.append("instructorId", filters.value.instructorId);
     if (filters.value.classroomId)
       params.append("classroomId", filters.value.classroomId);
+    if (filters.value.eventType)
+      params.append("eventType", filters.value.eventType);
 
     const response = await authFetch<{
       success: boolean;
@@ -1588,6 +1671,7 @@ const loadEvents = async (start?: Date, end?: Date) => {
 
 // Обновление событий в календаре через API (без дубликатов)
 const updateCalendarEvents = () => {
+  cleanupAllTooltips();
   const api = calendarRef.value?.getApi();
   if (!api) return;
 
@@ -1669,6 +1753,7 @@ const updateCalendarEvents = () => {
 };
 
 const openAddModal = (start?: Date) => {
+  cleanupAllTooltips();
   editingEvent.value = null;
   defaultEventStart.value = start || new Date();
   defaultEventEnd.value = new Date(
@@ -1829,6 +1914,7 @@ const resetFilters = () => {
     groupId: "",
     instructorId: "",
     classroomId: "",
+    eventType: "",
   };
   if (currentDateRange.value) {
     loadEvents(currentDateRange.value.start, currentDateRange.value.end);
@@ -2006,8 +2092,19 @@ watch(
   { deep: true },
 );
 
+// Глобальный обработчик кликов для очистки висящих подсказок
+const handleGlobalPointerDown = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (!target?.closest?.(".event-tooltip")) {
+    cleanupAllTooltips();
+  }
+};
+
 // Lifecycle
 onMounted(async () => {
+  window.addEventListener("scroll", cleanupAllTooltips, true);
+  window.addEventListener("mousedown", handleGlobalPointerDown);
+
   // Вычисляем диапазон дат для текущего месяца заранее
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -2033,6 +2130,10 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener("scroll", cleanupAllTooltips, true);
+  window.removeEventListener("mousedown", handleGlobalPointerDown);
+  cleanupAllTooltips();
+
   if (loadingAbortController.value) {
     loadingAbortController.value.abort();
   }
@@ -2217,15 +2318,25 @@ onUnmounted(() => {
 }
 
 .schedule-calendar .fc-popover {
+  position: absolute !important;
+  z-index: 1000 !important;
+  max-width: 320px;
+  min-width: 220px;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 10px !important;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.15),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
   border: 1px solid #e2e8f0;
+  overflow: hidden !important;
 }
 
 .dark .schedule-calendar .fc-popover {
   background: #1c2434;
   border-color: #3d4d5f;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.5),
+    0 8px 10px -6px rgba(0, 0, 0, 0.3) !important;
 }
 
 .schedule-calendar .fc-popover-header {
@@ -2238,6 +2349,17 @@ onUnmounted(() => {
 .dark .schedule-calendar .fc-popover-header {
   background: #24303f;
   border-color: #3d4d5f;
+}
+
+.schedule-calendar .fc-popover-body {
+  max-height: 280px !important;
+  overflow-y: auto !important;
+  padding: 6px !important;
+}
+
+/* Ограничение скролла календаря при открытии поповера в месячном виде */
+.schedule-calendar .fc-daygrid .fc-scroller {
+  overflow: visible !important;
 }
 
 .schedule-calendar .fc-list-empty {

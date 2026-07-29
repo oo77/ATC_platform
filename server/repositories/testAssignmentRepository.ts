@@ -523,14 +523,12 @@ export async function getStudentAssignments(
       ta.test_template_id,
       ta.group_id,
       ta.status,
-      ta.status,
       ta.start_date,
       ta.end_date,
       ta.allowed_student_ids,
       sg.end_date as group_end_date,
       se.original_event_id,
       DATE_FORMAT(se.start_time, '%Y-%m-%d %H:%i:%s') as event_start_time,
-      DATE_FORMAT(se.end_time, '%Y-%m-%d %H:%i:%s') as event_end_time,
       tt.name as template_name,
       tt.code as template_code,
       tt.max_attempts,
@@ -568,7 +566,6 @@ export async function getStudentAssignments(
     // MySQL2 НЕ конвертирует STRING колонки в Date объекты — UTC-смещения нет!
     // parseLocalDateTime на клиенте обработает эти строки как локальное время браузера
     const eventStartTime: string | null = row.event_start_time || null;
-    const eventEndTime: string | null = row.event_end_time || null;
 
     // group_end_date — это DATE колонка (только дата, без времени)
     // Преобразуем в строку в том же формате, что и время окончания занятия
@@ -580,11 +577,21 @@ export async function getStudentAssignments(
             : String(row.group_end_date))
       : null;
 
-    // Определяем финальную дату окончания теста
-    // Если курс завершен раньше времени окончания занятия, используем дату завершения курса
-    let finalEndDate: string | null = eventEndTime;
+    // Тест типа "Проверка знаний" (assessment) доступен на ВЕСЬ ДЕНЬ занятия:
+    // start_date = 00:00:00 дня занятия
+    // end_date   = 23:59:59 дня занятия
+    // Это даёт студентам возможность пройти тест в любое удобное время в течение дня.
+    let finalStartDate: string | null = null;
+    let finalEndDate: string | null = null;
 
-    if (groupEndDate && eventEndTime && groupEndDate < eventEndTime) {
+    if (eventStartTime) {
+      const eventDay = eventStartTime.substring(0, 10); // '2026-06-01'
+      finalStartDate = `${eventDay} 00:00:00`;
+      finalEndDate = `${eventDay} 23:59:59`;
+    }
+
+    // Если дата окончания группы раньше конца дня занятия — ограничиваем ею
+    if (groupEndDate && finalEndDate && groupEndDate < finalEndDate) {
       finalEndDate = groupEndDate;
     }
 
@@ -601,7 +608,7 @@ export async function getStudentAssignments(
       event_time: row.event_time || null,
       status: row.status,
       // Строки без timezone-суффикса — parseLocalDateTime обработает как локальное время
-      start_date: eventStartTime,
+      start_date: finalStartDate,
       end_date: finalEndDate,
       time_limit: row.time_limit || null,
       passing_score: row.passing_score || 60,
@@ -617,6 +624,7 @@ export async function getStudentAssignments(
         : null,
       original_event_id: row.original_event_id || null,
     };
+
   });
 }
 

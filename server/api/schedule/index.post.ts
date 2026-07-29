@@ -163,14 +163,14 @@ export default defineEventHandler(async (event) => {
         }
 
         // Получаем уже использованные часы
-        // Используем academic_hours напрямую, если есть,
-        // иначе fallback на расчёт из минут для обратной совместимости
+        // ИСКЛЮЧАЕМ пересдачи: они не влияют на баланс часов программы
         const usedHoursRows = await executeQuery<UsedHoursRow[]>(
           `SELECT SUM(
-             COALESCE(academic_hours, CEIL(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / ?))
+             COALESCE(academic_hours, ROUND(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / ? * 2) / 2)
            ) as total_hours
            FROM schedule_events
-           WHERE group_id = ? AND discipline_id = ? AND event_type = ?`,
+           WHERE group_id = ? AND discipline_id = ? AND event_type = ?
+             AND (allowed_student_ids IS NULL OR JSON_LENGTH(allowed_student_ids) = 0)`,
           [
             academicHourMinutes,
             body.groupId,
@@ -178,6 +178,7 @@ export default defineEventHandler(async (event) => {
             body.eventType,
           ],
         );
+
 
         const usedAcademicHours = Number(usedHoursRows[0]?.total_hours) || 0;
 

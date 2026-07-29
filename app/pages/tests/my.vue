@@ -430,21 +430,14 @@
                 </div>
                 <div
                   v-if="assignment.start_date || assignment.end_date"
-                  class="mt-1"
+                  class="mt-1 text-xs text-primary font-medium"
                 >
-                  <span v-if="assignment.start_date">{{
-                    formatTime(assignment.start_date)
-                  }}</span>
-                  <span v-if="assignment.start_date && assignment.end_date">
-                    —
-                  </span>
-                  <span v-if="assignment.end_date">{{
-                    formatTime(assignment.end_date)
-                  }}</span>
+                  Весь день
                 </div>
-                <div v-else-if="assignment.event_time">
+                <div v-else-if="assignment.event_time" class="mt-1">
                   {{ assignment.event_time }}
                 </div>
+
               </div>
 
               <!-- Результат если завершён -->

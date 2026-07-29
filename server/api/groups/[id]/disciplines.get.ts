@@ -114,18 +114,25 @@ export default defineEventHandler(async (event) => {
     const academicHourMinutes = await getAcademicHourMinutes();
 
     // Получаем использованные часы по всем занятиям этой группы
-    // Используем academic_hours напрямую, если есть,
-    // иначе fallback на расчёт из времени для обратной совместимости
+    // ИСКЛЮЧАЕМ пересдачи (allowed_student_ids IS NOT NULL) — они проводятся в свободное
+    // время и не должны влиять на баланс часов учебной программы.
+    // Формула округления: ROUND(x/ach * 2)/2 = округление до ближайших 0.5 а-ч
     const usedHoursRows = await executeQuery<UsedHoursRow[]>(
       `SELECT 
         discipline_id,
         event_type,
-        SUM(COALESCE(academic_hours, CEIL(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / ?))) as total_hours
+        SUM(COALESCE(
+          academic_hours,
+          ROUND(COALESCE(duration_minutes, TIMESTAMPDIFF(MINUTE, start_time, end_time)) / ? * 2) / 2
+        )) as total_hours
       FROM schedule_events
-      WHERE group_id = ? AND discipline_id IN (${placeholders})
+      WHERE group_id = ?
+        AND discipline_id IN (${placeholders})
+        AND (allowed_student_ids IS NULL OR JSON_LENGTH(allowed_student_ids) = 0)
       GROUP BY discipline_id, event_type`,
       [academicHourMinutes, groupId, ...disciplineIds],
     );
+
 
     // Группируем инструкторов по дисциплинам
     const instructorsByDiscipline = new Map<

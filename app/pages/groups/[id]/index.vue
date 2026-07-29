@@ -1353,22 +1353,22 @@ const getAcademicHours = (event: any): number => {
     return event.academicHours;
   }
 
-  // Fallback для старых записей: расчёт из durationMinutes
   const academicHourMinutes = parseInt(
     scheduleSettings.value.academic_hour_minutes || "40",
     10,
   );
 
+  // Fallback: из durationMinutes (округление до 0.5 а-ч)
   if (event.durationMinutes) {
-    return Math.ceil(event.durationMinutes / academicHourMinutes);
+    return Math.round((event.durationMinutes / academicHourMinutes) * 2) / 2;
   }
 
-  // Последний fallback: расчёт из разницы времени
+  // Последний fallback: из разницы startTime/endTime
   if (event.startTime && event.endTime) {
     const start = new Date(event.startTime);
     const end = new Date(event.endTime);
     const diffMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-    return Math.ceil(diffMinutes / academicHourMinutes);
+    return Math.round((diffMinutes / academicHourMinutes) * 2) / 2;
   }
 
   return 0;
@@ -1539,34 +1539,32 @@ const totalProgramHours = computed(() => {
 });
 
 const totalScheduledHours = computed(() => {
-  const total = scheduleEvents.value.reduce((sum, event) => {
-    // Используем academicHours напрямую, если есть
+  const academicHourMinutes = parseInt(
+    scheduleSettings.value.academic_hour_minutes || "40",
+    10,
+  );
+
+  return scheduleEvents.value.reduce((sum, event) => {
+    // ИСКЛЮЧАЕМ пересдачи — они не входят в часы учебной программы
+    if (event.allowedStudentIds && event.allowedStudentIds.length > 0) {
+      return sum;
+    }
+
+    // Приоритет: academicHours → durationMinutes → разница startTime/endTime
+    // Формула: round до ближайших 0.5 а-ч
     if (event.academicHours) {
       return sum + event.academicHours;
     }
-
-    // Fallback для старых записей: расчёт из durationMinutes
-    const academicHourMinutes = parseInt(
-      scheduleSettings.value.academic_hour_minutes || "40",
-      10,
-    );
-
     if (event.durationMinutes) {
-      return sum + Math.ceil(event.durationMinutes / academicHourMinutes);
+      return sum + Math.round((event.durationMinutes / academicHourMinutes) * 2) / 2;
     }
-
-    // Последний fallback: расчёт из разницы времени
     if (event.startTime && event.endTime) {
-      const start = new Date(event.startTime);
-      const end = new Date(event.endTime);
-      const diffMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-      return sum + Math.ceil(diffMinutes / academicHourMinutes);
+      const diffMinutes =
+        (new Date(event.endTime).getTime() - new Date(event.startTime).getTime()) / 60000;
+      return sum + Math.round((diffMinutes / academicHourMinutes) * 2) / 2;
     }
     return sum;
   }, 0);
-
-  console.log("[totalScheduledHours] Всего запланировано часов:", total);
-  return total;
 });
 
 const hoursProgress = computed(() => {
@@ -1609,22 +1607,25 @@ const groupInstructors = computed(() => {
     const instr = event.instructor;
     if (!instr) continue;
 
+    // ИСКЛЮЧАЕМ пересдачи — они не входят в плановые часы преподавателя по программе
+    if (event.allowedStudentIds && event.allowedStudentIds.length > 0) continue;
+
     const instrId =
       instr.id || instr.instructorId || String(instr.fullName || instr.name);
     if (!instrId) continue;
 
-    // Академические часы занятия
+    // Академические часы занятия с единой формулой округления до 0.5 а-ч
     let hours = 0;
     if (event.academicHours) {
       hours = event.academicHours;
     } else if (event.durationMinutes) {
-      hours = Math.ceil(event.durationMinutes / academicHourMinutes);
+      hours = Math.round((event.durationMinutes / academicHourMinutes) * 2) / 2;
     } else if (event.startTime && event.endTime) {
       const diff =
         (new Date(event.endTime).getTime() -
           new Date(event.startTime).getTime()) /
         60000;
-      hours = Math.ceil(diff / academicHourMinutes);
+      hours = Math.round((diff / academicHourMinutes) * 2) / 2;
     }
 
     const isCompleted = event.startTime && new Date(event.startTime) < now;

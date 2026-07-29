@@ -21,9 +21,9 @@
         <Users class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
       </div>
-      <p v-if="loading" class="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
-        <div class="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin"></div> Загрузка...
-      </p>
+      <div v-if="loading" class="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
+        <span class="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin"></span> Загрузка...
+      </div>
     </div>
 
     <!-- Список выбранных инструкторов -->
