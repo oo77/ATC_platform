@@ -463,8 +463,8 @@ export async function getStudentAssignments(
     event_date: Date | null;
     event_time: string | null;
     status: TestAssignmentStatus;
-    start_date: Date | null;
-    end_date: Date | null;
+    start_date: string | null;
+    end_date: string | null;
     time_limit: number | null;
     passing_score: number;
     max_attempts: number;

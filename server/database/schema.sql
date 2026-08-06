@@ -31,11 +31,19 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS organizations (
   id VARCHAR(191) PRIMARY KEY,
   code VARCHAR(100) NOT NULL UNIQUE COMMENT 'Уникальный код организации',
+  inn VARCHAR(12) NULL UNIQUE COMMENT 'ИНН организации',
   name VARCHAR(255) NOT NULL COMMENT 'Полное название организации',
-  short_name VARCHAR(100) COMMENT 'Краткое название',
+  name_uz VARCHAR(255) NULL COMMENT 'Название на узбекском',
+  name_en VARCHAR(255) NULL COMMENT 'Название на английском',
+  name_ru VARCHAR(255) NULL COMMENT 'Название на русском',
   contact_phone VARCHAR(20) COMMENT 'Контактный телефон',
   contact_email VARCHAR(100) COMMENT 'Контактный email',
-  address TEXT COMMENT 'Адрес организации',
+  contact_person VARCHAR(255) COMMENT 'Контактное лицо / Руководитель',
+  address TEXT COMMENT 'Адрес организации (фактический)',
+  legal_address TEXT COMMENT 'Юридический адрес',
+  mfo VARCHAR(5) COMMENT 'МФО банка',
+  account_number VARCHAR(20) COMMENT 'Расчетный счет',
+  oked VARCHAR(10) COMMENT 'ОКЭД',
   description TEXT COMMENT 'Описание организации',
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   students_count INT NOT NULL DEFAULT 0 COMMENT 'Кэшированное количество слушателей',
@@ -43,9 +51,10 @@ CREATE TABLE IF NOT EXISTS organizations (
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   
   INDEX idx_code (code),
+  INDEX idx_inn (inn),
   INDEX idx_name (name),
   INDEX idx_is_active (is_active),
-  FULLTEXT INDEX ft_search (name, short_name, address)
+  FULLTEXT INDEX ft_search (name, address)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
@@ -59,7 +68,15 @@ CREATE TABLE IF NOT EXISTS students (
   organization VARCHAR(255) NOT NULL COMMENT 'Текстовое название организации (legacy)',
   organization_id VARCHAR(191) NULL COMMENT 'Ссылка на таблицу organizations',
   department VARCHAR(255),
+  department_uz VARCHAR(255) NULL,
+  department_en VARCHAR(255) NULL,
+  department_ru VARCHAR(255) NULL,
   position VARCHAR(255) NOT NULL,
+  position_uz VARCHAR(255) NULL,
+  position_en VARCHAR(255) NULL,
+  position_ru VARCHAR(255) NULL,
+  birth_date DATE NULL COMMENT 'Дата рождения',
+  photo_base64 LONGTEXT NULL COMMENT 'Фото в base64',
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   

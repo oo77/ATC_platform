@@ -3,6 +3,7 @@ import {
   updateOrganization,
   getOrganizationById,
   organizationCodeExists,
+  organizationInnExists,
 } from "../../repositories/organizationRepository";
 import { createActivityLog } from "../../repositories/activityLogRepository";
 
@@ -50,15 +51,32 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // Проверка уникальности ИНН если изменяется
+    if (body.inn !== undefined && body.inn && body.inn.trim() !== existing.inn) {
+      const innExists = await organizationInnExists(body.inn.trim(), id);
+      if (innExists) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: "Организация с таким ИНН уже существует",
+        });
+      }
+    }
+
     const updated = await updateOrganization(id, {
       code: body.code,
+      inn: body.inn,
       name: body.name,
       nameUz: body.nameUz,
       nameEn: body.nameEn,
       nameRu: body.nameRu,
       contactPhone: body.contactPhone,
       contactEmail: body.contactEmail,
+      contactPerson: body.contactPerson,
       address: body.address,
+      legalAddress: body.legalAddress,
+      mfo: body.mfo,
+      accountNumber: body.accountNumber,
+      oked: body.oked,
       description: body.description,
       isActive: body.isActive,
     });

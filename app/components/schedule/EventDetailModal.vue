@@ -373,7 +373,7 @@
 
           <!-- Кнопка удаления (для пересдач) -->
           <div
-            v-if="canEditSchedule && isRetake && !event.group?.isArchived"
+            v-if="canEditSchedule && isRetake && event && !event.group?.isArchived"
             class="flex items-center gap-2"
           >
             <UiButton
@@ -419,7 +419,7 @@
         <div class="flex gap-3">
           <UiButton variant="outline" @click="handleClose"> Закрыть </UiButton>
           <UiButton
-            v-if="canEditSchedule && !event.group?.isArchived"
+            v-if="canEditSchedule && event && !event.group?.isArchived"
             @click="handleEdit"
           >
             <svg

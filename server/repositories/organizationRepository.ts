@@ -18,13 +18,19 @@ import type {
 export interface Organization {
   id: string;
   code: string;
+  inn: string | null;
   name: string; // Основное название (обычно RU)
   nameUz: string | null;
   nameEn: string | null;
   nameRu: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
+  contactPerson: string | null;
   address: string | null;
+  legalAddress: string | null;
+  mfo: string | null;
+  accountNumber: string | null;
+  oked: string | null;
   description: string | null;
   isActive: boolean;
   studentsCount: number;
@@ -39,26 +45,38 @@ export interface Organization {
 
 export interface CreateOrganizationInput {
   code?: string;
+  inn?: string;
   name: string;
   nameUz?: string;
   nameEn?: string;
   nameRu?: string;
   contactPhone?: string;
   contactEmail?: string;
+  contactPerson?: string;
   address?: string;
+  legalAddress?: string;
+  mfo?: string;
+  accountNumber?: string;
+  oked?: string;
   description?: string;
   isActive?: boolean;
 }
 
 export interface UpdateOrganizationInput {
   code?: string;
+  inn?: string | null;
   name?: string;
   nameUz?: string | null;
   nameEn?: string | null;
   nameRu?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
+  contactPerson?: string | null;
   address?: string | null;
+  legalAddress?: string | null;
+  mfo?: string | null;
+  accountNumber?: string | null;
+  oked?: string | null;
   description?: string | null;
   isActive?: boolean;
 }
@@ -89,13 +107,19 @@ export interface PaginatedResult<T> {
 interface OrganizationRow extends RowDataPacket {
   id: string;
   code: string;
+  inn: string | null;
   name: string;
   name_uz: string | null;
   name_en: string | null;
   name_ru: string | null;
   contact_phone: string | null;
   contact_email: string | null;
+  contact_person: string | null;
   address: string | null;
+  legal_address: string | null;
+  mfo: string | null;
+  account_number: string | null;
+  oked: string | null;
   description: string | null;
   is_active: boolean | number;
   students_count: number;
@@ -120,13 +144,19 @@ function mapRowToOrganization(row: OrganizationRow): Organization {
   return {
     id: row.id,
     code: row.code,
+    inn: row.inn || null,
     name: row.name,
     nameUz: row.name_uz,
     nameEn: row.name_en,
     nameRu: row.name_ru,
     contactPhone: row.contact_phone,
     contactEmail: row.contact_email,
+    contactPerson: row.contact_person || null,
     address: row.address,
+    legalAddress: row.legal_address || null,
+    mfo: row.mfo || null,
+    accountNumber: row.account_number || null,
+    oked: row.oked || null,
     description: row.description,
     isActive: Boolean(row.is_active),
     studentsCount: row.students_count || 0,
@@ -192,10 +222,12 @@ export async function getOrganizationsPaginated(
 
   if (search) {
     conditions.push(
-      "(o.name LIKE ? OR o.name_uz LIKE ? OR o.name_en LIKE ? OR o.name_ru LIKE ? OR o.code LIKE ?)",
+      "(o.name LIKE ? OR o.name_uz LIKE ? OR o.name_en LIKE ? OR o.name_ru LIKE ? OR o.code LIKE ? OR o.inn LIKE ? OR o.contact_person LIKE ?)",
     );
     const searchPattern = `%${search}%`;
     queryParams.push(
+      searchPattern,
+      searchPattern,
       searchPattern,
       searchPattern,
       searchPattern,
@@ -262,6 +294,19 @@ export async function getOrganizationById(
 }
 
 /**
+ * Получить организацию по ИНН
+ */
+export async function getOrganizationByInn(
+  inn: string,
+): Promise<Organization | null> {
+  const rows = await executeQuery<OrganizationRow[]>(
+    "SELECT * FROM organizations WHERE inn = ?",
+    [inn.trim()],
+  );
+  return rows.length > 0 ? mapRowToOrganization(rows[0]) : null;
+}
+
+/**
  * Получить организацию по коду
  */
 export async function getOrganizationByCode(
@@ -288,7 +333,7 @@ export async function getOrganizationByName(
 }
 
 /**
- * Поиск организаций по названию (для автокомплита)
+ * Поиск организаций по названию или ИНН (для автокомплита)
  */
 export async function searchOrganizations(
   query: string,
@@ -296,10 +341,10 @@ export async function searchOrganizations(
 ): Promise<Organization[]> {
   const rows = await executeQuery<OrganizationRow[]>(
     `SELECT * FROM organizations 
-     WHERE name LIKE ? OR name_uz LIKE ? OR name_en LIKE ? OR name_ru LIKE ?
+     WHERE name LIKE ? OR name_uz LIKE ? OR name_en LIKE ? OR name_ru LIKE ? OR inn LIKE ?
      ORDER BY name ASC
      LIMIT ?`,
-    [`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, limit],
+    [`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, limit],
   );
   return rows.map(mapRowToOrganization);
 }
@@ -313,6 +358,26 @@ export async function organizationCodeExists(
 ): Promise<boolean> {
   let query = "SELECT COUNT(*) as total FROM organizations WHERE code = ?";
   const params: any[] = [code];
+
+  if (excludeId) {
+    query += " AND id != ?";
+    params.push(excludeId);
+  }
+
+  const result = await executeQuery<CountRow[]>(query, params);
+  return (result[0]?.total || 0) > 0;
+}
+
+/**
+ * Проверить существование ИНН организации
+ */
+export async function organizationInnExists(
+  inn: string,
+  excludeId?: string,
+): Promise<boolean> {
+  if (!inn || !inn.trim()) return false;
+  let query = "SELECT COUNT(*) as total FROM organizations WHERE inn = ?";
+  const params: any[] = [inn.trim()];
 
   if (excludeId) {
     query += " AND id != ?";
@@ -348,18 +413,24 @@ export async function createOrganization(
 
   await executeQuery<ResultSetHeader>(
     `INSERT INTO organizations 
-     (id, code, name, name_uz, name_en, name_ru, contact_phone, contact_email, address, description, is_active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (id, code, inn, name, name_uz, name_en, name_ru, contact_phone, contact_email, contact_person, address, legal_address, mfo, account_number, oked, description, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       code,
+      data.inn?.trim() || null,
       data.name.trim(),
       data.nameUz?.trim() || null,
       data.nameEn?.trim() || null,
       data.nameRu?.trim() || null,
       data.contactPhone?.trim() || null,
       data.contactEmail?.trim() || null,
+      data.contactPerson?.trim() || null,
       data.address?.trim() || null,
+      data.legalAddress?.trim() || null,
+      data.mfo?.trim() || null,
+      data.accountNumber?.trim() || null,
+      data.oked?.trim() || null,
       data.description?.trim() || null,
       data.isActive !== false,
       now,
@@ -393,6 +464,10 @@ export async function updateOrganization(
     updates.push("code = ?");
     params.push(data.code.trim());
   }
+  if (data.inn !== undefined) {
+    updates.push("inn = ?");
+    params.push(data.inn?.trim() || null);
+  }
   if (data.name !== undefined) {
     updates.push("name = ?");
     params.push(data.name.trim());
@@ -417,9 +492,29 @@ export async function updateOrganization(
     updates.push("contact_email = ?");
     params.push(data.contactEmail?.trim() || null);
   }
+  if (data.contactPerson !== undefined) {
+    updates.push("contact_person = ?");
+    params.push(data.contactPerson?.trim() || null);
+  }
   if (data.address !== undefined) {
     updates.push("address = ?");
     params.push(data.address?.trim() || null);
+  }
+  if (data.legalAddress !== undefined) {
+    updates.push("legal_address = ?");
+    params.push(data.legalAddress?.trim() || null);
+  }
+  if (data.mfo !== undefined) {
+    updates.push("mfo = ?");
+    params.push(data.mfo?.trim() || null);
+  }
+  if (data.accountNumber !== undefined) {
+    updates.push("account_number = ?");
+    params.push(data.accountNumber?.trim() || null);
+  }
+  if (data.oked !== undefined) {
+    updates.push("oked = ?");
+    params.push(data.oked?.trim() || null);
   }
   if (data.description !== undefined) {
     updates.push("description = ?");

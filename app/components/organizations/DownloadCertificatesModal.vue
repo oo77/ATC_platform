@@ -165,14 +165,10 @@ import { ref, watch, computed, onMounted } from "vue";
 import flatPickr from "vue-flatpickr-component";
 import { Russian } from "flatpickr/dist/l10n/ru.js";
 import "flatpickr/dist/flatpickr.css";
+import type { Organization } from "~/types/organization";
 
 const { authFetch } = useAuthFetch();
 const notification = useNotification();
-
-interface Organization {
-  id: string;
-  name: string;
-}
 
 interface Course {
   id: string;

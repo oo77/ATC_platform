@@ -2,6 +2,7 @@ import { defineEventHandler, readBody, createError } from "h3";
 import {
   createOrganization,
   organizationCodeExists,
+  organizationInnExists,
 } from "../../repositories/organizationRepository";
 import { createActivityLog } from "../../repositories/activityLogRepository";
 
@@ -32,15 +33,32 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    // Проверка уникальности ИНН если указан
+    if (body.inn && body.inn.trim()) {
+      const innExists = await organizationInnExists(body.inn.trim());
+      if (innExists) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: "Организация с таким ИНН уже существует",
+        });
+      }
+    }
+
     const organization = await createOrganization({
       code: body.code?.trim(),
+      inn: body.inn?.trim(),
       name: body.name.trim(),
       nameUz: body.nameUz?.trim(),
       nameEn: body.nameEn?.trim(),
       nameRu: body.nameRu?.trim(),
       contactPhone: body.contactPhone?.trim(),
       contactEmail: body.contactEmail?.trim(),
+      contactPerson: body.contactPerson?.trim(),
       address: body.address?.trim(),
+      legalAddress: body.legalAddress?.trim(),
+      mfo: body.mfo?.trim(),
+      accountNumber: body.accountNumber?.trim(),
+      oked: body.oked?.trim(),
       description: body.description?.trim(),
       isActive: body.isActive !== false,
     });

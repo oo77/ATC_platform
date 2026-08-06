@@ -14,6 +14,13 @@
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
+        <button
+          @click="isSyncModalOpen = true"
+          class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-emerald-500/80 bg-transparent text-sm font-bold text-emerald-600 dark:text-emerald-400 transition-all duration-200 hover:bg-emerald-600 hover:text-white hover:shadow-md hover:shadow-emerald-500/20"
+        >
+          <RefreshCw class="w-4 h-4" />
+          Обновить слушателей
+        </button>
         <NuxtLink
           to="/database/import"
           class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-primary bg-transparent text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white hover:shadow-md hover:shadow-primary/20"
@@ -212,13 +219,19 @@
       @confirm="confirmDelete"
       @cancel="closeDeleteModal"
     />
+
+    <StudentsSyncStudentsModal
+      :show="isSyncModalOpen"
+      @close="isSyncModalOpen = false"
+      @synced="fetchStudents"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import type { Student, CreateStudentData, UpdateStudentData } from '~/types/student';
-import { Search, Plus, Filter, RotateCcw, Upload, CreditCard, Building2, Briefcase } from "lucide-vue-next";
+import { Search, Plus, Filter, RotateCcw, Upload, CreditCard, Building2, Briefcase, RefreshCw } from "lucide-vue-next";
 
 // Используем authFetch для авторизованных запросов
 const { authFetch } = useAuthFetch();
@@ -238,6 +251,7 @@ const students = ref<Student[]>([]);
 const loading = ref(false);
 const isFormModalOpen = ref(false);
 const isCertificatesModalOpen = ref(false);
+const isSyncModalOpen = ref(false);
 const isDeleteModalOpen = ref(false);
 const isDeleting = ref(false);
 const selectedStudent = ref<Student | null>(null);

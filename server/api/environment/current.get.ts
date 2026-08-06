@@ -42,5 +42,11 @@ export default defineEventHandler(async (event) => {
       OPENAI_MAX_TOKENS: process.env.OPENAI_MAX_TOKENS || "1500",
       OPENAI_TEMPERATURE: process.env.OPENAI_TEMPERATURE || "0.1",
     },
+    coursePlanner: {
+      COURSE_PLANNER_URL: process.env.COURSE_PLANNER_URL || "http://localhost:3000",
+      COURSE_PLANNER_API_TOKEN: process.env.COURSE_PLANNER_API_TOKEN ? "••••••••" : "",
+      COURSE_PLANNER_ENABLED: process.env.COURSE_PLANNER_ENABLED || "false",
+      PLANNER_API_TOKEN: process.env.PLANNER_API_TOKEN ? "••••••••" : "",
+    },
   };
 });

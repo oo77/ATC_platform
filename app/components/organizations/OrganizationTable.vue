@@ -4,6 +4,7 @@
       <thead>
         <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
           <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Организация</th>
+          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">ИНН</th>
           <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Код</th>
           <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Слушатели</th>
           <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Контакты</th>
@@ -15,7 +16,7 @@
       <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
         <!-- Loading -->
         <tr v-if="loading">
-          <td colspan="7" class="px-6 py-12 text-center">
+          <td colspan="8" class="px-6 py-12 text-center">
             <div class="flex flex-col items-center gap-3">
               <div class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
               <p class="font-bold text-slate-500 dark:text-slate-400">Загрузка организаций...</p>
@@ -25,7 +26,7 @@
 
         <!-- Empty State -->
         <tr v-else-if="organizations.length === 0">
-          <td colspan="7" class="px-6 py-16 text-center">
+          <td colspan="8" class="px-6 py-16 text-center">
             <div class="flex flex-col items-center gap-3">
               <div class="h-16 w-16 rounded-full bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center">
                 <Building2 class="w-8 h-8 text-slate-300" />
@@ -50,15 +51,27 @@
               <p class="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
                 {{ org.name }}
               </p>
-              <p v-if="org.shortName" class="text-xs font-medium text-slate-400 mt-0.5">
-                {{ org.shortName }}
+              <p v-if="org.contactPerson" class="text-xs font-medium text-slate-400 mt-0.5">
+                {{ org.contactPerson }}
               </p>
             </div>
           </td>
 
+          <!-- ИНН -->
+          <td class="px-6 py-4">
+            <span
+              v-if="org.inn"
+              class="inline-flex items-center gap-1 rounded-lg bg-primary/10 dark:bg-primary/20 px-2.5 py-1 text-xs font-bold text-primary font-mono"
+            >
+              <Hash class="w-3 h-3" />
+              {{ org.inn }}
+            </span>
+            <span v-else class="text-xs text-slate-400 italic">не указан</span>
+          </td>
+
           <!-- Код -->
           <td class="px-6 py-4">
-            <span class="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 font-mono">
+            <span class="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 font-mono">
               {{ org.code }}
             </span>
           </td>
@@ -79,12 +92,12 @@
           <td class="px-6 py-4">
             <div class="flex flex-col gap-1 text-sm">
               <div v-if="org.contactPhone" class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                <Phone class="w-3.5 h-3.5 shrink-0" />
-                <span class="font-medium">{{ org.contactPhone }}</span>
+                <Phone class="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                <span class="font-medium text-xs">{{ org.contactPhone }}</span>
               </div>
               <div v-if="org.contactEmail" class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                <Mail class="w-3.5 h-3.5 shrink-0" />
-                <span class="font-medium truncate max-w-[160px]">{{ org.contactEmail }}</span>
+                <Mail class="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                <span class="font-medium text-xs truncate max-w-[150px]">{{ org.contactEmail }}</span>
               </div>
               <span v-if="!org.contactPhone && !org.contactEmail" class="text-slate-300 dark:text-slate-600 text-xs italic">
                 Не указаны
@@ -107,7 +120,7 @@
 
           <!-- Сертификаты -->
           <td class="px-6 py-4">
-            <div class="flex flex-col gap-2 min-w-[140px]">
+            <div class="flex flex-col gap-2 min-w-[130px]">
               <div class="flex items-center justify-between text-xs font-bold">
                 <span class="text-slate-400">Выдано</span>
                 <span class="text-slate-900 dark:text-white">
@@ -163,29 +176,8 @@
 </template>
 
 <script setup lang="ts">
-import { Building2, Phone, Mail, Pencil, Download, Trash2 } from 'lucide-vue-next';
-
-interface Organization {
-  id: string;
-  code: string;
-  name: string;
-  shortName?: string | null;
-  nameUz?: string | null;
-  nameEn?: string | null;
-  nameRu?: string | null;
-  contactPhone: string | null;
-  contactEmail: string | null;
-  address: string | null;
-  description: string | null;
-  isActive: boolean;
-  studentsCount: number;
-  createdAt: Date | string;
-  updatedAt: Date | string;
-  totalCertificates?: number;
-  issuedCertificates?: number;
-  revokedCertificates?: number;
-  latestCertificateDate?: string | null;
-}
+import { Building2, Phone, Mail, Pencil, Download, Trash2, Hash } from 'lucide-vue-next';
+import type { Organization } from '~/types/organization';
 
 defineProps<{
   organizations: Organization[];

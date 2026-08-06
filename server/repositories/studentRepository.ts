@@ -117,11 +117,18 @@ function mapRowToStudent(
     fullName: row.full_name,
     pinfl: row.pinfl,
     organization: row.organization,
+    organizationId: row.organization_id || null,
     organizationUz: row.name_uz,
     organizationEn: row.name_en,
     organizationRu: row.name_ru,
     department: row.department,
+    departmentUz: row.department_uz || null,
+    departmentEn: row.department_en || null,
+    departmentRu: row.department_ru || null,
     position: row.position,
+    positionUz: row.position_uz || null,
+    positionEn: row.position_en || null,
+    positionRu: row.position_ru || null,
     birthDate: row.birth_date,
     photo_base64: row.photo_base64,
     userId: row.user_id,
@@ -620,24 +627,35 @@ export async function createStudent(
   const id = uuidv4();
   const now = new Date();
 
-  // Получаем или создаем организацию
-  const org = await getOrCreateOrganizationByName(data.organization, {
-    nameUz: data.organizationUz,
-    nameEn: data.organizationEn,
-    nameRu: data.organizationRu,
-  });
+  // Получаем или создаем организацию (если organizationId уже передан, берем его)
+  let orgId = data.organizationId;
+  if (!orgId) {
+    const org = await getOrCreateOrganizationByName(data.organization, {
+      nameUz: data.organizationUz,
+      nameEn: data.organizationEn,
+      nameRu: data.organizationRu,
+    });
+    orgId = org.id;
+  }
 
   await executeQuery(
-    `INSERT INTO students (id, full_name, pinfl, organization, organization_id, department, position, birth_date, photo_base64, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO students 
+     (id, full_name, pinfl, organization, organization_id, department, department_uz, department_en, department_ru, position, position_uz, position_en, position_ru, birth_date, photo_base64, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.fullName,
       data.pinfl,
       data.organization,
-      org.id,
+      orgId,
       data.department || null,
+      data.departmentUz || null,
+      data.departmentEn || null,
+      data.departmentRu || null,
       data.position,
+      data.positionUz || null,
+      data.positionEn || null,
+      data.positionRu || null,
       data.birthDate || null,
       data.photo_base64 || null,
       now,
@@ -679,26 +697,55 @@ export async function updateStudent(
     updates.push("pinfl = ?");
     params.push(data.pinfl);
   }
+  if (data.organizationId !== undefined && data.organizationId !== null) {
+    updates.push("organization_id = ?");
+    params.push(data.organizationId);
+  }
   if (data.organization !== undefined) {
     updates.push("organization = ?");
     params.push(data.organization);
 
-    // Обновляем organization_id
-    const org = await getOrCreateOrganizationByName(data.organization, {
-      nameUz: data.organizationUz,
-      nameEn: data.organizationEn,
-      nameRu: data.organizationRu,
-    });
-    updates.push("organization_id = ?");
-    params.push(org.id);
+    if (!data.organizationId) {
+      const org = await getOrCreateOrganizationByName(data.organization, {
+        nameUz: data.organizationUz,
+        nameEn: data.organizationEn,
+        nameRu: data.organizationRu,
+      });
+      updates.push("organization_id = ?");
+      params.push(org.id);
+    }
   }
   if (data.department !== undefined) {
     updates.push("department = ?");
     params.push(data.department || null);
   }
+  if (data.departmentUz !== undefined) {
+    updates.push("department_uz = ?");
+    params.push(data.departmentUz || null);
+  }
+  if (data.departmentEn !== undefined) {
+    updates.push("department_en = ?");
+    params.push(data.departmentEn || null);
+  }
+  if (data.departmentRu !== undefined) {
+    updates.push("department_ru = ?");
+    params.push(data.departmentRu || null);
+  }
   if (data.position !== undefined) {
     updates.push("position = ?");
     params.push(data.position);
+  }
+  if (data.positionUz !== undefined) {
+    updates.push("position_uz = ?");
+    params.push(data.positionUz || null);
+  }
+  if (data.positionEn !== undefined) {
+    updates.push("position_en = ?");
+    params.push(data.positionEn || null);
+  }
+  if (data.positionRu !== undefined) {
+    updates.push("position_ru = ?");
+    params.push(data.positionRu || null);
   }
   if (data.birthDate !== undefined) {
     updates.push("birth_date = ?");
@@ -713,6 +760,8 @@ export async function updateStudent(
     return existing; // Нечего обновлять
   }
 
+  updates.push("updated_at = ?");
+  params.push(new Date());
   params.push(id); // для WHERE id = ?
 
   await executeQuery(
