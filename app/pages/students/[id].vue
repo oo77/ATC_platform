@@ -59,14 +59,18 @@
         >
           <!-- Profile Main Info — compact -->
           <div class="flex items-center gap-4">
-            <div class="relative shrink-0">
+            <div
+              class="relative shrink-0 cursor-pointer group"
+              @click="isPhotoModalOpen = true"
+              title="Нажмите для просмотра фото"
+            >
               <div
-                class="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 shadow-xl"
+                class="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 shadow-xl relative"
               >
                 <img
                   v-if="student.photo_base64"
                   :src="student.photo_base64"
-                  class="w-full h-full object-cover"
+                  class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                 />
                 <div
                   v-else
@@ -75,6 +79,11 @@
                   <span class="text-2xl font-black">{{
                     getInitials(student.fullName)
                   }}</span>
+                </div>
+
+                <!-- Hover Overlay Zoom Icon -->
+                <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                  <Maximize2Icon class="w-5 h-5" />
                 </div>
               </div>
               <div
@@ -102,7 +111,7 @@
                 </div>
                 <div class="flex items-center gap-1.5">
                   <BriefcaseIcon class="w-3.5 h-3.5 text-slate-400" />
-                  {{ student.position }}
+                  {{ currentPosition }}
                 </div>
               </div>
             </div>
@@ -257,9 +266,29 @@
           >
             <!-- Student Data List — compact -->
             <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                <UserIcon class="w-4 h-4 text-info" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Данные слушателя</h3>
+              <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <div class="flex items-center gap-2">
+                  <UserIcon class="w-4 h-4 text-info" />
+                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Данные слушателя</h3>
+                </div>
+
+                <!-- Language Switcher Trigger -->
+                <div class="flex items-center gap-1 bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <span class="text-[10px] text-slate-400 font-bold px-1.5 hidden sm:inline">Язык:</span>
+                  <button
+                    v-for="lang in (['ru', 'uz', 'en'] as const)"
+                    :key="lang"
+                    @click="selectedLang = lang"
+                    :class="[
+                      'px-2 py-0.5 text-[10px] font-extrabold rounded uppercase transition-all',
+                      selectedLang === lang
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    ]"
+                  >
+                    {{ lang }}
+                  </button>
+                </div>
               </div>
               <div class="divide-y divide-slate-100 dark:divide-slate-800">
                 <!-- PINFL -->
@@ -292,16 +321,22 @@
                   <span class="text-sm font-bold text-slate-700 dark:text-slate-200 text-right">{{ student.organization }}</span>
                 </div>
 
-                <!-- Department -->
+                <!-- Department (Служба) -->
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-bold text-slate-400">Подразделение</span>
-                  <span class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ student.department || "—" }}</span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-xs font-bold text-slate-400">Подразделение (Служба)</span>
+                    <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-primary uppercase">{{ selectedLang }}</span>
+                  </div>
+                  <span class="text-sm font-bold text-slate-700 dark:text-slate-200 text-right">{{ currentDepartment }}</span>
                 </div>
 
-                <!-- Position -->
+                <!-- Position (Должность) -->
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-bold text-slate-400">Должность</span>
-                  <span class="text-sm font-bold text-slate-700 dark:text-slate-200 text-right">{{ student.position }}</span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-xs font-bold text-slate-400">Должность</span>
+                    <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-primary uppercase">{{ selectedLang }}</span>
+                  </div>
+                  <span class="text-sm font-bold text-slate-700 dark:text-slate-200 text-right">{{ currentPosition }}</span>
                 </div>
 
                 <!-- Registration Date -->
@@ -518,6 +553,51 @@
       @confirm="confirmDelete"
       @cancel="closeDeleteModal"
     />
+
+    <!-- Photo Lightbox Modal -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div
+          v-if="isPhotoModalOpen && student"
+          class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md"
+          @click="isPhotoModalOpen = false"
+        >
+          <div
+            class="relative max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 p-5 text-center space-y-4"
+            @click.stop
+          >
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div class="text-left min-w-0 pr-2">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide truncate">{{ student.fullName }}</h3>
+                <p class="text-[11px] text-slate-400 font-mono">ПИНФЛ: {{ student.pinfl }}</p>
+              </div>
+              <button
+                @click="isPhotoModalOpen = false"
+                class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
+              >
+                <XIcon class="w-5 h-5" />
+              </button>
+            </div>
+
+            <div class="relative max-h-[60vh] flex items-center justify-center overflow-hidden rounded-2xl bg-slate-950 p-2">
+              <img
+                v-if="student.photo_base64"
+                :src="student.photo_base64"
+                class="max-h-[50vh] w-auto object-contain rounded-xl shadow-lg"
+              />
+              <div v-else class="w-36 h-36 rounded-full bg-primary/10 text-primary flex items-center justify-center text-4xl font-black">
+                {{ getInitials(student.fullName) }}
+              </div>
+            </div>
+
+            <div class="pt-1 text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center justify-center space-x-1.5">
+              <BuildingIcon class="w-3.5 h-3.5 text-slate-400" />
+              <span>{{ student.organization }}</span>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -550,6 +630,8 @@ import {
   Eye as EyeIcon,
   EyeOff as EyeOffIcon,
   Info as InfoIcon,
+  Maximize2 as Maximize2Icon,
+  X as XIcon,
 } from "lucide-vue-next";
 import { usePDFExport } from "~/composables/usePDFExport";
 
@@ -567,7 +649,27 @@ const error = ref<string | null>(null);
 const isEditModalOpen = ref(false);
 const isDeleteModalOpen = ref(false);
 const isDeleting = ref(false);
+const isPhotoModalOpen = ref(false);
+const selectedLang = ref<"ru" | "uz" | "en">("ru");
 const activeTab = ref("info");
+
+const currentDepartment = computed(() => {
+  if (!student.value) return "—";
+  if (selectedLang.value === "uz")
+    return student.value.departmentUz || student.value.department || "—";
+  if (selectedLang.value === "en")
+    return student.value.departmentEn || student.value.department || "—";
+  return student.value.departmentRu || student.value.department || "—";
+});
+
+const currentPosition = computed(() => {
+  if (!student.value) return "—";
+  if (selectedLang.value === "uz")
+    return student.value.positionUz || student.value.position || "—";
+  if (selectedLang.value === "en")
+    return student.value.positionEn || student.value.position || "—";
+  return student.value.positionRu || student.value.position || "—";
+});
 const showPinfl = ref(false);
 
 const availableTabs = [

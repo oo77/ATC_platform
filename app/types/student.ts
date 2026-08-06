@@ -27,7 +27,13 @@ export interface Student {
   pinfl: string; // ПИНФЛ (обязательно)
   organization: string; // Организация (обязательно)
   department?: string | null; // Служба/отдел (не обязательно)
+  departmentUz?: string | null;
+  departmentEn?: string | null;
+  departmentRu?: string | null;
   position: string; // Должность (обязательно)
+  positionUz?: string | null;
+  positionEn?: string | null;
+  positionRu?: string | null;
   birthDate?: Date | string | null; // Дата рождения
   photo_base64?: string | null; // Фото в формате base64
   certificates: StudentCertificate[]; // История сертификатов

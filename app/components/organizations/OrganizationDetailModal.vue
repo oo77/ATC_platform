@@ -6,10 +6,16 @@
           <Building2 class="w-7 h-7 text-primary" />
         </div>
         <div>
-          <h3 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">
-            {{ organization?.name }}
-          </h3>
-          <p class="text-sm font-medium text-slate-500 mt-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+              {{ organization?.name }}
+            </h3>
+            <span v-if="organization?.inn" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-primary/10 text-primary border border-primary/20">
+              <Hash class="w-3 h-3" />
+              ИНН: {{ organization.inn }}
+            </span>
+          </div>
+          <p class="text-xs font-medium text-slate-500 mt-1">
             Код организации: <span class="font-mono text-slate-700 dark:text-slate-300">{{ organization?.code }}</span>
           </p>
         </div>
@@ -134,18 +140,43 @@
           </div>
         </div>
 
-        <!-- Контактная информация -->
+        <!-- Контактные данные и Банковские реквизиты -->
         <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 overflow-hidden">
-          <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800">
-            <h4 class="font-bold text-slate-900 dark:text-white text-sm">Данные организации</h4>
+          <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <h4 class="font-bold text-slate-900 dark:text-white text-sm">Реквизиты и Данные организации</h4>
           </div>
-          <div class="p-5">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 gap-y-6">
-              <InfoBlock v-if="organization.shortName" label="Краткое название" :value="organization.shortName" />
-              <div v-else class="hidden md:block"></div>
-              
-              <div>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Телефон</p>
+          <div class="p-5 space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- ИНН -->
+              <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">ИНН</p>
+                <p class="text-sm font-bold font-mono text-slate-900 dark:text-white">
+                  {{ organization.inn || 'Не указан' }}
+                </p>
+              </div>
+
+              <!-- Контактное лицо -->
+              <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Руководитель / ФИО</p>
+                <div class="flex items-center gap-2">
+                  <UserCheck class="w-4 h-4 text-slate-400 shrink-0" />
+                  <p class="text-sm font-medium text-slate-900 dark:text-white truncate">
+                    {{ organization.contactPerson || 'Не указано' }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- ОКЭД -->
+              <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">ОКЭД</p>
+                <p class="text-sm font-bold font-mono text-slate-900 dark:text-white">
+                  {{ organization.oked || '—' }}
+                </p>
+              </div>
+
+              <!-- Телефон -->
+              <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Телефон</p>
                 <div class="flex items-center gap-2">
                   <Phone class="w-4 h-4 text-slate-400 shrink-0" />
                   <p class="text-sm font-medium" :class="organization.contactPhone ? 'text-slate-900 dark:text-white' : 'text-slate-400 italic'">
@@ -154,18 +185,47 @@
                 </div>
               </div>
               
-              <div>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Email</p>
+              <!-- Email -->
+              <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Email</p>
                 <div class="flex items-center gap-2">
                   <Mail class="w-4 h-4 text-slate-400 shrink-0" />
-                  <p class="text-sm font-medium" :class="organization.contactEmail ? 'text-slate-900 dark:text-white' : 'text-slate-400 italic'">
+                  <p class="text-sm font-medium truncate" :class="organization.contactEmail ? 'text-slate-900 dark:text-white' : 'text-slate-400 italic'">
                     {{ organization.contactEmail || 'Не указан' }}
                   </p>
                 </div>
               </div>
+
+              <!-- МФО -->
+              <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">МФО банка</p>
+                <p class="text-sm font-bold font-mono text-slate-900 dark:text-white">
+                  {{ organization.mfo || '—' }}
+                </p>
+              </div>
+
+              <!-- Расчетный счет -->
+              <div class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 md:col-span-3">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Расчетный счет (р/с)</p>
+                <p class="text-sm font-bold font-mono text-slate-900 dark:text-white">
+                  {{ organization.accountNumber || 'Не указан' }}
+                </p>
+              </div>
+
+              <!-- Юридический адрес -->
+              <div v-if="organization.legalAddress" class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 md:col-span-3">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Юридический адрес</p>
+                <div class="flex items-start gap-2">
+                  <Landmark class="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                  <p class="text-sm font-medium text-slate-900 dark:text-white">
+                    {{ organization.legalAddress }}
+                  </p>
+                </div>
+              </div>
               
-              <div v-if="organization.address" class="md:col-span-2 mt-2">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Адрес</p>
+              <!-- Фактический адрес -->
+              <div v-if="organization.address" class="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 md:col-span-3">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Фактический адрес</p>
                 <div class="flex items-start gap-2">
                   <MapPin class="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
                   <p class="text-sm font-medium text-slate-900 dark:text-white">
@@ -174,7 +234,7 @@
                 </div>
               </div>
 
-              <div v-if="organization.description" class="md:col-span-2 mt-2">
+              <div v-if="organization.description" class="md:col-span-3 mt-2">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Описание</p>
                 <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
                   <p class="text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ organization.description }}</p>
@@ -217,21 +277,10 @@
 import { ref, watch, defineComponent, h } from 'vue';
 import { 
   Building2, Users, CheckCircle, XCircle, TrendingUp, Star, Award, 
-  FileCheck, Phone, Mail, MapPin, Clock, RotateCcw, Pencil
+  FileCheck, Phone, Mail, MapPin, Clock, RotateCcw, Pencil, Hash, Landmark, UserCheck
 } from 'lucide-vue-next';
 
 const { authFetch } = useAuthFetch();
-
-// Helper component for layout
-const InfoBlock = defineComponent({
-  props: { label: String, value: String },
-  setup(props) {
-    return () => h('div', {}, [
-      h('p', { class: 'text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5' }, props.label),
-      h('p', { class: 'text-sm font-medium text-slate-900 dark:text-white' }, props.value || '—')
-    ]);
-  }
-});
 
 const props = defineProps({
   organization: {
@@ -275,12 +324,10 @@ const fetchStats = async () => {
   }
 };
 
-// Загрузка статистики при открытии модалки
 watch(() => props.isOpen, async (isOpen) => {
   if (isOpen && props.organization?.id) {
     await fetchStats();
   } else {
-    // Сброс при закрытии
     stats.value = null;
     popularCourses.value = [];
     recentCertificates.value = [];

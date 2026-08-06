@@ -328,6 +328,7 @@
 </template>
 
 <script setup lang="ts">
+import type { CSSProperties } from "vue";
 import type { CertificateTemplate } from "~/types/certificate";
 import {
   Plus,
@@ -504,7 +505,7 @@ const getElementStyle = (element: any) => {
   };
 };
 
-const getTextStyle = (element: any) => {
+const getTextStyle = (element: any): CSSProperties => {
   return {
     fontFamily: element.fontFamily,
     fontSize: `${element.fontSize}px`,
@@ -519,7 +520,7 @@ const getTextStyle = (element: any) => {
     height: "100%",
     overflow: "hidden",
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "column" as const,
     justifyContent: "center",
   };
 };

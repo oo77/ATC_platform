@@ -89,6 +89,12 @@ export default defineEventHandler(async (event) => {
       "OPENAI_MAX_TOKENS",
       "OPENAI_TEMPERATURE",
 
+      // Course Planner Integration
+      "COURSE_PLANNER_URL",
+      "COURSE_PLANNER_API_TOKEN",
+      "COURSE_PLANNER_ENABLED",
+      "PLANNER_API_TOKEN",
+
       // Other
       "NODE_ENV",
       "AUTO_MIGRATE",

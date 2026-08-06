@@ -297,6 +297,7 @@ import {
   Settings,
   BookOpen,
   ClipboardList,
+  Building2,
 } from "lucide-vue-next";
 import type { Component } from "vue";
 
@@ -435,7 +436,6 @@ const allMenuGroups: MenuGroup[] = [
             path: "/certificates",
             excludePaths: ["/certificates/templates"],
           },
-          { name: "Организации", path: "/certificates?tab=orgs" },
           { name: "Шаблоны", path: "/certificates/templates" },
         ],
       },
@@ -469,6 +469,12 @@ const allMenuGroups: MenuGroup[] = [
   {
     title: "Управление",
     items: [
+      {
+        icon: Building2,
+        name: "Организации",
+        path: "/organizations",
+        hideForRoles: ["STUDENT"],
+      },
       {
         icon: Users,
         name: "Пользователи",

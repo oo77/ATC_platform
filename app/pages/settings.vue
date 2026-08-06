@@ -118,7 +118,7 @@
                   <p class="text-sm text-gray-500 dark:text-gray-400">{{ notif.description }}</p>
                 </div>
                 <label class="relative inline-flex cursor-pointer items-center">
-                  <input type="checkbox" v-model="userForm[notif.key]" class="peer sr-only" />
+                  <input type="checkbox" v-model="(userForm as any)[notif.key]" class="peer sr-only" />
                   <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-700"></div>
                 </label>
               </div>
@@ -267,6 +267,11 @@
             </div>
             <div class="p-6"><SettingsTelegramBotSettings /></div>
           </div>
+        </div>
+
+        <!-- COURSE PLANNER 2 INTEGRATION -->
+        <div v-if="activeTab === 'course-planner'" class="space-y-6">
+          <SettingsCoursePlannerSettings />
         </div>
 
         <!-- БАЗА ДАННЫХ -->
@@ -451,7 +456,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import {
   Settings, Bell, Palette, Calendar, DoorOpen, Bot,
-  MessageSquareText, Database, ShieldCheck, Server,
+  MessageSquareText, Database, ShieldCheck, Server, Share2,
   ChevronRight, Eye, EyeOff, Save, Power, Sun, Moon, SunMoon
 } from 'lucide-vue-next';
 import { useUserSettings } from '@/composables/useUserSettings';
@@ -467,7 +472,7 @@ const { settings, loading, fetchSettings, updateSettings } = useUserSettings();
 const { user } = useAuth();
 const { show: showNotification } = useNotification();
 
-const userForm = ref({
+const userForm = ref<Record<string, any>>({
   theme: 'light',
   language: 'ru',
   notifications_email: true,
@@ -478,7 +483,7 @@ const userForm = ref({
   sidebar_color: 'default',
 });
 
-watch(settings, (s) => { if (s) userForm.value = { ...s }; }, { immediate: true });
+watch(settings, (s) => { if (s) userForm.value = { ...userForm.value, ...s }; }, { immediate: true });
 
 // ============================================================================
 // ENV SETTINGS
@@ -510,8 +515,8 @@ const fetchEnvData = async () => {
   envLoading.value = true;
   try {
     const [data, dbInfo]: [any, any] = await Promise.all([
-      $fetch('/api/environment/current'),
-      $fetch('/api/environment/check-db').catch(() => ({ connected: false })),
+      ($fetch as any)('/api/environment/current'),
+      ($fetch as any)('/api/environment/check-db').catch(() => ({ connected: false })),
     ]);
     dbStatus.value = dbInfo;
 
@@ -540,10 +545,10 @@ const saveEnvGroup = async (keys: string[]) => {
       showNotification({ type: 'warning', title: 'Нет изменений', message: 'Заполните хотя бы одно поле' });
       return;
     }
-    await $fetch('/api/environment/save', { method: 'POST', body: payload });
+    await ($fetch as any)('/api/environment/save', { method: 'POST', body: payload });
     showNotification({ type: 'success', title: 'Сохранено', message: 'Настройки записаны в .env' });
   } catch (e: any) {
-    showNotification({ type: 'danger', title: 'Ошибка', message: e.data?.message || 'Ошибка сохранения' });
+    showNotification({ type: 'error', title: 'Ошибка', message: e.data?.message || 'Ошибка сохранения' });
   } finally { saving.value = false; }
 };
 
@@ -551,7 +556,7 @@ const testDbConnection = async () => {
   testingDb.value = true;
   connectionTest.value = null;
   try {
-    const r: any = await $fetch('/api/environment/test-connection', {
+    const r: any = await ($fetch as any)('/api/environment/test-connection', {
       method: 'POST',
       body: {
         DATABASE_HOST: envForm.DATABASE_HOST,
@@ -572,7 +577,7 @@ const testDbConnection = async () => {
 const saveAll = async (scope: 'general' | 'user') => {
   saving.value = true;
   // Сохраняем пользовательские настройки
-  await updateSettings(userForm.value);
+  await updateSettings(userForm.value as any);
   // Если общие — сохраняем и APP_NAME, APP_URL
   if (scope === 'general') {
     await saveEnvGroup(['APP_NAME', 'APP_URL']);
@@ -584,11 +589,11 @@ const executeRestart = async () => {
   showRestartConfirm.value = false;
   restarting.value = true;
   try {
-    await $fetch('/api/environment/restart', { method: 'POST' });
+    await ($fetch as any)('/api/environment/restart', { method: 'POST' });
     showNotification({ type: 'success', title: 'Перезагрузка', message: 'Сервер перезапускается...' });
     setTimeout(() => window.location.reload(), 5000);
   } catch (e: any) {
-    showNotification({ type: 'danger', title: 'Ошибка', message: e.data?.message || 'Не удалось перезапустить' });
+    showNotification({ type: 'error', title: 'Ошибка', message: e.data?.message || 'Не удалось перезапустить' });
   } finally { restarting.value = false; }
 };
 
@@ -631,6 +636,11 @@ const allTabs = computed(() => [
   {
     id: 'telegram', label: 'Telegram Бот', description: 'Токен, Webhook, статус',
     icon: MessageSquareText, bgClass: 'bg-sky-100 dark:bg-sky-900/20',
+    permission: Permission.SETTINGS_MANAGE,
+  },
+  {
+    id: 'course-planner', label: 'Course Planner 2', description: 'Интеграция с внешней системой',
+    icon: Share2, bgClass: 'bg-teal-100 dark:bg-teal-900/20',
     permission: Permission.SETTINGS_MANAGE,
   },
   {

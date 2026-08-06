@@ -12,6 +12,15 @@
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <UiButton
+          variant="outline"
+          size="sm"
+          class="h-10 px-4 gap-2 font-bold shadow-sm border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+          @click="isSyncModalOpen = true"
+        >
+          <RefreshCw class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span>Обновить слушателей</span>
+        </UiButton>
         <UiButton variant="primary" size="sm" class="h-10 px-4 gap-2 font-bold shadow-sm" @click="openCreateModal">
           <Plus class="w-4 h-4" />
           Добавить организацию
@@ -84,7 +93,7 @@
           <input
             v-model="filters.search"
             type="text"
-            placeholder="Поиск по названию, коду организации..."
+            placeholder="Поиск по названию, ИНН, коду или контактам..."
             class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
             @input="debouncedFetch"
           />
@@ -148,7 +157,7 @@
     />
 
     <OrganizationsOrganizationDetailModal
-      v-if="isDetailModalOpen"
+      v-if="isDetailModalOpen && selectedOrganization"
       :organization="selectedOrganization"
       :is-open="isDetailModalOpen"
       @close="closeDetailModal"
@@ -156,7 +165,7 @@
     />
 
     <OrganizationsDownloadCertificatesModal
-      v-if="isDownloadModalOpen"
+      v-if="isDownloadModalOpen && selectedOrganization"
       :organization="selectedOrganization"
       :is-open="isDownloadModalOpen"
       @close="closeDownloadModal"
@@ -172,34 +181,22 @@
       @confirm="confirmDelete"
       @cancel="closeDeleteModal"
     />
+
+    <StudentsSyncStudentsModal
+      :show="isSyncModalOpen"
+      @close="isSyncModalOpen = false"
+      @synced="fetchOrganizations"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { Plus, Award, Building2, FileCheck, Filter, RotateCcw, Search, Activity } from 'lucide-vue-next';
+import { Plus, Award, Building2, FileCheck, Filter, RotateCcw, Search, Activity, RefreshCw } from 'lucide-vue-next';
+import type { Organization } from '~/types/organization';
 
 const { authFetch } = useAuthFetch();
 const notification = useNotification();
-
-interface Organization {
-  id: string;
-  code: string;
-  name: string;
-  shortName: string | null;
-  contactPhone: string | null;
-  contactEmail: string | null;
-  address: string | null;
-  description: string | null;
-  isActive: boolean;
-  studentsCount: number;
-  createdAt: Date | string;
-  updatedAt: Date | string;
-  totalCertificates?: number;
-  issuedCertificates?: number;
-  revokedCertificates?: number;
-  latestCertificateDate?: string | null;
-}
 
 interface OrganizationsResponse {
   success: boolean;
@@ -222,6 +219,7 @@ const organizations = ref<Organization[]>([]);
 const loading = ref(false);
 const isFormModalOpen = ref(false);
 const isDetailModalOpen = ref(false);
+const isSyncModalOpen = ref(false);
 const isDownloadModalOpen = ref(false);
 const isDeleteModalOpen = ref(false);
 const isDeleting = ref(false);

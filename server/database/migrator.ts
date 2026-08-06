@@ -44,6 +44,8 @@ import * as updateActivityLogsEnums from "./migrations/20260505_033_update_activ
 import * as instructorEducationHistory from "./migrations/20260507_034_add_instructor_education_history";
 import * as instructorWorkExperience from "./migrations/20260507_035_add_instructor_work_experience";
 import * as certificateVerificationLogs from "./migrations/20260512_036_certificate_verification_logs";
+import * as addInnAndDetailsToOrganizations from "./migrations/20260730_037_add_inn_and_details_to_organizations";
+import * as addMultilingualFieldsAndPhotoToStudents from "./migrations/20260730_038_add_multilingual_fields_and_photo_to_students";
 
 /**
  * ============================================================================
@@ -388,6 +390,24 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: certificateVerificationLogs.up,
     down: certificateVerificationLogs.down,
     description: certificateVerificationLogs.description,
+  },
+  // ============================================================
+  // Миграция 037: ИНН и реквизиты организаций
+  // ============================================================
+  {
+    name: "20260730_037_add_inn_and_details_to_organizations",
+    up: addInnAndDetailsToOrganizations.up,
+    down: addInnAndDetailsToOrganizations.down,
+    description: addInnAndDetailsToOrganizations.description,
+  },
+  // ============================================================
+  // Миграция 038: Трехъязычные служба/должность и фото слушателей
+  // ============================================================
+  {
+    name: "20260730_038_add_multilingual_fields_and_photo_to_students",
+    up: addMultilingualFieldsAndPhotoToStudents.up,
+    down: addMultilingualFieldsAndPhotoToStudents.down,
+    description: addMultilingualFieldsAndPhotoToStudents.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

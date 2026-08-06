@@ -25,11 +25,18 @@ export interface Student {
   fullName: string;
   pinfl: string;
   organization: string;
+  organizationId?: string | null;
   organizationUz?: string | null;
   organizationEn?: string | null;
   organizationRu?: string | null;
   department?: string | null;
+  departmentUz?: string | null;
+  departmentEn?: string | null;
+  departmentRu?: string | null;
   position: string;
+  positionUz?: string | null;
+  positionEn?: string | null;
+  positionRu?: string | null;
   birthDate?: Date | null;
   photo_base64?: string | null;
   userId?: string | null;
@@ -43,11 +50,18 @@ export interface CreateStudentInput {
   fullName: string;
   pinfl: string;
   organization: string;
+  organizationId?: string | null;
   organizationUz?: string;
   organizationEn?: string;
   organizationRu?: string;
   department?: string;
+  departmentUz?: string | null;
+  departmentEn?: string | null;
+  departmentRu?: string | null;
   position: string;
+  positionUz?: string | null;
+  positionEn?: string | null;
+  positionRu?: string | null;
   birthDate?: Date | string | null;
   photo_base64?: string | null;
 }
@@ -57,11 +71,18 @@ export interface UpdateStudentInput {
   fullName?: string;
   pinfl?: string;
   organization?: string;
+  organizationId?: string | null;
   organizationUz?: string;
   organizationEn?: string;
   organizationRu?: string;
   department?: string;
+  departmentUz?: string | null;
+  departmentEn?: string | null;
+  departmentRu?: string | null;
   position?: string;
+  positionUz?: string | null;
+  positionEn?: string | null;
+  positionRu?: string | null;
   birthDate?: Date | string | null;
   photo_base64?: string | null;
 }
@@ -73,7 +94,7 @@ export interface CreateCertificateInput {
   issueDate: Date | string;
   certificateNumber: string;
   fileUrl?: string;
-  fileUuid?: string; // UUID загруженного файла из файлового менеджера
+  fileUuid?: string;
   expiryDate?: Date | string;
 }
 
@@ -83,6 +104,6 @@ export interface UpdateCertificateInput {
   issueDate?: Date | string;
   certificateNumber?: string;
   fileUrl?: string;
-  fileUuid?: string; // UUID загруженного файла из файлового менеджера
+  fileUuid?: string;
   expiryDate?: Date | string;
 }
