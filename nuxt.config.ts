@@ -5,8 +5,8 @@ export default defineNuxtConfig({
 
   // Настройка dev-сервера для доступа извне (включая ngrok)
   devServer: {
-    host: "localhost", // Слушает все сетевые интерфейсы (необходимо для ngrok и доступа по IP)
-    port: 3001,
+    host: "0.0.0.0", // Слушает все сетевые интерфейсы (необходимо для ngrok и доступа по IP)
+    port: 3000,
   },
 
   // Vite конфигурация для ngrok и pdfjs-dist
