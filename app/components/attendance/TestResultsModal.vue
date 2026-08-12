@@ -253,14 +253,31 @@
     </div>
 
     <template #footer>
-      <div class="flex justify-end">
-        <UiButton @click="$emit('close')">Закрыть</UiButton>
+      <div class="flex items-center justify-between w-full">
+        <div>
+          <UiButton
+            v-if="data"
+            variant="outline"
+            size="sm"
+            :loading="downloadingPdf"
+            @click="downloadPdf"
+            class="gap-1.5 font-semibold text-primary border-primary/30 hover:bg-primary/5"
+          >
+            <FileDown class="w-4 h-4" />
+            Скачать PDF
+          </UiButton>
+        </div>
+        <UiButton variant="secondary" size="sm" @click="$emit('close')">Закрыть</UiButton>
       </div>
     </template>
   </UiModal>
 </template>
 
 <script setup>
+import { ref, watch, onMounted } from 'vue';
+import { FileDown } from 'lucide-vue-next';
+import { generateTestResultReport } from '~/utils/pdf/generateTestResultReport';
+
 const props = defineProps({
   isOpen: {
     type: Boolean,
@@ -277,8 +294,21 @@ const emit = defineEmits(['close']);
 const { authFetch } = useAuthFetch();
 
 const loading = ref(false);
+const downloadingPdf = ref(false);
 const error = ref(null);
 const data = ref(null);
+
+const downloadPdf = async () => {
+  if (!data.value) return;
+  downloadingPdf.value = true;
+  try {
+    await generateTestResultReport(data.value);
+  } catch (err) {
+    console.error('Ошибка экспорта в PDF:', err);
+  } finally {
+    downloadingPdf.value = false;
+  }
+};
 
 // Форматирование даты
 const formatDate = (dateStr) => {

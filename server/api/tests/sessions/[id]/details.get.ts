@@ -164,20 +164,23 @@ export default defineEventHandler(async (event) => {
         };
 
         // Формируем ответы с деталями
-        const answers: SessionDetailAnswer[] = answerRows.map(row => ({
-            questionId: row.question_id,
-            questionText: row.question_text,
-            questionType: row.question_type,
-            questionOptions: parseJson<QuestionOptions | null>(row.question_options, null),
-            questionMedia: parseJson<QuestionMedia[] | null>(row.question_media, null),
-            questionExplanation: row.question_explanation,
-            questionPoints: row.question_points,
-            studentAnswer: parseJson<AnswerData | null>(row.answer_data, null),
-            isCorrect: row.is_correct,
-            pointsEarned: row.points_earned,
-            answeredAt: row.answered_at,
-            timeSpentSeconds: row.time_spent_seconds,
-        }));
+        const answers: SessionDetailAnswer[] = answerRows.map(row => {
+            const isCorrect = row.is_correct === null ? null : Boolean(Number(row.is_correct));
+            return {
+                questionId: row.question_id,
+                questionText: row.question_text,
+                questionType: row.question_type,
+                questionOptions: parseJson<QuestionOptions | null>(row.question_options, null),
+                questionMedia: parseJson<QuestionMedia[] | null>(row.question_media, null),
+                questionExplanation: row.question_explanation,
+                questionPoints: Number(row.question_points) || 0,
+                studentAnswer: parseJson<AnswerData | null>(row.answer_data, null),
+                isCorrect,
+                pointsEarned: Number(row.points_earned) || 0,
+                answeredAt: row.answered_at,
+                timeSpentSeconds: row.time_spent_seconds,
+            };
+        });
 
         // Формируем объект сессии
         const session = {
@@ -195,7 +198,7 @@ export default defineEventHandler(async (event) => {
             totalPoints: sessionRow.total_points,
             maxPoints: sessionRow.max_points,
             scorePercent: sessionRow.score_percent,
-            passed: sessionRow.passed,
+            passed: sessionRow.passed === null ? null : Boolean(Number(sessionRow.passed)),
             grade: sessionRow.grade,
             violations: parseJson<any[]>(sessionRow.violations, []),
         };
@@ -218,10 +221,10 @@ export default defineEventHandler(async (event) => {
         // Статистика по ответам
         const stats = {
             totalQuestions: answers.length,
-            answeredQuestions: answers.filter(a => a.studentAnswer !== null).length,
-            correctAnswers: answers.filter(a => a.isCorrect === true).length,
-            incorrectAnswers: answers.filter(a => a.isCorrect === false).length,
-            unanswered: answers.filter(a => a.studentAnswer === null).length,
+            answeredQuestions: answers.filter(a => a.studentAnswer !== null && a.studentAnswer !== undefined).length,
+            correctAnswers: answers.filter(a => a.isCorrect === true || a.pointsEarned > 0).length,
+            incorrectAnswers: answers.filter(a => (a.isCorrect === false || a.pointsEarned === 0) && a.studentAnswer !== null && a.studentAnswer !== undefined).length,
+            unanswered: answers.filter(a => a.studentAnswer === null || a.studentAnswer === undefined).length,
             totalPoints: session.maxPoints || 0,
             earnedPoints: session.totalPoints || 0,
         };

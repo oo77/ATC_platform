@@ -204,7 +204,7 @@
               <div class="divide-y divide-slate-100 dark:divide-slate-800">
                 <div class="flex items-center justify-between px-4 py-2.5">
                   <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Режим вопросов</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ questionsModeLabels[template.questions_mode] }}</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ questionsModeLabels[template.questions_mode] || template.questions_mode }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
                   <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Лимит времени</span>
@@ -220,7 +220,7 @@
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
                   <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Показ результатов</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ showResultsLabels[template.show_results] }}</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ showResultsLabels[template.show_results] || template.show_results }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
                   <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Возврат к вопросам</span>
@@ -315,9 +315,9 @@
                     <p class="text-sm font-medium text-slate-800 dark:text-slate-200 line-clamp-2">{{ question.question_text }}</p>
                     <div class="flex items-center gap-2 mt-1">
                       <span
-                        :class="['px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight', difficultyClasses[question.difficulty]]"
+                        :class="['px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight', difficultyClasses[question.difficulty] || 'bg-slate-100 text-slate-600']"
                       >
-                        {{ difficultyLabels[question.difficulty] }}
+                        {{ difficultyLabels[question.difficulty] || question.difficulty }}
                       </span>
                       <span class="text-[10px] text-slate-400">{{ question.points }} б.</span>
                     </div>
@@ -463,7 +463,7 @@
                             <th class="pb-3 font-medium text-slate-500 text-xs text-center">Статус</th>
                             <th class="pb-3 font-medium text-slate-500 text-xs text-center">Время</th>
                             <th class="pb-3 font-medium text-slate-500 text-xs">Дата</th>
-                            <th class="pb-3 pr-4 font-medium text-slate-500 text-xs text-right">Ответы</th>
+                            <th class="pb-3 pr-4 font-medium text-slate-500 text-xs text-right">Действия</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
@@ -490,13 +490,25 @@
                             <td class="py-3 text-center text-slate-500 text-xs">{{ formatDuration(session.timeSpentSeconds) }}</td>
                             <td class="py-3 px-4 text-slate-500 text-xs">{{ formatDate(session.completedAt) }}</td>
                             <td class="py-3 pr-4 text-right">
-                              <button
-                                @click="viewSessionDetails(session.sessionId)"
-                                class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 active:scale-95"
-                              >
-                                <ClipboardListIcon class="w-3 h-3 group-hover:rotate-6 transition-transform" />
-                                Ответы
-                              </button>
+                              <div class="inline-flex items-center justify-end gap-1.5">
+                                <button
+                                  @click="downloadSessionPdf(session.sessionId)"
+                                  :disabled="downloadingSessionId === session.sessionId"
+                                  class="group inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Скачать результаты тестирования в PDF"
+                                >
+                                  <div v-if="downloadingSessionId === session.sessionId" class="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                  <FileDown v-else class="w-3 h-3 text-slate-400 group-hover:text-primary transition-colors" />
+                                  <span>PDF</span>
+                                </button>
+                                <button
+                                  @click="viewSessionDetails(session.sessionId)"
+                                  class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 active:scale-95"
+                                >
+                                  <ClipboardListIcon class="w-3 h-3 group-hover:rotate-6 transition-transform" />
+                                  Ответы
+                                </button>
+                              </div>
                             </td>
                           </tr>
                           <tr v-if="filteredSessions.length === 0">
@@ -607,7 +619,7 @@
     <!-- Test Results Modal -->
     <AttendanceTestResultsModal
       :is-open="showSessionDetails"
-      :session-id="selectedSessionId"
+      :session-id="selectedSessionId || undefined"
       @close="showSessionDetails = false"
     />
 
@@ -647,7 +659,9 @@ import {
   XCircle as XCircleIcon,
   ExternalLink as ExternalLinkIcon,
   Info as InfoIcon,
+  FileDown,
 } from "lucide-vue-next";
+import { generateTestResultReport } from "~/utils/pdf/generateTestResultReport";
 
 const route = useRoute();
 const { authFetch } = useAuthFetch();
@@ -676,7 +690,8 @@ const analyticsLoading = ref(false);
 const analytics = ref<any>(null);
 const analyticsExpanded = ref(false);
 const showSessionDetails = ref(false);
-const selectedSessionId = ref<string | null>(null);
+const selectedSessionId = ref<string | undefined>(undefined);
+const downloadingSessionId = ref<string | null>(null);
 
 // Search/filter/pagination
 const analyticsSearch = ref("");
@@ -715,26 +730,26 @@ const availableLanguagesForModal = computed(() => {
 });
 
 // Constants
-const questionsModeLabels = {
+const questionsModeLabels: Record<string, string> = {
   all: "Все вопросы",
   random: "Случайные",
   manual: "Вручную",
 };
 
-const showResultsLabels = {
+const showResultsLabels: Record<string, string> = {
   immediately: "Сразу",
   after_deadline: "После дедлайна",
   manual: "Вручную",
   never: "Никогда",
 };
 
-const difficultyLabels = {
+const difficultyLabels: Record<string, string> = {
   easy: "Лёгкий",
   medium: "Средний",
   hard: "Сложный",
 };
 
-const difficultyClasses = {
+const difficultyClasses: Record<string, string> = {
   easy: "bg-success/10 text-success",
   medium: "bg-warning/10 text-warning",
   hard: "bg-danger/10 text-danger",
@@ -790,7 +805,7 @@ const languageStats = computed(() => {
 
 const filteredSessions = computed(() => {
   if (!analytics.value?.sessions) return [];
-  return analytics.value.sessions.filter((s) => {
+  return analytics.value.sessions.filter((s: any) => {
     const matchSearch = !analyticsSearch.value ||
       s.studentName.toLowerCase().includes(analyticsSearch.value.toLowerCase()) ||
       s.studentPinfl?.toLowerCase().includes(analyticsSearch.value.toLowerCase()) ||
@@ -947,6 +962,49 @@ const startPreview = async (language: string | null = null) => {
 const viewSessionDetails = (sessionId: string) => {
   selectedSessionId.value = sessionId;
   showSessionDetails.value = true;
+};
+
+const downloadSessionPdf = async (sessionId: string) => {
+  if (downloadingSessionId.value) return;
+  downloadingSessionId.value = sessionId;
+  try {
+    const response = await authFetch(`/api/tests/sessions/${sessionId}/details`);
+    if (response.success && response.session) {
+      await generateTestResultReport(response);
+      notification.value = {
+        show: true,
+        type: "success",
+        title: "Успешно",
+        message: "Результаты тестирования скачаны в PDF",
+      };
+      setTimeout(() => {
+        notification.value.show = false;
+      }, 3000);
+    } else {
+      notification.value = {
+        show: true,
+        type: "error",
+        title: "Ошибка",
+        message: response.message || "Не удалось загрузить данные для формирования PDF",
+      };
+      setTimeout(() => {
+        notification.value.show = false;
+      }, 4000);
+    }
+  } catch (err) {
+    console.error("Ошибка скачивания результатов в PDF:", err);
+    notification.value = {
+      show: true,
+      type: "error",
+      title: "Ошибка",
+      message: "Произошла ошибка при экспорте в PDF",
+    };
+    setTimeout(() => {
+      notification.value.show = false;
+    }, 4000);
+  } finally {
+    downloadingSessionId.value = null;
+  }
 };
 
 // Watchers
