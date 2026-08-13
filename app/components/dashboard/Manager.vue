@@ -58,7 +58,7 @@
       <!-- Контингент на курсах -->
       <div
         class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-white p-6 shadow-xl shadow-slate-200/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-slate-200/40 dark:border-slate-800/60 dark:bg-slate-900/70 dark:shadow-none"
-        @click="navigateTo('/users?tab=students')"
+        @click="navigateTo('/students')"
       >
         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-emerald-500/5 transition-transform group-hover:scale-150"></div>
         <div class="relative flex flex-col gap-4">

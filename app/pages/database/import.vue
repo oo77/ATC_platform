@@ -261,7 +261,7 @@ const handleNewImport = () => {
 // Переход к базе данных
 const goToDatabase = () => {
   store.reset();
-  navigateTo("/users?tab=students");
+  navigateTo("/students");
 };
 
 // Скрытие ошибки

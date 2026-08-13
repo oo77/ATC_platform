@@ -4,10 +4,10 @@
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
       <div>
         <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          Управление студентами
+          Управление слушателями
         </h3>
         <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
-          Всего студентов: {{ pagination.total }}
+          Всего слушателей: {{ pagination.total }}
           <span v-if="hasActiveFilters" class="text-primary font-bold">
             (отфильтровано)
           </span>
@@ -26,14 +26,14 @@
           class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-primary bg-transparent text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white hover:shadow-md hover:shadow-primary/20"
         >
           <Upload class="w-4 h-4" />
-          Импорт студентов
+          Импорт слушателей
         </NuxtLink>
         <button
           @click="openCreateModal"
           class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-md shadow-primary/20 hover:bg-primary/90 hover:shadow-lg transition-all whitespace-nowrap"
         >
           <Plus class="w-4 h-4" />
-          Добавить студента
+          Добавить слушателя
         </button>
       </div>
     </div>
@@ -211,10 +211,10 @@
     <!-- Модальное окно подтверждения удаления -->
     <UiConfirmModal
       :is-open="isDeleteModalOpen"
-      title="Удаление студента"
-      message="Вы уверены, что хотите удалить этого студента?"
+      title="Удаление слушателя"
+      message="Вы уверены, что хотите удалить этого слушателя?"
       :item-name="deleteStudent?.fullName"
-      warning="Это действие нельзя отменить. Все данные студента будут удалены."
+      warning="Это действие нельзя отменить. Все данные слушателя будут удалены."
       :loading="isDeleting"
       @confirm="confirmDelete"
       @cancel="closeDeleteModal"
@@ -508,7 +508,7 @@ const handleSubmit = async (data: CreateStudentData | UpdateStudentData) => {
         
         // Показываем уведомление об успехе
         const notification = useNotification();
-        notification.success('Студент успешно обновлен', 'Успех');
+        notification.success('Слушатель успешно обновлен', 'Успех');
         
         closeFormModal();
       }
@@ -535,13 +535,13 @@ const handleSubmit = async (data: CreateStudentData | UpdateStudentData) => {
         if (response.generatedPassword && response.accountEmail) {
           notification.success(
             `Учётная запись создана!\nEmail: ${response.accountEmail}\nПароль: ${response.generatedPassword}`,
-            'Студент и аккаунт созданы',
+            'Слушатель и аккаунт созданы',
             10000 // Показываем дольше для копирования
           );
         } else if ((data as any).createAccount) {
-          notification.success('Студент и учётная запись успешно созданы', 'Успех');
+          notification.success('Слушатель и учётная запись успешно созданы', 'Успех');
         } else {
-          notification.success('Студент успешно создан', 'Успех');
+          notification.success('Слушатель успешно создан', 'Успех');
         }
         
         closeFormModal();

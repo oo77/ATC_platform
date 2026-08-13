@@ -298,6 +298,8 @@ import {
   BookOpen,
   ClipboardList,
   Building2,
+  UserCheck,
+  UserSquare2,
 } from "lucide-vue-next";
 import type { Component } from "vue";
 
@@ -354,7 +356,7 @@ const userRoleLabel = computed(() =>
       ? "Менеджер"
       : isTeacher.value
         ? "Преподаватель"
-        : "Студент",
+        : "Слушатель",
 );
 
 const handleMouseEnter = () => !isExpanded.value && setIsHovered(true);
@@ -399,6 +401,23 @@ const allMenuGroups: MenuGroup[] = [
           Permission.GROUPS_VIEW_ALL,
           Permission.GROUPS_VIEW_OWN,
         ],
+      },
+      {
+        icon: UserCheck,
+        name: "Слушатели",
+        path: "/students",
+        anyPermissions: [
+          Permission.STUDENTS_VIEW_ALL,
+          Permission.STUDENTS_VIEW,
+        ],
+        hideForRoles: ["STUDENT"],
+      },
+      {
+        icon: UserSquare2,
+        name: "Инструкторы",
+        path: "/instructors",
+        permission: Permission.INSTRUCTORS_VIEW,
+        hideForRoles: ["STUDENT"],
       },
       {
         icon: Trophy,

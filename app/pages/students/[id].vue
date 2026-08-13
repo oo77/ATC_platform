@@ -28,7 +28,7 @@
         </h3>
         <UiButton
           class="mt-8 shadow-lg"
-          @click="$router.push('/users?tab=students')"
+          @click="$router.push('/students')"
           >К списку слушателей</UiButton
         >
       </div>
@@ -40,7 +40,7 @@
         <!-- Breadcrumbs -->
         <div class="mb-4">
           <NuxtLink
-            to="/users?tab=students"
+            to="/students"
             class="group inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-primary transition-colors"
           >
             <div
@@ -797,7 +797,7 @@ const confirmDelete = async () => {
   try {
     await authFetch(`/api/students/${studentId}`, { method: "DELETE" });
     notification.success("Слушатель удален");
-    router.push("/users?tab=students");
+    router.push("/students");
   } catch (e) {
     notification.error("Ошибка удаления");
   } finally {

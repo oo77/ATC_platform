@@ -26,8 +26,8 @@
         <h3 class="text-2xl font-bold text-slate-900 dark:text-white">
           {{ error || "Инструктор не найден" }}
         </h3>
-        <UiButton class="mt-8 shadow-lg" @click="$router.push('/users')"
-          >К списку пользователей</UiButton
+        <UiButton class="mt-8 shadow-lg" @click="$router.push('/instructors')"
+          >К списку инструкторов</UiButton
         >
       </div>
     </div>
@@ -38,7 +38,7 @@
         <!-- Breadcrumbs -->
         <div class="mb-6">
           <NuxtLink
-            to="/users"
+            to="/instructors"
             class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
           >
             <div

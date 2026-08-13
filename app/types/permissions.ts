@@ -461,12 +461,23 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
     ],
   },
   {
+    path: "/students",
+    anyPermissions: [
+      Permission.STUDENTS_VIEW_ALL,
+      Permission.STUDENTS_VIEW,
+    ],
+  },
+  {
     path: "/students/[id]",
     anyPermissions: [
       Permission.STUDENTS_VIEW_ALL,
       Permission.STUDENTS_VIEW_OWN,
     ],
     requiresOwnerCheck: true,
+  },
+  {
+    path: "/instructors",
+    requiredPermissions: [Permission.INSTRUCTORS_VIEW],
   },
   {
     path: "/instructors/[id]",

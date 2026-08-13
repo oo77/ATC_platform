@@ -90,7 +90,7 @@
                     
                     <div class="grow">
                       <p class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-1">
-                        Загрузите фото студента
+                        Загрузите фото слушателя
                       </p>
                       <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">
                         PNG, JPG или WEBP. Максимум 2MB.
@@ -465,7 +465,7 @@ const handleResetPassword = async () => {
 
 // Вычисляемые свойства
 const modalTitle = computed(() => {
-  return props.student ? 'Редактировать студента' : 'Добавить студента';
+  return props.student ? 'Редактировать слушателя' : 'Добавить слушателя';
 });
 
 const submitButtonText = computed(() => {

@@ -48,16 +48,6 @@
         <UsersUserManagementPanel :role="UserRole.MANAGER" />
       </div>
 
-      <!-- Инструкторы Tab (для ADMIN и MANAGER) -->
-      <div v-show="activeTab === 'instructors'" class="p-6">
-        <UsersInstructorManagementPanel />
-      </div>
-
-      <!-- Студенты Tab (для ADMIN и MANAGER) -->
-      <div v-show="activeTab === 'students'" class="p-6">
-        <DatabaseStudentManagementPanel />
-      </div>
-
       <!-- Представители Tab (только для ADMIN) -->
       <div v-if="isAdmin" v-show="activeTab === 'representatives'" class="p-6">
         <RepresentativesRepresentativeManagementPanel />
@@ -70,7 +60,7 @@
 import { ref, computed, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { UserRole } from "~/types/auth";
-import { Shield, UserCog, GraduationCap, Users, Briefcase } from "lucide-vue-next";
+import { Shield, UserCog, Briefcase, Users } from "lucide-vue-next";
 
 // Определяем мета-данные страницы
 definePageMeta({
@@ -102,18 +92,6 @@ const allTabs = [
     icon: UserCog
   },
   {
-    id: "instructors",
-    label: "Инструкторы",
-    roles: ["ADMIN", "MANAGER"], // Видна админам и модераторам
-    icon: GraduationCap
-  },
-  {
-    id: "students",
-    label: "Студенты",
-    roles: ["ADMIN", "MANAGER"], // Видна админам и модераторам
-    icon: Users
-  },
-  {
     id: "representatives",
     label: "Представители",
     roles: ["ADMIN"], // Видна только админам
@@ -139,6 +117,14 @@ const activeTab = ref<string>("");
 // Синхронизация с URL
 const syncTabWithUrl = () => {
   const tab = route.query.tab as string;
+  if (tab === "instructors") {
+    router.replace("/instructors");
+    return;
+  }
+  if (tab === "students") {
+    router.replace("/students");
+    return;
+  }
   if (tab && visibleTabs.value.some((t) => t.id === tab)) {
     activeTab.value = tab;
   } else if (visibleTabs.value.length > 0 && !activeTab.value) {

@@ -26,7 +26,7 @@
         <p class="text-2xl font-bold text-slate-800">{{ stats?.totalTrained || 0 }}</p>
       </div>
 
-      <div class="rounded-xl bg-white border border-slate-200 p-3 cursor-pointer hover:shadow-md transition-shadow" @click="navigateTo('/users?tab=instructors')">
+      <div class="rounded-xl bg-white border border-slate-200 p-3 cursor-pointer hover:shadow-md transition-shadow" @click="navigateTo('/instructors')">
         <div class="flex items-center gap-2 mb-2">
           <div class="h-8 w-8 rounded-lg bg-emerald-500 flex items-center justify-center">
             <IconsInstructorIcon class="w-4 h-4 text-white" />

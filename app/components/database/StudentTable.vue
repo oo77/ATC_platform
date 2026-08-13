@@ -45,7 +45,7 @@
         <!-- Нет данных -->
         <tr v-else-if="students.length === 0">
           <td colspan="4" class="text-center py-12">
-            <p class="text-gray-600 dark:text-gray-400">Студенты не найдены</p>
+            <p class="text-gray-600 dark:text-gray-400">Слушатели не найдены</p>
           </td>
         </tr>
 
