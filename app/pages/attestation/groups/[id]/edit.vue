@@ -128,6 +128,7 @@
                   class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 text-xs font-bold outline-none focus:border-primary"
                 >
                   <option value="chairman">Председатель</option>
+                  <option value="responsible">Ответственный</option>
                   <option value="secretary">Секретарь</option>
                   <option value="member">Член комиссии</option>
                 </select>
