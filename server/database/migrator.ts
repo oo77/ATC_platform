@@ -48,6 +48,7 @@ import * as addInnAndDetailsToOrganizations from "./migrations/20260730_037_add_
 import * as addMultilingualFieldsAndPhotoToStudents from "./migrations/20260730_038_add_multilingual_fields_and_photo_to_students";
 import * as attestationSystem from "./migrations/20260813_039_attestation_system";
 import * as attestationCertificates from "./migrations/20260813_040_attestation_certificates";
+import * as attestationResponsibleRole from "./migrations/20260813_041_attestation_responsible_role";
 
 /**
  * ============================================================================
@@ -428,6 +429,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: attestationCertificates.up,
     down: attestationCertificates.down,
     description: attestationCertificates.description,
+  },
+  // ============================================================
+  // Миграция 041: Роль "Ответственный" в комиссии аттестации
+  // ============================================================
+  {
+    name: "20260813_041_attestation_responsible_role",
+    up: attestationResponsibleRole.up,
+    down: attestationResponsibleRole.down,
+    description: attestationResponsibleRole.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

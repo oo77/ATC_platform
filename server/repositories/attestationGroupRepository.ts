@@ -13,7 +13,7 @@ export type AttestationGroupStatus =
   | "completed"
   | "cancelled";
 
-export type CommissionRole = "chairman" | "secretary" | "member";
+export type CommissionRole = "chairman" | "secretary" | "member" | "responsible";
 
 export interface AttestationGroup {
   id: string;
@@ -360,7 +360,7 @@ export async function getGroupCommission(
      FROM attestation_group_commission agc
      JOIN commission_members cm ON agc.commission_member_id = cm.id
      WHERE agc.group_id = ?
-     ORDER BY FIELD(agc.role, 'chairman', 'secretary', 'member'), agc.order_index ASC`,
+     ORDER BY FIELD(agc.role, 'chairman', 'responsible', 'secretary', 'member'), agc.order_index ASC`,
     [groupId]
   );
 

@@ -571,7 +571,7 @@ const statusText = computed(() => {
   return group.value ? map[group.value.status] || group.value.status : "";
 });
 
-const roleLabel = (role) => ({ chairman: "Председатель комиссии", secretary: "Секретарь", member: "Член комиссии" }[role] || "Член комиссии");
+const roleLabel = (role) => ({ chairman: "Председатель комиссии", responsible: "Ответственный за проведение", secretary: "Секретарь", member: "Член комиссии" }[role] || "Член комиссии");
 
 const decisionLabel = (r) => {
   if (r?.decision === "passed") return "Сдан";
