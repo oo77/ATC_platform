@@ -74,6 +74,13 @@ export interface VariableContext {
     fullName: string;
     position?: string | null;
   } | null;
+  attestation?: {
+    examScore?: number | null;
+    examDate?: Date | string | null;
+    groupName?: string | null;
+    chairmanName?: string | null;
+    chairmanPosition?: string | null;
+  } | null;
 }
 
 // ============================================================================
@@ -535,6 +542,16 @@ export function resolveVariable(
         : "";
     case "instructor.position":
       return context.instructor?.position || "";
+    case "attestation.examScore":
+      return context.attestation?.examScore != null ? `${Math.round(context.attestation.examScore)}%` : "";
+    case "attestation.examDate":
+      return context.attestation?.examDate ? formatDate(context.attestation.examDate) : "";
+    case "attestation.groupName":
+      return context.attestation?.groupName || "";
+    case "attestation.chairmanName":
+      return context.attestation?.chairmanName || "";
+    case "attestation.chairmanPosition":
+      return context.attestation?.chairmanPosition || "";
     case "custom":
       return "";
     default:

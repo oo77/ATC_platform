@@ -343,6 +343,43 @@
                 </div>
               </div>
             </div>
+
+            <!-- Attestation certificates — issued automatically after passing certification exams -->
+            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <ShieldCheckIcon class="w-4 h-4 text-success" />
+                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Сертификаты аттестации</h3>
+              </div>
+              <div v-if="!attestationCertificates.length" class="px-4 py-6 text-center text-xs text-slate-400">
+                Сертификаты аттестации ещё не выданы
+              </div>
+              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+                <div
+                  v-for="cert in attestationCertificates"
+                  :key="cert.id"
+                  class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
+                >
+                  <div class="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+                    <AwardIcon class="w-3.5 h-3.5 text-success" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate leading-tight">{{ cert.templateName || "Сертификат" }}</p>
+                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span class="text-[10px] font-semibold text-slate-400">№ <span class="text-slate-600 dark:text-slate-300">{{ cert.certificateNumber }}</span></span>
+                      <span class="text-[10px] font-semibold text-slate-400">{{ formatDate(cert.issueDate) }}</span>
+                    </div>
+                  </div>
+                  <a
+                    v-if="cert.id"
+                    :href="`/api/certificates/download/${cert.id}`"
+                    target="_blank"
+                    class="p-1.5 text-slate-400 hover:text-success transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                  >
+                    <DownloadIcon class="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- HOURS TAB -->
@@ -513,6 +550,7 @@ import {
   Download as DownloadIcon,
   Search as SearchIcon,
   BookOpen as BookOpenIcon,
+  ShieldCheck as ShieldCheckIcon,
 } from "lucide-vue-next";
 import InstructorsHoursStats from "~/components/instructors/HoursStats.vue";
 import InstructorsCourseHistory from "~/components/instructors/CourseHistory.vue";
@@ -717,6 +755,19 @@ const fetchFileMetadata = async () => {
   }
 };
 
+const attestationCertificates = ref<any[]>([]);
+
+const loadAttestationCertificates = async () => {
+  try {
+    const res = await authFetch<{ success: boolean; certificates: any[] }>(
+      `/api/instructors/${instructorId}/certificates`,
+    );
+    if (res.success) attestationCertificates.value = res.certificates || [];
+  } catch (err) {
+    console.error("Error loading attestation certificates:", err);
+  }
+};
+
 const loadInstructor = async () => {
   loading.value = true;
   error.value = null;
@@ -729,6 +780,7 @@ const loadInstructor = async () => {
     if (response.success) {
       instructor.value = response.instructor;
       fetchFileMetadata();
+      loadAttestationCertificates();
     } else {
       error.value = "Не удалось загрузить данные инструктора";
     }

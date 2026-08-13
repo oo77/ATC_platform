@@ -1,4 +1,5 @@
 import { decideForInstructor } from "../../../../../../repositories/attestationResultRepository";
+import { issueAttestationCertificateIfConfigured } from "../../../../../../services/attestationCertificateService";
 import { requirePermission } from "../../../../../../utils/permissions";
 import { Permission } from "../../../../../../types/permissions";
 import type { AttestationDecision } from "../../../../../../repositories/attestationResultRepository";
@@ -22,7 +23,18 @@ export default defineEventHandler(async (event) => {
       notes: body.notes?.trim() || null,
     });
 
-    return { success: true, result };
+    let certificateIssued = false;
+    if (body.decision === "passed") {
+      try {
+        const outcome = await issueAttestationCertificateIfConfigured(groupId, instructorId, context.userId);
+        certificateIssued = outcome.issued;
+      } catch (certError) {
+        // Не блокируем решение комиссии, если выдача сертификата не удалась
+        console.error("Ошибка автоматической выдачи сертификата:", certError);
+      }
+    }
+
+    return { success: true, result, certificateIssued };
   } catch (error) {
     console.error("Ошибка принятия решения комиссии:", error);
     return { success: false, message: "Ошибка при сохранении решения" };

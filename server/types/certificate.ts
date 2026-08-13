@@ -43,6 +43,12 @@ export type VariableSource =
   | "instructor.fullName"
   | "instructor.shortName" // Петров П.П.
   | "instructor.position"
+  // Данные аттестации (сертификационный экзамен инструктора)
+  | "attestation.examScore" // Балл за экзамен, %
+  | "attestation.examDate" // Дата решения комиссии
+  | "attestation.groupName" // Название группы аттестации
+  | "attestation.chairmanName" // Ф.И.О. председателя комиссии
+  | "attestation.chairmanPosition" // Должность председателя комиссии
   // Кастомные
   | "custom";
 
@@ -321,7 +327,7 @@ export type IssuedCertificateStatus = "draft" | "issued" | "revoked";
 /**
  * Источник создания сертификата
  */
-export type CertificateSourceType = "group_journal" | "manual" | "import";
+export type CertificateSourceType = "group_journal" | "manual" | "import" | "attestation";
 
 /**
  * Предупреждение при выдаче
@@ -342,7 +348,9 @@ export interface IssueWarning {
 export interface IssuedCertificate {
   id: string;
   groupId: string | null; // NULL для standalone сертификатов
-  studentId: string;
+  attestationGroupId: string | null; // Группа аттестации (для source_type = 'attestation')
+  studentId: string | null; // NULL для сертификатов аттестации (см. instructorId)
+  instructorId: string | null; // Инструктор (для source_type = 'attestation')
   templateId: string | null; // NULL для standalone сертификатов
   certificateNumber: string;
   issueDate: Date;
@@ -403,6 +411,7 @@ export interface IssuedCertificate {
     position: string;
   };
   template?: CertificateTemplate;
+  templateName?: string;
 }
 
 /**

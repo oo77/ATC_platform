@@ -47,6 +47,7 @@ import * as certificateVerificationLogs from "./migrations/20260512_036_certific
 import * as addInnAndDetailsToOrganizations from "./migrations/20260730_037_add_inn_and_details_to_organizations";
 import * as addMultilingualFieldsAndPhotoToStudents from "./migrations/20260730_038_add_multilingual_fields_and_photo_to_students";
 import * as attestationSystem from "./migrations/20260813_039_attestation_system";
+import * as attestationCertificates from "./migrations/20260813_040_attestation_certificates";
 
 /**
  * ============================================================================
@@ -418,6 +419,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: attestationSystem.up,
     down: attestationSystem.down,
     description: attestationSystem.description,
+  },
+  // ============================================================
+  // Миграция 040: Сертификаты по итогам аттестации
+  // ============================================================
+  {
+    name: "20260813_040_attestation_certificates",
+    up: attestationCertificates.up,
+    down: attestationCertificates.down,
+    description: attestationCertificates.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

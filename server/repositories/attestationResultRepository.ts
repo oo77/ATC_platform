@@ -40,6 +40,9 @@ export interface AttestationResultWithInstructor {
   positionSnapshot: string | null;
   attempts: number;
   lastAttemptAt: Date | null;
+  certificateId: string | null;
+  certificateNumber: string | null;
+  certificateUrl: string | null;
 }
 
 interface ResultRow extends RowDataPacket {
@@ -208,10 +211,14 @@ export async function getGroupResults(groupId: string): Promise<AttestationResul
         ar.notes,
         ar.evaluation_sheet_file_id,
         (SELECT COUNT(*) FROM attestation_test_sessions ts WHERE ts.group_id = agi.group_id AND ts.instructor_id = agi.instructor_id) as attempts,
-        (SELECT MAX(ts.started_at) FROM attestation_test_sessions ts WHERE ts.group_id = agi.group_id AND ts.instructor_id = agi.instructor_id) as last_attempt_at
+        (SELECT MAX(ts.started_at) FROM attestation_test_sessions ts WHERE ts.group_id = agi.group_id AND ts.instructor_id = agi.instructor_id) as last_attempt_at,
+        ic.id as certificate_id,
+        ic.certificate_number as certificate_number,
+        ic.pdf_file_url as certificate_url
      FROM attestation_group_instructors agi
      JOIN instructors i ON agi.instructor_id = i.id
      LEFT JOIN attestation_results ar ON ar.group_id = agi.group_id AND ar.instructor_id = agi.instructor_id
+     LEFT JOIN issued_certificates ic ON ic.attestation_group_id = agi.group_id AND ic.instructor_id = agi.instructor_id AND ic.status = 'issued'
      WHERE agi.group_id = ?
      ORDER BY i.full_name ASC`,
     [groupId]
@@ -231,6 +238,9 @@ export async function getGroupResults(groupId: string): Promise<AttestationResul
     positionSnapshot: row.position_snapshot,
     attempts: row.attempts || 0,
     lastAttemptAt: row.last_attempt_at,
+    certificateId: row.certificate_id ?? null,
+    certificateNumber: row.certificate_number ?? null,
+    certificateUrl: row.certificate_url ?? null,
   }));
 }
 

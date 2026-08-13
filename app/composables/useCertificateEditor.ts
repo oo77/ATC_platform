@@ -134,6 +134,32 @@ export const AVAILABLE_VARIABLES: {
     label: "Должность инструктора",
     placeholder: "Инструктор-методист",
   },
+  // Аттестация
+  {
+    key: "attestation.examScore",
+    label: "Балл аттестационного экзамена",
+    placeholder: "85%",
+  },
+  {
+    key: "attestation.examDate",
+    label: "Дата решения комиссии",
+    placeholder: "13.08.2026",
+  },
+  {
+    key: "attestation.groupName",
+    label: "Название группы аттестации",
+    placeholder: "Сертификационный экзамен инструкторов ПАБ",
+  },
+  {
+    key: "attestation.chairmanName",
+    label: "Ф.И.О. председателя комиссии",
+    placeholder: "О.М. Мусаев",
+  },
+  {
+    key: "attestation.chairmanPosition",
+    label: "Должность председателя комиссии",
+    placeholder: "Директор ООО «Airports Training Center»",
+  },
 ];
 
 // Доступные шрифты (реэкспорт из useGoogleFonts)

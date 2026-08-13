@@ -222,6 +222,43 @@
         </div>
       </div>
 
+      <!-- Сертификат -->
+      <div
+        class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden mb-6"
+      >
+        <div class="border-b border-slate-100 dark:border-slate-800 p-6">
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Award class="w-5 h-5 text-success" />
+            Сертификат
+          </h3>
+        </div>
+        <div class="p-6">
+          <div class="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3 flex items-start gap-2.5 mb-5">
+            <Info class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+            <p class="text-xs text-blue-800 dark:text-blue-300 font-medium leading-relaxed">
+              Если шаблон назначен, сертификат будет выдаваться инструктору автоматически, как только комиссия
+              отметит его решение как «Сдал».
+            </p>
+          </div>
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Шаблон сертификата</label>
+          <div class="relative mt-2">
+            <select
+              v-model="certificateTemplateId"
+              class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 appearance-none transition-all font-medium"
+            >
+              <option value="">Не назначен (сертификаты не выдаются)</option>
+              <option v-for="t in certificateTemplates" :key="t.id" :value="t.id">{{ t.name }}</option>
+            </select>
+            <ChevronDown class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          </div>
+          <div class="mt-4 flex justify-end">
+            <UiButton class="gap-2 font-bold px-6" :loading="savingCertificateTemplate" @click="saveCertificateTemplate">
+              <Save class="w-4 h-4" /> Сохранить
+            </UiButton>
+          </div>
+        </div>
+      </div>
+
       <!-- Опасная зона -->
       <div class="rounded-2xl border border-danger/20 bg-danger/5 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -255,6 +292,8 @@ import {
   Save,
   CalendarClock,
   AlertTriangle,
+  Award,
+  Info,
 } from "lucide-vue-next";
 
 definePageMeta({ layout: "default" });
@@ -273,11 +312,14 @@ const commissionDraft = ref([]);
 const allInstructors = ref([]);
 const commissionMembers = ref([]);
 const testTemplates = ref([]);
+const certificateTemplates = ref([]);
+const certificateTemplateId = ref("");
 
 const selectedInstructorId = ref("");
 const selectedCommissionMemberId = ref("");
 const savingCommission = ref(false);
 const savingSchedule = ref(false);
+const savingCertificateTemplate = ref(false);
 
 const schedule = ref({ testTemplateId: "", examStart: "", examEnd: "", location: "" });
 
@@ -305,11 +347,12 @@ const toLocalInput = (iso) => {
 const load = async () => {
   loading.value = true;
   try {
-    const [groupRes, instructorsRes, commissionMembersRes, templatesRes] = await Promise.all([
+    const [groupRes, instructorsRes, commissionMembersRes, templatesRes, certTemplatesRes] = await Promise.all([
       authFetch(`/api/attestation/groups/${groupId}`),
       authFetch("/api/instructors/all"),
       authFetch("/api/attestation/commission-members"),
       authFetch("/api/test-bank/templates?limit=100"),
+      authFetch("/api/certificates/templates?isActive=true"),
     ]);
 
     if (groupRes.success) {
@@ -323,6 +366,7 @@ const load = async () => {
         examEnd: toLocalInput(group.value.examEnd),
         location: group.value.location || "",
       };
+      certificateTemplateId.value = group.value.certificateTemplateId || "";
     } else {
       toast.error(groupRes.message || "Группа не найдена");
     }
@@ -330,6 +374,7 @@ const load = async () => {
     if (instructorsRes.success) allInstructors.value = instructorsRes.instructors || [];
     if (commissionMembersRes.success) commissionMembers.value = commissionMembersRes.members || [];
     if (templatesRes.success) testTemplates.value = templatesRes.templates || [];
+    if (certTemplatesRes.success) certificateTemplates.value = certTemplatesRes.templates || [];
   } finally {
     loading.value = false;
   }
@@ -410,6 +455,24 @@ const saveSchedule = async () => {
     }
   } finally {
     savingSchedule.value = false;
+  }
+};
+
+const saveCertificateTemplate = async () => {
+  savingCertificateTemplate.value = true;
+  try {
+    const res = await authFetch(`/api/attestation/groups/${groupId}/certificate-template`, {
+      method: "PUT",
+      body: { certificateTemplateId: certificateTemplateId.value || null },
+    });
+    if (res.success) {
+      group.value = res.group;
+      toast.success(certificateTemplateId.value ? "Шаблон сертификата назначен" : "Автовыдача сертификата отключена");
+    } else {
+      toast.error(res.message || "Не удалось сохранить шаблон сертификата");
+    }
+  } finally {
+    savingCertificateTemplate.value = false;
   }
 };
 

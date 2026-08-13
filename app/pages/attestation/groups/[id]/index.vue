@@ -438,6 +438,15 @@
                         >
                           <FileText class="w-3.5 h-3.5" /> Лист
                         </button>
+                        <a
+                          v-if="r.certificateId"
+                          :href="`/api/certificates/download/${r.certificateId}`"
+                          target="_blank"
+                          class="inline-flex h-8 items-center gap-1 px-2.5 rounded-lg text-xs font-bold text-success bg-success/10 hover:bg-success/20 transition-all"
+                          title="Скачать сертификат"
+                        >
+                          <Award class="w-3.5 h-3.5" /> Сертификат
+                        </a>
                       </div>
                     </td>
                   </tr>
@@ -482,6 +491,7 @@ import {
   ChevronRight,
   ClipboardList,
   ShieldCheck,
+  Award,
 } from "lucide-vue-next";
 
 definePageMeta({ layout: "default" });
@@ -597,6 +607,11 @@ const load = async () => {
   }
 };
 
+const refreshResults = async () => {
+  const resultsRes = await authFetch(`/api/attestation/groups/${groupId}/results`);
+  if (resultsRes.success) results.value = resultsRes.results || [];
+};
+
 const requestDecide = (result, decision) => {
   decideTarget.value = { result, decision };
 };
@@ -611,10 +626,15 @@ const confirmDecide = async () => {
       body: { decision },
     });
     if (res.success) {
-      const idx = results.value.findIndex((r) => r.instructorId === result.instructorId);
-      if (idx >= 0) results.value[idx] = { ...results.value[idx], id: res.result.id, decision };
-      toast.success("Решение сохранено");
       decideTarget.value = null;
+      if (res.certificateIssued) {
+        toast.success("Решение сохранено, сертификат выдан автоматически");
+        await refreshResults();
+      } else {
+        const idx = results.value.findIndex((r) => r.instructorId === result.instructorId);
+        if (idx >= 0) results.value[idx] = { ...results.value[idx], id: res.result.id, decision };
+        toast.success("Решение сохранено");
+      }
     } else {
       toast.error(res.message || "Не удалось сохранить решение");
     }
