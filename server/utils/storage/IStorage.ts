@@ -17,6 +17,7 @@ export type FileCategory =
   | 'instructor_certificate'
   | 'instructor_photo'
   | 'instructor_additional'
+  | 'attestation_document'
   | 'other';
 
 export interface UploadedFile {

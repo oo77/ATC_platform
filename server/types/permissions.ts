@@ -119,6 +119,12 @@ export enum Permission {
   LIBRARY_UPLOAD = "library:upload", // Загрузка новых книг
   LIBRARY_MANAGE = "library:manage", // Управление книгами (редактирование, удаление)
   LIBRARY_ACCESS_MANAGE = "library:access_manage", // Управление правами доступа
+
+  // ========== ATTESTATION (Аттестация инструкторов) ==========
+  ATTESTATION_VIEW = "attestation:view",
+  ATTESTATION_VIEW_OWN = "attestation:view_own",
+  ATTESTATION_MANAGE = "attestation:manage",
+  ATTESTATION_CONDUCT = "attestation:conduct",
 }
 
 // ========================================
@@ -177,6 +183,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.LIBRARY_UPLOAD,
     Permission.LIBRARY_MANAGE,
     Permission.LIBRARY_ACCESS_MANAGE,
+    Permission.ATTESTATION_VIEW,
+    Permission.ATTESTATION_MANAGE,
   ],
 
   [UserRole.TEACHER]: [
@@ -196,6 +204,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.DISCIPLINES_VIEW,
     Permission.LIBRARY_VIEW,
     Permission.LIBRARY_READ,
+    Permission.ATTESTATION_VIEW_OWN,
+    Permission.ATTESTATION_CONDUCT,
   ],
 
   [UserRole.STUDENT]: [

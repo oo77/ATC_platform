@@ -62,6 +62,12 @@ const ROLE_PROTECTED_ROUTES: Record<string, UserRole[]> = {
     UserRole.TEACHER,
   ],
   "/api/schedule/periods": [UserRole.ADMIN, UserRole.MANAGER, UserRole.TEACHER],
+  "/api/attestation/my": [UserRole.TEACHER, UserRole.ADMIN, UserRole.MANAGER],
+  "/api/attestation/sessions": [UserRole.TEACHER, UserRole.ADMIN, UserRole.MANAGER],
+  "/api/attestation/journal": [UserRole.ADMIN, UserRole.MANAGER],
+  "/api/attestation/commission-members": [UserRole.ADMIN, UserRole.MANAGER],
+  "/api/attestation/groups": [UserRole.ADMIN, UserRole.MANAGER],
+  "/api/attestation/results": [UserRole.ADMIN, UserRole.MANAGER],
 };
 
 /**
