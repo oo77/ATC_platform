@@ -46,6 +46,7 @@ import * as instructorWorkExperience from "./migrations/20260507_035_add_instruc
 import * as certificateVerificationLogs from "./migrations/20260512_036_certificate_verification_logs";
 import * as addInnAndDetailsToOrganizations from "./migrations/20260730_037_add_inn_and_details_to_organizations";
 import * as addMultilingualFieldsAndPhotoToStudents from "./migrations/20260730_038_add_multilingual_fields_and_photo_to_students";
+import * as attestationSystem from "./migrations/20260813_039_attestation_system";
 
 /**
  * ============================================================================
@@ -408,6 +409,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: addMultilingualFieldsAndPhotoToStudents.up,
     down: addMultilingualFieldsAndPhotoToStudents.down,
     description: addMultilingualFieldsAndPhotoToStudents.description,
+  },
+  // ============================================================
+  // Миграция 039: Система аттестации инструкторов
+  // ============================================================
+  {
+    name: "20260813_039_attestation_system",
+    up: attestationSystem.up,
+    down: attestationSystem.down,
+    description: attestationSystem.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

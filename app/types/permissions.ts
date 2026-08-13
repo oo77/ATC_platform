@@ -135,6 +135,12 @@ export enum Permission {
   TESTS_ASSIGN = "tests:assign",
   TESTS_TAKE = "tests:take",
   TESTS_VIEW_RESULTS = "tests:view_results",
+
+  // ========== ATTESTATION (Аттестация инструкторов) ==========
+  ATTESTATION_VIEW = "attestation:view",
+  ATTESTATION_VIEW_OWN = "attestation:view_own",
+  ATTESTATION_MANAGE = "attestation:manage",
+  ATTESTATION_CONDUCT = "attestation:conduct",
 }
 
 // ========================================
@@ -254,6 +260,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Tests (назначение и просмотр результатов)
     Permission.TESTS_ASSIGN,
     Permission.TESTS_VIEW_RESULTS,
+
+    // Attestation
+    Permission.ATTESTATION_VIEW,
+    Permission.ATTESTATION_MANAGE,
   ],
 
   // =========================================================
@@ -305,6 +315,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Tests (назначение и просмотр результатов)
     Permission.TESTS_ASSIGN,
     Permission.TESTS_VIEW_RESULTS,
+
+    // Attestation (своя аттестация)
+    Permission.ATTESTATION_VIEW_OWN,
+    Permission.ATTESTATION_CONDUCT,
   ],
 
   // =========================================================
@@ -539,6 +553,37 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
   {
     path: "/tests/take/[id]",
     anyPermissions: [Permission.TESTS_TAKE, Permission.TEST_TEMPLATES_VIEW],
+  },
+
+  // Attestation
+  {
+    path: "/attestation",
+    anyPermissions: [Permission.ATTESTATION_VIEW, Permission.ATTESTATION_VIEW_OWN],
+  },
+  {
+    path: "/attestation/groups/create",
+    requiredPermissions: [Permission.ATTESTATION_MANAGE],
+  },
+  {
+    path: "/attestation/groups/[id]",
+    requiredPermissions: [Permission.ATTESTATION_VIEW],
+  },
+  {
+    path: "/attestation/groups/[id]/edit",
+    requiredPermissions: [Permission.ATTESTATION_MANAGE],
+  },
+  {
+    path: "/attestation/commission",
+    requiredPermissions: [Permission.ATTESTATION_MANAGE],
+  },
+  {
+    path: "/attestation/journal",
+    requiredPermissions: [Permission.ATTESTATION_VIEW],
+  },
+  {
+    path: "/attestation/exam/[groupId]",
+    anyPermissions: [Permission.ATTESTATION_CONDUCT, Permission.ATTESTATION_MANAGE],
+    requiresOwnerCheck: true,
   },
 ];
 

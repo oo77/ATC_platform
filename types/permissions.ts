@@ -122,6 +122,12 @@ export enum Permission {
   LIBRARY_UPLOAD = "library:upload", // Загрузка новых книг
   LIBRARY_MANAGE = "library:manage", // Управление книгами (редактирование, удаление)
   LIBRARY_ACCESS_MANAGE = "library:access_manage", // Управление правами доступа
+
+  // ========== ATTESTATION (Аттестация инструкторов) ==========
+  ATTESTATION_VIEW = "attestation:view", // Просмотр всех групп/результатов аттестации
+  ATTESTATION_VIEW_OWN = "attestation:view_own", // Просмотр своей аттестации (инструктор)
+  ATTESTATION_MANAGE = "attestation:manage", // Управление группами, комиссией, расписанием
+  ATTESTATION_CONDUCT = "attestation:conduct", // Прохождение экзамена (инструктор)
 }
 
 // ========================================
@@ -229,6 +235,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.LIBRARY_UPLOAD,
     Permission.LIBRARY_MANAGE,
     Permission.LIBRARY_ACCESS_MANAGE,
+
+    // Attestation
+    Permission.ATTESTATION_VIEW,
+    Permission.ATTESTATION_MANAGE,
   ],
 
   // =========================================================
@@ -271,6 +281,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Library
     Permission.LIBRARY_VIEW,
     Permission.LIBRARY_READ,
+
+    // Attestation (своя аттестация)
+    Permission.ATTESTATION_VIEW_OWN,
+    Permission.ATTESTATION_CONDUCT,
   ],
 
   // =========================================================
@@ -448,6 +462,29 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
 
   // Settings
   { path: "/settings", requiredPermissions: [Permission.SETTINGS_VIEW] },
+
+  // Attestation
+  {
+    path: "/attestation",
+    anyPermissions: [Permission.ATTESTATION_VIEW, Permission.ATTESTATION_VIEW_OWN],
+  },
+  {
+    path: "/attestation/groups/[id]",
+    requiredPermissions: [Permission.ATTESTATION_MANAGE],
+  },
+  {
+    path: "/attestation/commission",
+    requiredPermissions: [Permission.ATTESTATION_MANAGE],
+  },
+  {
+    path: "/attestation/journal",
+    requiredPermissions: [Permission.ATTESTATION_VIEW],
+  },
+  {
+    path: "/attestation/exam/[groupId]",
+    anyPermissions: [Permission.ATTESTATION_CONDUCT, Permission.ATTESTATION_MANAGE],
+    requiresOwnerCheck: true,
+  },
 ];
 
 // ========================================

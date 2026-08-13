@@ -340,6 +340,17 @@ export function usePermissions() {
     hasPermission(Permission.TESTS_VIEW_RESULTS)
   );
 
+  // === ATTESTATION ===
+  const canViewAttestation = computed(() =>
+    hasAnyPermission([Permission.ATTESTATION_VIEW, Permission.ATTESTATION_VIEW_OWN])
+  );
+  const canManageAttestation = computed(() =>
+    hasPermission(Permission.ATTESTATION_MANAGE)
+  );
+  const canConductAttestation = computed(() =>
+    hasPermission(Permission.ATTESTATION_CONDUCT)
+  );
+
   return {
     // Основные данные
     currentRole,
@@ -466,6 +477,11 @@ export function usePermissions() {
     canAssignTests,
     canTakeTests,
     canViewTestResults,
+
+    // Шорткаты для Attestation
+    canViewAttestation,
+    canManageAttestation,
+    canConductAttestation,
 
     // Экспорт enum для удобства
     Permission,

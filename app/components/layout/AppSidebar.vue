@@ -421,6 +421,30 @@ const allMenuGroups: MenuGroup[] = [
           { name: "Шаблоны", path: "/test-templates" },
         ],
       },
+      {
+        icon: ShieldCheck,
+        name: "Аттестация",
+        path: "/attestation",
+        showOnlyForRoles: ["TEACHER"],
+      },
+      {
+        icon: ShieldCheck,
+        name: "Аттестация",
+        hideForRoles: ["STUDENT", "TEACHER"],
+        subItems: [
+          { name: "Группы", path: "/attestation", excludePaths: ["/attestation/commission", "/attestation/journal"] },
+          {
+            name: "Комиссия",
+            path: "/attestation/commission",
+            permission: Permission.ATTESTATION_MANAGE,
+          },
+          {
+            name: "Журнал",
+            path: "/attestation/journal",
+            permission: Permission.ATTESTATION_VIEW,
+          },
+        ],
+      },
     ],
   },
   {
