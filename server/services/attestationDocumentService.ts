@@ -19,7 +19,7 @@ import {
 import { getInstructorById } from "../repositories/instructorRepository";
 import {
   getGroupResults,
-  getResultById,
+  ensureResultRow,
   setEvaluationSheetFile,
 } from "../repositories/attestationResultRepository";
 
@@ -71,9 +71,8 @@ function positionLabel(entry: { position: string | null; organization: string | 
 /**
  * Генерирует "Оценочный лист" для одного инструктора и сохраняет его в files
  */
-export async function generateEvaluationSheet(resultId: string, uploadedBy: string) {
-  const result = await getResultById(resultId);
-  if (!result) throw new Error("Результат аттестации не найден");
+export async function generateEvaluationSheet(groupId: string, instructorId: string, uploadedBy: string) {
+  const result = await ensureResultRow(groupId, instructorId);
 
   const [group, instructor, commission] = await Promise.all([
     getAttestationGroupById(result.groupId),
@@ -130,7 +129,7 @@ export async function generateEvaluationSheet(resultId: string, uploadedBy: stri
     uploadedBy,
   });
 
-  await setEvaluationSheetFile(resultId, fileRecord.id);
+  await setEvaluationSheetFile(result.id, fileRecord.id);
 
   return fileRecord;
 }

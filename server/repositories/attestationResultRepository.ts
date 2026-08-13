@@ -22,7 +22,20 @@ export interface AttestationResult {
   updatedAt: Date;
 }
 
-export interface AttestationResultWithInstructor extends AttestationResult {
+/**
+ * Строка результата на карточке группы — существует для КАЖДОГО инструктора
+ * группы, даже если он ещё не проходил тест (id/createdAt/updatedAt = null)
+ */
+export interface AttestationResultWithInstructor {
+  id: string | null;
+  groupId: string;
+  instructorId: string;
+  scorePercent: number | null;
+  decision: AttestationDecision;
+  decidedAt: Date | null;
+  decidedBy: string | null;
+  notes: string | null;
+  evaluationSheetFileId: number | null;
   fullName: string;
   positionSnapshot: string | null;
   attempts: number;
@@ -123,6 +136,51 @@ export async function decideResult(
   return getResultById(id);
 }
 
+/**
+ * Принять решение комиссии по инструктору, даже если у него ещё нет строки
+ * результата (он не проходил тест) — строка создаётся автоматически
+ */
+export async function decideForInstructor(
+  groupId: string,
+  instructorId: string,
+  data: { decision: AttestationDecision; decidedBy: string; notes?: string | null }
+): Promise<AttestationResult> {
+  const existing = await getResultByGroupAndInstructor(groupId, instructorId);
+  if (existing) {
+    const updated = await decideResult(existing.id, data);
+    return updated!;
+  }
+
+  const id = uuidv4();
+  const now = new Date();
+  await executeQuery(
+    `INSERT INTO attestation_results (id, group_id, instructor_id, decision, decided_at, decided_by, notes, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, groupId, instructorId, data.decision, now, data.decidedBy, data.notes ?? null, now, now]
+  );
+  const created = await getResultById(id);
+  return created!;
+}
+
+/**
+ * Гарантирует наличие строки результата (pending) для инструктора —
+ * используется перед генерацией "Оценочного листа" без готового счёта
+ */
+export async function ensureResultRow(groupId: string, instructorId: string): Promise<AttestationResult> {
+  const existing = await getResultByGroupAndInstructor(groupId, instructorId);
+  if (existing) return existing;
+
+  const id = uuidv4();
+  const now = new Date();
+  await executeQuery(
+    `INSERT INTO attestation_results (id, group_id, instructor_id, decision, created_at, updated_at)
+     VALUES (?, ?, ?, 'pending', ?, ?)`,
+    [id, groupId, instructorId, now, now]
+  );
+  const created = await getResultById(id);
+  return created!;
+}
+
 export async function setEvaluationSheetFile(id: string, fileId: number): Promise<void> {
   await executeQuery(
     "UPDATE attestation_results SET evaluation_sheet_file_id = ?, updated_at = ? WHERE id = ?",
@@ -132,25 +190,43 @@ export async function setEvaluationSheetFile(id: string, fileId: number): Promis
 
 /**
  * Результаты группы вместе с данными по инструктору (для таблицы группы/протокола)
+ * Возвращает строку для КАЖДОГО инструктора группы, даже если он ещё не
+ * проходил тест и решение по нему не принято.
  */
 export async function getGroupResults(groupId: string): Promise<AttestationResultWithInstructor[]> {
   const rows = await executeQuery<RowDataPacket[]>(
     `SELECT
-        ar.*,
-        i.full_name,
+        agi.group_id,
+        agi.instructor_id,
         agi.position_snapshot,
-        (SELECT COUNT(*) FROM attestation_test_sessions ts WHERE ts.group_id = ar.group_id AND ts.instructor_id = ar.instructor_id) as attempts,
-        (SELECT MAX(ts.started_at) FROM attestation_test_sessions ts WHERE ts.group_id = ar.group_id AND ts.instructor_id = ar.instructor_id) as last_attempt_at
-     FROM attestation_results ar
-     JOIN instructors i ON ar.instructor_id = i.id
-     LEFT JOIN attestation_group_instructors agi ON agi.group_id = ar.group_id AND agi.instructor_id = ar.instructor_id
-     WHERE ar.group_id = ?
+        i.full_name,
+        ar.id as result_id,
+        ar.score_percent,
+        ar.decision,
+        ar.decided_at,
+        ar.decided_by,
+        ar.notes,
+        ar.evaluation_sheet_file_id,
+        (SELECT COUNT(*) FROM attestation_test_sessions ts WHERE ts.group_id = agi.group_id AND ts.instructor_id = agi.instructor_id) as attempts,
+        (SELECT MAX(ts.started_at) FROM attestation_test_sessions ts WHERE ts.group_id = agi.group_id AND ts.instructor_id = agi.instructor_id) as last_attempt_at
+     FROM attestation_group_instructors agi
+     JOIN instructors i ON agi.instructor_id = i.id
+     LEFT JOIN attestation_results ar ON ar.group_id = agi.group_id AND ar.instructor_id = agi.instructor_id
+     WHERE agi.group_id = ?
      ORDER BY i.full_name ASC`,
     [groupId]
   );
 
   return rows.map((row) => ({
-    ...mapResult(row as ResultRow),
+    id: row.result_id ?? null,
+    groupId: row.group_id,
+    instructorId: row.instructor_id,
+    scorePercent: row.score_percent ? parseFloat(row.score_percent) : null,
+    decision: (row.decision as AttestationDecision) ?? "pending",
+    decidedAt: row.decided_at,
+    decidedBy: row.decided_by,
+    notes: row.notes,
+    evaluationSheetFileId: row.evaluation_sheet_file_id,
     fullName: row.full_name,
     positionSnapshot: row.position_snapshot,
     attempts: row.attempts || 0,
