@@ -348,9 +348,9 @@
                     </td>
                     <td class="px-6 py-4 text-right">
                       <span
-                        :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-bold', decisionBadgeClass(resultFor(ins.instructorId)?.decision)]"
+                        :class="['inline-flex items-center rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest border', decisionBadgeClass(resultFor(ins.instructorId))]"
                       >
-                        {{ decisionLabel(resultFor(ins.instructorId)?.decision) }}
+                        {{ decisionLabel(resultFor(ins.instructorId)) }}
                       </span>
                     </td>
                   </tr>
@@ -365,11 +365,23 @@
           <div
             class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden"
           >
+            <div class="border-b border-slate-100 dark:border-slate-800 p-6 flex items-center justify-between">
+              <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <ClipboardList class="w-5 h-5 text-warning" />
+                Результаты и решения комиссии
+              </h3>
+              <div class="flex items-center gap-4 text-xs font-bold">
+                <span class="flex items-center gap-1.5 text-success"><span class="h-2 w-2 rounded-full bg-success"></span>{{ passedCount }} сдали</span>
+                <span class="flex items-center gap-1.5 text-danger"><span class="h-2 w-2 rounded-full bg-danger"></span>{{ failedCount }} не сдали</span>
+                <span class="flex items-center gap-1.5 text-slate-400"><span class="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600"></span>{{ pendingCount }} ожидают</span>
+              </div>
+            </div>
+
             <div v-if="results.length === 0" class="p-16 text-center">
               <div class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-full inline-block mb-4">
                 <ClipboardList class="w-10 h-10 text-slate-300 dark:text-slate-600" />
               </div>
-              <p class="text-slate-500 font-medium">Результаты появятся после прохождения теста</p>
+              <p class="text-slate-500 font-medium">В группе пока нет инструкторов</p>
             </div>
             <div v-else class="overflow-x-auto">
               <table class="w-full text-left border-collapse">
@@ -383,11 +395,7 @@
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                  <tr
-                    v-for="r in results"
-                    :key="r.id"
-                    class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group"
-                  >
+                  <tr v-for="r in results" :key="r.instructorId" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-3">
                         <div
@@ -401,28 +409,31 @@
                     <td class="px-6 py-4 text-center font-bold text-slate-900 dark:text-white">
                       {{ r.scorePercent !== null ? Math.round(r.scorePercent) + "%" : "—" }}
                     </td>
-                    <td class="px-6 py-4 text-center text-sm font-semibold text-slate-500">{{ r.attempts }}</td>
+                    <td class="px-6 py-4 text-center text-sm font-semibold text-slate-500">
+                      <span v-if="r.attempts > 0">{{ r.attempts }}</span>
+                      <span v-else class="text-slate-300 dark:text-slate-600">0</span>
+                    </td>
                     <td class="px-6 py-4">
-                      <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-bold', decisionBadgeClass(r.decision)]">
-                        {{ decisionLabel(r.decision) }}
+                      <span :class="['inline-flex items-center rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest border', decisionBadgeClass(r)]">
+                        {{ decisionLabel(r) }}
                       </span>
                     </td>
                     <td class="px-6 py-4">
-                      <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div class="flex items-center justify-end gap-1.5">
                         <button
-                          class="inline-flex h-8 items-center gap-1 px-2.5 rounded-lg text-xs font-bold text-success hover:bg-success/10 transition-all"
-                          @click="decide(r, 'passed')"
+                          class="inline-flex h-8 items-center gap-1 px-2.5 rounded-lg text-xs font-bold text-success bg-success/5 hover:bg-success/15 transition-all"
+                          @click="requestDecide(r, 'passed')"
                         >
                           <CheckCircle2 class="w-3.5 h-3.5" /> Сдал
                         </button>
                         <button
-                          class="inline-flex h-8 items-center gap-1 px-2.5 rounded-lg text-xs font-bold text-danger hover:bg-danger/10 transition-all"
-                          @click="decide(r, 'failed')"
+                          class="inline-flex h-8 items-center gap-1 px-2.5 rounded-lg text-xs font-bold text-danger bg-danger/5 hover:bg-danger/15 transition-all"
+                          @click="requestDecide(r, 'failed')"
                         >
                           <XCircle class="w-3.5 h-3.5" /> Не сдал
                         </button>
                         <button
-                          class="inline-flex h-8 items-center gap-1 px-2.5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-all"
+                          class="inline-flex h-8 items-center gap-1 px-2.5 rounded-lg text-xs font-bold text-primary bg-primary/5 hover:bg-primary/15 transition-all"
                           @click="r.evaluationSheetUrl ? window.open(r.evaluationSheetUrl, '_blank') : generateEvaluationSheet(r)"
                         >
                           <FileText class="w-3.5 h-3.5" /> Лист
@@ -437,6 +448,20 @@
         </div>
       </div>
     </template>
+
+    <!-- Подтверждение решения комиссии -->
+    <UiConfirmModal
+      :is-open="!!decideTarget"
+      :title="decideTarget?.decision === 'passed' ? 'Подтвердить сдачу экзамена' : 'Подтвердить несдачу экзамена'"
+      :message="`Изменить решение комиссии по инструктору «${decideTarget?.result?.fullName}» на «${decideTarget?.decision === 'passed' ? 'Сдал' : 'Не сдал'}»?`"
+      :warning="decideTarget?.result?.attempts === 0 ? 'Этот инструктор ещё не проходил тест — решение будет зафиксировано вручную.' : ''"
+      confirm-text="Подтвердить"
+      cancel-text="Отмена"
+      :variant="decideTarget?.decision === 'passed' ? 'warning' : 'danger'"
+      :loading="deciding"
+      @confirm="confirmDecide"
+      @cancel="decideTarget = null"
+    />
   </div>
 </template>
 
@@ -483,9 +508,14 @@ const tabs = [
 
 const chairman = computed(() => commission.value.find((c) => c.role === "chairman") || null);
 const passedCount = computed(() => results.value.filter((r) => r.decision === "passed").length);
+const failedCount = computed(() => results.value.filter((r) => r.decision === "failed").length);
+const pendingCount = computed(() => results.value.filter((r) => r.decision !== "passed" && r.decision !== "failed").length);
 const passedPercent = computed(() =>
   results.value.length ? Math.round((passedCount.value / results.value.length) * 100) : 0
 );
+
+const decideTarget = ref(null);
+const deciding = ref(false);
 
 const getInitials = (name) => {
   if (!name) return "?";
@@ -533,11 +563,16 @@ const statusText = computed(() => {
 
 const roleLabel = (role) => ({ chairman: "Председатель комиссии", secretary: "Секретарь", member: "Член комиссии" }[role] || "Член комиссии");
 
-const decisionLabel = (d) => ({ passed: "Сдан", failed: "Не сдан" }[d] || "Ожидает");
-const decisionBadgeClass = (d) => {
-  if (d === "passed") return "bg-success/10 text-success";
-  if (d === "failed") return "bg-danger/10 text-danger";
-  return "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400";
+const decisionLabel = (r) => {
+  if (r?.decision === "passed") return "Сдан";
+  if (r?.decision === "failed") return "Не сдан";
+  if (!r || r.attempts === 0) return "Не проходил тест";
+  return "Ожидает решения";
+};
+const decisionBadgeClass = (r) => {
+  if (r?.decision === "passed") return "bg-success/10 text-success border-success/20";
+  if (r?.decision === "failed") return "bg-danger/10 text-danger border-danger/20";
+  return "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700";
 };
 
 const resultFor = (instructorId) => results.value.find((r) => r.instructorId === instructorId);
@@ -562,24 +597,39 @@ const load = async () => {
   }
 };
 
-const decide = async (result, decision) => {
-  const res = await authFetch(`/api/attestation/results/${result.id}/decide`, {
-    method: "POST",
-    body: { decision },
-  });
-  if (res.success) {
-    const idx = results.value.findIndex((r) => r.id === result.id);
-    if (idx >= 0) results.value[idx] = { ...results.value[idx], decision };
-    toast.success("Решение сохранено");
-  } else {
-    toast.error(res.message || "Не удалось сохранить решение");
+const requestDecide = (result, decision) => {
+  decideTarget.value = { result, decision };
+};
+
+const confirmDecide = async () => {
+  if (!decideTarget.value) return;
+  const { result, decision } = decideTarget.value;
+  deciding.value = true;
+  try {
+    const res = await authFetch(`/api/attestation/groups/${groupId}/instructors/${result.instructorId}/decide`, {
+      method: "POST",
+      body: { decision },
+    });
+    if (res.success) {
+      const idx = results.value.findIndex((r) => r.instructorId === result.instructorId);
+      if (idx >= 0) results.value[idx] = { ...results.value[idx], id: res.result.id, decision };
+      toast.success("Решение сохранено");
+      decideTarget.value = null;
+    } else {
+      toast.error(res.message || "Не удалось сохранить решение");
+    }
+  } finally {
+    deciding.value = false;
   }
 };
 
 const generateEvaluationSheet = async (result) => {
-  const res = await authFetch(`/api/attestation/results/${result.id}/documents/evaluation-sheet`, { method: "POST" });
+  const res = await authFetch(
+    `/api/attestation/groups/${groupId}/instructors/${result.instructorId}/documents/evaluation-sheet`,
+    { method: "POST" }
+  );
   if (res.success) {
-    const idx = results.value.findIndex((r) => r.id === result.id);
+    const idx = results.value.findIndex((r) => r.instructorId === result.instructorId);
     if (idx >= 0) results.value[idx] = { ...results.value[idx], evaluationSheetFileId: res.file.id, evaluationSheetUrl: res.file.url };
     window.open(res.file.url, "_blank");
   } else {
