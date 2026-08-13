@@ -52,7 +52,9 @@ interface TemplateRow extends RowDataPacket {
 interface IssuedCertificateRow extends RowDataPacket {
   id: string;
   group_id: string | null;
-  student_id: string;
+  attestation_group_id: string | null;
+  student_id: string | null;
+  instructor_id: string | null;
   template_id: string | null;
   certificate_number: string;
   issue_date: Date;
@@ -134,7 +136,9 @@ function mapRowToIssuedCertificate(
   const cert: IssuedCertificate = {
     id: row.id,
     groupId: row.group_id,
+    attestationGroupId: row.attestation_group_id,
     studentId: row.student_id,
+    instructorId: row.instructor_id,
     templateId: row.template_id,
     certificateNumber: row.certificate_number,
     issueDate: row.issue_date,
@@ -174,6 +178,9 @@ function mapRowToIssuedCertificate(
   };
 
   // Добавляем связанные данные, если они есть
+  if (row.template_name) {
+    cert.templateName = row.template_name;
+  }
   if (row.student_full_name) {
     cert.student = {
       id: row.student_id,
@@ -715,6 +722,80 @@ export async function createStandaloneCertificate(data: {
   );
 
   return (await getIssuedCertificateById(id))!;
+}
+
+/**
+ * Создать сертификат по итогам аттестации инструктора
+ */
+export async function createAttestationCertificate(data: {
+  attestationGroupId: string;
+  instructorId: string;
+  templateId: string;
+  certificateNumber: string;
+  issueDate: Date;
+  expiryDate?: Date | null;
+  variablesData?: Record<string, string>;
+  issuedBy?: string;
+}): Promise<IssuedCertificate> {
+  const id = uuidv4();
+  const now = new Date();
+
+  await executeQuery<ResultSetHeader>(
+    `INSERT INTO issued_certificates
+     (id, attestation_group_id, instructor_id, template_id, certificate_number, issue_date, expiry_date,
+      source_type, status, variables_data, issued_by, issued_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'attestation', 'issued', ?, ?, ?, ?, ?)`,
+    [
+      id,
+      data.attestationGroupId,
+      data.instructorId,
+      data.templateId,
+      data.certificateNumber,
+      data.issueDate,
+      data.expiryDate || null,
+      data.variablesData ? JSON.stringify(data.variablesData) : null,
+      data.issuedBy || null,
+      now,
+      now,
+      now,
+    ],
+  );
+
+  return (await getIssuedCertificateById(id))!;
+}
+
+/**
+ * Проверить, выдан ли уже сертификат инструктору за данную группу аттестации
+ */
+export async function getAttestationCertificate(
+  attestationGroupId: string,
+  instructorId: string
+): Promise<IssuedCertificate | null> {
+  const rows = await executeQuery<IssuedCertificateRow[]>(
+    `SELECT * FROM issued_certificates
+     WHERE attestation_group_id = ? AND instructor_id = ? AND status = 'issued'
+     LIMIT 1`,
+    [attestationGroupId, instructorId]
+  );
+  return rows.length > 0 ? mapRowToIssuedCertificate(rows[0]) : null;
+}
+
+/**
+ * Получить сертификаты, выданные инструктору по итогам аттестации
+ */
+export async function getInstructorCertificates(
+  instructorId: string,
+): Promise<IssuedCertificate[]> {
+  const rows = await executeQuery<IssuedCertificateRow[]>(
+    `SELECT ic.*, ct.name as template_name
+     FROM issued_certificates ic
+     LEFT JOIN certificate_templates ct ON ic.template_id = ct.id
+     WHERE ic.instructor_id = ? AND ic.status = 'issued'
+     ORDER BY ic.issued_at DESC`,
+    [instructorId],
+  );
+
+  return rows.map(mapRowToIssuedCertificate);
 }
 
 /**

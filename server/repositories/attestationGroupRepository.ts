@@ -21,6 +21,7 @@ export interface AttestationGroup {
   name: string;
   description: string | null;
   testTemplateId: string | null;
+  certificateTemplateId: string | null;
   examStart: Date | null;
   examEnd: Date | null;
   location: string | null;
@@ -36,6 +37,7 @@ export interface AttestationGroupWithDetails extends AttestationGroup {
   templateName: string | null;
   templateCode: string | null;
   passingScore: number | null;
+  certificateTemplateName: string | null;
   instructorsCount: number;
 }
 
@@ -65,6 +67,7 @@ interface GroupRow extends RowDataPacket {
   name: string;
   description: string | null;
   test_template_id: string | null;
+  certificate_template_id: string | null;
   exam_start: Date | null;
   exam_end: Date | null;
   location: string | null;
@@ -77,6 +80,7 @@ interface GroupRow extends RowDataPacket {
   template_name?: string | null;
   template_code?: string | null;
   passing_score?: number | null;
+  certificate_template_name?: string | null;
   instructors_count?: number;
 }
 
@@ -87,6 +91,7 @@ function mapGroupRow(row: GroupRow): AttestationGroupWithDetails {
     name: row.name,
     description: row.description,
     testTemplateId: row.test_template_id,
+    certificateTemplateId: row.certificate_template_id,
     examStart: row.exam_start,
     examEnd: row.exam_end,
     location: row.location,
@@ -99,6 +104,7 @@ function mapGroupRow(row: GroupRow): AttestationGroupWithDetails {
     templateName: row.template_name ?? null,
     templateCode: row.template_code ?? null,
     passingScore: row.passing_score ?? null,
+    certificateTemplateName: row.certificate_template_name ?? null,
     instructorsCount: row.instructors_count ?? 0,
   };
 }
@@ -109,9 +115,11 @@ const GROUP_SELECT = `
     tt.name as template_name,
     tt.code as template_code,
     tt.passing_score as passing_score,
+    ct.name as certificate_template_name,
     (SELECT COUNT(*) FROM attestation_group_instructors agi WHERE agi.group_id = ag.id) as instructors_count
   FROM attestation_groups ag
   LEFT JOIN test_templates tt ON ag.test_template_id = tt.id
+  LEFT JOIN certificate_templates ct ON ag.certificate_template_id = ct.id
 `;
 
 export async function getAttestationGroups(filters: {
@@ -253,6 +261,17 @@ export async function scheduleAttestationGroup(
      SET test_template_id = ?, exam_start = ?, exam_end = ?, location = ?, status = 'scheduled', updated_at = ?
      WHERE id = ?`,
     [data.testTemplateId, data.examStart, data.examEnd, data.location || null, new Date(), id]
+  );
+  return getAttestationGroupById(id);
+}
+
+export async function setCertificateTemplate(
+  id: string,
+  certificateTemplateId: string | null
+): Promise<AttestationGroupWithDetails | null> {
+  await executeQuery(
+    "UPDATE attestation_groups SET certificate_template_id = ?, updated_at = ? WHERE id = ?",
+    [certificateTemplateId, new Date(), id]
   );
   return getAttestationGroupById(id);
 }
