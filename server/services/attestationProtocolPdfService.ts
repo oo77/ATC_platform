@@ -32,7 +32,9 @@ function formatDateParts(date: Date | string | null | undefined) {
 
 function positionLabel(entry: { position: string | null; organization: string | null } | null) {
   if (!entry) return "";
-  return [entry.position, entry.organization].filter(Boolean).join(", ");
+  // position уже включает организацию (например, "Директор ООО «...»"),
+  // поэтому organization не дублируется в подписи.
+  return entry.position || entry.organization || "";
 }
 
 // ============================================================================
@@ -368,7 +370,7 @@ export async function generateProtocolPdfBuffer(data: ProtocolPdfData): Promise<
   const passedCount = decided.filter((r) => r.decision === "passed").length;
   const failedCount = total - passedCount;
   const passedPercent = total > 0 ? Math.round((passedCount / total) * 100) : 0;
-  const failedPercent = total > 0 ? 100 - passedPercent : 0;
+  const failedPercent = 100 - passedPercent;
 
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
