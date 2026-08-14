@@ -22,6 +22,7 @@ import {
   ensureResultRow,
   setEvaluationSheetFile,
 } from "../repositories/attestationResultRepository";
+import { generateProtocolPdfBuffer } from "./attestationProtocolPdfService";
 
 const TEMPLATES_DIR = path.join(process.cwd(), "server", "assets", "templates");
 
@@ -135,7 +136,8 @@ export async function generateEvaluationSheet(groupId: string, instructorId: str
 }
 
 /**
- * Генерирует "Протокол проведения экзамена" для группы и сохраняет его в files
+ * Генерирует "Ведомость проведения экзамена" (протокол) для группы в PDF
+ * и сохраняет его в files
  */
 export async function generateProtocol(groupId: string, uploadedBy: string) {
   const group = await getAttestationGroupById(groupId);
@@ -146,45 +148,14 @@ export async function generateProtocol(groupId: string, uploadedBy: string) {
     getGroupResults(groupId),
   ]);
 
-  const { chairman, secretary, members } = commissionByRole(commission);
-  const exam = dateParts(group.examStart);
+  const buffer = await generateProtocolPdfBuffer({ group, commission, results });
 
-  const passedCount = results.filter((r) => r.decision === "passed").length;
-  const failedCount = results.filter((r) => r.decision === "failed").length;
-  const total = results.length;
-  const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
-
-  const buffer = await renderTemplate("attestation-protocol.docx", {
-    group_name: group.name,
-    exam_day: exam.day,
-    exam_month: exam.month,
-    exam_year: exam.year,
-    location: group.location || "",
-    responsible_person: group.responsiblePerson || chairman?.fullName || "",
-    secretary_name: secretary?.fullName || "",
-    rows: results.map((r, i) => ({
-      index: i + 1,
-      full_name: r.fullName,
-      score_percent: r.scorePercent !== null ? r.scorePercent.toFixed(0) : "-",
-      decision_text: r.decision === "passed" ? "успешно" : r.decision === "failed" ? "не успешно" : "-",
-    })),
-    total_count: total,
-    passed_count: passedCount,
-    passed_percent: pct(passedCount),
-    failed_count: failedCount,
-    failed_percent: pct(failedCount),
-    chairman_position: chairman ? positionLabel(chairman) : "",
-    chairman_name: chairman?.fullName || "",
-    members: members.map((m) => ({ position: positionLabel(m), full_name: m.fullName })),
-    secretary_position: secretary ? positionLabel(secretary) : "",
-  });
-
-  const fileName = `Protokol_${group.code}.docx`;
+  const fileName = `Vedomost_${group.code}.pdf`;
   const saved = await storage.save(
     {
       filename: fileName,
       data: buffer,
-      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      mimeType: "application/pdf",
       size: buffer.length,
     },
     "attestation_document",
