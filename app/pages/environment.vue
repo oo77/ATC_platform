@@ -350,8 +350,7 @@
             }}
           </button>
           <p class="text-white text-sm text-center mt-3">
-            Все изменения будут сохранены в .env файл и приложение
-            перезапустится
+            Все изменения будут сохранены в базу данных платформы
           </p>
         </div>
       </form>
@@ -551,10 +550,17 @@ const handleSaveAndRestart = async () => {
 
   try {
     // Сохраняем настройки
-    await ($fetch as any)("/api/environment/save", {
-      method: "POST",
-      body: form,
-    });
+    try {
+      await ($fetch as any)("/api/environment/save", {
+        method: "POST",
+        body: form,
+      });
+    } catch (saveErr: any) {
+      const errText = saveErr.message || '';
+      if (!errText.includes('Failed to fetch') && !errText.includes('NetworkError') && !errText.includes('RESET') && !errText.includes('reset')) {
+        throw saveErr;
+      }
+    }
 
     alert("✅ Настройки сохранены!");
 

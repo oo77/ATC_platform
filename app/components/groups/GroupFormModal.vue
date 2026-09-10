@@ -213,29 +213,97 @@
           </div>
         </div>
 
-        <!-- Правая колонка: Только Файлы (Официальные основания) -->
+        <!-- Правая колонка: Документы и Слушатели группы -->
         <div class="h-full flex flex-col">
-          <label
-            class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"
-          >
-            Официальные основания (PDF)
-            <span class="text-danger" v-if="!isEdit">*</span>
-          </label>
+          <div class="flex items-center justify-between mb-2">
+            <div v-if="!isEdit" class="inline-flex rounded-lg bg-slate-200/70 dark:bg-slate-700/60 p-1 text-xs">
+              <button
+                type="button"
+                @click="rightTab = 'files'"
+                :class="[
+                  'px-3 py-1.5 rounded-md font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                  rightTab === 'files'
+                    ? 'bg-white text-primary shadow-xs dark:bg-slate-800 dark:text-white'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-300'
+                ]"
+              >
+                <FileText class="w-3.5 h-3.5" />
+                Основания (PDF)
+                <span class="text-danger">*</span>
+              </button>
+              <button
+                type="button"
+                @click="rightTab = 'students'"
+                :class="[
+                  'px-3 py-1.5 rounded-md font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+                  rightTab === 'students'
+                    ? 'bg-white text-primary shadow-xs dark:bg-slate-800 dark:text-white'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-300'
+                ]"
+              >
+                <Sparkles class="w-3.5 h-3.5 text-amber-500" />
+                <span>Слушатели</span>
+                <span v-if="selectedStudentIds.length" class="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-mono">
+                  {{ selectedStudentIds.length }}
+                </span>
+              </button>
+            </div>
+            <label
+              v-else
+              class="block text-xs font-bold text-slate-400 uppercase tracking-wider"
+            >
+              Официальные основания (PDF)
+            </label>
+          </div>
 
           <div
-            class="grow rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4 flex flex-col"
+            class="grow rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 p-4 flex flex-col min-h-[380px]"
           >
-            <!-- Загрузка новых файлов (при создании) -->
-            <div v-if="!isEdit" class="h-full">
-              <GroupsGroupReportUploader
-                ref="uploaderRef"
-                :loading="false"
-                @files-selected="handleFilesSelected"
-                class="h-full"
-              />
-              <p v-if="errors.file" class="mt-2 text-xs text-danger">
-                {{ errors.file }}
-              </p>
+            <!-- Загрузка новых файлов / ИИ (при создании) -->
+            <div v-if="!isEdit" class="h-full flex flex-col">
+              <!-- Вкладка файлов -->
+              <div v-show="rightTab === 'files'" class="h-full flex flex-col justify-between space-y-3">
+                <GroupsGroupReportUploader
+                  ref="uploaderRef"
+                  :loading="false"
+                  @files-selected="handleFilesSelected"
+                  class="grow"
+                />
+                <p v-if="errors.file" class="mt-1 text-xs text-danger">
+                  {{ errors.file }}
+                </p>
+
+                <!-- AI Promo banner when files are attached -->
+                <div
+                  v-if="selectedFiles.length > 0"
+                  class="p-3 rounded-xl border border-primary/20 bg-primary/5 flex items-center justify-between"
+                >
+                  <div class="flex items-center gap-2">
+                    <Sparkles class="w-4 h-4 text-amber-500 shrink-0" />
+                    <span class="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      {{ selectedStudentIds.length ? `Прикреплено слушателей: ${selectedStudentIds.length}` : 'Распознать состав группы из приказа?' }}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    @click="rightTab = 'students'"
+                    class="text-xs font-bold text-primary hover:underline cursor-pointer"
+                  >
+                    {{ selectedStudentIds.length ? 'Изменить состав' : 'Распознать с ИИ' }} &rarr;
+                  </button>
+                </div>
+              </div>
+
+              <!-- Вкладка ИИ-Помощника -->
+              <div v-show="rightTab === 'students'" class="h-full flex flex-col">
+                <GroupsAiStudentAssistant
+                  :start-date="form.startDate"
+                  :end-date="form.endDate"
+                  :existing-student-ids="selectedStudentIds"
+                  @confirm="handleStudentsConfirmed"
+                  class="flex-1"
+                />
+              </div>
             </div>
 
             <!-- Список файлов (Режим просмотра) -->
@@ -359,6 +427,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
+import { Sparkles, FileText } from "lucide-vue-next";
 import type { StudyGroup } from "~/types/group";
 import type { Course } from "~/types/course";
 
@@ -390,11 +459,18 @@ const form = ref({
 });
 const errors = ref<Record<string, string>>({});
 
-// Files
+// Files & Students (AI)
+const rightTab = ref<"files" | "students">("files");
+const selectedStudentIds = ref<string[]>([]);
 const uploaderRef = ref<any>(null);
 const selectedFiles = ref<File[]>([]);
 const existingReports = ref<any[]>([]);
 const loadingReports = ref(false);
+
+const handleStudentsConfirmed = (ids: string[]) => {
+  selectedStudentIds.value = ids;
+  toast.success(`Прикреплено слушателей к создаваемой группе: ${ids.length}`);
+};
 
 // Computed
 const isEdit = computed(() => !!props.group);
@@ -523,8 +599,13 @@ const handleSubmit = async () => {
       // Создание (POST) - используем FormData
       const formData = new FormData();
 
+      const payload = {
+        ...form.value,
+        studentIds: selectedStudentIds.value,
+      };
+
       // Добавляем данные как JSON строку (согласно нашему API)
-      formData.append("data", JSON.stringify(form.value));
+      formData.append("data", JSON.stringify(payload));
 
       // Добавляем все файлы
       for (const file of selectedFiles.value) {
@@ -589,6 +670,8 @@ const resetForm = () => {
   };
   errors.value = {};
   selectedFiles.value = [];
+  selectedStudentIds.value = [];
+  rightTab.value = "files";
   uploaderRef.value?.clearFiles();
   existingReports.value = [];
 };

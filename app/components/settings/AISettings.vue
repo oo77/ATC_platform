@@ -415,20 +415,23 @@
           <form @submit.prevent="saveSettings" class="space-y-4">
             <!-- Provider -->
             <div>
-              <label
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Провайдер *
-              </label>
+              <div class="flex items-center justify-between mb-2">
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Провайдер *
+                </label>
+                <span class="text-xs text-primary font-medium">10 топовых + Custom</span>
+              </div>
               <select
                 v-model="form.provider"
+                @change="onProviderChange"
                 required
                 class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
               >
-                <option value="openrouter">OpenRouter</option>
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-                <option value="custom">Custom</option>
+                <option v-for="p in availableProviders" :key="p.id" :value="p.id">
+                  {{ p.name }} — {{ p.description }}
+                </option>
               </select>
             </div>
 
@@ -447,68 +450,160 @@
               />
             </div>
 
-            <!-- API Key -->
+            <!-- API Key with Load Models button -->
             <div>
-              <label
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                API Ключ
-                {{
-                  editingSettings ? "(оставьте пустым, чтобы не менять)" : "*"
-                }}
-              </label>
+              <div class="flex items-center justify-between mb-2">
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  API Ключ
+                  {{
+                    editingSettings ? "(оставьте пустым, чтобы не менять)" : "*"
+                  }}
+                </label>
+                <button
+                  type="button"
+                  @click="loadModelsForCurrentKey"
+                  :disabled="loadingModels || (!form.apiKey && !editingSettings)"
+                  class="text-xs font-semibold text-primary hover:text-primary/80 flex items-center gap-1.5 transition-colors disabled:opacity-40 cursor-pointer"
+                  title="Загрузить список доступных моделей для этого ключа"
+                >
+                  <Loader2 v-if="loadingModels" class="w-3.5 h-3.5 animate-spin" />
+                  <RefreshCw v-else class="w-3.5 h-3.5" />
+                  <span>{{ loadingModels ? 'Загрузка...' : 'Загрузить модели' }}</span>
+                </button>
+              </div>
               <input
                 v-model="form.apiKey"
+                @blur="onApiKeyBlur"
                 type="text"
-                :placeholder="editingSettings ? '(Ключ сохранен)' : 'sk-...'"
+                :placeholder="editingSettings ? '(Ключ сохранен — нажмите «Загрузить модели»)' : 'sk-...'"
                 :required="!editingSettings"
-                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white font-mono text-sm"
               />
+              <p v-if="modelsLoadedStatus" class="mt-1 text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <Check class="w-3.5 h-3.5" /> {{ modelsLoadedStatus }}
+              </p>
             </div>
 
-            <!-- Base URL (for custom provider) -->
-            <div v-if="form.provider === 'custom'">
-              <label
-                class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-              >
-                Base URL *
-              </label>
+            <!-- Base URL (for custom provider or editable override) -->
+            <div v-if="form.provider === 'custom' || showCustomBaseUrl">
+              <div class="flex items-center justify-between mb-1.5">
+                <label
+                  class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Base URL {{ form.provider === 'custom' ? '*' : '(переопределение)' }}
+                </label>
+                <button
+                  v-if="form.provider !== 'custom'"
+                  type="button"
+                  @click="showCustomBaseUrl = false; resetBaseUrlToDefault()"
+                  class="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Сбросить на дефолтный
+                </button>
+              </div>
               <input
                 v-model="form.baseUrl"
                 type="url"
-                placeholder="https://api.example.com/v1"
-                required
-                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                :placeholder="currentProviderDef?.defaultBaseUrl || 'https://api.example.com/v1'"
+                :required="form.provider === 'custom'"
+                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white font-mono text-xs"
               />
             </div>
+            <div v-else-if="form.provider !== 'custom'" class="flex items-center justify-between text-xs text-gray-500 py-1">
+              <span class="truncate max-w-[80%] font-mono text-[11px] opacity-75">
+                URL: {{ currentProviderDef?.defaultBaseUrl || 'Стандартный URL провайдера' }}
+              </span>
+              <button
+                type="button"
+                @click="showCustomBaseUrl = true"
+                class="text-primary hover:underline font-medium shrink-0 ml-2 cursor-pointer"
+              >
+                Изменить URL
+              </button>
+            </div>
 
-            <!-- Models -->
-            <div class="grid grid-cols-2 gap-4">
+            <!-- Models: Vision & Text with flexible dropdown / manual input -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Vision Model -->
               <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                >
-                  Vision Model
-                </label>
+                <div class="flex items-center justify-between mb-1.5">
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5"
+                  >
+                    <Eye class="w-3.5 h-3.5 text-primary" />
+                    <span>Vision Model</span>
+                  </label>
+                  <button
+                    type="button"
+                    @click="isCustomVision = !isCustomVision"
+                    class="text-[11px] font-medium text-primary hover:underline cursor-pointer"
+                  >
+                    {{ isCustomVision ? 'Из списка' : 'Вручную' }}
+                  </button>
+                </div>
+
+                <!-- Custom Input -->
                 <input
+                  v-if="isCustomVision"
                   v-model="form.visionModel"
                   type="text"
                   placeholder="openai/gpt-4o"
-                  class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                  class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white font-mono text-xs"
                 />
-              </div>
-              <div>
-                <label
-                  class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+
+                <!-- Select Dropdown -->
+                <select
+                  v-else
+                  v-model="form.visionModel"
+                  class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-xs font-mono"
                 >
-                  Text Model
-                </label>
+                  <option v-for="m in currentVisionModels" :key="m" :value="m">
+                    {{ m }}
+                  </option>
+                </select>
+                <p class="mt-1 text-[10px] text-gray-400">Модель для фото, сканов и PDF</p>
+              </div>
+
+              <!-- Text Model -->
+              <div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <label
+                    class="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5"
+                  >
+                    <FileText class="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Text Model</span>
+                  </label>
+                  <button
+                    type="button"
+                    @click="isCustomText = !isCustomText"
+                    class="text-[11px] font-medium text-primary hover:underline cursor-pointer"
+                  >
+                    {{ isCustomText ? 'Из списка' : 'Вручную' }}
+                  </button>
+                </div>
+
+                <!-- Custom Input -->
                 <input
+                  v-if="isCustomText"
                   v-model="form.textModel"
                   type="text"
-                  placeholder="openai/gpt-3.5-turbo"
-                  class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                  placeholder="openai/gpt-4o-mini"
+                  class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white font-mono text-xs"
                 />
+
+                <!-- Select Dropdown -->
+                <select
+                  v-else
+                  v-model="form.textModel"
+                  class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-gray-900 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white text-xs font-mono"
+                >
+                  <option v-for="m in currentTextModels" :key="m" :value="m">
+                    {{ m }}
+                  </option>
+                </select>
+                <p class="mt-1 text-[10px] text-gray-400">Модель для разбора текста и списков</p>
               </div>
             </div>
 
@@ -706,6 +801,16 @@ import {
   Bot,
   Cloud,
   Server,
+  Eye,
+  RefreshCw,
+  FileText,
+  Sparkles,
+  Layers,
+  Flame,
+  Globe,
+  Radio,
+  Brain,
+  Check,
 } from "lucide-vue-next";
 
 // Types
@@ -753,6 +858,118 @@ interface AIStats {
   }>;
 }
 
+interface ProviderDef {
+  id: string;
+  name: string;
+  description: string;
+  defaultBaseUrl?: string;
+  supportsModelsList: boolean;
+  presetVisionModels: string[];
+  presetTextModels: string[];
+}
+
+const DEFAULT_PROVIDERS: ProviderDef[] = [
+  {
+    id: "openai",
+    name: "OpenAI",
+    description: "GPT-4o, GPT-4o-mini, o1",
+    defaultBaseUrl: "https://api.openai.com/v1",
+    supportsModelsList: true,
+    presetVisionModels: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
+    presetTextModels: ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo", "o1-mini"],
+  },
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    description: "Мульти-провайдер агрегатор (100+ моделей)",
+    defaultBaseUrl: "https://openrouter.ai/api/v1",
+    supportsModelsList: true,
+    presetVisionModels: ["openai/gpt-4o", "openai/gpt-4o-mini", "google/gemini-flash-1.5", "anthropic/claude-3.5-sonnet"],
+    presetTextModels: ["openai/gpt-4o-mini", "deepseek/deepseek-chat", "meta-llama/llama-3.3-70b-instruct", "google/gemini-flash-1.5"],
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini",
+    description: "Gemini 1.5 Pro, Flash, Flash-8B",
+    defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    supportsModelsList: true,
+    presetVisionModels: ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
+    presetTextModels: ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.5-flash-8b"],
+  },
+  {
+    id: "deepseek",
+    name: "DeepSeek",
+    description: "DeepSeek-V3, DeepSeek-R1",
+    defaultBaseUrl: "https://api.deepseek.com/v1",
+    supportsModelsList: true,
+    presetVisionModels: ["deepseek-chat"],
+    presetTextModels: ["deepseek-chat", "deepseek-reasoner"],
+  },
+  {
+    id: "anthropic",
+    name: "Anthropic Claude",
+    description: "Claude 3.5 Sonnet, Claude 3 Opus",
+    defaultBaseUrl: "https://api.anthropic.com/v1",
+    supportsModelsList: false,
+    presetVisionModels: ["claude-3-5-sonnet-20241022", "claude-3-haiku-20240307", "claude-3-opus-20240229"],
+    presetTextModels: ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-haiku-20240307"],
+  },
+  {
+    id: "groq",
+    name: "Groq",
+    description: "Llama 3.3, Mixtral (сверхбыстрый LPU чип)",
+    defaultBaseUrl: "https://api.groq.com/openai/v1",
+    supportsModelsList: true,
+    presetVisionModels: ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"],
+    presetTextModels: ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+  },
+  {
+    id: "mistral",
+    name: "Mistral AI",
+    description: "Mistral Large, Pixtral, Codestral",
+    defaultBaseUrl: "https://api.mistral.ai/v1",
+    supportsModelsList: true,
+    presetVisionModels: ["pixtral-12b-2409", "pixtral-large-latest"],
+    presetTextModels: ["mistral-small-latest", "mistral-large-latest", "open-mistral-nemo"],
+  },
+  {
+    id: "together",
+    name: "Together AI",
+    description: "Llama 3, Qwen, DeepSeek хостинг",
+    defaultBaseUrl: "https://api.together.xyz/v1",
+    supportsModelsList: true,
+    presetVisionModels: ["meta-llama/Llama-Vision-Free", "meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo"],
+    presetTextModels: ["meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo", "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo", "deepseek-ai/DeepSeek-V3"],
+  },
+  {
+    id: "cohere",
+    name: "Cohere",
+    description: "Command R+, Command R",
+    defaultBaseUrl: "https://api.cohere.ai/v1",
+    supportsModelsList: true,
+    presetVisionModels: ["command-r-plus-08-2024", "command-r-08-2024"],
+    presetTextModels: ["command-r-plus-08-2024", "command-r-08-2024", "command-light"],
+  },
+  {
+    id: "nim",
+    name: "NVIDIA NIM",
+    description: "Enterprise ускоренные microservices",
+    defaultBaseUrl: "https://integrate.api.nvidia.com/v1",
+    supportsModelsList: true,
+    presetVisionModels: ["meta/llama-3.2-11b-vision-instruct", "meta/llama-3.2-90b-vision-instruct"],
+    presetTextModels: ["meta/llama-3.3-70b-instruct", "deepseek-ai/deepseek-r1", "mistralai/mixtral-8x22b-instruct-v0.1"],
+  },
+  {
+    id: "custom",
+    name: "Custom (OpenAI-совместимый)",
+    description: "Собственный сервер / vLLM / Ollama / LocalAI",
+    defaultBaseUrl: "",
+    supportsModelsList: true,
+    presetVisionModels: ["llava", "qwen-vl", "gpt-4o"],
+    presetTextModels: ["llama3", "mistral", "qwen2.5", "gpt-3.5-turbo"],
+  },
+];
+
 // State
 const loading = ref(true);
 const saving = ref(false);
@@ -764,12 +981,22 @@ const showErrorsModal = ref(false);
 const editingSettings = ref<AISetting | null>(null);
 const errorMessage = ref<string | null>(null);
 
+const availableProviders = ref<ProviderDef[]>(DEFAULT_PROVIDERS);
+const loadingModels = ref(false);
+const modelsLoadedStatus = ref<string | null>(null);
+const showCustomBaseUrl = ref(false);
+const isCustomVision = ref(false);
+const isCustomText = ref(false);
+
+const availableVisionModels = ref<string[]>([]);
+const availableTextModels = ref<string[]>([]);
+
 // Form
 const form = ref({
   provider: "openrouter" as string,
   apiKeyName: "",
   apiKey: "",
-  baseUrl: "",
+  baseUrl: "https://openrouter.ai/api/v1",
   visionModel: "openai/gpt-4o",
   textModel: "openai/gpt-4o-mini",
   maxTokens: 1500,
@@ -784,6 +1011,33 @@ const form = ref({
 const isModalOpen = computed(
   () => showAddModal.value || !!editingSettings.value || showErrorsModal.value,
 );
+
+const currentProviderDef = computed(() => {
+  return (
+    availableProviders.value.find((p) => p.id === form.value.provider) ||
+    availableProviders.value[0]
+  );
+});
+
+const currentVisionModels = computed(() => {
+  const set = new Set<string>();
+  if (form.value.visionModel) set.add(form.value.visionModel);
+  availableVisionModels.value.forEach((m) => set.add(m));
+  if (currentProviderDef.value) {
+    currentProviderDef.value.presetVisionModels.forEach((m) => set.add(m));
+  }
+  return Array.from(set);
+});
+
+const currentTextModels = computed(() => {
+  const set = new Set<string>();
+  if (form.value.textModel) set.add(form.value.textModel);
+  availableTextModels.value.forEach((m) => set.add(m));
+  if (currentProviderDef.value) {
+    currentProviderDef.value.presetTextModels.forEach((m) => set.add(m));
+  }
+  return Array.from(set);
+});
 
 const maxTokensUsage = computed(() => {
   if (!stats.value?.usageByModel?.length) return 1;
@@ -815,8 +1069,22 @@ const getProviderIcon = (provider: string) => {
       return Bot;
     case "openrouter":
       return Cloud;
+    case "gemini":
+      return Sparkles;
+    case "deepseek":
+      return Brain;
     case "anthropic":
       return Cpu;
+    case "groq":
+      return Zap;
+    case "mistral":
+      return Flame;
+    case "together":
+      return Layers;
+    case "cohere":
+      return Radio;
+    case "nim":
+      return Globe;
     default:
       return Server;
   }
@@ -825,11 +1093,25 @@ const getProviderIcon = (provider: string) => {
 const getProviderColor = (provider: string): string => {
   switch (provider) {
     case "openai":
-      return "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400";
+      return "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400";
     case "openrouter":
       return "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400";
+    case "gemini":
+      return "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400";
+    case "deepseek":
+      return "bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400";
     case "anthropic":
+      return "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400";
+    case "groq":
       return "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400";
+    case "mistral":
+      return "bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400";
+    case "together":
+      return "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400";
+    case "cohere":
+      return "bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400";
+    case "nim":
+      return "bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-400";
     default:
       return "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400";
   }
@@ -845,6 +1127,126 @@ const getErrorTypeLabel = (type: string): string => {
     other: "Другая ошибка",
   };
   return labels[type] || type;
+};
+
+const resetBaseUrlToDefault = () => {
+  form.value.baseUrl = currentProviderDef.value?.defaultBaseUrl || "";
+};
+
+const onProviderChange = () => {
+  const p = currentProviderDef.value;
+  if (!p) return;
+
+  if (p.id === "custom") {
+    showCustomBaseUrl.value = true;
+    if (!form.value.baseUrl) form.value.baseUrl = "http://localhost:11434/v1";
+  } else {
+    showCustomBaseUrl.value = false;
+    form.value.baseUrl = p.defaultBaseUrl || "";
+  }
+
+  // Reset dynamic models list to presets
+  availableVisionModels.value = [...p.presetVisionModels];
+  availableTextModels.value = [...p.presetTextModels];
+  modelsLoadedStatus.value = null;
+
+  const defaultVision = p.presetVisionModels[0];
+  if (defaultVision) {
+    form.value.visionModel = defaultVision;
+  }
+  const defaultText = p.presetTextModels[0];
+  if (defaultText) {
+    form.value.textModel = defaultText;
+  }
+};
+
+const loadModelsForCurrentKey = async () => {
+  if (loadingModels.value) return;
+  if (!form.value.apiKey && !editingSettings.value) {
+    showNotification({
+      type: "warning",
+      message: "Введите API ключ для загрузки списка моделей",
+    });
+    return;
+  }
+
+  loadingModels.value = true;
+  modelsLoadedStatus.value = null;
+
+  try {
+    const res = await ($fetch as any)("/api/admin/ai-settings/models", {
+      method: "POST",
+      body: {
+        provider: form.value.provider,
+        apiKey: form.value.apiKey || undefined,
+        settingId: editingSettings.value?.id,
+        baseUrl: form.value.baseUrl || undefined,
+      },
+    });
+
+    const data = (res as any).data || res;
+    if (data && (data.visionModels?.length > 0 || data.textModels?.length > 0)) {
+      availableVisionModels.value = data.visionModels || [];
+      availableTextModels.value = data.textModels || [];
+      modelsLoadedStatus.value = `Загружено моделей: ${data.total || (availableVisionModels.value.length + availableTextModels.value.length)} (Vision: ${availableVisionModels.value.length}, Text: ${availableTextModels.value.length})`;
+      
+      if (data.isPreset) {
+        showNotification({
+          type: "warning",
+          message: data.error ? `${data.error}. Использованы стандартные пресеты.` : "Использованы стандартные пресеты",
+        });
+      } else {
+        showNotification({
+          type: "success",
+          message: `Модели успешно загружены (${data.total || (data.visionModels.length + data.textModels.length)} шт.)`,
+        });
+      }
+
+      if (data.visionModels.length > 0 && !data.visionModels.includes(form.value.visionModel)) {
+        form.value.visionModel = data.visionModels[0];
+      }
+      if (data.textModels.length > 0 && !data.textModels.includes(form.value.textModel)) {
+        form.value.textModel = data.textModels[0];
+      }
+    } else {
+      showNotification({
+        type: "info",
+        message: "Модели не получены из API, используются стандартные пресеты",
+      });
+    }
+  } catch (error: any) {
+    console.error("Failed to fetch models:", error);
+    showNotification({
+      type: "error",
+      message:
+        error.data?.message ||
+        "Не удалось загрузить модели с провайдера. Используйте ручной ввод или пресеты.",
+    });
+  } finally {
+    loadingModels.value = false;
+  }
+};
+
+const onApiKeyBlur = () => {
+  if (
+    form.value.apiKey &&
+    form.value.apiKey.length > 8 &&
+    availableVisionModels.value.length <= (currentProviderDef.value?.presetVisionModels.length || 0)
+  ) {
+    loadModelsForCurrentKey();
+  }
+};
+
+const loadProviders = async () => {
+  try {
+    const res = await ($fetch as any)("/api/admin/ai-settings/providers");
+    const list = res?.data?.providers || res?.providers;
+    if (list?.length) {
+      availableProviders.value = list;
+    }
+  } catch (err) {
+    console.warn("Could not fetch remote providers list, using defaults:", err);
+  }
 };
 
 const loadSettings = async () => {
@@ -901,6 +1303,8 @@ const testConnection = async (setting: AISetting) => {
 const editSetting = (setting: AISetting) => {
   editingSettings.value = setting;
   errorMessage.value = null;
+  modelsLoadedStatus.value = null;
+
   form.value = {
     provider: setting.provider,
     apiKeyName: setting.apiKeyName || "",
@@ -915,6 +1319,23 @@ const editSetting = (setting: AISetting) => {
     isActive: setting.isActive,
     isDefault: setting.isDefault,
   };
+
+  const pDef = availableProviders.value.find((p) => p.id === setting.provider);
+  showCustomBaseUrl.value =
+    setting.provider === "custom" ||
+    (!!setting.baseUrl && setting.baseUrl !== pDef?.defaultBaseUrl);
+
+  isCustomVision.value = pDef
+    ? !pDef.presetVisionModels.includes(setting.visionModel)
+    : false;
+  isCustomText.value = pDef
+    ? !pDef.presetTextModels.includes(setting.textModel)
+    : false;
+
+  if (pDef) {
+    availableVisionModels.value = [...pDef.presetVisionModels];
+    availableTextModels.value = [...pDef.presetTextModels];
+  }
 };
 
 const setDefault = async (setting: AISetting) => {
@@ -969,7 +1390,7 @@ const resetForm = () => {
     provider: "openrouter",
     apiKeyName: "",
     apiKey: "",
-    baseUrl: "",
+    baseUrl: "https://openrouter.ai/api/v1",
     visionModel: "openai/gpt-4o",
     textModel: "openai/gpt-4o-mini",
     maxTokens: 1500,
@@ -979,21 +1400,22 @@ const resetForm = () => {
     isActive: true,
     isDefault: false,
   };
+  showCustomBaseUrl.value = false;
+  isCustomVision.value = false;
+  isCustomText.value = false;
+  modelsLoadedStatus.value = null;
+  availableVisionModels.value = [];
+  availableTextModels.value = [];
 };
 
 const saveSettings = async () => {
   saving.value = true;
-  errorMessage.value = null; // Сброс предыдущих ошибок
+  errorMessage.value = null;
 
   try {
-    // Автоматически разрешаем baseUrl по провайдеру, если не задан вручную
-    const providerBaseUrls: Record<string, string> = {
-      openrouter: "https://openrouter.ai/api/v1",
-      anthropic: "https://api.anthropic.com/v1",
-    };
     const resolvedBaseUrl =
       form.value.baseUrl ||
-      providerBaseUrls[form.value.provider] ||
+      currentProviderDef.value?.defaultBaseUrl ||
       undefined;
 
     const payload: any = {
@@ -1039,17 +1461,14 @@ const saveSettings = async () => {
       });
     }
 
-    // Сначала закрываем модалку, потом загружаем данные
     closeModal();
-    loading.value = true; // Показываем индикатор загрузки списка
+    loading.value = true;
     await loadSettings();
   } catch (error: any) {
     console.error("Save settings error:", error);
-    // Показываем ошибку В МОДАЛКЕ, чтобы пользователь видел её
     errorMessage.value =
       error.data?.message || error.message || "Ошибка сохранения настроек";
 
-    // Дублируем в уведомлении
     showNotification({
       type: "error",
       message: errorMessage.value || "Ошибка",
@@ -1060,17 +1479,15 @@ const saveSettings = async () => {
 };
 
 // Lifecycle
-onMounted(() => {
-  loadSettings();
+onMounted(async () => {
+  await Promise.all([loadProviders(), loadSettings()]);
 });
 
 onUnmounted(() => {
-  // Очистка при размонтировании компонента
   document.body.style.overflow = "";
   document.removeEventListener("keydown", handleEscape);
 });
 
-// Блокировка скролла и обработка Escape при открытии модалки
 watch(isModalOpen, (isOpen) => {
   if (isOpen) {
     document.body.style.overflow = "hidden";
@@ -1081,10 +1498,10 @@ watch(isModalOpen, (isOpen) => {
   }
 });
 
-// Обработчик клавиши Escape
 const handleEscape = (e: KeyboardEvent) => {
   if (e.key === "Escape") {
     closeModal();
   }
 };
 </script>
+

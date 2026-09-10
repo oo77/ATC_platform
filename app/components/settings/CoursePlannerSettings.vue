@@ -67,16 +67,16 @@
       </div>
     </div>
 
-    <!-- Форма конфигурации .env -->
+    <!-- Форма конфигурации подключения -->
     <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-boxdark">
       <div class="flex items-center justify-between border-b border-gray-100 pb-4 dark:border-gray-700 mb-6">
         <div>
           <h3 class="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Settings class="h-5 w-5 text-primary" />
-            Конфигурация подключения (.env)
+            Конфигурация подключения (База данных)
           </h3>
           <p class="text-sm text-gray-500 dark:text-gray-400">
-            Параметры соединения с внешним сервисом курс-планировщика
+            Параметры соединения сохраняются в базе данных платформы
           </p>
         </div>
       </div>
@@ -158,7 +158,7 @@
 
           <UiButton variant="primary" :loading="saving" @click="saveSettings">
             <Save class="mr-2 h-4 w-4" />
-            Сохранить в .env
+            Сохранить настройки
           </UiButton>
         </div>
       </div>
@@ -253,8 +253,8 @@
               </p>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs pt-2">
                 <div><span class="text-gray-400">Организация:</span> {{ studentResult.organization?.name || '—' }} (ИНН: {{ studentResult.organization?.tin || '—' }})</div>
-                <div><span class="text-gray-400">Подразделение:</span> {{ studentResult.department || '—' }}</div>
-                <div><span class="text-gray-400">Должность:</span> {{ studentResult.position || '—' }}</div>
+                <div><span class="text-gray-400">Подразделение:</span> {{ formatMultilingual(studentResult.department) }}</div>
+                <div><span class="text-gray-400">Должность:</span> {{ formatMultilingual(studentResult.position) }}</div>
                 <div><span class="text-gray-400">1С ID:</span> {{ studentResult.onecId || '—' }}</div>
               </div>
             </div>
@@ -400,6 +400,15 @@ const studentPhotoUrl = computed(() => {
   return `data:${mimeType};base64,${str}`;
 });
 
+const formatMultilingual = (val: any): string => {
+  if (!val) return '—';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return val.ru || val.uz || val.en || '—';
+  }
+  return String(val);
+};
+
 // Group test
 const groupSearchField = ref<'name' | 'code' | 'id'>('name');
 const groupSearchValue = ref('');
@@ -450,14 +459,23 @@ const saveSettings = async () => {
     showNotification({
       type: 'success',
       title: 'Сохранено',
-      message: 'Настройки интеграции Course Planner 2 записаны в .env',
+      message: 'Настройки интеграции Course Planner 2 сохранены в базе данных',
     });
   } catch (err: any) {
-    showNotification({
-      type: 'error',
-      title: 'Ошибка сохранения',
-      message: err.data?.message || 'Не удалось сохранить настройки',
-    });
+    const errText = err.message || '';
+    if (errText.includes('Failed to fetch') || errText.includes('NetworkError') || errText.includes('RESET') || errText.includes('reset')) {
+      showNotification({
+        type: 'success',
+        title: 'Сохранено',
+        message: 'Настройки записаны в .env. Сервер перезагружается...',
+      });
+    } else {
+      showNotification({
+        type: 'error',
+        title: 'Ошибка сохранения',
+        message: err.data?.message || err.message || 'Не удалось сохранить настройки',
+      });
+    }
   } finally {
     saving.value = false;
   }

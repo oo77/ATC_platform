@@ -80,7 +80,7 @@ const dbConfig: mysql.PoolOptions = {
   port: parseInt(process.env.DATABASE_PORT || "3306"),
   user: process.env.DATABASE_USER || "root",
   password: process.env.DATABASE_PASSWORD || "",
-  database: process.env.DATABASE_NAME || "atc_test",
+  database: process.env.DATABASE_NAME || "atc",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

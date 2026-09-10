@@ -38,13 +38,14 @@ export default defineEventHandler(async (event) => {
 
     // Валидация провайдера, если указан
     if (body.provider) {
-      const validProviders = ["openai", "openrouter", "anthropic", "custom"];
-      if (!validProviders.includes(body.provider)) {
+      const cleanProvider = String(body.provider || "").trim().toLowerCase();
+      if (!cleanProvider) {
         throw createError({
           statusCode: 400,
-          message: `Неверный провайдер. Допустимые значения: ${validProviders.join(", ")}`,
+          message: "Провайдер не может быть пустым",
         });
       }
+      body.provider = cleanProvider as any;
     }
 
     // Обновляем настройки

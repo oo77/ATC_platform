@@ -20,16 +20,18 @@ export default defineEventHandler(async (event) => {
       apiKey?: string;
       provider?: string;
       baseUrl?: string;
+      model?: string;
     }>(event);
 
     let apiKey: string;
     let provider: string;
     let baseUrl: string | undefined;
+    let modelToUse: string | undefined = body.model;
 
     if (body.settingId) {
       // Тестируем существующие настройки
-      const settings = await aiSettingsRepository.getById(body.settingId);
-      if (!settings) {
+      const setting = await aiSettingsRepository.getById(body.settingId);
+      if (!setting) {
         throw createError({
           statusCode: 404,
           message: "Настройка не найдена",
@@ -45,8 +47,11 @@ export default defineEventHandler(async (event) => {
         });
       }
       apiKey = decryptedKey;
-      provider = settings.provider;
-      baseUrl = settings.baseUrl || undefined;
+      provider = setting.provider;
+      baseUrl = setting.baseUrl || undefined;
+      if (!modelToUse) {
+        modelToUse = setting.textModel;
+      }
     } else if (body.apiKey) {
       // Тестируем новый ключ
       apiKey = body.apiKey;
@@ -59,21 +64,11 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Определяем baseURL в зависимости от провайдера
-    let clientBaseUrl = baseUrl;
-    if (!clientBaseUrl) {
-      switch (provider) {
-        case "openrouter":
-          clientBaseUrl = "https://openrouter.ai/api/v1";
-          break;
-        case "anthropic":
-          clientBaseUrl = "https://api.anthropic.com/v1";
-          break;
-        case "openai":
-        default:
-          clientBaseUrl = undefined; // Используем дефолтный OpenAI URL
-      }
-    }
+    // Определяем baseURL и тестовую модель в зависимости от провайдера
+    const { resolveBaseUrl, getProviderDefinition } = await import("../../../utils/ai/aiProvidersConfig");
+    const def = getProviderDefinition(provider);
+    const clientBaseUrl = resolveBaseUrl(provider, baseUrl);
+    const testModel = modelToUse || def.testModel;
 
     // Создаем клиента
     const client = new OpenAI({
@@ -92,15 +87,14 @@ export default defineEventHandler(async (event) => {
 
     // Делаем простой запрос для проверки
     const response = await client.chat.completions.create({
-      model:
-        provider === "openrouter" ? "openai/gpt-3.5-turbo" : "gpt-3.5-turbo",
+      model: testModel,
       messages: [
         {
           role: "user",
           content: "Say 'Connection successful!' in one sentence.",
         },
       ],
-      max_tokens: 20,
+      max_tokens: 30,
     });
 
     const duration = Date.now() - startTime;
