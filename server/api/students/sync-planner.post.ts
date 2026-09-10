@@ -1,72 +1,77 @@
-import { defineEventHandler } from "h3";
-import mysql from "mysql2/promise";
+import { getDbPool } from "../../utils/db";
+import {
+  fetchCoursePlannerStudents,
+  getCoursePlannerConfig,
+  StudentResource,
+} from "../../utils/coursePlanner";
+import crypto from "crypto";
 
 export default defineEventHandler(async (event) => {
-  console.log("🔄 Starting ultra-fast student sync from Course Planner...");
+  console.log("🚀 [SyncPlanner] Starting 10x streaming pipeline student sync...");
 
-  let plannerConnection: mysql.Connection | null = null;
-  let atcConnection: mysql.Connection | null = null;
+  let body: any = {};
+  try {
+    body = await readBody(event);
+  } catch {
+    body = {};
+  }
+
+  const isStream = Boolean(getHeader(event, "accept")?.includes("text/event-stream"));
+
+  const overrideConfig = (body?.url || body?.token)
+    ? { url: body.url, token: body.token }
+    : undefined;
+
+  const config = getCoursePlannerConfig();
+  const effectiveUrl = overrideConfig?.url || config.url;
+  const effectiveToken = overrideConfig?.token !== undefined ? overrideConfig.token : config.token;
+
+  if (!effectiveUrl || !effectiveToken) {
+    const errorMsg = "URL или API-токен для Course Planner 2 не настроены.";
+    if (isStream) {
+      setResponseHeader(event, "Content-Type", "text/event-stream");
+      event.node.res.write(`event: error\ndata: ${JSON.stringify({ error: errorMsg })}\n\n`);
+      event.node.res.end();
+      return;
+    }
+    return { success: false, error: errorMsg };
+  }
+
+  // Setup SSE stream headers if requested
+  const sendEvent = (eventName: string, data: any) => {
+    if (!isStream) return;
+    try {
+      event.node.res.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
+      if (typeof (event.node.res as any).flush === "function") {
+        (event.node.res as any).flush();
+      }
+    } catch (e: any) {
+      console.warn("⚠️ Failed to write to SSE stream:", e.message);
+    }
+  };
+
+  if (isStream) {
+    setResponseHeader(event, "Content-Type", "text/event-stream");
+    setResponseHeader(event, "Cache-Control", "no-cache, no-transform");
+    setResponseHeader(event, "Connection", "keep-alive");
+    setResponseHeader(event, "X-Accel-Buffering", "no");
+  }
 
   try {
-    const host = process.env.DATABASE_HOST || "localhost";
-    const port = Number(process.env.DATABASE_PORT) || 3306;
-    const user = process.env.DATABASE_USER || "root";
-    const password = process.env.DATABASE_PASSWORD || "";
+    const startTime = Date.now();
+    const pool = getDbPool();
+    await pool.query("SET GLOBAL max_allowed_packet = 67108864").catch(() => {});
 
-    // 1. Connect to MySQL planner database safely
-    plannerConnection = await mysql.createConnection({
-      host,
-      port,
-      user,
-      password,
-      database: "planner",
-    });
+    // 1. Preload local organization mappings and existing PINFL set (O(1) lookups)
+    sendEvent("status", { message: "Загрузка локального справочника организаций по ИНН..." });
 
-    atcConnection = await mysql.createConnection({
-      host,
-      port,
-      user,
-      password,
-      database: "atc",
-    });
-
-    // 2. Fetch all active contingents with organization info
-    const [plannerRows]: any = await plannerConnection.query(`
-      SELECT 
-        c.id, c.pinfl, c.name, c.organizationId,
-        c.department, c.departmentUz, c.departmentEn, c.departmentRu,
-        c.position, c.positionUz, c.positionEn, c.positionRu,
-        c.photo, c.onecId, c.hireDate,
-        o.name as organizationName, o.tin as organizationTin
-      FROM Contingent c
-      LEFT JOIN Organization o ON c.organizationId = o.id
-      WHERE c.isActive = 1
-      ORDER BY c.name ASC
-    `);
-
-    if (!plannerRows || plannerRows.length === 0) {
-      return {
-        success: true,
-        message: "В курс-планировщике не найдено активных слушателей",
-        total: 0,
-        created: 0,
-        updated: 0,
-        matchedOrgs: 0,
-        errors: [],
-      };
-    }
-
-    // 3. Preload all organizations and existing PINFLs from ATC database
-    const [atcOrgs]: any = await atcConnection.query(
-      "SELECT id, name, inn FROM organizations"
-    );
-
+    const [atcOrgs]: any = await pool.query("SELECT id, name, inn FROM organizations");
     const orgByInn = new Map<string, any>();
     const orgByName = new Map<string, any>();
 
     for (const org of atcOrgs) {
       if (org.inn) {
-        orgByInn.set(org.inn.trim(), org);
+        orgByInn.set(String(org.inn).trim(), org);
       }
       if (org.name) {
         const cleanName = org.name.toLowerCase().replace(/[^a-zа-я0-9]/gi, "");
@@ -74,169 +79,348 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const [existingStudents]: any = await atcConnection.query(
-      "SELECT pinfl FROM students"
-    );
+    const [existingStudents]: any = await pool.query("SELECT pinfl FROM students");
     const existingPinflSet = new Set<string>(
-      existingStudents.map((s: any) => String(s.pinfl).trim())
+      existingStudents.map((s: any) => String(s.pinfl || "").trim())
     );
 
-    let created = 0;
-    let updated = 0;
+    // 2. Fetch Page 1 to inspect total count
+    sendEvent("status", { message: "Подключение к API Course Planner 2..." });
+    const PAGE_SIZE = 100;
+    const firstPage = await fetchCoursePlannerStudents(
+      { page: 1, limit: PAGE_SIZE },
+      { url: effectiveUrl, token: effectiveToken }
+    );
+
+    if (!firstPage.success) {
+      throw new Error(firstPage.error || "Не удалось загрузить данные из Course Planner 2 API");
+    }
+
+    const totalStudents = Number(firstPage.total) || (firstPage.data?.length || 0);
+    const totalPages = Number(firstPage.totalPages) || Math.ceil(totalStudents / PAGE_SIZE);
+    const targetPages = body?.maxPages ? Math.min(totalPages, Number(body.maxPages)) : totalPages;
+    const effectiveTotal = Math.min(totalStudents, targetPages * PAGE_SIZE);
+
+    console.log(`🚀 [Pipeline] ${totalStudents} total students found. Syncing ${targetPages} pages (${PAGE_SIZE}/page)...`);
+
+    sendEvent("init", {
+      total: effectiveTotal,
+      totalPages: targetPages,
+      pageSize: PAGE_SIZE,
+    });
+
+    // Tracking metrics
+    let processedCount = 0;
+    let createdCount = 0;
+    let updatedCount = 0;
     let matchedOrgsCount = 0;
+    let photosCount = 0;
+    let multilingualDeptCount = 0;
+    let multilingualPosCount = 0;
+    const samples: any[] = [];
     const errors: any[] = [];
 
-    const insertBatch: any[][] = [];
-    const updateBatch: any[][] = [];
+    // Helper: process and upsert a batch of students using multi-row INSERT ... ON DUPLICATE KEY UPDATE
+    const processAndUpsertPage = async (studentsList: StudentResource[], pageNumber: number) => {
+      if (!studentsList || studentsList.length === 0) return;
 
-    for (const pStudent of plannerRows) {
-      try {
-        const pinfl = String(pStudent.pinfl || "").trim();
-        if (!pinfl || pinfl.length !== 14) {
-          errors.push({
-            name: pStudent.name,
-            error: "Некорректный ПИНФЛ (должно быть 14 цифр)",
-          });
-          continue;
-        }
+      const rowsToUpsert: any[][] = [];
 
-        // Match organization by INN (tin) first, then fallback to normalized name
-        let targetOrg: any = null;
-        const plannerTin = pStudent.organizationTin
-          ? String(pStudent.organizationTin).trim()
-          : null;
+      for (const pStudent of studentsList) {
+        try {
+          const pinfl = String(pStudent.pinfl || "").trim();
+          if (!pinfl || !/^\d{14}$/.test(pinfl)) {
+            errors.push({
+              name: pStudent.name || "Без имени",
+              pinfl: pinfl || "пусто",
+              error: "Некорректный ПИНФЛ (требуется 14 цифр)",
+            });
+            continue;
+          }
 
-        if (plannerTin && orgByInn.has(plannerTin)) {
-          targetOrg = orgByInn.get(plannerTin);
-        } else if (pStudent.organizationName) {
-          const cleanPName = pStudent.organizationName
-            .toLowerCase()
-            .replace(/[^a-zа-я0-9]/gi, "");
-          targetOrg = orgByName.get(cleanPName);
-        }
+          // Match organization by INN first, then fallback to normalized name
+          let targetOrg: any = null;
+          const plannerTin = pStudent.organization?.tin ? String(pStudent.organization.tin).trim() : null;
+          const plannerOrgName = pStudent.organization?.name ? String(pStudent.organization.name).trim() : null;
 
-        if (targetOrg) {
-          matchedOrgsCount++;
-        }
+          if (plannerTin && orgByInn.has(plannerTin)) {
+            targetOrg = orgByInn.get(plannerTin);
+          } else if (plannerOrgName) {
+            const cleanPName = plannerOrgName.toLowerCase().replace(/[^a-zа-я0-9]/gi, "");
+            targetOrg = orgByName.get(cleanPName);
+          }
 
-        const orgName = targetOrg
-          ? targetOrg.name
-          : pStudent.organizationName || "Не указана";
-        const orgId = targetOrg ? targetOrg.id : null;
+          if (targetOrg) {
+            matchedOrgsCount++;
+          }
 
-        // Normalize photo
-        let photoBase64 = pStudent.photo ? String(pStudent.photo).trim() : null;
-        if (
-          photoBase64 &&
-          !photoBase64.startsWith("data:") &&
-          !photoBase64.startsWith("http")
-        ) {
-          let mime = "image/jpeg";
-          if (photoBase64.startsWith("iVBORw0KGgo")) mime = "image/png";
-          photoBase64 = `data:${mime};base64,${photoBase64}`;
-        }
+          const orgName = targetOrg?.name || plannerOrgName || null;
+          const orgId = targetOrg?.id || null;
 
-        const deptRu = pStudent.departmentRu || pStudent.department || null;
-        const posRu = pStudent.positionRu || pStudent.position || "Слушатель";
+          // Process multilingual department
+          let deptUz: string | null = null;
+          let deptRu: string | null = null;
+          let deptEn: string | null = null;
+          let mainDept: string | null = null;
 
-        if (existingPinflSet.has(pinfl)) {
-          updateBatch.push([
-            pStudent.name,
-            orgName,
-            orgId,
-            pStudent.department || null,
-            pStudent.departmentUz || null,
-            pStudent.departmentEn || null,
-            deptRu,
-            pStudent.position || "Слушатель",
-            pStudent.positionUz || null,
-            pStudent.positionEn || null,
-            posRu,
-            photoBase64,
-            pinfl,
-          ]);
-          updated++;
-        } else {
+          if (pStudent.department && typeof pStudent.department === "object") {
+            deptUz = pStudent.department.uz?.trim() || null;
+            deptRu = pStudent.department.ru?.trim() || null;
+            deptEn = pStudent.department.en?.trim() || null;
+            mainDept = deptRu || deptUz || deptEn || null;
+          } else if (typeof pStudent.department === "string") {
+            mainDept = pStudent.department.trim() || null;
+            deptRu = mainDept;
+          }
+
+          if ((deptUz && deptRu) || (deptRu && deptEn) || (deptUz && deptEn)) {
+            multilingualDeptCount++;
+          }
+
+          // Process multilingual position
+          let posUz: string | null = null;
+          let posRu: string | null = null;
+          let posEn: string | null = null;
+          let mainPos = "Слушатель";
+
+          if (pStudent.position && typeof pStudent.position === "object") {
+            posUz = pStudent.position.uz?.trim() || null;
+            posRu = pStudent.position.ru?.trim() || null;
+            posEn = pStudent.position.en?.trim() || null;
+            mainPos = posRu || posUz || posEn || "Слушатель";
+          } else if (typeof pStudent.position === "string" && pStudent.position.trim()) {
+            mainPos = pStudent.position.trim();
+            posRu = mainPos;
+          }
+
+          if ((posUz && posRu) || (posRu && posEn) || (posUz && posEn)) {
+            multilingualPosCount++;
+          }
+
+          const photoBase64 = pStudent.photo && typeof pStudent.photo === "string" && pStudent.photo.trim()
+            ? pStudent.photo.trim()
+            : null;
+
+          if (photoBase64) {
+            photosCount++;
+          }
+
+          const fullName = String(pStudent.name || "").trim() || "Слушатель";
+
+          // Collect rich samples
+          if (samples.length < 4 && ((deptUz && deptRu) || (posUz && posRu) || photoBase64)) {
+            samples.push({
+              name: fullName,
+              pinfl,
+              organization: orgName,
+              department: { uz: deptUz, ru: deptRu, en: deptEn },
+              position: { uz: posUz, ru: posRu, en: posEn },
+              hasPhoto: Boolean(photoBase64),
+            });
+          }
+
+          const isExisting = existingPinflSet.has(pinfl);
+          if (isExisting) {
+            updatedCount++;
+          } else {
+            createdCount++;
+            existingPinflSet.add(pinfl);
+          }
+
           const id = crypto.randomUUID();
-          insertBatch.push([
+          rowsToUpsert.push([
             id,
-            pStudent.name,
+            fullName,
             pinfl,
             orgName,
             orgId,
-            pStudent.department || null,
-            pStudent.departmentUz || null,
-            pStudent.departmentEn || null,
+            mainDept,
+            deptUz,
+            deptEn,
             deptRu,
-            pStudent.position || "Слушатель",
-            pStudent.positionUz || null,
-            pStudent.positionEn || null,
+            mainPos,
+            posUz,
+            posEn,
             posRu,
             photoBase64,
           ]);
-          created++;
-          existingPinflSet.add(pinfl);
+        } catch (err: any) {
+          errors.push({
+            name: pStudent.name || "Ошибка",
+            pinfl: pStudent.pinfl,
+            error: err.message,
+          });
         }
-      } catch (err: any) {
-        errors.push({
-          name: pStudent.name,
-          pinfl: pStudent.pinfl,
-          error: err.message || "Ошибка обработки",
-        });
       }
+
+      // Deduplicate rows by PINFL within the page to avoid ER_DUP_ENTRY
+      const uniqueRowsMap = new Map<string, any[]>();
+      for (const row of rowsToUpsert) {
+        uniqueRowsMap.set(row[2], row);
+      }
+      const uniqueRows = Array.from(uniqueRowsMap.values());
+
+      // Bulk Upsert in chunks of 20
+      const CHUNK_SIZE = 20;
+      for (let i = 0; i < uniqueRows.length; i += CHUNK_SIZE) {
+        const chunk = uniqueRows.slice(i, i + CHUNK_SIZE);
+        const sql = `
+          INSERT INTO students 
+          (id, full_name, pinfl, organization, organization_id, department, department_uz, department_en, department_ru, position, position_uz, position_en, position_ru, photo_base64, created_at, updated_at) 
+          VALUES ${chunk.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())").join(", ")}
+          ON DUPLICATE KEY UPDATE 
+            full_name = VALUES(full_name),
+            organization = VALUES(organization),
+            organization_id = VALUES(organization_id),
+            department = VALUES(department),
+            department_uz = VALUES(department_uz),
+            department_en = VALUES(department_en),
+            department_ru = VALUES(department_ru),
+            position = VALUES(position),
+            position_uz = VALUES(position_uz),
+            position_en = VALUES(position_en),
+            position_ru = VALUES(position_ru),
+            photo_base64 = COALESCE(VALUES(photo_base64), students.photo_base64),
+            updated_at = NOW()
+        `;
+
+        try {
+          await pool.query(sql, chunk.flat());
+        } catch (chunkErr: any) {
+          // Fallback item by item
+          for (const item of chunk) {
+            const singleSql = `
+              INSERT INTO students 
+              (id, full_name, pinfl, organization, organization_id, department, department_uz, department_en, department_ru, position, position_uz, position_en, position_ru, photo_base64, created_at, updated_at) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+              ON DUPLICATE KEY UPDATE 
+                full_name = VALUES(full_name),
+                organization = VALUES(organization),
+                organization_id = VALUES(organization_id),
+                department = VALUES(department),
+                department_uz = VALUES(department_uz),
+                department_en = VALUES(department_en),
+                department_ru = VALUES(department_ru),
+                position = VALUES(position),
+                position_uz = VALUES(position_uz),
+                position_en = VALUES(position_en),
+                position_ru = VALUES(position_ru),
+                photo_base64 = COALESCE(VALUES(photo_base64), students.photo_base64),
+                updated_at = NOW()
+            `;
+            try {
+              await pool.query(singleSql, item);
+            } catch (singleErr: any) {
+              if (singleErr.message?.includes("max_allowed_packet") && item[13]) {
+                const noPhotoItem = [...item];
+                noPhotoItem[13] = null;
+                await pool.query(singleSql, noPhotoItem).catch((e: any) => {
+                  errors.push({ name: item[1], pinfl: item[2], error: e.message });
+                });
+              } else {
+                errors.push({ name: item[1], pinfl: item[2], error: singleErr.message });
+              }
+            }
+          }
+        }
+      }
+
+      processedCount += studentsList.length;
+      const elapsedSec = Math.max(0.1, (Date.now() - startTime) / 1000);
+      const speed = Math.round(processedCount / elapsedSec);
+      const percentage = Math.min(100, Math.round((processedCount / effectiveTotal) * 100));
+
+      sendEvent("progress", {
+        processed: processedCount,
+        total: effectiveTotal,
+        created: createdCount,
+        updated: updatedCount,
+        photosCount,
+        matchedOrgs: matchedOrgsCount,
+        multilingualDeptCount,
+        multilingualPosCount,
+        percentage,
+        speed,
+        page: pageNumber,
+        totalPages: targetPages,
+      });
+    };
+
+    // 3. Process Page 1 immediately
+    await processAndUpsertPage(firstPage.data || [], 1);
+
+    // 4. Concurrently process remaining pages with worker queue (CONCURRENCY = 6)
+    if (targetPages > 1) {
+      const remainingPages: number[] = [];
+      for (let p = 2; p <= targetPages; p++) {
+        remainingPages.push(p);
+      }
+
+      const CONCURRENCY = 6;
+      let currentIndex = 0;
+
+      const worker = async () => {
+        while (currentIndex < remainingPages.length) {
+          const pageIndex = currentIndex++;
+          const pageNum = remainingPages[pageIndex];
+          if (!pageNum) break;
+
+          try {
+            const pageRes = await fetchCoursePlannerStudents(
+              { page: pageNum, limit: PAGE_SIZE },
+              { url: effectiveUrl, token: effectiveToken }
+            );
+
+            if (pageRes.success && pageRes.data) {
+              await processAndUpsertPage(pageRes.data, pageNum);
+            }
+          } catch (pageErr: any) {
+            console.error(`❌ Error fetching/processing page ${pageNum}:`, pageErr.message);
+          }
+        }
+      };
+
+      const workers = Array.from({ length: Math.min(CONCURRENCY, remainingPages.length) }, () => worker());
+      await Promise.all(workers);
     }
 
-    // Execute Bulk Inserts (in chunks of 250)
-    const CHUNK_SIZE = 250;
-    for (let i = 0; i < insertBatch.length; i += CHUNK_SIZE) {
-      const chunk = insertBatch.slice(i, i + CHUNK_SIZE);
-      await atcConnection.query(
-        `INSERT INTO students 
-         (id, full_name, pinfl, organization, organization_id, department, department_uz, department_en, department_ru, position, position_uz, position_en, position_ru, photo_base64, created_at, updated_at) 
-         VALUES ${chunk.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())").join(", ")}`,
-        chunk.flat()
-      );
-    }
+    const totalElapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`🎉 [Pipeline Complete] Processed ${processedCount} students in ${totalElapsedSec}s. Created: ${createdCount}, Updated: ${updatedCount}, Photos: ${photosCount}`);
 
-    // Execute Parallel Bulk Updates (concurrency = 25)
-    const CONCURRENCY = 25;
-    const updateQuery = `
-      UPDATE students 
-      SET full_name = ?, organization = ?, organization_id = ?, 
-          department = ?, department_uz = ?, department_en = ?, department_ru = ?, 
-          position = ?, position_uz = ?, position_en = ?, position_ru = ?, 
-          photo_base64 = ?, updated_at = NOW() 
-      WHERE pinfl = ?
-    `;
-
-    for (let i = 0; i < updateBatch.length; i += CONCURRENCY) {
-      const chunk = updateBatch.slice(i, i + CONCURRENCY);
-      await Promise.all(
-        chunk.map((item) => atcConnection!.query(updateQuery, item))
-      );
-    }
-
-    console.log(
-      `🎉 Student sync complete! Total: ${plannerRows.length}, Created: ${created}, Updated: ${updated}`
-    );
-
-    return {
+    const finalResult = {
       success: true,
-      message: `Синхронизация успешно завершена. Создано новых: ${created}, Обновлено: ${updated}`,
-      total: plannerRows.length,
-      created,
-      updated,
+      message: `Синхронизация через 10x Pipeline завершена за ${totalElapsedSec} сек. Обработано: ${processedCount} (Создано: ${createdCount}, Обновлено: ${updatedCount})`,
+      total: processedCount,
+      created: createdCount,
+      updated: updatedCount,
       matchedOrgs: matchedOrgsCount,
-      errors: errors.slice(0, 10),
+      photosCount,
+      multilingualDeptCount,
+      multilingualPosCount,
+      duration: totalElapsedSec,
+      samples,
+      errors: errors.slice(0, 15),
     };
+
+    sendEvent("complete", finalResult);
+
+    if (isStream) {
+      event.node.res.end();
+      return;
+    }
+
+    return finalResult;
   } catch (error: any) {
-    console.error("❌ Student sync error:", error);
-    return {
+    console.error("❌ 10x Pipeline student sync error:", error);
+    const errPayload = {
       success: false,
-      error: error.message || "Ошибка во время синхронизации слушателей",
+      error: error.message || "Ошибка во время синхронизации слушателей через API",
     };
-  } finally {
-    if (plannerConnection) await plannerConnection.end().catch(() => {});
-    if (atcConnection) await atcConnection.end().catch(() => {});
+    sendEvent("error", errPayload);
+    if (isStream) {
+      event.node.res.end();
+      return;
+    }
+    return errPayload;
   }
 });

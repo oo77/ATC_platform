@@ -75,14 +75,8 @@ export class CertificateAIProcessor {
     };
 
     // Определяем baseURL: используем из настроек, или автоматически по провайдеру
-    let resolvedBaseUrl = config.baseUrl || undefined;
-    if (!resolvedBaseUrl) {
-      if (config.provider === "openrouter") {
-        resolvedBaseUrl = "https://openrouter.ai/api/v1";
-      } else if (config.provider === "anthropic") {
-        resolvedBaseUrl = "https://api.anthropic.com/v1";
-      }
-    }
+    const { resolveBaseUrl } = await import("./aiProvidersConfig");
+    const resolvedBaseUrl = resolveBaseUrl(config.provider, config.baseUrl);
 
     // Для OpenRouter обязательны доп. заголовки
     const defaultHeaders: Record<string, string> | undefined =

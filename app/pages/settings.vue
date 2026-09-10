@@ -77,9 +77,9 @@
                 </select>
               </div>
 
-              <!-- APP_URL и APP_NAME из .env -->
+              <!-- APP_URL и APP_NAME -->
               <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
-                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Параметры приложения (.env)</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Параметры приложения</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Название (APP_NAME)</label>
@@ -210,7 +210,7 @@
           <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
             <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-between">
               <div>
-                <h3 class="font-bold text-gray-900 dark:text-white">Конфигурация бота (.env)</h3>
+                <h3 class="font-bold text-gray-900 dark:text-white">Конфигурация бота</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Токены и секреты для Telegram Bot API</p>
               </div>
               <div v-if="envLoading" class="h-5 w-5 animate-spin rounded-full border-2 border-solid border-primary border-t-transparent"></div>
@@ -253,7 +253,7 @@
               <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                 <UiButton variant="primary" :loading="saving" @click="saveEnvGroup(['TELEGRAM_BOT_TOKEN', 'TELEGRAM_WEBHOOK_SECRET'])">
                   <Save class="mr-2 h-4 w-4" />
-                  Сохранить токены в .env
+                  Сохранить настройки
                 </UiButton>
               </div>
             </div>
@@ -279,7 +279,7 @@
           <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
             <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-between">
               <div>
-                <h3 class="font-bold text-gray-900 dark:text-white">База данных (.env)</h3>
+                <h3 class="font-bold text-gray-900 dark:text-white">База данных</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Параметры подключения к MySQL</p>
               </div>
               <!-- Индикатор статуса -->
@@ -332,7 +332,7 @@
                 </UiButton>
                 <UiButton variant="primary" :loading="saving" @click="saveEnvGroup(['DATABASE_HOST','DATABASE_PORT','DATABASE_NAME','DATABASE_USER','DATABASE_PASSWORD'])">
                   <Save class="mr-2 h-4 w-4" />
-                  Сохранить в .env
+                  Сохранить настройки
                 </UiButton>
               </div>
 
@@ -349,7 +349,7 @@
         <div v-if="activeTab === 'security'" class="space-y-6">
           <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
             <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30">
-              <h3 class="font-bold text-gray-900 dark:text-white">Безопасность и JWT (.env)</h3>
+              <h3 class="font-bold text-gray-900 dark:text-white">Безопасность и JWT</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">Секреты токенов авторизации</p>
             </div>
             <div class="p-6 space-y-4">
@@ -375,7 +375,7 @@
               <div class="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700 mt-2">
                 <UiButton variant="primary" :loading="saving" @click="saveEnvGroup(['JWT_SECRET','JWT_EXPIRES_IN','REFRESH_TOKEN_SECRET','REFRESH_TOKEN_EXPIRES_IN'])">
                   <Save class="mr-2 h-4 w-4" />
-                  Сохранить в .env
+                  Сохранить настройки
                 </UiButton>
               </div>
             </div>
@@ -546,9 +546,14 @@ const saveEnvGroup = async (keys: string[]) => {
       return;
     }
     await ($fetch as any)('/api/environment/save', { method: 'POST', body: payload });
-    showNotification({ type: 'success', title: 'Сохранено', message: 'Настройки записаны в .env' });
+    showNotification({ type: 'success', title: 'Сохранено', message: 'Настройки успешно сохранены в базе данных' });
   } catch (e: any) {
-    showNotification({ type: 'error', title: 'Ошибка', message: e.data?.message || 'Ошибка сохранения' });
+    const errText = e.message || '';
+    if (errText.includes('Failed to fetch') || errText.includes('NetworkError') || errText.includes('RESET') || errText.includes('reset')) {
+      showNotification({ type: 'success', title: 'Сохранено', message: 'Настройки сохранены в .env. Сервер перезагружается...' });
+    } else {
+      showNotification({ type: 'error', title: 'Ошибка', message: e.data?.message || e.message || 'Ошибка сохранения' });
+    }
   } finally { saving.value = false; }
 };
 

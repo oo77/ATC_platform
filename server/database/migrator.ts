@@ -49,6 +49,8 @@ import * as addMultilingualFieldsAndPhotoToStudents from "./migrations/20260730_
 import * as attestationSystem from "./migrations/20260813_039_attestation_system";
 import * as attestationCertificates from "./migrations/20260813_040_attestation_certificates";
 import * as attestationResponsibleRole from "./migrations/20260813_041_attestation_responsible_role";
+import * as systemSettings from "./migrations/20260909_042_system_settings";
+import * as flexibleAiProviders from "./migrations/20260910_043_flexible_ai_providers";
 
 /**
  * ============================================================================
@@ -438,6 +440,24 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: attestationResponsibleRole.up,
     down: attestationResponsibleRole.down,
     description: attestationResponsibleRole.description,
+  },
+  // ============================================================
+  // Миграция 042: Таблица системных настроек платформы
+  // ============================================================
+  {
+    name: "20260909_042_system_settings",
+    up: systemSettings.up,
+    down: systemSettings.down,
+    description: systemSettings.description,
+  },
+  // ============================================================
+  // Миграция 043: Гибкие AI провайдеры (top 10 + custom)
+  // ============================================================
+  {
+    name: "20260910_043_flexible_ai_providers",
+    up: flexibleAiProviders.up,
+    down: flexibleAiProviders.down,
+    description: flexibleAiProviders.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

@@ -34,12 +34,12 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Валидация провайдера
-    const validProviders = ["openai", "openrouter", "anthropic", "custom"];
-    if (!validProviders.includes(body.provider)) {
+    // Нормализуем провайдера
+    const cleanProvider = String(body.provider || "").trim().toLowerCase();
+    if (!cleanProvider) {
       throw createError({
         statusCode: 400,
-        message: `Неверный провайдер. Допустимые значения: ${validProviders.join(", ")}`,
+        message: "Провайдер не может быть пустым",
       });
     }
 

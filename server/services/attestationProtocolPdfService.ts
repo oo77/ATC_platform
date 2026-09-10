@@ -32,7 +32,9 @@ function formatDateParts(date: Date | string | null | undefined) {
 
 function positionLabel(entry: { position: string | null; organization: string | null } | null) {
   if (!entry) return "";
-  return [entry.position, entry.organization].filter(Boolean).join(", ");
+  // position уже включает организацию (например, "Директор ООО «...»"),
+  // поэтому organization не дублируется в подписи.
+  return entry.position || entry.organization || "";
 }
 
 // ============================================================================
@@ -313,8 +315,10 @@ function drawSignatureRow(
     py -= lineHeight;
   }
 
-  // Линия подписи — на уровне последней строки позиции
-  const sigLineY = top - Math.max(posLines.length, 1) * lineHeight + lineHeight - 4;
+  // Строка, к которой выравниваются линия подписи и ФИО — baseline последней
+  // строки должности (аналог "выровнять по нижнему краю" для колонок в Word).
+  const baseY = top - (posLines.length - 1) * lineHeight - size;
+  const sigLineY = baseY - 2;
   ctx.page.drawLine({
     start: { x: lineX, y: sigLineY },
     end: { x: lineX + lineWidth, y: sigLineY },
@@ -334,8 +338,8 @@ function drawSignatureRow(
 
   if (name) {
     ctx.page.drawText(name, {
-      x: nameX + (nameWidth - ctx.bold.widthOfTextAtSize(name, size)) / 2,
-      y: sigLineY + 4,
+      x: nameX,
+      y: baseY,
       size, font: ctx.bold, color: BLACK,
     });
   }
@@ -363,12 +367,11 @@ export async function generateProtocolPdfBuffer(data: ProtocolPdfData): Promise<
 
   const exam = formatDateParts(group.examStart);
 
-  const decided = results.filter((r) => r.decision === "passed" || r.decision === "failed");
-  const total = decided.length;
-  const passedCount = decided.filter((r) => r.decision === "passed").length;
-  const failedCount = total - passedCount;
+  const total = results.length;
+  const passedCount = results.filter((r) => r.decision === "passed").length;
+  const failedCount = results.filter((r) => r.decision === "failed").length;
   const passedPercent = total > 0 ? Math.round((passedCount / total) * 100) : 0;
-  const failedPercent = total > 0 ? 100 - passedPercent : 0;
+  const failedPercent = total > 0 ? Math.round((failedCount / total) * 100) : 0;
 
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);

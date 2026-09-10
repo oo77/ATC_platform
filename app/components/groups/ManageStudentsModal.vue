@@ -1,251 +1,344 @@
 <template>
-  <UiModal :is-open="isOpen" title="Управление слушателями" size="xl" @close="$emit('close')">
-    <div class="space-y-4">
-      <!-- Информация о группе -->
-      <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-        <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
+  <UiModal :is-open="isOpen" size="full" @close="$emit('close')">
+    <!-- Кастомная шапка с информацией о группе и переключателем вкладок -->
+    <template #header>
+      <div class="flex items-center justify-between w-full pr-6 gap-4 flex-wrap">
+        <!-- Информация о группе -->
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold">
+            <Users class="w-5 h-5" />
           </div>
-          <div>
-            <h4 class="font-bold text-slate-900 dark:text-white">{{ group?.code }}</h4>
-            <p class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">{{ group?.course?.name }}</p>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h3 class="text-base font-bold text-slate-900 dark:text-white truncate">
+                {{ group?.code }}
+              </h3>
+              <span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
+                В группе: {{ currentStudents.length }}
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
+              {{ group?.course?.name }}
+              <span v-if="groupStartDate && groupEndDate"> • {{ groupStartDate }} — {{ groupEndDate }}</span>
+            </p>
           </div>
+        </div>
+
+        <!-- Навигационные вкладки -->
+        <div class="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-xs shrink-0">
+          <button
+            type="button"
+            @click="activeTab = 'ai'"
+            :class="[
+              'px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 cursor-pointer',
+              activeTab === 'ai'
+                ? 'bg-white text-primary shadow-xs dark:bg-slate-700 dark:text-white'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-300'
+            ]"
+          >
+            <Sparkles class="w-4 h-4 text-amber-500" />
+            <span>ИИ-Помощник зачисления</span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeTab = 'current'"
+            :class="[
+              'px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 cursor-pointer',
+              activeTab === 'current'
+                ? 'bg-white text-primary shadow-xs dark:bg-slate-700 dark:text-white'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-300'
+            ]"
+          >
+            <Users class="w-4 h-4" />
+            <span>Слушатели группы ({{ currentStudents.length }})</span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeTab = 'search'"
+            :class="[
+              'px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 cursor-pointer',
+              activeTab === 'search'
+                ? 'bg-white text-primary shadow-xs dark:bg-slate-700 dark:text-white'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-300'
+            ]"
+          >
+            <Search class="w-4 h-4" />
+            <span>Поиск в базе</span>
+          </button>
         </div>
       </div>
+    </template>
 
-      <!-- Двухколоночный layout -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <!-- Левая колонка: База слушателей -->
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col">
-          <div class="bg-slate-50 dark:bg-slate-800/70 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-            <h5 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              База слушателей
-            </h5>
+    <!-- Основное тело модального окна с фиксированной высотой (нет раздувания страницы) -->
+    <div class="h-[84vh] max-h-[84vh] flex flex-col min-h-0 overflow-hidden -mx-6 -my-5">
+      
+      <!-- ==================== ВКЛАДКА 1: ИИ-ПОМОЩНИК (ПОЛНОЭКРАННЫЙ СПЛИТ) ==================== -->
+      <div v-if="activeTab === 'ai'" class="flex-1 min-h-0 h-full overflow-hidden flex flex-col">
+        <GroupsAiStudentAssistant
+          :group-id="group?.id"
+          :start-date="groupStartDate"
+          :end-date="groupEndDate"
+          :existing-student-ids="existingStudentIds"
+          @confirm="handleAiAddStudents"
+          class="flex-1 min-h-0 h-full"
+        />
+      </div>
+
+      <!-- ==================== ВКЛАДКА 2: ТЕКУЩИЕ СЛУШАТЕЛИ ГРУППЫ ==================== -->
+      <div v-else-if="activeTab === 'current'" class="flex-1 min-h-0 h-full overflow-hidden flex flex-col p-6 space-y-4">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white">
+              Список зачисленных слушателей
+            </h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Всего в группе: {{ currentStudents.length }} слушателей
+            </p>
           </div>
-          
-          <div class="p-3 space-y-3">
-            <!-- Фильтры -->
-            <div class="flex gap-2">
-              <div class="relative flex-1">
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="Поиск по ФИО, ПИНФЛ..."
-                  class="w-full rounded-lg border border-slate-200 bg-transparent py-2.5 pl-10 pr-4 text-sm font-medium outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 block"
-                  @input="debouncedSearch"
-                />
-                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-              <button
-                v-if="selectedStudentIds.length > 0"
-                type="button"
-                @click="addSelectedStudents"
-                :disabled="addingStudents"
-                class="px-3 py-2 bg-primary text-white text-sm rounded hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-1"
-              >
-                <svg v-if="addingStudents" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span>Добавить ({{ selectedStudentIds.length }})</span>
-              </button>
-            </div>
 
-            <!-- Статус загрузки -->
-            <div v-if="loading" class="text-center py-6">
-              <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
-              <p class="mt-2 text-sm text-gray-500">Поиск...</p>
-            </div>
-
-            <!-- Результаты поиска -->
-            <div v-else-if="searchResults.length > 0" class="max-h-72 overflow-y-auto space-y-1">
-              <label
-                v-for="student in searchResults"
-                :key="student.id"
-                :class="[
-                  'flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all border border-transparent',
-                  existingStudentIds.includes(student.id)
-                    ? 'bg-slate-50 dark:bg-slate-800/50 opacity-50 cursor-not-allowed'
-                    : selectedStudentIds.includes(student.id)
-                      ? 'bg-primary/5 border-primary/20 text-primary'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-slate-200 dark:hover:border-slate-700'
-                ]"
-              >
-                <input
-                  type="checkbox"
-                  :checked="selectedStudentIds.includes(student.id)"
-                  :disabled="existingStudentIds.includes(student.id)"
-                  @change="toggleStudent(student)"
-                  class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
-                />
-                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                  {{ getInitials(student.fullName) }}
-                </div>
-                <div class="min-w-0 flex-1">
-                  <p class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ student.fullName }}</p>
-                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">{{ student.pinfl }} • {{ student.organization }}</p>
-                </div>
-                <span v-if="existingStudentIds.includes(student.id)" class="text-xs font-bold uppercase tracking-wider text-slate-400 shrink-0">В группе</span>
-              </label>
-            </div>
-
-            <!-- Пустой результат -->
-            <div v-else-if="searchQuery && !loading" class="text-center py-6 text-gray-500 dark:text-gray-400">
-              <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p class="mt-2 text-sm">Слушатели не найдены</p>
-            </div>
-
-            <!-- Подсказка -->
-            <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400">
-              <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <p class="mt-2 text-sm">Введите минимум 2 символа для поиска</p>
-            </div>
+          <!-- Поиск по текущим слушателям -->
+          <div class="relative w-72">
+            <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              v-model="currentSearchQuery"
+              type="text"
+              placeholder="Поиск по ФИО, организации..."
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+            />
           </div>
         </div>
 
-        <!-- Правая колонка: Слушатели группы -->
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden flex flex-col">
-          <div class="bg-slate-50 dark:bg-slate-800/70 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-            <h5 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-              <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              В группе ({{ currentStudents.length }})
-            </h5>
+        <!-- Таблица слушателей -->
+        <div class="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 custom-scrollbar">
+          <div v-if="filteredCurrentStudents.length === 0" class="h-64 flex flex-col items-center justify-center text-center p-6">
+            <Users class="w-10 h-10 text-slate-300 dark:text-slate-600 mb-2" />
+            <p class="text-sm font-bold text-slate-700 dark:text-slate-300">
+              {{ currentSearchQuery ? 'Ничего не найдено по запросу' : 'В группе пока нет слушателей' }}
+            </p>
+            <p class="text-xs text-slate-400 mt-1 max-w-sm">
+              Используйте вкладку «ИИ-Помощник зачисления» для распознавания приказов или «Поиск в базе» для ручного зачисления.
+            </p>
           </div>
-          
-          <div class="p-3">
-            <div v-if="currentStudents.length === 0" class="text-center py-6 text-gray-500 dark:text-gray-400">
-              <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              <p class="mt-2 text-sm">Группа пуста</p>
-              <p class="text-xs text-gray-400 mt-1">Выберите слушателей слева для добавления</p>
-            </div>
 
-            <div v-else class="max-h-72 overflow-y-auto space-y-1">
-              <div
-                v-for="gs in currentStudents"
-                :key="gs.id"
-                class="flex items-center gap-3 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 group hover:border-slate-200 dark:hover:border-slate-700 transition-all cursor-default"
-              >
-                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success/10 text-success text-xs font-semibold">
+          <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+            <div
+              v-for="gs in filteredCurrentStudents"
+              :key="gs.id"
+              class="flex items-center justify-between gap-4 p-3.5 hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors"
+            >
+              <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold font-mono">
                   {{ getInitials(gs.student?.fullName) }}
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ gs.student?.fullName }}</p>
-                  <p class="text-xs font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">{{ gs.student?.organization }}</p>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <p class="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      {{ gs.student?.fullName }}
+                    </p>
+                    <span v-if="gs.student?.pinfl" class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                      {{ gs.student.pinfl }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    {{ [gs.student?.organization, gs.student?.department, gs.student?.position].filter(Boolean).join(" · ") }}
+                  </p>
                 </div>
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    type="button"
-                    @click="openTransferModal(gs)"
-                    class="p-1.5 text-gray-400 hover:text-primary rounded transition-colors"
-                    title="Переместить"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    @click="removeStudentConfirm(gs)"
-                    class="p-1.5 text-gray-400 hover:text-danger rounded transition-colors"
-                    title="Удалить"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
+              </div>
+
+              <!-- Действия -->
+              <div class="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  @click="openTransferModal(gs)"
+                  class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-primary hover:border-primary/40 transition-colors cursor-pointer"
+                  title="Переместить в другую группу"
+                >
+                  <ArrowRightLeft class="w-3.5 h-3.5" />
+                  <span>Переместить</span>
+                </button>
+                <button
+                  type="button"
+                  @click="removeStudentConfirm(gs)"
+                  class="p-1.5 text-slate-400 hover:text-danger rounded-lg transition-colors cursor-pointer"
+                  title="Удалить из группы"
+                >
+                  <Trash2 class="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Модальное окно переноса -->
-      <UiModal
-        :is-open="showTransferModal"
-        title="Переместить слушателя"
-        size="sm"
-        @close="showTransferModal = false"
-      >
-        <div class="space-y-4">
-          <p class="text-gray-600 dark:text-gray-400">
-            Выберите группу для перемещения:
-            <strong class="block mt-1 text-gray-900 dark:text-white">{{ studentToTransfer?.student?.fullName }}</strong>
-          </p>
-          
-          <div v-if="loadingGroups" class="text-center py-4">
-            <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
+      <!-- ==================== ВКЛАДКА 3: РУЧНОЙ ПОИСК В БАЗЕ ==================== -->
+      <div v-else-if="activeTab === 'search'" class="flex-1 min-h-0 h-full overflow-hidden flex flex-col p-6 space-y-4">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white">
+              Поиск слушателей в базе данных
+            </h4>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Введите ФИО или ПИНФЛ для выбора слушателей
+            </p>
           </div>
-          
-          <div v-else-if="availableGroups.length === 0" class="text-center py-4 text-gray-500">
-            Нет доступных групп для перемещения
+
+          <button
+            v-if="selectedStudentIds.length > 0"
+            type="button"
+            @click="addSelectedStudents"
+            :disabled="addingStudents"
+            class="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm"
+          >
+            <Loader2 v-if="addingStudents" class="w-3.5 h-3.5 animate-spin" />
+            <UserCheck v-else class="w-3.5 h-3.5" />
+            <span>Добавить выбранных ({{ selectedStudentIds.length }})</span>
+          </button>
+        </div>
+
+        <div class="relative">
+          <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Введите минимум 2 символа для поиска..."
+            class="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+            @input="debouncedSearch"
+          />
+        </div>
+
+        <!-- Результаты ручного поиска -->
+        <div class="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 custom-scrollbar p-3">
+          <div v-if="loading" class="h-48 flex flex-col items-center justify-center text-center">
+            <Loader2 class="w-6 h-6 animate-spin text-primary mb-2" />
+            <p class="text-xs text-slate-500">Поиск по базе...</p>
           </div>
-          
-          <div v-else class="space-y-2 max-h-60 overflow-y-auto">
-            <button
-              v-for="g in availableGroups"
-              :key="g.id"
-              type="button"
-              @click="transferStudentToGroup(g.id)"
-              class="w-full p-4 text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary hover:ring-1 hover:ring-primary hover:bg-primary/5 transition-all outline-none"
+
+          <div v-else-if="searchResults.length > 0" class="space-y-1">
+            <label
+              v-for="student in searchResults"
+              :key="student.id"
+              :class="[
+                'flex items-center gap-3.5 p-3 rounded-xl cursor-pointer transition-all border',
+                existingStudentIds.includes(student.id)
+                  ? 'bg-slate-50 dark:bg-slate-800/40 opacity-50 cursor-not-allowed border-transparent'
+                  : selectedStudentIds.includes(student.id)
+                    ? 'bg-primary/5 border-primary/30 ring-1 ring-primary/20'
+                    : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700 hover:bg-slate-50/50'
+              ]"
             >
-              <p class="font-bold text-slate-900 dark:text-white mb-1">{{ g.code }}</p>
-              <p class="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{{ g.courseName }}</p>
-            </button>
+              <input
+                type="checkbox"
+                :checked="selectedStudentIds.includes(student.id)"
+                :disabled="existingStudentIds.includes(student.id)"
+                @change="toggleStudent(student)"
+                class="w-4 h-4 rounded text-primary focus:ring-primary disabled:opacity-40 accent-primary"
+              />
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+                {{ getInitials(student.fullName) }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-bold text-slate-900 dark:text-white truncate">
+                  {{ student.fullName }}
+                </p>
+                <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                  {{ student.pinfl }} • {{ student.organization }}
+                </p>
+              </div>
+              <span v-if="existingStudentIds.includes(student.id)" class="text-xs font-bold text-slate-400 shrink-0">
+                Уже в группе
+              </span>
+            </label>
+          </div>
+
+          <div v-else-if="searchQuery && !loading" class="h-48 flex flex-col items-center justify-center text-center text-slate-400">
+            <Search class="w-8 h-8 mb-2 opacity-50" />
+            <p class="text-xs">Слушатели не найдены</p>
+          </div>
+
+          <div v-else class="h-48 flex flex-col items-center justify-center text-center text-slate-400">
+            <Search class="w-8 h-8 mb-2 opacity-50" />
+            <p class="text-xs">Введите ФИО или ПИНФЛ в строке поиска выше</p>
           </div>
         </div>
-        
-        <template #footer>
-          <div class="flex justify-end">
-            <UiButton variant="outline" @click="showTransferModal = false">
-              Отмена
-            </UiButton>
-          </div>
-        </template>
-      </UiModal>
+      </div>
     </div>
 
-    <template #footer>
-      <div class="flex justify-end">
-        <UiButton variant="outline" @click="$emit('close')">
-          Закрыть
-        </UiButton>
-      </div>
-    </template>
-  </UiModal>
+    <!-- Модальное окно переноса слушателя -->
+    <UiModal
+      :is-open="showTransferModal"
+      title="Переместить слушателя"
+      size="sm"
+      @close="showTransferModal = false"
+    >
+      <div class="space-y-4">
+        <p class="text-xs text-slate-600 dark:text-slate-400">
+          Выберите целевую группу для перемещения слушателя:
+          <strong class="block mt-1 text-sm text-slate-900 dark:text-white">
+            {{ studentToTransfer?.student?.fullName }}
+          </strong>
+        </p>
 
-  <!-- Модальное окно подтверждения удаления -->
-  <UiConfirmModal
-    :is-open="showDeleteConfirm"
-    title="Удаление слушателя"
-    message="Вы уверены, что хотите удалить слушателя из группы?"
-    :item-name="studentToDelete?.student?.fullName"
-    confirm-text="Удалить"
-    cancel-text="Отмена"
-    variant="danger"
-    :loading="deletingStudent"
-    @confirm="confirmDeleteStudent"
-    @cancel="cancelDeleteStudent"
-  />
+        <div v-if="loadingGroups" class="text-center py-6">
+          <Loader2 class="w-6 h-6 animate-spin text-primary mx-auto" />
+        </div>
+
+        <div v-else-if="availableGroups.length === 0" class="text-center py-6 text-xs text-slate-500">
+          Нет доступных групп для перемещения
+        </div>
+
+        <div v-else class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+          <button
+            v-for="g in availableGroups"
+            :key="g.id"
+            type="button"
+            @click="transferStudentToGroup(g.id)"
+            class="w-full p-3 text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary hover:bg-primary/5 transition-all cursor-pointer"
+          >
+            <p class="font-bold text-xs text-slate-900 dark:text-white">{{ g.code }}</p>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{{ g.courseName }}</p>
+          </button>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex justify-end">
+          <UiButton variant="outline" @click="showTransferModal = false">
+            Отмена
+          </UiButton>
+        </div>
+      </template>
+    </UiModal>
+
+    <!-- Модальное окно подтверждения удаления -->
+    <UiConfirmModal
+      :is-open="showDeleteConfirm"
+      title="Удаление слушателя"
+      message="Вы уверены, что хотите исключить слушателя из этой группы?"
+      :item-name="studentToDelete?.student?.fullName"
+      confirm-text="Исключить"
+      cancel-text="Отмена"
+      variant="danger"
+      :loading="deletingStudent"
+      @confirm="confirmDeleteStudent"
+      @cancel="cancelDeleteStudent"
+    />
+  </UiModal>
 </template>
 
 <script setup lang="ts">
+import { ref, computed, watch } from 'vue';
+import {
+  Sparkles,
+  Users,
+  Search,
+  ArrowRightLeft,
+  Trash2,
+  Loader2,
+  UserCheck,
+} from 'lucide-vue-next';
+import GroupsAiStudentAssistant from './AiStudentAssistant.vue';
 import type { GroupStudent } from '~/types/group';
 import type { Student } from '~/types/student';
 
@@ -255,6 +348,8 @@ const props = defineProps<{
     id: string;
     code: string;
     course?: { name: string };
+    startDate?: string | Date | null;
+    endDate?: string | Date | null;
     students?: GroupStudent[];
   } | null;
 }>();
@@ -268,27 +363,83 @@ const { authFetch } = useAuthFetch();
 const toast = useNotification();
 
 // State
+const activeTab = ref<'ai' | 'current' | 'search'>('ai');
 const searchQuery = ref('');
+const currentSearchQuery = ref('');
 const searchResults = ref<Student[]>([]);
 const selectedStudentIds = ref<string[]>([]);
 const loading = ref(false);
 const addingStudents = ref(false);
+
+// State для переноса
 const showTransferModal = ref(false);
 const studentToTransfer = ref<GroupStudent | null>(null);
 const availableGroups = ref<Array<{ id: string; code: string; courseName: string }>>([]);
 const loadingGroups = ref(false);
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
-// State для модального подтверждения удаления
+// State для удаления
 const showDeleteConfirm = ref(false);
 const studentToDelete = ref<GroupStudent | null>(null);
 const deletingStudent = ref(false);
 
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
 // Computed
 const currentStudents = computed(() => props.group?.students || []);
-const existingStudentIds = computed(() => currentStudents.value.map(s => s.studentId));
+const existingStudentIds = computed(() => currentStudents.value.map((s) => s.studentId));
 
-// Methods
+const filteredCurrentStudents = computed(() => {
+  if (!currentSearchQuery.value.trim()) return currentStudents.value;
+  const q = currentSearchQuery.value.toLowerCase().trim();
+  return currentStudents.value.filter((gs) =>
+    gs.student?.fullName?.toLowerCase().includes(q) ||
+    gs.student?.pinfl?.includes(q) ||
+    gs.student?.organization?.toLowerCase().includes(q)
+  );
+});
+
+const groupStartDate = computed(() => {
+  if (!props.group?.startDate) return undefined;
+  return new Date(props.group.startDate).toISOString().split('T')[0];
+});
+
+const groupEndDate = computed(() => {
+  if (!props.group?.endDate) return undefined;
+  return new Date(props.group.endDate).toISOString().split('T')[0];
+});
+
+// Добавление слушателей через ИИ
+const handleAiAddStudents = async (ids: string[]) => {
+  if (!props.group || !ids.length) return;
+  addingStudents.value = true;
+  try {
+    const response = await authFetch<{ success: boolean; message?: string; conflicts?: any[] }>(
+      `/api/groups/${props.group.id}/students`,
+      {
+        method: 'POST',
+        body: { studentIds: ids },
+      }
+    );
+
+    if (response.success) {
+      toast.success(response.message || `Успешно зачислено: ${ids.length} слушателей`);
+      emit('updated');
+      // Переключаем на вкладку текущих слушателей, чтобы сразу видеть результат
+      activeTab.value = 'current';
+    } else if (response.conflicts && response.conflicts.length > 0) {
+      const conflictNames = response.conflicts.map((c: any) => c.studentName).join(', ');
+      toast.error(`Конфликт расписания: ${conflictNames}`);
+    } else {
+      toast.error(response.message || 'Ошибка добавления слушателей');
+    }
+  } catch (error: any) {
+    toast.error(error.data?.message || 'Ошибка при зачислении слушателей');
+  } finally {
+    addingStudents.value = false;
+  }
+};
+
+// Ручной поиск слушателей
 const searchStudents = async () => {
   if (!searchQuery.value || searchQuery.value.length < 2) {
     searchResults.value = [];
@@ -299,12 +450,12 @@ const searchStudents = async () => {
   try {
     const response = await authFetch<{ success: boolean; students: Student[] }>('/api/students', {
       method: 'GET',
-      params: { 
+      params: {
         search: searchQuery.value,
-        limit: 30 
+        limit: 30,
       },
     });
-    
+
     if (response.success && response.students) {
       searchResults.value = response.students;
     }
@@ -317,9 +468,7 @@ const searchStudents = async () => {
 };
 
 const debouncedSearch = () => {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
-  }
+  if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
     searchStudents();
   }, 300);
@@ -327,7 +476,6 @@ const debouncedSearch = () => {
 
 const toggleStudent = (student: Student) => {
   if (existingStudentIds.value.includes(student.id)) return;
-  
   const index = selectedStudentIds.value.indexOf(student.id);
   if (index === -1) {
     selectedStudentIds.value.push(student.id);
@@ -355,6 +503,7 @@ const addSelectedStudents = async () => {
       searchQuery.value = '';
       searchResults.value = [];
       emit('updated');
+      activeTab.value = 'current';
     } else if (response.conflicts && response.conflicts.length > 0) {
       const conflictNames = response.conflicts.map((c: any) => c.studentName).join(', ');
       toast.error(`Конфликт дат: ${conflictNames}`);
@@ -368,6 +517,7 @@ const addSelectedStudents = async () => {
   }
 };
 
+// Удаление слушателя
 const removeStudentConfirm = (gs: GroupStudent) => {
   studentToDelete.value = gs;
   showDeleteConfirm.value = true;
@@ -375,7 +525,6 @@ const removeStudentConfirm = (gs: GroupStudent) => {
 
 const confirmDeleteStudent = async () => {
   if (!studentToDelete.value) return;
-  
   deletingStudent.value = true;
   await removeStudent(studentToDelete.value.studentId);
   deletingStudent.value = false;
@@ -390,7 +539,6 @@ const cancelDeleteStudent = () => {
 
 const removeStudent = async (studentId: string) => {
   if (!props.group) return;
-
   try {
     const response = await authFetch<{ success: boolean; message?: string }>(
       `/api/groups/${props.group.id}/students/${studentId}`,
@@ -398,27 +546,27 @@ const removeStudent = async (studentId: string) => {
     );
 
     if (response.success) {
-      toast.success('Слушатель удалён');
+      toast.success('Слушатель исключен из группы');
       emit('updated');
     } else {
       toast.error(response.message || 'Ошибка удаления');
     }
   } catch (error) {
-    toast.error('Ошибка удаления слушателя');
+    toast.error('Ошибка исключения слушателя');
   }
 };
 
+// Перенос слушателя в другую группу
 const openTransferModal = async (gs: GroupStudent) => {
   studentToTransfer.value = gs;
   showTransferModal.value = true;
-  
   loadingGroups.value = true;
+
   try {
     const response = await authFetch<{ success: boolean; groups: any[] }>(
       '/api/groups/select',
       { params: { excludeGroupId: props.group?.id } }
     );
-
     if (response.success) {
       availableGroups.value = response.groups;
     }
@@ -446,7 +594,7 @@ const transferStudentToGroup = async (toGroupId: string) => {
     );
 
     if (response.success) {
-      toast.success(response.message || 'Слушатель перемещён');
+      toast.success(response.message || 'Слушатель перемещен');
       showTransferModal.value = false;
       studentToTransfer.value = null;
       emit('updated');
@@ -469,12 +617,33 @@ const getInitials = (name?: string): string => {
   return name.substring(0, 2).toUpperCase();
 };
 
-// Reset on open
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    searchQuery.value = '';
-    searchResults.value = [];
-    selectedStudentIds.value = [];
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen) {
+      activeTab.value = 'ai';
+      searchQuery.value = '';
+      currentSearchQuery.value = '';
+      searchResults.value = [];
+      selectedStudentIds.value = [];
+    }
   }
-});
+);
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.35);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.55);
+}
+</style>
