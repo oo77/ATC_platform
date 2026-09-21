@@ -1221,7 +1221,6 @@ import {
   ArrowLeft,
 } from "lucide-vue-next";
 import type { StudyGroup } from "~/types/group";
-import { generateEmptyJournal } from "~/utils/pdf/generateEmptyJournal";
 
 interface Discipline {
   id: string;
@@ -1754,35 +1753,25 @@ const downloadEmptyJournal = async (format: "pdf" | "docx" = "pdf") => {
   try {
     generatingEmptyJournal.value = true;
 
-    // Собираем список студентов
-    const studentNames =
-      group.value.students
-        ?.map((gs: any) => gs.student?.fullName || "")
-        .filter(Boolean) || [];
-
-    if (studentNames.length === 0) {
+    if (!group.value.students?.length) {
       toast.error("В группе нет студентов");
       return;
     }
 
-    // Подготавливаем данные для пустого журнала
-    const emptyJournalData = {
-      groupCode: group.value.code,
-      courseName: group.value.course?.name,
-      startDate: group.value.startDate,
-      endDate: group.value.endDate,
-      studentNames,
-      columnCount: 20, // 20 пустых колонок
-    };
+    // Бланк формирует сервер по утверждённому шаблону журнала (Word или PDF)
+    const blob = await authFetch<Blob>(
+      `/api/groups/${group.value.id}/empty-journal?format=${format}`,
+      { responseType: "blob" },
+    );
 
-    // Генерируем документ в выбранном формате
-    if (format === "pdf") {
-      await generateEmptyJournal(emptyJournalData);
-    } else {
-      const { generateEmptyJournalDocx } =
-        await import("~/utils/docx/generateEmptyJournal");
-      await generateEmptyJournalDocx(emptyJournalData);
-    }
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Pustoy_Zhurnal_${group.value.code}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
 
     // Логируем скачивание
     try {
@@ -1805,7 +1794,11 @@ const downloadEmptyJournal = async (format: "pdf" | "docx" = "pdf") => {
     );
   } catch (error: any) {
     console.error("Error generating empty journal:", error);
-    toast.error(error.message || "Ошибка при формировании пустого журнала");
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания журнала"
+        : "Ошибка при формировании пустого журнала",
+    );
   } finally {
     generatingEmptyJournal.value = false;
   }
