@@ -76,6 +76,30 @@
           </svg>
           Добавить занятие
         </UiButton>
+
+        <!-- Выгрузка расписания недели в Excel -->
+        <button
+          v-if="canViewAllSchedule"
+          type="button"
+          @click="openExportModal"
+          class="flex items-center gap-2 px-3 py-2 rounded-lg border border-stroke dark:border-strokedark hover:bg-gray-100 dark:hover:bg-meta-4 transition-colors text-sm font-medium"
+          title="Скачать расписание недели в Excel"
+        >
+          <svg
+            class="w-5 h-5 text-success"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+            />
+          </svg>
+          Excel
+        </button>
       </div>
 
       <!-- Заголовок с текущей датой -->
@@ -447,6 +471,33 @@
           </button>
         </div>
       </div>
+
+      <!-- Легенда видов занятий и обозначений сетки -->
+      <div
+        class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-500 dark:text-gray-400"
+      >
+        <span class="font-medium text-gray-600 dark:text-gray-400"
+          >Вид занятия:</span
+        >
+        <span class="inline-flex items-center gap-1.5">
+          <span class="legend-kind">Т</span> теория
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="legend-kind">П</span> практика
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="legend-kind">Э</span> проверка знаний
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="legend-kind">Д</span> другое
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="font-bold text-purple-600">↻</span> пересдача
+        </span>
+        <span class="text-gray-400"
+          >Цвет карточки — цвет группы; цвет метки — «Цвет» занятия</span
+        >
+      </div>
     </div>
 
     <!-- Модальное окно просмотра деталей события -->
@@ -532,6 +583,13 @@
       @close="showBulkDeleteModal = false"
       @deleted="handleBulkDeleted"
     />
+
+    <!-- Модальное окно выгрузки расписания в Excel -->
+    <ScheduleExportExcelModal
+      :is-open="showExportModal"
+      :initial-date="exportInitialDate"
+      @close="showExportModal = false"
+    />
   </div>
 </template>
 
@@ -550,6 +608,7 @@ import type {
   DatesSetArg,
   EventDropArg,
   EventMountArg,
+  SlotLaneContentArg,
 } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 import type { ScheduleEvent } from "~/types/schedule";
@@ -558,6 +617,13 @@ import {
   formatDateOnly,
   formatTimeOnly,
 } from "~/utils/dateTime";
+import {
+  toCalendarEventInput,
+  renderTimeGridEventContent,
+  getSlotLaneClasses,
+  applyGroupCssVars,
+  getEventGroupTokens,
+} from "~/utils/scheduleCalendar";
 
 interface Group {
   id: string;
@@ -587,6 +653,7 @@ const {
   isStudent,
   canViewAllGroups,
   canViewInstructors,
+  canViewAllSchedule,
 } = usePermissions();
 
 // Настройки расписания (академические пары)
@@ -641,6 +708,10 @@ const showMoveEventsModal = ref(false);
 const showCreateTemplateModal = ref(false);
 const showApplyTemplateModal = ref(false);
 const showBulkDeleteModal = ref(false);
+
+// ============ ВЫГРУЗКА В EXCEL ============
+const showExportModal = ref(false);
+const exportInitialDate = ref<Date | null>(null);
 
 // Computed
 const hasActiveFilters = computed(() => {
@@ -718,49 +789,10 @@ const selectedEventsGroupInfo = computed(() => {
   };
 });
 
-// Цвета событий (по типу)
-const eventColors: Record<
-  string,
-  { bg: string; border: string; text: string }
-> = {
-  primary: { bg: "#3C50E0", border: "#3C50E0", text: "#ffffff" },
-  success: { bg: "#10B981", border: "#10B981", text: "#ffffff" },
-  warning: { bg: "#F59E0B", border: "#F59E0B", text: "#ffffff" },
-  danger: { bg: "#EF4444", border: "#EF4444", text: "#ffffff" },
-};
-
-// Палитра цветов для групп (12 контрастных цветов)
-const GROUP_COLOR_PALETTE = [
-  "#E91E63", // Розовый
-  "#9C27B0", // Фиолетовый
-  "#673AB7", // Глубокий фиолетовый
-  "#3F51B5", // Индиго
-  "#2196F3", // Синий
-  "#00BCD4", // Циан
-  "#009688", // Бирюзовый
-  "#4CAF50", // Зелёный
-  "#8BC34A", // Лаймовый
-  "#FF9800", // Оранжевый
-  "#FF5722", // Глубокий оранжевый
-  "#795548", // Коричневый
-];
-
-// Хеш-функция для генерации индекса цвета из groupId
-const hashStringToIndex = (str: string): number => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return Math.abs(hash) % GROUP_COLOR_PALETTE.length;
-};
-
-// Получить цвет группы по её ID
-const getGroupColor = (groupId: string | undefined): string => {
-  if (!groupId) return "transparent";
-  return GROUP_COLOR_PALETTE[hashStringToIndex(groupId)] || "#3C50E0";
-};
+// Оформление занятий (заливка карточки = цвет ГРУППЫ) — см. ~/utils/scheduleCalendar.
+// Индекс цвета группы назначает сервер (group.colorIndex), поэтому цвет группы одинаков
+// в календаре, в легенде и в Excel-выгрузке.
+const transformEventForCalendar = toCalendarEventInput;
 
 // Вычисляемое свойство: группы, используемые в текущих событиях, с их цветами
 const usedGroupsWithColors = computed(() => {
@@ -774,7 +806,7 @@ const usedGroupsWithColors = computed(() => {
       groupMap.set(event.groupId, {
         id: event.groupId,
         code: event.group.code,
-        color: getGroupColor(event.groupId),
+        color: getEventGroupTokens(event).base,
       });
     }
   }
@@ -784,80 +816,6 @@ const usedGroupsWithColors = computed(() => {
     a.code.localeCompare(b.code),
   );
 });
-
-// Преобразование события для FullCalendar
-const transformEventForCalendar = (event: ScheduleEvent): EventInput => {
-  const defaultColors = { bg: "#3C50E0", border: "#3C50E0", text: "#ffffff" };
-  const colors = eventColors[event.color] ?? defaultColors;
-
-  // Проверяем, является ли это перездачей
-  const isRetake =
-    (event.allowedStudentIds && event.allowedStudentIds.length > 0) ||
-    event.originalEventId;
-
-  // Формируем заголовок с аудиторией если она указана
-  let titleWithClassroom = event.classroom?.name
-    ? `${event.title} (${event.classroom.name})`
-    : event.title;
-
-  // Добавляем иконку перездачи к заголовку
-  if (isRetake) {
-    titleWithClassroom = `🔄 ${titleWithClassroom}`;
-  }
-
-  // Получаем цвет группы для полосы слева
-  const groupColor = getGroupColor(event.groupId || undefined);
-
-  // Определяем CSS-классы
-  const classNames = [];
-  if (event.groupId) {
-    classNames.push(`group-stripe-${hashStringToIndex(event.groupId)}`);
-  }
-  if (isRetake) {
-    classNames.push("event-retake");
-  }
-
-  const isArchivedGroup = event.group?.isArchived;
-
-  if (isArchivedGroup) {
-    titleWithClassroom = `🔒 ${titleWithClassroom}`;
-    classNames.push("opacity-75", "cursor-not-allowed");
-  }
-
-  return {
-    id: event.id,
-    title: titleWithClassroom,
-    start: event.startTime,
-    end: event.endTime,
-    allDay: false,
-    backgroundColor: colors.bg,
-    borderColor: colors.border,
-    textColor: colors.text,
-    editable: !isArchivedGroup,
-    startEditable: !isArchivedGroup,
-    durationEditable: !isArchivedGroup,
-    // Добавляем класс с data-атрибутом для CSS-стилизации полосы группы
-    classNames: classNames,
-    extendedProps: {
-      description: event.description || undefined,
-      groupId: event.groupId || undefined,
-      groupCode: event.group?.code,
-      groupColor: groupColor,
-      isGroupArchived: isArchivedGroup,
-      instructorId: event.instructorId || undefined,
-      instructorName: event.instructor?.fullName,
-      classroomId: event.classroomId || undefined,
-      classroomName: event.classroom?.name,
-      eventType: event.eventType,
-      color: event.color,
-      isRetake: isRetake,
-      allowedStudentIds: event.allowedStudentIds,
-      originalEventId: event.originalEventId,
-      academicHours: event.academicHours,
-      durationMinutes: event.durationMinutes,
-    },
-  };
-};
 
 // Обработчики событий календаря
 const onEventClick = (arg: EventClickArg) => {
@@ -1174,6 +1132,9 @@ const onEventDidMount = (arg: EventMountArg) => {
   const { event, el } = arg;
   const extendedProps = event.extendedProps;
 
+  // Цвета группы для заливки/акцента (см. стили .ev-group)
+  applyGroupCssVars(el, extendedProps.groupTokens);
+
   // ============ ЧЕКБОКСЫ В РЕЖИМЕ МАССОВОГО ВЫБОРА ============
   // Добавляем чекбокс только в режиме списка и при включенном режиме выбора
   if (bulkSelectionMode.value && currentView.value === "listWeek") {
@@ -1489,6 +1450,11 @@ const snapToGrid = (date: Date): Date => {
   return date;
 };
 
+// Содержимое карточки занятия («Неделя»/«День» — своя вёрстка) и разметка сетки пар
+const eventContent = renderTimeGridEventContent;
+const slotLaneClassNames = (arg: SlotLaneContentArg): string[] =>
+  getSlotLaneClasses(arg.date, periods.value, scheduleSettings.value);
+
 // ДИНАМИЧЕСКИЕ опции календаря - используем computed
 const calendarOptions = computed<CalendarOptions>(() => {
   // Длительность пары для привязки при перетаскивании
@@ -1528,6 +1494,14 @@ const calendarOptions = computed<CalendarOptions>(() => {
     slotDuration: slotDuration.value,
     slotLabelInterval: slotLabelInterval.value,
     allDaySlot: false,
+
+    // Параллельные занятия (несколько групп одновременно) — рядом в своих колонках,
+    // а не «лесенкой» друг поверх друга
+    slotEventOverlap: false,
+    eventMinHeight: 28,
+    eventShortHeight: 44,
+    eventContent,
+    slotLaneClassNames,
 
     // Привязка к сетке при перетаскивании - привязываем к длительности пары
     snapDuration: snapDurationValue,
@@ -1750,6 +1724,13 @@ const updateCalendarEvents = () => {
   transformedEvents.forEach((event) => {
     api.addEvent(event);
   });
+};
+
+// Выгрузка недели в Excel: по умолчанию — неделя, открытая в календаре
+const openExportModal = () => {
+  cleanupAllTooltips();
+  exportInitialDate.value = calendarRef.value?.getApi().getDate() ?? new Date();
+  showExportModal.value = true;
 };
 
 const openAddModal = (start?: Date) => {
@@ -2552,123 +2533,304 @@ onUnmounted(() => {
 }
 
 /* ============================================
-   ЦВЕТОВАЯ ПОЛОСА ГРУППЫ НА СОБЫТИЯХ
+   ЗАЛИВКА ЗАНЯТИЙ ПО ЦВЕТУ ГРУППЫ
+   Цвета группы приходят в CSS-переменных самой карточки
+   (--gc, --gc-soft, --gc-ink, …): их выставляет eventDidMount
+   через applyGroupCssVars (см. ~/utils/scheduleCalendar).
    ============================================ */
 
-/* Базовый стиль для событий с полосой группы */
-.schedule-calendar .fc-event[class*="group-stripe-"] {
+/* Запасные значения, пока переменные не выставлены */
+.schedule-calendar .fc-event.ev-group {
+  --gc: #3c50e0;
+  --gc-soft: #eef0fd;
+  --gc-soft-dark: #253166;
+  --gc-ink: #1f2f88;
+  --gc-ink-dark: #b6c0f5;
+  --gc-on: #ffffff;
+}
+
+/* Общий вид карточки: мягкая заливка цветом группы + плотная полоса слева */
+.schedule-calendar .fc-timegrid-event.ev-group,
+.schedule-calendar .fc-daygrid-event.ev-group {
+  background-color: var(--gc-soft) !important;
+  color: var(--gc-ink) !important;
+  border: 0 !important;
+  border-left: 4px solid var(--gc) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  transition:
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+}
+
+.dark .schedule-calendar .fc-timegrid-event.ev-group,
+.dark .schedule-calendar .fc-daygrid-event.ev-group {
+  background-color: var(--gc-soft-dark) !important;
+  color: var(--gc-ink-dark) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.schedule-calendar .fc-timegrid-event.ev-group:hover,
+.schedule-calendar .fc-daygrid-event.ev-group:hover {
+  opacity: 1;
+  filter: brightness(0.97);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+}
+
+.dark .schedule-calendar .fc-timegrid-event.ev-group:hover,
+.dark .schedule-calendar .fc-daygrid-event.ev-group:hover {
+  filter: brightness(1.12);
+}
+
+/* «Неделя» и «День»: карточка — контейнер для адаптивного содержимого */
+.schedule-calendar .fc-timegrid-event.ev-group {
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+.schedule-calendar .fc-timegrid-event.ev-group .fc-event-main {
+  padding: 5px 7px 5px 6px;
+}
+
+.schedule-calendar .ev-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.schedule-calendar .ev-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Код группы — то, по чему глаз находит «свою» группу */
+.schedule-calendar .ev-code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--gc-ink);
+}
+
+.dark .schedule-calendar .ev-code {
+  color: var(--gc-ink-dark);
+}
+
+.schedule-calendar .ev-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+/* Метка вида занятия (Т / П / Э / Д); цвет — «Цвет» из формы занятия */
+.schedule-calendar .ev-kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 5px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35) inset;
+}
+
+.schedule-calendar .ev-flag {
+  font-size: 0.8125rem;
+  line-height: 1;
+}
+
+.schedule-calendar .ev-flag-retake {
+  color: #9333ea;
+  font-weight: 800;
+}
+
+.schedule-calendar .ev-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  word-break: break-word;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.dark .schedule-calendar .ev-title {
+  color: #e5e7eb;
+}
+
+.schedule-calendar .ev-time {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--gc-ink);
+  opacity: 0.85;
+}
+
+.dark .schedule-calendar .ev-time {
+  color: var(--gc-ink-dark);
+}
+
+.schedule-calendar .ev-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 0.6875rem;
+  color: #475569;
+}
+
+.dark .schedule-calendar .ev-meta {
+  color: #a8b3c2;
+}
+
+.schedule-calendar .ev-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schedule-calendar .ev-ico {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+/* Узкие карточки (несколько групп одновременно в недельном виде) — только главное */
+@container (max-width: 130px) {
+  .ev-meta {
+    display: none;
+  }
+  .ev-title {
+    -webkit-line-clamp: 2;
+  }
+}
+
+@container (max-width: 80px) {
+  .ev-time,
+  .ev-flag {
+    display: none;
+  }
+  .ev-code {
+    font-size: 0.65rem;
+    letter-spacing: 0;
+  }
+  .ev-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+}
+
+/* Совсем узкие карточки: остаются код группы и метка — подробности в подсказке */
+@container (max-width: 56px) {
+  .ev-title {
+    display: none;
+  }
+}
+
+/* «Месяц»: компактная «таблетка» в том же цвете группы */
+.schedule-calendar .fc-daygrid-event.ev-group {
+  border-left-width: 3px !important;
+  border-radius: 5px !important;
+  padding: 0 2px;
+}
+
+.schedule-calendar .fc-daygrid-event.ev-group .fc-daygrid-event-dot {
+  display: none;
+}
+
+.schedule-calendar .fc-daygrid-event.ev-group .fc-event-title,
+.schedule-calendar .fc-daygrid-event.ev-group .fc-event-time {
+  color: inherit;
+}
+
+/* «Список»: цветная полоса группы у строки */
+.schedule-calendar .fc-list-event.ev-group td:first-child {
   position: relative;
-  overflow: visible;
-  border-left: 4px solid transparent !important;
-  margin-left: 0 !important;
 }
 
-/* Цвета полос для каждой группы (соответствуют GROUP_COLOR_PALETTE) */
-.schedule-calendar .fc-event.group-stripe-0 {
-  border-left-color: #e91e63 !important;
-} /* Розовый */
-.schedule-calendar .fc-event.group-stripe-1 {
-  border-left-color: #9c27b0 !important;
-} /* Фиолетовый */
-.schedule-calendar .fc-event.group-stripe-2 {
-  border-left-color: #673ab7 !important;
-} /* Глубокий фиолетовый */
-.schedule-calendar .fc-event.group-stripe-3 {
-  border-left-color: #3f51b5 !important;
-} /* Индиго */
-.schedule-calendar .fc-event.group-stripe-4 {
-  border-left-color: #2196f3 !important;
-} /* Синий */
-.schedule-calendar .fc-event.group-stripe-5 {
-  border-left-color: #00bcd4 !important;
-} /* Циан */
-.schedule-calendar .fc-event.group-stripe-6 {
-  border-left-color: #009688 !important;
-} /* Бирюзовый */
-.schedule-calendar .fc-event.group-stripe-7 {
-  border-left-color: #4caf50 !important;
-} /* Зелёный */
-.schedule-calendar .fc-event.group-stripe-8 {
-  border-left-color: #8bc34a !important;
-} /* Лаймовый */
-.schedule-calendar .fc-event.group-stripe-9 {
-  border-left-color: #ff9800 !important;
-} /* Оранжевый */
-.schedule-calendar .fc-event.group-stripe-10 {
-  border-left-color: #ff5722 !important;
-} /* Глубокий оранжевый */
-.schedule-calendar .fc-event.group-stripe-11 {
-  border-left-color: #795548 !important;
-} /* Коричневый */
-
-/* Стили для дневного/недельного вида - более заметная полоса */
-.schedule-calendar .fc-timegrid-event[class*="group-stripe-"] {
-  border-left-width: 5px !important;
-  border-radius: 0 4px 4px 0 !important;
-}
-
-/* Стили для месячного вида */
-.schedule-calendar .fc-daygrid-event[class*="group-stripe-"] {
-  border-left-width: 4px !important;
-  border-radius: 0 4px 4px 0 !important;
-}
-
-/* Стили для списка */
-.schedule-calendar .fc-list-event[class*="group-stripe-"] td:first-child {
-  position: relative;
-}
-
-.schedule-calendar
-  .fc-list-event[class*="group-stripe-"]
-  td:first-child::before {
+.schedule-calendar .fc-list-event.ev-group td:first-child::before {
   content: "";
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
   width: 4px;
+  background-color: var(--gc);
 }
 
-.schedule-calendar .fc-list-event.group-stripe-0 td:first-child::before {
-  background-color: #e91e63;
-}
-.schedule-calendar .fc-list-event.group-stripe-1 td:first-child::before {
-  background-color: #9c27b0;
-}
-.schedule-calendar .fc-list-event.group-stripe-2 td:first-child::before {
-  background-color: #673ab7;
-}
-.schedule-calendar .fc-list-event.group-stripe-3 td:first-child::before {
-  background-color: #3f51b5;
-}
-.schedule-calendar .fc-list-event.group-stripe-4 td:first-child::before {
-  background-color: #2196f3;
-}
-.schedule-calendar .fc-list-event.group-stripe-5 td:first-child::before {
-  background-color: #00bcd4;
-}
-.schedule-calendar .fc-list-event.group-stripe-6 td:first-child::before {
-  background-color: #009688;
-}
-.schedule-calendar .fc-list-event.group-stripe-7 td:first-child::before {
-  background-color: #4caf50;
-}
-.schedule-calendar .fc-list-event.group-stripe-8 td:first-child::before {
-  background-color: #8bc34a;
-}
-.schedule-calendar .fc-list-event.group-stripe-9 td:first-child::before {
-  background-color: #ff9800;
-}
-.schedule-calendar .fc-list-event.group-stripe-10 td:first-child::before {
-  background-color: #ff5722;
-}
-.schedule-calendar .fc-list-event.group-stripe-11 td:first-child::before {
-  background-color: #795548;
+/* Группа в архиве: приглушённая карточка с диагональной штриховкой */
+.schedule-calendar .fc-event.ev-archived {
+  opacity: 0.72;
+  filter: saturate(0.55);
 }
 
-/* Hover эффект - подсветка полосы */
-.schedule-calendar .fc-event[class*="group-stripe-"]:hover {
-  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+.schedule-calendar .fc-timegrid-event.ev-archived,
+.schedule-calendar .fc-daygrid-event.ev-archived {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0,
+    transparent 7px,
+    rgba(100, 116, 139, 0.14) 7px,
+    rgba(100, 116, 139, 0.14) 14px
+  );
+}
+
+/* ============================================
+   РАЗМЕТКА СЕТКИ ПАР В «НЕДЕЛЕ» И «ДНЕ»
+   (классы задаёт slotLaneClassNames по настройкам расписания)
+   ============================================ */
+
+.schedule-calendar .fc-timegrid-slot-lane.slot-pair-even {
+  background-color: rgba(60, 80, 224, 0.035);
+}
+
+.dark .schedule-calendar .fc-timegrid-slot-lane.slot-pair-even {
+  background-color: rgba(148, 163, 184, 0.07);
+}
+
+/* Короткие перемены между парами */
+.schedule-calendar .fc-timegrid-slot-lane.slot-break {
+  background-color: rgba(100, 116, 139, 0.09);
+}
+
+.dark .schedule-calendar .fc-timegrid-slot-lane.slot-break {
+  background-color: rgba(148, 163, 184, 0.12);
+}
+
+/* Обеденный перерыв — штриховка */
+.schedule-calendar .fc-timegrid-slot-lane.slot-lunch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(245, 158, 11, 0.16) 0,
+    rgba(245, 158, 11, 0.16) 6px,
+    rgba(245, 158, 11, 0.04) 6px,
+    rgba(245, 158, 11, 0.04) 12px
+  );
+}
+
+/* Время вне сетки пар */
+.schedule-calendar .fc-timegrid-slot-lane.slot-off {
+  background-color: rgba(100, 116, 139, 0.06);
+}
+
+.dark .schedule-calendar .fc-timegrid-slot-lane.slot-off {
+  background-color: rgba(0, 0, 0, 0.18);
 }
 
 /* ============================================
@@ -2788,58 +2950,39 @@ onUnmounted(() => {
 
 /* ============================================
    СТИЛИ ДЛЯ ПЕРЕЗДАЧ
+   Заливка остаётся по цвету группы; пересдачу выделяют
+   пунктирная рамка и значок ↻ на карточке.
    ============================================ */
 
-/* Основной стиль для перездач */
-.schedule-calendar .fc-event.event-retake {
-  border: 2px solid #9333ea !important;
+.schedule-calendar .fc-timegrid-event.event-retake,
+.schedule-calendar .fc-daygrid-event.event-retake {
+  outline: 2px dashed #9333ea;
+  outline-offset: -2px;
   box-shadow:
     0 0 0 1px rgba(147, 51, 234, 0.2),
-    0 2px 8px rgba(147, 51, 234, 0.15) !important;
-  position: relative;
+    0 2px 8px rgba(147, 51, 234, 0.15);
 }
 
-/* Пульсирующая анимация для перездач */
-.schedule-calendar .fc-event.event-retake::before {
-  content: "";
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  border: 2px solid #9333ea;
-  border-radius: 4px;
-  opacity: 0;
-  animation: retake-pulse 2s ease-in-out infinite;
-  pointer-events: none;
-}
-
-@keyframes retake-pulse {
-  0%,
-  100% {
-    opacity: 0;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.3;
-    transform: scale(1.05);
-  }
-}
-
-/* Hover эффект для перездач */
-.schedule-calendar .fc-event.event-retake:hover {
+.schedule-calendar .fc-timegrid-event.event-retake:hover,
+.schedule-calendar .fc-daygrid-event.event-retake:hover {
   box-shadow:
     0 0 0 2px rgba(147, 51, 234, 0.3),
-    0 4px 12px rgba(147, 51, 234, 0.25) !important;
+    0 4px 12px rgba(147, 51, 234, 0.25);
 }
 
-/* Дополнительный фон для перездач в темной теме */
-.dark .schedule-calendar .fc-event.event-retake {
-  background: linear-gradient(
-    135deg,
-    rgba(147, 51, 234, 0.15) 0%,
-    rgba(147, 51, 234, 0.05) 100%
-  ) !important;
+/* Метка вида занятия в легенде под календарём */
+.legend-kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 5px;
+  background: #3c50e0;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 700;
 }
 
 /* ============================================

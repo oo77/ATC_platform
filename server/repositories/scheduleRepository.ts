@@ -4,6 +4,7 @@
 
 import { executeQuery, executeTransaction } from "../utils/db";
 import { isoToMySqlDatetime } from "../utils/timeUtils";
+import { GROUP_COLOR_PALETTE } from "../../shared/utils/groupColors";
 import { v4 as uuidv4 } from "uuid";
 import type {
   PoolConnection,
@@ -43,6 +44,8 @@ export interface ScheduleEvent {
     code: string;
     courseName: string;
     isArchived: boolean;
+    /** Индекс цвета группы в палитре (см. shared/utils/groupColors.ts) */
+    colorIndex?: number;
   } | null;
   instructor?: {
     id: string;
@@ -373,7 +376,82 @@ export async function getScheduleEvents(
   `;
 
   const rows = await executeQuery<ScheduleEventRow[]>(query, params);
-  return rows.map(mapRowToScheduleEvent);
+  const events = rows.map(mapRowToScheduleEvent);
+  await attachGroupColorIndexes(events);
+  return events;
+}
+
+/**
+ * Карта «id группы → индекс цвета в палитре».
+ *
+ * Индекс — порядковый номер группы по дате создания (по модулю размера палитры).
+ * Так группы, которые идут одновременно (создаются примерно в одно время), получают
+ * разные цвета, а цвет конкретной группы не зависит от выбранной недели или фильтров.
+ */
+export async function getGroupColorIndexMap(): Promise<Map<string, number>> {
+  const rows = await executeQuery<(RowDataPacket & { id: string })[]>(
+    "SELECT id FROM study_groups ORDER BY created_at ASC, id ASC",
+  );
+  const size = GROUP_COLOR_PALETTE.length;
+  const map = new Map<string, number>();
+  rows.forEach((row, rank) => map.set(row.id, rank % size));
+  return map;
+}
+
+/** Проставляет `group.colorIndex` всем событиям, у которых есть группа */
+async function attachGroupColorIndexes(events: ScheduleEvent[]): Promise<void> {
+  if (!events.some((e) => e.group)) return;
+  const colorMap = await getGroupColorIndexMap();
+  for (const e of events) {
+    if (!e.group) continue;
+    const idx = colorMap.get(e.group.id);
+    if (idx !== undefined) e.group.colorIndex = idx;
+  }
+}
+
+/**
+ * Количество слушателей в группах: Map<groupId, count>
+ */
+export async function getGroupStudentCounts(
+  groupIds: string[],
+): Promise<Map<string, number>> {
+  const result = new Map<string, number>();
+  if (groupIds.length === 0) return result;
+
+  const placeholders = groupIds.map(() => "?").join(", ");
+  const rows = await executeQuery<
+    (RowDataPacket & { group_id: string; cnt: number })[]
+  >(
+    `SELECT group_id, COUNT(*) AS cnt
+       FROM study_group_students
+      WHERE group_id IN (${placeholders})
+      GROUP BY group_id`,
+    groupIds,
+  );
+  for (const row of rows) result.set(row.group_id, Number(row.cnt));
+  return result;
+}
+
+/**
+ * ID групп (из переданных), у которых есть занятия ДО указанной даты.
+ * @param before дата в формате YYYY-MM-DD (не включая)
+ */
+export async function getGroupIdsWithEventsBefore(
+  groupIds: string[],
+  before: string,
+): Promise<Set<string>> {
+  const result = new Set<string>();
+  if (groupIds.length === 0) return result;
+
+  const placeholders = groupIds.map(() => "?").join(", ");
+  const rows = await executeQuery<(RowDataPacket & { group_id: string })[]>(
+    `SELECT DISTINCT group_id
+       FROM schedule_events
+      WHERE group_id IN (${placeholders}) AND start_time < ?`,
+    [...groupIds, `${before} 00:00:00`],
+  );
+  for (const row of rows) result.add(row.group_id);
+  return result;
 }
 
 /**

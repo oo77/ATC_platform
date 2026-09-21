@@ -26,7 +26,10 @@ export interface ScheduleEvent {
   title: string;
   description?: string;
   groupId?: string;
-  group?: StudyGroup;
+  group?: StudyGroup & {
+    /** Индекс цвета группы в палитре (назначается сервером) */
+    colorIndex?: number;
+  };
   disciplineId?: string;
   discipline?: {
     id: string;
