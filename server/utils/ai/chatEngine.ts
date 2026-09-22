@@ -31,12 +31,22 @@ export interface ColumnDef {
   type?: "text" | "number" | "date";
 }
 
+export interface CertificateItem {
+  id: string;
+  certificateNumber: string;
+  studentName: string;
+  courseName: string;
+  issueDate?: string;
+  status?: string;
+}
+
 export interface ReportArtifact {
   title: string;
   description?: string;
   columns: ColumnDef[];
   rows: Record<string, any>[];
   summaryMetrics?: SummaryMetric[];
+  certificates?: CertificateItem[];
   chartSuggestion?: {
     type?: "bar" | "doughnut" | "line";
     xKey?: string;
@@ -49,6 +59,7 @@ export interface ChatEngineResponse {
   reply: string;
   steps: AgentStep[];
   artifact: ReportArtifact | null;
+  certificates?: CertificateItem[] | null;
   sqlExecuted: string | null;
 }
 
@@ -231,8 +242,11 @@ ${orgNotice}
    - Учебные группы. status: 'planning', 'in_progress', 'completed', 'cancelled'.
 7. group_students (id, group_id, student_id, status)
    - Слушатели, зачисленные в конкретную группу.
-8. certificates (id, student_id, course_name, issue_date, certificate_number, expiry_date)
-   - Выданные сертификаты слушателям.
+8. issued_certificates (id, certificate_number, student_id, group_id, issue_date, status, pdf_file_url, docx_file_url)
+   - Выданные официальные сертификаты слушателям.
+   - status: 'issued', 'revoked'.
+   - ВАЖНО: При запросе сертификатов ВСЕГДА делай JOIN с таблицей students (s.full_name) и courses (c.name) и выбирай ic.id, ic.certificate_number, s.full_name as student_name, c.name as course_name, ic.issue_date!
+   - В ответе action: "final_answer" обязательно заполняй поле "certificates": [ { "id": "...", "certificateNumber": "...", "studentName": "...", "courseName": "...", "issueDate": "..." } ], чтобы в интерфейсе появились кнопки скачивания PDF и единого архива ZIP!
 9. files (id, uuid, filename, mime_type, size_bytes, extension, category, user_id, course_id, group_id, created_at)
    - Реестр загруженных файлов, приказов, учебных планов и методических материалов.
 10. attendance (id, group_id, student_id, date, status)
@@ -324,14 +338,23 @@ ${orgNotice}
 // ПОЛУЧЕНИЕ AI КЛИЕНТА
 // ============================================================================
 
-async function getAIClient(): Promise<{
+async function getAIClient(
+  targetSettingId?: string,
+  overrideModel?: string
+): Promise<{
   client: OpenAI;
   model: string;
   settingId: string | null;
 }> {
   try {
-    const dbSettings = await aiSettingsRepository.getDefault();
-    if (dbSettings) {
+    let dbSettings: any = null;
+    if (targetSettingId && targetSettingId !== "env_default") {
+      dbSettings = await aiSettingsRepository.getById(targetSettingId);
+    }
+    if (!dbSettings) {
+      dbSettings = await aiSettingsRepository.getDefault();
+    }
+    if (dbSettings && dbSettings.isActive) {
       const decryptedKey = await aiSettingsRepository.getDecryptedApiKey(dbSettings.id);
       if (decryptedKey) {
         const client = new OpenAI({
@@ -340,7 +363,7 @@ async function getAIClient(): Promise<{
         });
         return {
           client,
-          model: dbSettings.textModel || "gpt-4o-mini",
+          model: overrideModel || dbSettings.textModel || "gpt-4o-mini",
           settingId: dbSettings.id,
         };
       }
@@ -358,7 +381,7 @@ async function getAIClient(): Promise<{
 
   return {
     client,
-    model: process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini",
+    model: overrideModel || process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini",
     settingId: null,
   };
 }
@@ -584,9 +607,13 @@ export async function processAiChatMessage(params: {
   userContext: UserContext;
   history?: ChatHistoryMessage[];
   fileAttachmentUuid?: string;
+  settingId?: string;
+  modelOverride?: string;
+  effort?: "low" | "medium" | "high";
 }): Promise<ChatEngineResponse> {
-  const { userMessage, userContext, history = [], fileAttachmentUuid } = params;
-  const { client, model, settingId } = await getAIClient();
+  const { userMessage, userContext, history = [], fileAttachmentUuid, settingId: requestedSettingId, modelOverride, effort = "medium" } = params;
+  const { client, model, settingId } = await getAIClient(requestedSettingId, modelOverride);
+  const chosenModel = model;
 
   const systemPrompt = buildSystemPrompt(userContext);
 
@@ -617,15 +644,15 @@ export async function processAiChatMessage(params: {
 
   const steps: AgentStep[] = [];
   let lastExecutedSql: string | null = null;
-  const MAX_ITERATIONS = 6;
+  const MAX_ITERATIONS = effort === "low" ? 2 : effort === "high" ? 8 : 4;
   let totalPromptTokens = 0;
   let totalCompletionTokens = 0;
 
   for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     const completion = await client.chat.completions.create({
-      model,
+      model: chosenModel,
       messages,
-      temperature: 0.2,
+      temperature: effort === "high" ? 0.3 : 0.1,
       response_format: { type: "json_object" },
     });
 
@@ -678,10 +705,13 @@ export async function processAiChatMessage(params: {
         }
       }
 
+      const certs = parsed.certificates || parsed.artifact?.certificates || null;
+
       return {
         reply: parsed.reply || "Готово.",
         steps,
         artifact: parsed.artifact || null,
+        certificates: certs,
         sqlExecuted: lastExecutedSql,
       };
     }

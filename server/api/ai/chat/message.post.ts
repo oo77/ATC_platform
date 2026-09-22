@@ -101,12 +101,19 @@ export default defineEventHandler(async (event) => {
       sqlExecuted: m.sql_executed,
     }));
 
+    const requestedSettingId = body?.settingId ? String(body.settingId).trim() : undefined;
+    const requestedModel = body?.model ? String(body.model).trim() : undefined;
+    const requestedEffort = (['low', 'medium', 'high'].includes(body?.effort) ? body.effort : 'medium') as 'low' | 'medium' | 'high';
+
     // 5. Вызов ReAct Chat Engine
     const aiResponse = await processAiChatMessage({
       userMessage: rawMessage,
       userContext,
       history,
       fileAttachmentUuid,
+      settingId: requestedSettingId,
+      modelOverride: requestedModel,
+      effort: requestedEffort,
     });
 
     // 6. Сохранение ответа ассистента
@@ -149,6 +156,7 @@ export default defineEventHandler(async (event) => {
           content: aiResponse.reply,
           steps: aiResponse.steps,
           artifact: aiResponse.artifact,
+          certificates: aiResponse.certificates || aiResponse.artifact?.certificates || null,
           sqlExecuted: aiResponse.sqlExecuted,
           createdAt: new Date().toISOString(),
         },
