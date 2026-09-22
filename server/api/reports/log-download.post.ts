@@ -34,6 +34,7 @@ export default defineEventHandler(async (event: H3Event) => {
     empty_journal: "Пустой журнал",
     group_report: "Зачётная ведомость",
     certificate_report: "Ведомость выдачи сертификатов",
+    assessment_sheet: "Ведомость контроля знаний",
   };
 
   const reportName = reportNames[reportType] || reportType;

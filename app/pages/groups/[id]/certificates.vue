@@ -371,6 +371,67 @@
               </button>
             </div>
           </div>
+
+          <!-- Скачать ведомость контроля знаний (бланк по дисциплинам, для заполнения от руки) -->
+          <div class="relative inline-block">
+            <UiButton
+              @click="toggleAssessmentSheetDropdown"
+              :disabled="generatingAssessmentSheet"
+              variant="outline"
+              class="font-bold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              <FileIcon v-if="!generatingAssessmentSheet" class="w-4 h-4 mr-2" />
+              <Loader2 v-else class="w-4 h-4 mr-2 animate-spin" />
+              <span>{{
+                generatingAssessmentSheet ? "Генерация..." : "Ведомость контроля"
+              }}</span>
+              <ChevronDown class="w-4 h-4 ml-1 opacity-50" />
+            </UiButton>
+
+            <div
+              v-if="showAssessmentSheetDropdown"
+              class="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden"
+            >
+              <button
+                @click="downloadAssessmentSheet('pdf')"
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-t-lg text-gray-900 dark:text-white"
+              >
+                <svg
+                  class="w-4 h-4 text-danger"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <span>Скачать PDF</span>
+              </button>
+              <button
+                @click="downloadAssessmentSheet('docx')"
+                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-b-lg text-gray-900 dark:text-white"
+              >
+                <svg
+                  class="w-4 h-4 text-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <span>Скачать Word</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Индикатор активной фоновой выдачи -->
@@ -789,6 +850,8 @@ const issueResults = ref<IssueCertificatesResponse["results"]>([]);
 const resultsModalOpen = ref(false);
 const generatingPdf = ref(false); // Состояние генерации ведомости
 const showReportDropdown = ref(false); // Состояние выпадающего меню формата
+const generatingAssessmentSheet = ref(false); // Состояние генерации ведомости контроля знаний
+const showAssessmentSheetDropdown = ref(false); // Состояние выпадающего меню формата
 
 // Bulk issue modal
 const bulkIssueModalOpen = ref(false);
@@ -1182,6 +1245,60 @@ const downloadReport = async (format: "pdf" | "docx" = "pdf") => {
     showError(error.message || "Ошибка при формировании ведомости");
   } finally {
     generatingPdf.value = false;
+  }
+};
+
+// Функция переключения выпадающего меню формата ведомости контроля знаний
+const toggleAssessmentSheetDropdown = () => {
+  showAssessmentSheetDropdown.value = !showAssessmentSheetDropdown.value;
+};
+
+// Скачивание «Ведомости проведения контроля знаний» — бланк по утверждённому образцу,
+// формируется сервером (server/services/assessmentSheetService.ts)
+const downloadAssessmentSheet = async (format: "pdf" | "docx" = "pdf") => {
+  if (generatingAssessmentSheet.value || !groupId.value) return;
+
+  showAssessmentSheetDropdown.value = false;
+  generatingAssessmentSheet.value = true;
+  try {
+    const blob = await authFetch<Blob>(
+      `/api/groups/${groupId.value}/assessment-sheet?format=${format}`,
+      { responseType: "blob" },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Vedomost_${group.value?.code || groupId.value}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "assessment_sheet",
+          format,
+          groupCode: group.value?.code,
+          groupId: groupId.value,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+    }
+
+    showSuccess(`Ведомость контроля знаний сформирована (${format.toUpperCase()})`);
+  } catch (error: any) {
+    console.error("Error generating assessment sheet:", error);
+    showError(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания ведомости"
+        : error?.data?.message || error.message || "Ошибка при формировании ведомости",
+    );
+  } finally {
+    generatingAssessmentSheet.value = false;
   }
 };
 
