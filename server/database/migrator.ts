@@ -51,6 +51,7 @@ import * as attestationCertificates from "./migrations/20260813_040_attestation_
 import * as attestationResponsibleRole from "./migrations/20260813_041_attestation_responsible_role";
 import * as systemSettings from "./migrations/20260909_042_system_settings";
 import * as flexibleAiProviders from "./migrations/20260910_043_flexible_ai_providers";
+import * as addNameUzToCoursesAndShortNameToDisciplines from "./migrations/20260922_044_add_name_uz_to_courses_and_short_name_to_disciplines";
 
 /**
  * ============================================================================
@@ -458,6 +459,15 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: flexibleAiProviders.up,
     down: flexibleAiProviders.down,
     description: flexibleAiProviders.description,
+  },
+  // ============================================================
+  // Миграция 044: Узбекское название курса + короткое название дисциплины
+  // ============================================================
+  {
+    name: "20260922_044_add_name_uz_to_courses_and_short_name_to_disciplines",
+    up: addNameUzToCoursesAndShortNameToDisciplines.up,
+    down: addNameUzToCoursesAndShortNameToDisciplines.down,
+    description: addNameUzToCoursesAndShortNameToDisciplines.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

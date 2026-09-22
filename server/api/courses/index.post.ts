@@ -10,6 +10,7 @@ import { z } from 'zod';
 // Схема валидации для дисциплины
 const disciplineSchema = z.object({
   name: z.string().min(1, 'Название дисциплины обязательно'),
+  shortName: z.string().min(1, 'Короткое название дисциплины обязательно').max(20),
   description: z.string().optional(),
   theoryHours: z.number().min(0, 'Часы теории не могут быть отрицательными'),
   practiceHours: z.number().min(0, 'Часы практики не могут быть отрицательными'),
@@ -24,6 +25,7 @@ const disciplineSchema = z.object({
 // Схема валидации для курса
 const courseSchema = z.object({
   name: z.string().min(1, 'Название курса обязательно'),
+  nameUz: z.string().optional(),
   shortName: z.string().min(2).max(10, 'Короткое название должно быть от 2 до 10 символов'),
   code: z.string().min(1, 'Код курса обязателен'),
   description: z.string().optional(),

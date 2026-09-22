@@ -2,8 +2,9 @@
  * PDF-версия «Ведомости проведения контроля знаний» — тот же бланк, что и Word
  * (server/assets/templates/assessment-sheet-template.docx): геометрия (A4, поля, ширины
  * колонок, шрифт Montserrat) взята из шаблона. Ячейки баллов показывают уже выставленную
- * оценку, если она есть, иначе пусты (форма для заполнения от руки); «Итого, %» всегда пусто —
- * как и в Word-версии, см. assessmentSheetService.ts.
+ * оценку, если она есть, иначе пусты (форма для заполнения от руки); «Итого, %» — среднее по
+ * уже выставленным баллам. Все дисциплины — в одной таблице на одной странице, названия
+ * сокращаются под ширину колонки — как и в Word-версии, см. assessmentSheetService.ts.
  *
  * Реализовано на pdf-lib, как и остальные PDF проекта.
  */
@@ -14,12 +15,13 @@ import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import {
   disciplineColumnWidths,
-  disciplineHeaderLines,
   wrapWithEllipsis,
-  MAX_DISCIPLINES_PER_BLOCK,
+  averageScore,
+  NUM_TW,
+  NAME_TW,
+  ITOGO_TW,
   type AssessmentSheetModel,
 } from "./assessmentSheetService";
-import { chunk } from "./emptyJournalService";
 
 const tw = (twips: number) => twips / 20;
 const BLACK = rgb(0, 0, 0);
@@ -42,13 +44,10 @@ const BODY_SIZE = 12; // sz=24 — большинство текста блан�
 const BODY_LINE = SINGLE * BODY_SIZE; // межстрочный "одинарный" (line=240/auto в шаблоне)
 const CELL_PAD_X = tw(108); // поля ячейки слева/справа (tblCellMar таблицы)
 
-/** Сетка таблицы: № | ФИО | N колонок дисциплин | Итого — как в шаблоне */
-const NUM_TW = 509;
-const NAME_TW = 3318;
-const ITOGO_TW = 2117;
 const BORDER = 0.5; // sz=4 в шаблоне
-/** Ячейка заголовка дисциплины/даты не выше этого числа строк — длинные названия обрезаются («…») */
-const MAX_HEADER_LINES = 2;
+/** Название дисциплины — не более одной строки; дата — до двух, если тесно (см. сервис Word-версии) */
+const MAX_DISCIPLINE_NAME_LINES = 1;
+const MAX_DATE_LINES = 2;
 
 interface Fonts {
   regular: PDFFont;
@@ -169,15 +168,20 @@ function drawTableHead(ctx: Ctx): number {
   const lastCol = gx.length - 2; // индекс последней колонки (Итого)
   const top = ctx.y;
 
-  // Длинные названия дисциплин (и, в крайнем случае, тесные даты) переносятся не больше чем
-  // на MAX_HEADER_LINES строк и обрезаются с «…» — та же логика, что и в Word (см.
-  // assessmentSheetService.wrapWithEllipsis), чтобы шапка не «расползалась» по высоте.
-  const fitHeader = (text: string, widthPt: number) =>
-    wrapWithEllipsis(text, (s) => bold.widthOfTextAtSize(clean(s), BODY_SIZE), widthPt - 2 * CELL_PAD_X, MAX_HEADER_LINES);
+  // Название дисциплины обрезается до одной строки, дата — до двух, если тесно (см. wrapWithEllipsis
+  // в assessmentSheetService.ts — та же логика, что и в Word), чтобы шапка не «расползалась» по высоте.
+  const fitHeader = (text: string, widthPt: number, maxLines: number, allowCharSplit = true) =>
+    wrapWithEllipsis(
+      text,
+      (s) => bold.widthOfTextAtSize(clean(s), BODY_SIZE),
+      widthPt - 2 * CELL_PAD_X,
+      maxLines,
+      allowCharSplit,
+    );
 
   // --- строка "Дисциплина: <имя> ... Итого, %" ---
   const disciplineLines = disciplines.map((d, i) =>
-    disciplineHeaderLines(d, (s) => bold.widthOfTextAtSize(clean(s), BODY_SIZE), ctx.widths[i]! - 2 * CELL_PAD_X),
+    fitHeader(d.name, ctx.widths[i]!, MAX_DISCIPLINE_NAME_LINES),
   );
   const row0Lines = Math.max(1, ...disciplineLines.map((l) => l.length));
   const row0H = row0Lines * BODY_LINE;
@@ -190,7 +194,7 @@ function drawTableHead(ctx: Ctx): number {
   const row1Top = top + row0H;
 
   // --- строка "дата проведения: <дата> ..." ---
-  const dateLines = disciplines.map((d, i) => fitHeader(d.date, ctx.widths[i]!));
+  const dateLines = disciplines.map((d, i) => fitHeader(d.date, ctx.widths[i]!, MAX_DATE_LINES, false));
   const row1H = Math.max(1, ...dateLines.map((l) => l.length)) * BODY_LINE;
   drawCenteredLines(ctx, ["дата проведения:"], bold, BODY_SIZE, (gx[COL_NUM]! + gx[COL_DISC0]!) / 2, row1Top + (row1H - BODY_LINE) / 2);
   disciplines.forEach((_, i) => {
@@ -200,16 +204,22 @@ function drawTableHead(ctx: Ctx): number {
   drawCenteredLines(ctx, ["Итого, %"], bold, BODY_SIZE, (gx[lastCol]! + gx[lastCol + 1]!) / 2, top + (row0H + row1H - BODY_LINE) / 2);
 
   const row2Top = row1Top + row1H;
-  const row2H = BODY_LINE;
+  // Высота строки «№ / Ф.И.О. слушателя / Балл, %» — по факту, а не всегда 1 строка: при узкой
+  // колонке ФИО заголовок «Ф.И.О. слушателя» может перенестись на 2 строки (см. баг с наездом
+  // на первую строку таблицы, когда высота считалась фиксированной).
+  const nameHeaderLines = wrapText("Ф.И.О. слушателя", bold, BODY_SIZE, tw(NAME_TW) - 2 * CELL_PAD_X);
+  const row2H = Math.max(1, nameHeaderLines.length) * BODY_LINE;
   drawCenteredLines(ctx, ["№"], bold, BODY_SIZE, (gx[COL_NUM]! + gx[COL_NUM + 1]!) / 2, row2Top);
-  drawCenteredLines(ctx, wrapText("Ф.И.О. слушателя", bold, BODY_SIZE, tw(NAME_TW) - 2 * CELL_PAD_X), bold, BODY_SIZE, (gx[COL_NAME]! + gx[COL_NAME + 1]!) / 2, row2Top);
-  drawCenteredLines(ctx, ["Балл, %"], bold, BODY_SIZE, (gx[COL_DISC0]! + gx[lastCol + 1]!) / 2, row2Top);
+  drawCenteredLines(ctx, nameHeaderLines, bold, BODY_SIZE, (gx[COL_NAME]! + gx[COL_NAME + 1]!) / 2, row2Top);
+  drawCenteredLines(ctx, ["Балл, %"], bold, BODY_SIZE, (gx[COL_DISC0]! + gx[lastCol + 1]!) / 2, row2Top + (row2H - BODY_LINE) / 2);
 
   const bottom = row2Top + row2H;
 
   // --- линии ---
   hLine(ctx, gx[0]!, gx[gx.length - 1]!, top);
-  hLine(ctx, gx[0]!, gx[gx.length - 1]!, row1Top);
+  // Разделитель между «Дисциплина:» и «дата проведения:» не идёт через «Итого, %» — эта ячейка
+  // объединена на обе строки, внутренней границы там нет (как и в самой таблице Word)
+  hLine(ctx, gx[0]!, gx[lastCol]!, row1Top);
   hLine(ctx, gx[0]!, gx[lastCol + 1]!, row2Top);
   hLine(ctx, gx[0]!, gx[gx.length - 1]!, bottom);
   for (const x of gx) vLine(ctx, x, top, bottom);
@@ -245,6 +255,15 @@ function drawStudentRow(ctx: Ctx, index: number, name: string, scores: (number |
     const width = regular.widthOfTextAtSize(text, BODY_SIZE);
     drawText(ctx, text, cx - width / 2, top + ASCENT * BODY_SIZE, regular, BODY_SIZE);
   });
+
+  // «Итого, %» — среднее по уже выставленным баллам (пусто, если баллов нет вообще)
+  const avg = averageScore(scores);
+  if (avg !== null) {
+    const text = String(avg);
+    const cx = (gx[lastCol]! + gx[lastCol + 1]!) / 2;
+    const width = regular.widthOfTextAtSize(text, BODY_SIZE);
+    drawText(ctx, text, cx - width / 2, top + ASCENT * BODY_SIZE, regular, BODY_SIZE);
+  }
 
   hLine(ctx, gx[0]!, gx[lastCol + 1]!, bottom);
   for (const x of gx) vLine(ctx, x, top, bottom);
@@ -320,35 +339,25 @@ export async function renderAssessmentSheetPdf(model: AssessmentSheetModel): Pro
   doc.setTitle(`Ведомость контроля знаний ${model.groupCode}`);
   const fonts = await loadFonts(doc);
 
+  const { widths, gx } = computeGrid(model.disciplines);
   const ctx: Ctx = {
     doc,
     page: doc.addPage([PAGE_W, PAGE_H]),
     fonts,
     y: M_TOP,
-    widths: [],
-    gx: [],
-    disciplines: [],
+    widths,
+    gx,
+    disciplines: model.disciplines,
   };
 
-  // Больше MAX_DISCIPLINES_PER_BLOCK дисциплин — отдельная страница-бланк на каждую пачку
-  // колонок (см. assessmentSheetService.MAX_DISCIPLINES_PER_BLOCK), с той же логикой, что и в Word.
-  chunk(model.disciplines, MAX_DISCIPLINES_PER_BLOCK).forEach((disciplines, i) => {
-    if (i > 0) newPage(ctx);
-    const { widths, gx } = computeGrid(disciplines);
-    ctx.widths = widths;
-    ctx.gx = gx;
-    ctx.disciplines = disciplines;
-
-    const colOffset = i * MAX_DISCIPLINES_PER_BLOCK;
-
-    drawHeader(ctx, model);
-    drawTableHead(ctx);
-    model.students.forEach((name, si) => {
-      const scores = model.scores[si]?.slice(colOffset, colOffset + disciplines.length) ?? [];
-      drawStudentRow(ctx, si + 1, name, scores);
-    });
-    drawSignatureBlock(ctx);
+  // Все дисциплины — одной таблицей на одной странице; при большом числе слушателей таблица
+  // естественно переходит на следующие страницы (drawStudentRow сама вызывает newPage+повтор шапки).
+  drawHeader(ctx, model);
+  drawTableHead(ctx);
+  model.students.forEach((name, si) => {
+    drawStudentRow(ctx, si + 1, name, model.scores[si] ?? []);
   });
+  drawSignatureBlock(ctx);
 
   return Buffer.from(await doc.save());
 }

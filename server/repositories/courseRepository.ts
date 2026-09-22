@@ -17,6 +17,7 @@ import type {
 export interface Course {
   id: string;
   name: string;
+  nameUz?: string | null;
   shortName: string;
   code: string;
   description?: string | null;
@@ -49,6 +50,7 @@ export interface Discipline {
   id: string;
   courseId: string;
   name: string;
+  shortName?: string | null;
   description?: string | null;
   hours: number;
   theoryHours: number;
@@ -105,6 +107,7 @@ export interface PaginatedResult<T> {
 
 export interface CreateCourseInput {
   name: string;
+  nameUz?: string;
   shortName: string;
   code: string;
   description?: string;
@@ -117,6 +120,7 @@ export interface CreateCourseInput {
 
 export interface UpdateCourseInput {
   name?: string;
+  nameUz?: string | null;
   shortName?: string;
   code?: string;
   description?: string | null;
@@ -131,6 +135,7 @@ export interface UpdateCourseInput {
 
 export interface CreateDisciplineInput {
   name: string;
+  shortName?: string;
   description?: string;
   theoryHours: number;
   practiceHours: number;
@@ -142,6 +147,7 @@ export interface CreateDisciplineInput {
 export interface UpdateDisciplineInput {
   id?: string;
   name?: string;
+  shortName?: string | null;
   description?: string | null;
   theoryHours?: number;
   practiceHours?: number;
@@ -157,6 +163,7 @@ export interface UpdateDisciplineInput {
 interface CourseRow extends RowDataPacket {
   id: string;
   name: string;
+  name_uz: string | null;
   short_name: string;
   code: string;
   description: string | null;
@@ -186,6 +193,7 @@ interface DisciplineRow extends RowDataPacket {
   id: string;
   course_id: string;
   name: string;
+  short_name: string | null;
   description: string | null;
   hours: number;
   theory_hours: number;
@@ -233,6 +241,7 @@ function mapRowToCourse(row: CourseRow): Course {
   return {
     id: row.id,
     name: row.name,
+    nameUz: row.name_uz,
     shortName: row.short_name,
     code: row.code,
     description: row.description,
@@ -268,6 +277,7 @@ function mapRowToDiscipline(row: DisciplineRow): Discipline {
     id: row.id,
     courseId: row.course_id,
     name: row.name,
+    shortName: row.short_name,
     description: row.description,
     hours: row.hours,
     theoryHours: row.theory_hours,
@@ -400,10 +410,11 @@ export async function getCoursesPaginated(
 
   if (search) {
     conditions.push(
-      "(name LIKE ? OR short_name LIKE ? OR code LIKE ? OR description LIKE ?)"
+      "(name LIKE ? OR name_uz LIKE ? OR short_name LIKE ? OR code LIKE ? OR description LIKE ?)"
     );
     const searchPattern = `%${search}%`;
     queryParams.push(
+      searchPattern,
       searchPattern,
       searchPattern,
       searchPattern,
@@ -561,11 +572,12 @@ export async function createCourse(data: CreateCourseInput): Promise<Course> {
   await executeTransaction(async (connection: PoolConnection) => {
     // Создаём курс
     await connection.execute(
-      `INSERT INTO courses (id, name, short_name, code, description, course_type, total_hours, certificate_template_id, certificate_validity_months, is_active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO courses (id, name, name_uz, short_name, code, description, course_type, total_hours, certificate_template_id, certificate_validity_months, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         data.name,
+        data.nameUz || null,
         data.shortName.toUpperCase(),
         data.code,
         data.description || null,
@@ -586,12 +598,13 @@ export async function createCourse(data: CreateCourseInput): Promise<Course> {
         const disciplineId = uuidv4();
 
         await connection.execute(
-          `INSERT INTO disciplines (id, course_id, name, description, hours, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO disciplines (id, course_id, name, short_name, description, hours, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             disciplineId,
             id,
             discipline.name,
+            discipline.shortName || null,
             discipline.description || null,
             discipline.theoryHours + discipline.practiceHours + discipline.assessmentHours,
             discipline.theoryHours,
@@ -637,6 +650,10 @@ export async function updateCourse(
   if (data.name !== undefined) {
     updates.push("name = ?");
     params.push(data.name);
+  }
+  if (data.nameUz !== undefined) {
+    updates.push("name_uz = ?");
+    params.push(data.nameUz);
   }
   if (data.shortName !== undefined) {
     updates.push("short_name = ?");
@@ -723,12 +740,13 @@ export async function addDisciplineToCourse(
     const nextOrder = (maxOrderRows[0]?.max_order ?? -1) + 1;
 
     await connection.execute(
-      `INSERT INTO disciplines (id, course_id, name, description, hours, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO disciplines (id, course_id, name, short_name, description, hours, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         courseId,
         data.name,
+        data.shortName || null,
         data.description || null,
         data.theoryHours + data.practiceHours + data.assessmentHours,
         data.theoryHours,
@@ -784,6 +802,10 @@ export async function updateDiscipline(
     if (data.name !== undefined) {
       updates.push("name = ?");
       params.push(data.name);
+    }
+    if (data.shortName !== undefined) {
+      updates.push("short_name = ?");
+      params.push(data.shortName);
     }
     if (data.description !== undefined) {
       updates.push("description = ?");

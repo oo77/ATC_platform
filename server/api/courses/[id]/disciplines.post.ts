@@ -26,6 +26,13 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    if (!body.shortName || typeof body.shortName !== 'string') {
+      throw createError({
+        statusCode: 400,
+        message: 'Короткое название дисциплины обязательно',
+      });
+    }
+
     if (typeof body.theoryHours !== 'number' || body.theoryHours < 0) {
       throw createError({
         statusCode: 400,
@@ -58,6 +65,7 @@ export default defineEventHandler(async (event) => {
     // Создаем дисциплину
     const discipline = await addDisciplineToCourse(courseId, {
       name: body.name,
+      shortName: body.shortName,
       description: body.description,
       theoryHours: body.theoryHours,
       practiceHours: body.practiceHours,

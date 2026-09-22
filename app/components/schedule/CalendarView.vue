@@ -1196,8 +1196,10 @@ const onEventDidMount = (arg: EventMountArg) => {
   // Формируем содержимое tooltip
   const parts: string[] = [];
 
-  // Название (заголовок)
-  parts.push(`<div class="event-tooltip-title">${event.title}</div>`);
+  // Название (заголовок) — полное название дисциплины
+  parts.push(
+    `<div class="event-tooltip-title">${extendedProps.rawTitle || event.title}</div>`,
+  );
 
   // Время
   if (event.start) {

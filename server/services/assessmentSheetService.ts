@@ -14,7 +14,13 @@
  *
  * Ячейка балла — уже выставленная оценка (лучшая из grades по дисциплине, включая пересдачи),
  * если она есть, иначе пусто — для заполнения от руки, если контроль ещё не проведён/не оценён
- * (ровно как в присланном образце, где дата уже вписана, а баллы — нет). «Итого, %» всегда пусто.
+ * (ровно как в присланном образце, где дата уже вписана, а баллы — нет). «Итого, %» — среднее
+ * по уже выставленным баллам слушателя (пусто, если баллов пока нет вообще).
+ *
+ * Все дисциплины — в одной таблице на одной странице (никакого разбиения на несколько таблиц).
+ * В шапке колонки — короткое название дисциплины (disciplines.short_name из карточки
+ * дисциплины), если оно задано; иначе полное название, обрезанное под ширину колонки в одну
+ * строку — так даже десяток дисциплин остаётся читаемым без разрастания бланка на несколько листов.
  *
  * Блок подписей («Ответственный специалист (оператор): …», «Проверил: …») — фиксированные
  * должности и ФИО из шаблона (аналогично DEFAULT_APPROVER_NAME в schedule/export.get.ts);
@@ -28,7 +34,7 @@ import PizZip from "pizzip";
 import fontkit from "@pdf-lib/fontkit";
 import type { RowDataPacket } from "mysql2/promise";
 import { executeQuery } from "../utils/db";
-import { formatPersonName, chunk } from "./emptyJournalService";
+import { formatPersonName } from "./emptyJournalService";
 
 const TEMPLATE_PATH = path.join(
   process.cwd(),
@@ -39,20 +45,18 @@ const TEMPLATE_PATH = path.join(
 );
 
 /**
- * Суммарная ширина колонок дисциплин в шаблоне (twips): 2247 + 2642 — пул, который делится
- * поровну между фактическим числом дисциплин. Остальные колонки (№, ФИО, Итого) неизменны.
+ * Ширины колонок (twips) — № и Итого узкие (короткие значения), ФИО и пул дисциплин делят
+ * остаток страницы; пул дисциплин расходуется поровну между фактическим числом дисциплин
+ * (см. disciplineColumnWidths) — их всегда показывают все, в одну таблицу на одной странице.
  */
-const DISCIPLINE_POOL_TW = 2247 + 2642;
-const MIN_DISCIPLINE_COL_TW = 650;
-/** Ячейка заголовка дисциплины/даты не выше этого числа строк — длинные названия обрезаются («…») */
-const MAX_HEADER_LINES = 2;
-/**
- * Больше стольких дисциплин в одной таблице колонки становятся нечитаемыми (короткие
- * аббревиатуры не отличить друг от друга) — при бо́льшем числе дисциплин бланк разбивается
- * на несколько таблиц по MAX_DISCIPLINES_PER_BLOCK колонок, каждая на отдельной странице,
- * с полным списком слушателей и подписями — как несколько отдельных бланков под один файл.
- */
-export const MAX_DISCIPLINES_PER_BLOCK = 3;
+export const NUM_TW = 509;
+export const NAME_TW = 2600; // хватает на «Ф.И.О. слушателя» в шапке в одну строку
+export const ITOGO_TW = 1350;
+const DISCIPLINE_POOL_TW = 6601;
+const MIN_DISCIPLINE_COL_TW = 400;
+/** Название дисциплины — не более одной строки (обрезается с «…»); дата — до двух, если тесно */
+const MAX_DISCIPLINE_NAME_LINES = 1;
+const MAX_DATE_LINES = 2;
 
 // ============================================================================
 // ДАННЫЕ
@@ -62,7 +66,6 @@ export interface AssessmentSheetDiscipline {
   name: string;
   /** Как в бланке: «10.09.2026»; пусто, если контроль ещё не назначен в расписании */
   date: string;
-  isRetake: boolean;
 }
 
 export interface AssessmentSheetModel {
@@ -84,12 +87,14 @@ interface GroupRow extends RowDataPacket {
 interface DisciplineEventRow extends RowDataPacket {
   discipline_id: string;
   discipline_name: string | null;
+  discipline_short_name: string | null;
   day: string;
 }
 
 interface CourseDisciplineRow extends RowDataPacket {
   id: string;
   name: string;
+  short_name: string | null;
 }
 
 interface GradeRow extends RowDataPacket {
@@ -139,6 +144,7 @@ export async function loadAssessmentSheetModel(
     executeQuery<DisciplineEventRow[]>(
       `SELECT se.discipline_id,
               d.name AS discipline_name,
+              d.short_name AS discipline_short_name,
               DATE_FORMAT(
                 COALESCE(
                   MIN(CASE WHEN se.original_event_id IS NULL THEN se.start_time END),
@@ -149,7 +155,7 @@ export async function loadAssessmentSheetModel(
        FROM schedule_events se
        LEFT JOIN disciplines d ON d.id = se.discipline_id
        WHERE se.group_id = ? AND se.event_type = 'assessment'
-       GROUP BY se.discipline_id, d.name
+       GROUP BY se.discipline_id, d.name, d.short_name
        ORDER BY MIN(se.start_time)`,
       [groupId],
     ),
@@ -163,24 +169,27 @@ export async function loadAssessmentSheetModel(
     ),
   ]);
 
+  // В шапке — короткое название дисциплины (short_name, задаётся в карточке дисциплины), если
+  // оно есть; иначе полное название (обрежется под ширину колонки при вёрстке, см. renderTable)
+  const shortOrFullName = (short: string | null | undefined, full: string) =>
+    short && short.trim() ? short.trim() : full;
+
   let disciplines: AssessmentSheetDiscipline[] = disciplineRows.map((r) => ({
-    name: r.discipline_name ?? "Дисциплина",
+    name: shortOrFullName(r.discipline_short_name, r.discipline_name ?? "Дисциплина"),
     date: formatDdMmYyyy(r.day),
-    isRetake: false,
   }));
   let disciplineIds = disciplineRows.map((r) => r.discipline_id);
 
   if (disciplines.length === 0 && group.course_id) {
     const courseDisciplines = await executeQuery<CourseDisciplineRow[]>(
-      `SELECT id, name FROM disciplines
+      `SELECT id, name, short_name FROM disciplines
        WHERE course_id = ? AND assessment_hours > 0
        ORDER BY order_index`,
       [group.course_id],
     );
     disciplines = courseDisciplines.map((r) => ({
-      name: r.name,
+      name: shortOrFullName(r.short_name, r.name),
       date: "", // контроль ещё не назначен в расписании — дата вписывается от руки
-      isRetake: false,
     }));
     disciplineIds = courseDisciplines.map((r) => r.id);
   }
@@ -239,7 +248,7 @@ export function disciplineColumnWidths(n: number): number[] {
  * чем помещается, остаток стягивается в последнюю строку и обрезается символ за символом
  * до «…» (аналог сокращения длинных названий дисциплин в выгрузке расписания в Excel).
  * Слово, которое само по себе шире maxWidth (например, дата без пробелов), не разбивается —
- * остаётся как есть на своей строке.
+ * остаётся как есть на своей строке (если только не разрешить allowCharSplit).
  */
 /** Режет одно слово на куски, каждый из которых умещается в maxWidth (для узких колонок) */
 function splitWordToFit(word: string, measure: (s: string) => number, maxWidth: number): string[] {
@@ -262,6 +271,13 @@ export function wrapWithEllipsis(
   measure: (s: string) => number,
   maxWidth: number,
   maxLines: number,
+  /**
+   * Резать по символам слово, которое не умещается целиком (для длинных названий дисциплин).
+   * Для дат (одно «слово» без пробелов вроде «06.07.2026») это выключают — разрезанные куски
+   * пришлось бы потом соединять пробелом при сведении строк в одну (см. renderTable в Word), а
+   * пробел внутри даты — испорченное значение; лучше пусть дата не влезет, чем станет неверной.
+   */
+  allowCharSplit = true,
 ): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   if (words.length === 0) return [""];
@@ -270,9 +286,8 @@ export function wrapWithEllipsis(
   // куски заранее — дальше алгоритм пакует токены, зная, что каждый по отдельности помещается.
   const tokens: { text: string; newWord: boolean }[] = [];
   for (const word of words) {
-    splitWordToFit(word, measure, maxWidth).forEach((part, i) =>
-      tokens.push({ text: part, newWord: i === 0 }),
-    );
+    const parts = allowCharSplit ? splitWordToFit(word, measure, maxWidth) : [word];
+    parts.forEach((part, i) => tokens.push({ text: part, newWord: i === 0 }));
   }
 
   const lines: string[] = [];
@@ -320,24 +335,11 @@ export function measureBold(text: string, sizePt: number): number {
   return (width * sizePt) / font.unitsPerEm;
 }
 
-/** Короче «(пересдача)», чтобы надёжнее умещаться даже в узкой (3-колоночной) шапке */
-export const RETAKE_LABEL = "(пересд.)";
-
-/**
- * Строки заголовка колонки дисциплины: название дисциплины (обрезается с «…», если не
- * помещается) и, для пересдачи, отдельная гарантированная последняя строка с пометкой —
- * «какая это дисциплина» важнее «весь текст названия», а с меткой отличить исходный контроль
- * от пересдачи можно и по дате, поэтому в первую очередь жертвуем названием, а не меткой.
- * Общий помощник для Word (assessmentSheetService) и PDF (assessmentSheetPdfService).
- */
-export function disciplineHeaderLines(
-  d: Pick<AssessmentSheetDiscipline, "name" | "isRetake">,
-  measure: (s: string) => number,
-  maxWidth: number,
-): string[] {
-  if (!d.isRetake) return wrapWithEllipsis(d.name, measure, maxWidth, MAX_HEADER_LINES);
-  const nameLines = wrapWithEllipsis(d.name, measure, maxWidth, Math.max(1, MAX_HEADER_LINES - 1));
-  return [...nameLines, RETAKE_LABEL];
+/** Средний балл по уже выставленным оценкам (без учёта дисциплин, где балла ещё нет); null — баллов нет вообще */
+export function averageScore(rowScores: (number | null)[]): number | null {
+  const values = rowScores.filter((v): v is number => v !== null && v !== undefined);
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
 }
 
 // ============================================================================
@@ -434,7 +436,7 @@ function replaceCells(rowXml: string, newCells: string[]): string {
 
 /**
  * Строит блок «Дисциплина: … / дата проведения: …» и строку слушателя по числу реальных
- * дисциплин (по образцу — 2 колонки, но их может быть любое число, см. MAX_DISCIPLINES_PER_BLOCK).
+ * дисциплин (по образцу — 2 колонки, но их может быть любое число — все в одной таблице).
  */
 function renderTable(
   tableXml: string,
@@ -459,34 +461,31 @@ function renderTable(
 
   const widths = disciplineColumnWidths(disciplines.length);
   const disciplinePool = widths.reduce((a, b) => a + b, 0);
-  const ITOGO_TW = 2117;
-  const NUM_TW = 509;
-  const NAME_TW = 3318;
   const CELL_PAD_X_TW = 108; // поля ячейки слева/справа (tblCellMar таблицы)
 
   /** Обрезает текст под реальную ширину колонки (см. wrapWithEllipsis) — Word сам перенесёт остаток по словам */
-  const fitHeaderText = (text: string, widthTw: number) =>
+  const fitText = (text: string, widthTw: number, maxLines: number, allowCharSplit = true) =>
     wrapWithEllipsis(
       text,
       (s) => measureBold(s, 12),
       (widthTw - 2 * CELL_PAD_X_TW) / 20,
-      MAX_HEADER_LINES,
+      maxLines,
+      allowCharSplit,
     ).join(" ");
 
-  // --- строка «Дисциплина: (значение) (значение) … Итого, %» ---
+  // --- строка «Дисциплина: (значение) (значение) … Итого, %» — название в одну строку ---
   const captionCells = cellsOf(captionRow);
   if (captionCells.length !== 4) throw templateError("в строке дисциплин не 4 ячейки");
-  const disciplineCells = disciplines.map((d, i) => {
-    const label = disciplineHeaderLines(
-      d,
-      (s) => measureBold(s, 12),
-      (widths[i]! - 2 * CELL_PAD_X_TW) / 20,
-    ).join(" ");
-    return setCellWidth(
-      fillMarkedField(captionCells[1]!, label, `дисциплина #${i + 1}`),
+  const disciplineCells = disciplines.map((d, i) =>
+    setCellWidth(
+      fillMarkedField(
+        captionCells[1]!,
+        fitText(d.name, widths[i]!, MAX_DISCIPLINE_NAME_LINES),
+        `дисциплина #${i + 1}`,
+      ),
       widths[i]!,
-    );
-  });
+    ),
+  );
   const newCaptionRow = replaceCells(captionRow, [
     captionCells[0]!,
     ...disciplineCells,
@@ -498,7 +497,11 @@ function renderTable(
   if (dateCells.length !== 4) throw templateError("в строке дат не 4 ячейки");
   const newDateCells = disciplines.map((d, i) =>
     setCellWidth(
-      fillMarkedField(dateCells[1]!, fitHeaderText(d.date, widths[i]!), `дата дисциплины #${i + 1}`),
+      fillMarkedField(
+        dateCells[1]!,
+        fitText(d.date, widths[i]!, MAX_DATE_LINES, false),
+        `дата дисциплины #${i + 1}`,
+      ),
       widths[i]!,
     ),
   );
@@ -531,7 +534,9 @@ function renderTable(
       const cell = score !== null && score !== undefined ? fillEmptyCell(scoreCellTpl, String(score)) : scoreCellTpl;
       return setCellWidth(cell, w);
     });
-    return replaceCells(studentProto, [numCell, nameCell, ...scoreCells, itogoCellTpl]);
+    const avg = averageScore(scores[si] ?? []);
+    const itogoCell = avg !== null ? fillEmptyCell(itogoCellTpl, String(avg)) : itogoCellTpl;
+    return replaceCells(studentProto, [numCell, nameCell, ...scoreCells, itogoCell]);
   });
 
   const newGrid =
@@ -554,9 +559,6 @@ function renderTable(
   );
 }
 
-/** Абзац с разрывом страницы (обычный Normal-абзац, без дополнительного форматирования) */
-const PAGE_BREAK_PARAGRAPH = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
-
 export async function renderAssessmentSheetDocx(
   model: AssessmentSheetModel,
 ): Promise<Buffer> {
@@ -568,10 +570,7 @@ export async function renderAssessmentSheetDocx(
 
   const zip = new PizZip(await fs.readFile(TEMPLATE_PATH, "binary"));
   const docFile = zip.file("word/document.xml");
-  const numberingFile = zip.file("word/numbering.xml");
-  if (!docFile || !numberingFile) {
-    throw templateError("нет word/document.xml или word/numbering.xml");
-  }
+  if (!docFile) throw templateError("нет word/document.xml");
 
   let xml = docFile
     .asText()
@@ -579,7 +578,6 @@ export async function renderAssessmentSheetDocx(
     .replace(/<w:lastRenderedPageBreak\/>/g, "")
     .replace(/ w14:(?:paraId|textId)="[^"]*"/g, "")
     .replace(/ w:rsid[A-Za-z]*="[^"]*"/g, "");
-  let numbering = numberingFile.asText();
 
   const tableStart = xml.indexOf("<w:tbl>");
   const tableEnd = xml.indexOf("</w:tbl>") + "</w:tbl>".length;
@@ -606,64 +604,37 @@ export async function renderAssessmentSheetDocx(
   const signatureBlock = preSignature + tail.slice(sigStart, sigEnd);
   const documentEnd = tail.slice(sigEnd); // финальный абзац + sectPr — ровно один раз, в самом конце
 
-  // --- автонумерация слушателей: у каждого блока своя (с 1), как в «Пустом журнале» ---
   const templateNumId = Number(/<w:numId w:val="(\d+)"/.exec(table)?.[1]);
-  const numDef = new RegExp(
-    `<w:num w:numId="${templateNumId}"[^>]*>\\s*<w:abstractNumId w:val="(\\d+)"`,
-  ).exec(numbering);
-  if (!templateNumId || !numDef) {
+  if (!templateNumId) {
     throw templateError("у слушателей не найден автосписок нумерации");
   }
-  const abstractNumId = numDef[1];
-  const maxNumId = Math.max(
-    ...[...numbering.matchAll(/<w:num w:numId="(\d+)"/g)].map((m) => Number(m[1])),
-  );
 
   // Правит абзацы шапки «на месте» (P0 title, P1 subtitle, P2 название курса, P3 удаляется —
   // Word сам перенесёт название курса на нужное число строк внутри одного абзаца P2, второй
   // заготовленный под перенос вручную абзац избыточен, P4 группа, P5 пустая строка), не трогая
   // ничего вокруг них (декларацию документа, <w:body> и т.д.)
-  const renderHead = () => {
-    let paraIndex = -1;
-    return headTpl.replace(PARA_RE, (p) => {
-      paraIndex += 1;
-      if (paraIndex === 2) return fillMarkedField(p, model.courseName, "название курса");
-      if (paraIndex === 3) return "";
-      if (paraIndex === 4) return fillMarkedField(p, model.groupCode, "код группы");
-      return p;
-    });
-  };
-
-  const disciplineChunks = chunk(model.disciplines, MAX_DISCIPLINES_PER_BLOCK);
-  const newNums: string[] = [];
-  const blocks = disciplineChunks.map((disciplines, i) => {
-    let numId = templateNumId;
-    if (i > 0) {
-      numId = maxNumId + i;
-      newNums.push(
-        `<w:num w:numId="${numId}"><w:abstractNumId w:val="${abstractNumId}"/>` +
-          `<w:lvlOverride w:ilvl="0"><w:startOverride w:val="1"/></w:lvlOverride></w:num>`,
-      );
-    }
-    const colOffset = i * MAX_DISCIPLINES_PER_BLOCK;
-    const chunkScores = model.scores.map((row) =>
-      row.slice(colOffset, colOffset + disciplines.length),
-    );
-    return (
-      (i > 0 ? PAGE_BREAK_PARAGRAPH : "") +
-      renderHead() +
-      renderTable(table, disciplines, model.students, chunkScores, numId) +
-      signatureBlock
-    );
+  let paraIndex = -1;
+  const newHead = headTpl.replace(PARA_RE, (p) => {
+    paraIndex += 1;
+    if (paraIndex === 2) return fillMarkedField(p, model.courseName, "название курса");
+    if (paraIndex === 3) return "";
+    if (paraIndex === 4) return fillMarkedField(p, model.groupCode, "код группы");
+    return p;
   });
 
-  if (newNums.length > 0) {
-    const lastNumEnd = numbering.lastIndexOf("</w:num>") + "</w:num>".length;
-    numbering =
-      numbering.slice(0, lastNumEnd) + newNums.join("") + numbering.slice(lastNumEnd);
-  }
+  // Все дисциплины — одной таблицей на одной странице (см. заголовок файла); при большом
+  // числе слушателей таблица естественно перетекает на следующие страницы средствами Word.
+  const newTable = renderTable(
+    table,
+    model.disciplines,
+    model.students,
+    model.scores,
+    templateNumId,
+  );
 
-  zip.file("word/document.xml", documentPreamble + blocks.join("") + documentEnd);
-  zip.file("word/numbering.xml", numbering);
+  zip.file(
+    "word/document.xml",
+    documentPreamble + newHead + newTable + signatureBlock + documentEnd,
+  );
   return zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
 }

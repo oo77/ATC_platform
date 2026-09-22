@@ -27,7 +27,7 @@
         ></div>
         <div class="flex-1">
           <h3 class="text-xl font-semibold text-black dark:text-white">
-            {{ event.title }}
+            {{ event.discipline?.name || event.title }}
           </h3>
           <p
             v-if="event.description"

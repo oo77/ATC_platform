@@ -79,6 +79,21 @@
                   </p>
                 </div>
 
+                <!-- Название курса на узбекском -->
+                <div class="md:col-span-2 space-y-2">
+                  <label
+                    class="block text-xs font-bold text-slate-400 uppercase tracking-wider"
+                  >
+                    Название курса (узб.)
+                  </label>
+                  <input
+                    v-model="formData.nameUz"
+                    type="text"
+                    placeholder="Masalan: Python dasturlash asoslari"
+                    class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 transition-all font-medium"
+                  />
+                </div>
+
                 <!-- Короткое название -->
                 <div class="space-y-2">
                   <label
@@ -357,97 +372,66 @@
           </UiButton>
         </div>
 
-        <div v-else class="p-6 space-y-4">
+        <div v-else class="p-4 space-y-2">
           <div
             v-for="(discipline, index) in formData.disciplines"
             :key="index"
-            class="group flex flex-col sm:flex-row gap-4 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all relative"
+            class="group flex items-center gap-3 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 hover:border-primary/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all relative"
           >
             <div
-              class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold group-hover:bg-primary group-hover:text-white transition-colors"
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-sm font-bold group-hover:bg-primary group-hover:text-white transition-colors"
             >
               {{ index + 1 }}
             </div>
 
-            <div class="flex-1 min-w-0">
-              <h4 class="font-bold text-lg text-slate-900 dark:text-white">
-                {{ discipline.name }}
-              </h4>
+            <span
+              v-if="discipline.shortName"
+              class="shrink-0 rounded-md bg-primary/10 px-2 py-1 text-xs font-black uppercase tracking-wide text-primary"
+            >
+              {{ discipline.shortName }}
+            </span>
 
-              <div
-                class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 rounded-xl border border-slate-100 bg-white p-3 dark:border-slate-800 dark:bg-slate-900/50 shadow-sm"
-              >
-                <div>
-                  <p
-                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-                  >
-                    Теория
-                  </p>
-                  <p
-                    class="text-sm font-bold text-slate-900 dark:text-white mt-0.5"
-                  >
-                    {{ discipline.theoryHours }} ч
-                  </p>
-                </div>
-                <div>
-                  <p
-                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-                  >
-                    Практика
-                  </p>
-                  <p
-                    class="text-sm font-bold text-slate-900 dark:text-white mt-0.5"
-                  >
-                    {{ discipline.practiceHours }} ч
-                  </p>
-                </div>
-                <div>
-                  <p
-                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-                  >
-                    Проверка
-                  </p>
-                  <p
-                    class="text-sm font-bold text-slate-900 dark:text-white mt-0.5"
-                  >
-                    {{ discipline.assessmentHours }} ч
-                  </p>
-                </div>
-                <div
-                  class="border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-2 sm:pt-0 sm:pl-4"
-                >
-                  <p
-                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-                  >
-                    Всего
-                  </p>
-                  <p class="text-sm font-black text-primary mt-0.5">
-                    {{ getDisciplineTotal(discipline) }} ч
-                  </p>
-                </div>
-              </div>
+            <h4
+              class="flex-1 min-w-0 truncate font-bold text-sm text-slate-900 dark:text-white"
+              :title="discipline.name"
+            >
+              {{ discipline.name }}
+            </h4>
+
+            <div
+              class="hidden md:flex items-center gap-3 shrink-0 text-xs font-bold text-slate-500 dark:text-slate-400"
+            >
+              <span>Т: {{ discipline.theoryHours }}ч</span>
+              <span>П: {{ discipline.practiceHours }}ч</span>
+              <span>К: {{ discipline.assessmentHours }}ч</span>
+              <span class="text-primary">Всего: {{ getDisciplineTotal(discipline) }}ч</span>
             </div>
+            <span
+              class="md:hidden shrink-0 text-xs font-black text-primary"
+            >
+              {{ getDisciplineTotal(discipline) }}ч
+            </span>
 
-            <div class="flex flex-row sm:flex-col gap-2 shrink-0">
+            <div class="flex items-center gap-1 shrink-0">
               <UiButton
                 type="button"
                 variant="outline"
                 size="sm"
-                class="h-8 w-8 p-0!"
+                class="h-7 w-7 p-0!"
                 @click="editDiscipline(index)"
                 title="Редактировать"
               >
-                <Settings class="w-4 h-4 text-slate-500" />
+                <Settings class="w-3.5 h-3.5 text-slate-500" />
               </UiButton>
               <UiButton
                 type="button"
                 variant="outline"
                 size="sm"
-                class="h-8 w-8 p-0! border-danger/20 hover:bg-danger/5 hover:border-danger/40"
+                class="h-7 w-7 p-0! border-danger/20 hover:bg-danger/5 hover:border-danger/40"
                 @click="removeDiscipline(index)"
                 title="Удалить"
               >
-                <Trash2 class="w-4 h-4 text-danger" />
+                <Trash2 class="w-3.5 h-3.5 text-danger" />
               </UiButton>
             </div>
           </div>
@@ -528,6 +512,7 @@ const formData = ref<
   CreateCourseData & { disciplines: CreateDisciplineData[] }
 >({
   name: "",
+  nameUz: "",
   shortName: "",
   code: "",
   description: "",

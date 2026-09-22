@@ -97,6 +97,13 @@
                 {{ course.name }}
               </div>
               <div
+                v-if="course.nameUz"
+                class="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-500"
+              >
+                <span class="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-black uppercase text-slate-500">УЗ</span>
+                {{ course.nameUz }}
+              </div>
+              <div
                 class="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400"
               >
                 <Clock class="w-4 h-4 text-slate-400" />
@@ -265,6 +272,15 @@
                     {{ course.shortName }}
                   </p>
                 </div>
+                <div v-if="course.nameUz" class="space-y-1">
+                  <label
+                    class="text-xs font-bold text-slate-400 uppercase tracking-wider"
+                    >Название на узбекском</label
+                  >
+                  <p class="text-sm font-bold text-slate-900 dark:text-white">
+                    {{ course.nameUz }}
+                  </p>
+                </div>
                 <div class="space-y-1">
                   <label
                     class="text-xs font-bold text-slate-400 uppercase tracking-wider"
@@ -407,130 +423,89 @@
             </UiButton>
           </div>
 
-          <div v-else class="p-6 space-y-4">
+          <div v-else class="p-4 space-y-2">
             <div
               v-for="(discipline, index) in course.disciplines"
               :key="discipline.id"
-              class="border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/30 hover:bg-primary/5 transition-all group relative"
+              class="border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 hover:border-primary/30 hover:bg-primary/5 transition-all group relative"
             >
-              <div class="flex items-start gap-4">
+              <div class="flex items-center gap-3">
                 <div
-                  class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-semibold shrink-0 group-hover:bg-primary group-hover:text-white transition-colors"
+                  class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-sm font-semibold shrink-0 group-hover:bg-primary group-hover:text-white transition-colors"
                 >
                   {{ index + 1 }}
                 </div>
+
+                <span
+                  v-if="discipline.shortName"
+                  class="shrink-0 rounded-md bg-primary/10 px-2 py-1 text-xs font-black uppercase tracking-wide text-primary"
+                >
+                  {{ discipline.shortName }}
+                </span>
+
                 <div class="flex-1 min-w-0">
                   <h4
-                    class="text-lg font-bold text-slate-900 dark:text-white mb-2"
+                    class="truncate text-sm font-bold text-slate-900 dark:text-white"
+                    :title="discipline.name"
                   >
                     {{ discipline.name }}
                   </h4>
-                  <p
-                    v-if="discipline.description"
-                    class="text-sm text-slate-600 dark:text-slate-400 mb-4"
-                  >
-                    {{ discipline.description }}
-                  </p>
+                </div>
 
-                  <div
-                    class="mb-4 rounded-xl border border-slate-100 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/50 shadow-sm"
-                  >
-                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                      <div>
-                        <p
-                          class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                        >
-                          Теория
-                        </p>
-                        <p
-                          class="text-sm font-bold text-slate-900 dark:text-white mt-1"
-                        >
-                          {{ discipline.theoryHours }} ч
-                        </p>
-                      </div>
-                      <div>
-                        <p
-                          class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                        >
-                          Практика
-                        </p>
-                        <p
-                          class="text-sm font-bold text-slate-900 dark:text-white mt-1"
-                        >
-                          {{ discipline.practiceHours }} ч
-                        </p>
-                      </div>
-                      <div>
-                        <p
-                          class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                        >
-                          Проверка
-                        </p>
-                        <p
-                          class="text-sm font-bold text-slate-900 dark:text-white mt-1"
-                        >
-                          {{ discipline.assessmentHours }} ч
-                        </p>
-                      </div>
-                      <div
-                        class="col-span-2 sm:col-span-1 border-t sm:border-t-0 sm:border-l border-slate-100 dark:border-slate-800 pt-3 sm:pt-0 sm:pl-4"
-                      >
-                        <p
-                          class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                        >
-                          Всего
-                        </p>
-                        <p class="text-base font-black text-primary mt-1">
-                          {{ discipline.hours }} ч
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                <div
+                  class="hidden md:flex items-center gap-3 shrink-0 text-xs font-bold text-slate-500 dark:text-slate-400"
+                >
+                  <span>Т: {{ discipline.theoryHours }}ч</span>
+                  <span>П: {{ discipline.practiceHours }}ч</span>
+                  <span>К: {{ discipline.assessmentHours }}ч</span>
+                  <span class="text-primary">Всего: {{ discipline.hours }}ч</span>
+                </div>
+                <span class="md:hidden shrink-0 text-xs font-black text-primary">
+                  {{ discipline.hours }}ч
+                </span>
 
-                  <div
-                    v-if="
-                      discipline.instructors &&
-                      discipline.instructors.length > 0
-                    "
-                    class="pt-2 border-t border-slate-100 dark:border-slate-800"
-                  >
-                    <div class="flex flex-wrap gap-2 items-center">
-                      <Users class="w-4 h-4 text-slate-400" />
-                      <span
-                        v-for="di in discipline.instructors"
-                        :key="di.id"
-                        class="inline-flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-300"
-                      >
-                        {{ di.instructor?.fullName }}
-                        <span v-if="di.isPrimary" class="text-warning">★</span>
-                      </span>
-                    </div>
-                  </div>
+                <div
+                  v-if="discipline.instructors && discipline.instructors.length > 0"
+                  class="hidden lg:flex items-center gap-1 shrink-0"
+                  :title="discipline.instructors.map(di => di.instructor?.fullName).join(', ')"
+                >
+                  <Users class="w-3.5 h-3.5 text-slate-400" />
+                  <span class="text-xs font-bold text-slate-500 dark:text-slate-400">
+                    {{ discipline.instructors.length }}
+                  </span>
                 </div>
 
                 <!-- Actions -->
                 <div
                   v-if="canManageDisciplines"
-                  class="flex flex-col gap-2 shrink-0"
+                  class="flex items-center gap-1 shrink-0"
                 >
                   <UiButton
                     variant="outline"
                     size="sm"
-                    class="h-8 w-8 p-0!"
+                    class="h-7 w-7 p-0!"
                     @click="openDisciplineModal(discipline)"
                   >
-                    <Settings class="w-4 h-4 text-slate-500" />
+                    <Settings class="w-3.5 h-3.5 text-slate-500" />
                   </UiButton>
                   <UiButton
                     variant="outline"
                     size="sm"
-                    class="h-8 w-8 p-0! border-danger/20 hover:bg-danger/5 hover:border-danger/40"
+                    class="h-7 w-7 p-0! border-danger/20 hover:bg-danger/5 hover:border-danger/40"
                     @click="handleDeleteDiscipline(discipline)"
                   >
-                    <Trash2 class="w-4 h-4 text-danger" />
+                    <Trash2 class="w-3.5 h-3.5 text-danger" />
                   </UiButton>
                 </div>
               </div>
+
+              <p
+                v-if="discipline.description"
+                class="mt-1 ml-11 truncate text-xs text-slate-500 dark:text-slate-400"
+                :title="discipline.description"
+              >
+                {{ discipline.description }}
+              </p>
             </div>
           </div>
         </div>

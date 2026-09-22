@@ -163,6 +163,7 @@ CREATE TABLE IF NOT EXISTS certificate_templates (
 CREATE TABLE IF NOT EXISTS courses (
   id VARCHAR(191) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
+  name_uz VARCHAR(255) NULL COMMENT 'Название курса на узбекском языке',
   short_name VARCHAR(10) NOT NULL COMMENT 'Короткое название',
   code VARCHAR(20) NOT NULL UNIQUE COMMENT 'Код курса',
   description TEXT,
@@ -191,6 +192,7 @@ CREATE TABLE IF NOT EXISTS disciplines (
   id VARCHAR(191) PRIMARY KEY,
   course_id VARCHAR(191) NOT NULL,
   name VARCHAR(255) NOT NULL,
+  short_name VARCHAR(20) NULL COMMENT 'Короткое название (аббревиатура), например АОЭП',
   description TEXT,
   hours INT NOT NULL DEFAULT 0 COMMENT 'Общее количество часов (авто-вычисляемое)',
   theory_hours INT NOT NULL DEFAULT 0 COMMENT 'Часы теории',

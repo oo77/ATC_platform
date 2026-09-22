@@ -19,6 +19,7 @@ import { z } from 'zod';
 const disciplineSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1),
+  shortName: z.string().max(20).nullable().optional(),
   description: z.string().nullable().optional(),
   theoryHours: z.number().min(0).default(0),
   practiceHours: z.number().min(0).default(0),
@@ -29,6 +30,7 @@ const disciplineSchema = z.object({
 
 const updateCourseSchema = z.object({
   name: z.string().min(1).optional(),
+  nameUz: z.string().nullable().optional(),
   shortName: z.string().min(2).max(10).optional(),
   code: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
@@ -114,6 +116,7 @@ export default defineEventHandler(async (event) => {
           // Обновляем существующую дисциплину
           await updateDiscipline(discipline.id, {
             name: discipline.name,
+            shortName: discipline.shortName,
             description: discipline.description,
             theoryHours: discipline.theoryHours,
             practiceHours: discipline.practiceHours,
@@ -125,6 +128,7 @@ export default defineEventHandler(async (event) => {
           // Создаём новую дисциплину
           await addDisciplineToCourse(id, {
             name: discipline.name,
+            shortName: discipline.shortName || undefined,
             description: discipline.description || undefined,
             theoryHours: discipline.theoryHours,
             practiceHours: discipline.practiceHours,
