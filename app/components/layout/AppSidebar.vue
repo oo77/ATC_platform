@@ -300,6 +300,7 @@ import {
   Building2,
   UserCheck,
   UserSquare2,
+  Sparkles,
 } from "lucide-vue-next";
 import type { Component } from "vue";
 
@@ -535,6 +536,12 @@ const allMenuGroups: MenuGroup[] = [
         name: "Аналитика",
         path: "/reports",
         hideForRoles: ["STUDENT", "TEACHER"],
+      },
+      {
+        icon: Sparkles,
+        name: "ИИ Ассистент",
+        path: "/chat",
+        hideForRoles: ["STUDENT"],
       },
       {
         icon: History,
