@@ -3,19 +3,37 @@
     <form @submit.prevent="handleSubmit" class="space-y-6">
       
       <!-- Название дисциплины -->
-      <div class="space-y-2">
-        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-          Название дисциплины <span class="text-danger">*</span>
-        </label>
-        <input
-          v-model="formData.name"
-          type="text"
-          placeholder="Введите название дисциплины"
-          class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 transition-all font-medium"
-          :class="{ 'border-danger focus:border-danger focus:ring-danger': errors.name }"
-          required
-        />
-        <p v-if="errors.name" class="mt-1 text-xs font-bold text-danger">{{ errors.name }}</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="sm:col-span-2 space-y-2">
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Название дисциплины <span class="text-danger">*</span>
+          </label>
+          <input
+            v-model="formData.name"
+            type="text"
+            placeholder="Введите название дисциплины"
+            class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 transition-all font-medium"
+            :class="{ 'border-danger focus:border-danger focus:ring-danger': errors.name }"
+            required
+          />
+          <p v-if="errors.name" class="mt-1 text-xs font-bold text-danger">{{ errors.name }}</p>
+        </div>
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Короткое название <span class="text-danger">*</span>
+          </label>
+          <input
+            v-model="formData.shortName"
+            type="text"
+            placeholder="АОЭП"
+            maxlength="20"
+            class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 uppercase transition-all font-medium"
+            :class="{ 'border-danger focus:border-danger focus:ring-danger': errors.shortName }"
+            required
+            @input="formData.shortName = formData.shortName.toUpperCase()"
+          />
+          <p v-if="errors.shortName" class="mt-1 text-xs font-bold text-danger">{{ errors.shortName }}</p>
+        </div>
       </div>
 
       <!-- Описание -->
@@ -166,6 +184,7 @@ const errors = ref<Record<string, string>>({});
 
 const formData = ref<CreateDisciplineData>({
   name: '',
+  shortName: '',
   description: '',
   theoryHours: 0,
   practiceHours: 0,
@@ -186,6 +205,7 @@ const totalHours = computed(() => {
 const resetForm = () => {
   formData.value = {
     name: '',
+    shortName: '',
     description: '',
     theoryHours: 0,
     practiceHours: 0,
@@ -208,6 +228,10 @@ const validateForm = (): boolean => {
 
   if (!formData.value.name.trim()) {
     errors.value.name = 'Название обязательно';
+  }
+
+  if (!formData.value.shortName.trim()) {
+    errors.value.shortName = 'Короткое название обязательно';
   }
 
   if (formData.value.theoryHours < 0) {

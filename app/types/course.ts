@@ -47,6 +47,7 @@ export interface Discipline {
   id: string;
   courseId: string;
   name: string;
+  shortName?: string;
   description?: string;
   hours: number; // Автоматически вычисляется как сумма theoryHours + practiceHours + assessmentHours
   theoryHours: number;
@@ -69,6 +70,7 @@ export interface DisciplineInstructor {
 
 export interface CreateDisciplineData {
   name: string;
+  shortName: string;
   description?: string;
   theoryHours: number;
   practiceHours: number;
@@ -96,6 +98,7 @@ export const COURSE_TYPE_SHORT: Record<CourseType, string> = {
 export interface Course {
   id: string;
   name: string;
+  nameUz?: string;
   shortName: string;
   code: string;
   description?: string;
@@ -116,6 +119,7 @@ export interface Course {
 
 export interface CreateCourseData {
   name: string;
+  nameUz?: string;
   shortName: string;
   code: string;
   description?: string;

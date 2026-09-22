@@ -59,6 +59,7 @@ export interface ScheduleEvent {
   discipline?: {
     id: string;
     name: string;
+    shortName?: string | null;
   } | null;
 }
 
@@ -160,6 +161,7 @@ interface ScheduleEventRow extends RowDataPacket {
   classroom_name?: string;
   classroom_capacity?: number;
   discipline_name?: string;
+  discipline_short_name?: string | null;
 }
 
 interface ClassroomRow extends RowDataPacket {
@@ -233,6 +235,7 @@ function mapRowToScheduleEvent(row: ScheduleEventRow): ScheduleEvent {
     event.discipline = {
       id: row.discipline_id!,
       name: row.discipline_name,
+      shortName: row.discipline_short_name,
     };
   }
 
@@ -364,7 +367,8 @@ export async function getScheduleEvents(
       i.full_name as instructor_full_name,
       cr.name as classroom_name,
       cr.capacity as classroom_capacity,
-      d.name as discipline_name
+      d.name as discipline_name,
+      d.short_name as discipline_short_name
     FROM schedule_events se
     LEFT JOIN study_groups sg ON se.group_id = sg.id
     LEFT JOIN courses c ON sg.course_id = c.id
@@ -473,7 +477,8 @@ export async function getScheduleEventById(
       i.full_name as instructor_full_name,
       cr.name as classroom_name,
       cr.capacity as classroom_capacity,
-      d.name as discipline_name
+      d.name as discipline_name,
+      d.short_name as discipline_short_name
     FROM schedule_events se
     LEFT JOIN study_groups sg ON se.group_id = sg.id
     LEFT JOIN courses c ON sg.course_id = c.id
@@ -720,7 +725,8 @@ export async function checkScheduleConflicts(
       i.full_name as instructor_full_name,
       cr.name as classroom_name,
       cr.capacity as classroom_capacity,
-      d.name as discipline_name
+      d.name as discipline_name,
+      d.short_name as discipline_short_name
     FROM schedule_events se
     LEFT JOIN study_groups sg ON se.group_id = sg.id
     LEFT JOIN courses c ON sg.course_id = c.id

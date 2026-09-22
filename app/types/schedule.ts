@@ -34,6 +34,7 @@ export interface ScheduleEvent {
   discipline?: {
     id: string;
     name: string;
+    shortName?: string;
   };
   instructorId?: string;
   instructor?: {

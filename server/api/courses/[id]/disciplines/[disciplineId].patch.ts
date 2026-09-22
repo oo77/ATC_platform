@@ -26,6 +26,13 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    if (body.shortName !== undefined && (typeof body.shortName !== 'string' || !body.shortName.trim())) {
+      throw createError({
+        statusCode: 400,
+        message: 'Короткое название дисциплины должно быть непустой строкой',
+      });
+    }
+
     if (body.theoryHours !== undefined && (typeof body.theoryHours !== 'number' || body.theoryHours < 0)) {
       throw createError({
         statusCode: 400,
@@ -50,6 +57,7 @@ export default defineEventHandler(async (event) => {
     // Обновляем дисциплину
     const discipline = await updateDiscipline(disciplineId, {
       name: body.name,
+      shortName: body.shortName,
       description: body.description,
       theoryHours: body.theoryHours,
       practiceHours: body.practiceHours,

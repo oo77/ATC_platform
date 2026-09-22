@@ -114,6 +114,13 @@ export default defineEventHandler(async (event) => {
         ? body.instructorId
         : existing.instructorId;
 
+    // Пересдачи не учитываются в лимите часов дисциплины (как и при их создании
+    // в /api/schedule/retake) — они проводятся сверх учебного плана группы.
+    const isRetake = Boolean(
+      existing.originalEventId ||
+        (existing.allowedStudentIds && existing.allowedStudentIds.length > 0),
+    );
+
     // ===============================
     // ВАЛИДАЦИЯ ГРУППЫ И ДАТ
     // ===============================
@@ -151,7 +158,12 @@ export default defineEventHandler(async (event) => {
       // ВАЛИДАЦИЯ ДИСЦИПЛИНЫ И ЧАСОВ
       // ===============================
 
-      if (finalDisciplineId && finalEventType && finalEventType !== "other") {
+      if (
+        !isRetake &&
+        finalDisciplineId &&
+        finalEventType &&
+        finalEventType !== "other"
+      ) {
         // Получаем информацию о дисциплине
         const disciplineRows = await executeQuery<DisciplineRow[]>(
           "SELECT id, theory_hours, practice_hours, assessment_hours FROM disciplines WHERE id = ? AND course_id = ? LIMIT 1",

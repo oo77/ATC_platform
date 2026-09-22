@@ -55,10 +55,11 @@ export function toCalendarEventInput(event: ScheduleEvent): EventInput {
   const isRetake = isRetakeEvent(event);
   const isArchived = Boolean(event.group?.isArchived);
 
-  // Заголовок для списка/месяца: с аудиторией и пометками
+  // Заголовок для списка/месяца: короткое название дисциплины (полное — в карточке/тултипе)
+  const displayTitle = event.discipline?.shortName || event.title;
   let title = event.classroom?.name
-    ? `${event.title} (${event.classroom.name})`
-    : event.title;
+    ? `${displayTitle} (${event.classroom.name})`
+    : displayTitle;
   if (isRetake) title = `🔄 ${title}`;
   if (isArchived) title = `🔒 ${title}`;
 
@@ -83,6 +84,7 @@ export function toCalendarEventInput(event: ScheduleEvent): EventInput {
     extendedProps: {
       description: event.description || undefined,
       rawTitle: event.title,
+      disciplineShortName: event.discipline?.shortName || undefined,
       groupId: event.groupId || undefined,
       groupCode: event.group?.code,
       groupTokens: tokens,
@@ -204,7 +206,7 @@ export function renderTimeGridEventContent(arg: EventContentArg) {
   return {
     html: buildTimeGridCardHtml({
       groupCode: p.groupCode,
-      title: p.rawTitle || arg.event.title,
+      title: p.disciplineShortName || p.rawTitle || arg.event.title,
       timeText: arg.timeText,
       classroom: p.classroomName,
       instructor: p.instructorName,
