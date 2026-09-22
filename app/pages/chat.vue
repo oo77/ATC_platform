@@ -1,69 +1,263 @@
 <template>
-  <div class="h-[calc(100vh-5.5rem)] flex flex-col overflow-hidden bg-gray-50/50 dark:bg-gray-950">
-    <!-- Header Bar -->
+  <div class="h-full w-full flex flex-col overflow-hidden bg-white dark:bg-gray-950">
+    <!-- Subheader Bar (Under Global Navbar) -->
     <div
-      class="h-14 px-4 border-b border-gray-200/80 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md flex items-center justify-between shrink-0 z-10"
+      class="h-13 px-4 border-b border-gray-200/80 dark:border-gray-800 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md flex items-center justify-between shrink-0 z-10"
     >
-      <div class="flex items-center gap-3 min-w-0">
+      <!-- Left: Sidebar toggle + Session Title -->
+      <div class="flex items-center gap-2.5 min-w-0">
         <button
           @click="isSidebarOpen = !isSidebarOpen"
-          class="p-2 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          class="p-1.5 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
           :title="isSidebarOpen ? 'Скрыть историю' : 'Показать историю'"
         >
-          <PanelLeft :size="18" />
+          <PanelLeft :size="17" />
         </button>
 
-        <div class="flex items-center gap-2.5 min-w-0">
-          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm shadow-blue-500/20 shrink-0">
-            <Sparkles :size="16" />
-          </div>
-          <div class="flex flex-col min-w-0">
-            <div class="flex items-center gap-2">
-              <h1 class="text-sm font-bold text-gray-900 dark:text-white truncate">
-                {{ currentSessionTitle }}
-              </h1>
-              <span class="px-2 py-0.5 text-[10px] font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200/50 dark:border-blue-800/50">
-                SQL + Files ReAct
-              </span>
-            </div>
-            <span class="text-[11px] text-gray-400 dark:text-gray-500 truncate">
-              Автономный аналитический агент с доступом к базе данных и реестру файлов
-            </span>
-          </div>
+        <div class="flex items-center gap-2 min-w-0">
+          <h1 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">
+            {{ currentSessionTitle }}
+          </h1>
+          <span class="hidden md:inline-flex px-2 py-0.5 text-[10px] font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200/50 dark:border-blue-800/50 shrink-0">
+            ReAct Data Agent
+          </span>
         </div>
       </div>
 
+      <!-- Right: Model Selector + Effort Selector + Canvas + New Chat -->
       <div class="flex items-center gap-2 shrink-0">
+        <!-- Model Selector Dropdown (Configured AI Providers & Models) -->
+        <div class="relative" ref="modelDropdownRef">
+          <button
+            @click="isModelMenuOpen = !isModelMenuOpen"
+            class="px-2.5 py-1.5 rounded-xl text-xs font-medium bg-gray-50 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-700/80 text-gray-700 dark:text-gray-200 border border-gray-200/80 dark:border-gray-700 flex items-center gap-1.5 transition-colors shadow-xs"
+            title="Выбрать настроенную модель ИИ"
+          >
+            <Cpu :size="13" class="text-blue-600 dark:text-blue-400" />
+            <span class="max-w-[120px] sm:max-w-none truncate flex items-center gap-1">
+              <span>{{ selectedModelLabel }}</span>
+              <span
+                v-if="currentSelectedProvider"
+                class="hidden md:inline text-[10px] text-gray-400 font-normal"
+              >
+                ({{ currentSelectedProvider.providerName }})
+              </span>
+            </span>
+            <ChevronDown :size="12" class="text-gray-400" />
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div
+            v-if="isModelMenuOpen"
+            class="absolute right-0 mt-1.5 w-72 sm:w-80 max-h-[480px] flex flex-col rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-2xl py-2 z-50 animate-in fade-in zoom-in-95 duration-100"
+          >
+            <!-- Header -->
+            <div class="px-3 pb-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <div>
+                <div class="text-[11px] font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  <Cpu :size="13" class="text-blue-600" />
+                  <span>Настроенные модели ИИ</span>
+                </div>
+                <div class="text-[10px] text-gray-400">
+                  Активные подключения провайдеров
+                </div>
+              </div>
+              <NuxtLink
+                to="/settings"
+                class="text-[10px] text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium hover:underline flex items-center gap-0.5"
+                title="Перейти к подключению провайдеров"
+              >
+                <span>Настройки</span>
+                <ArrowRight :size="10" />
+              </NuxtLink>
+            </div>
+
+            <!-- Search input -->
+            <div class="p-2 border-b border-gray-100 dark:border-gray-800">
+              <div class="relative">
+                <Search :size="12" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  v-model="modelSearchQuery"
+                  type="text"
+                  placeholder="Быстрый поиск модели..."
+                  class="w-full pl-7 pr-2.5 py-1 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-400"
+                />
+              </div>
+            </div>
+
+            <!-- Providers & Models List -->
+            <div class="overflow-y-auto custom-scrollbar flex-1 p-1 space-y-2">
+              <div
+                v-if="loadingModels"
+                class="py-6 text-center text-xs text-gray-400 flex flex-col items-center gap-2"
+              >
+                <Loader2 :size="16" class="animate-spin text-blue-600" />
+                <span>Загрузка подключений...</span>
+              </div>
+
+              <div
+                v-else-if="filteredProviderGroups.length === 0"
+                class="py-6 text-center text-xs text-gray-400 px-3"
+              >
+                Модели не найдены
+              </div>
+
+              <div
+                v-for="group in filteredProviderGroups"
+                :key="group.settingId"
+                class="space-y-1"
+              >
+                <!-- Group Header -->
+                <div class="px-2.5 pt-1.5 pb-0.5 flex items-center justify-between">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <span
+                      class="px-1.5 py-0.5 text-[9px] font-bold rounded-md uppercase tracking-wide border"
+                      :class="getProviderBadgeColor(group.provider)"
+                    >
+                      {{ group.providerName }}
+                    </span>
+                    <span class="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">
+                      {{ group.name }}
+                    </span>
+                  </div>
+                  <span
+                    v-if="group.isDefault"
+                    class="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium shrink-0"
+                  >
+                    По умолчанию
+                  </span>
+                </div>
+
+                <!-- Model Buttons in Group -->
+                <div class="space-y-0.5">
+                  <button
+                    v-for="m in group.models"
+                    :key="m.id"
+                    @click="selectConfiguredModel(group.settingId, m.id)"
+                    class="w-full px-2.5 py-1.5 text-left rounded-xl text-xs flex items-center justify-between hover:bg-blue-50/70 dark:hover:bg-blue-900/20 transition-colors"
+                    :class="selectedSettingId === group.settingId && selectedModel === m.id
+                      ? 'text-blue-600 dark:text-blue-400 font-semibold bg-blue-50/60 dark:bg-blue-900/25'
+                      : 'text-gray-700 dark:text-gray-300'"
+                  >
+                    <div class="flex items-center gap-2 min-w-0 pr-2">
+                      <span class="text-sm shrink-0">{{ m.icon }}</span>
+                      <div class="flex flex-col min-w-0">
+                        <span class="truncate font-medium">{{ m.name }}</span>
+                        <div class="flex items-center gap-1.5 mt-0.5">
+                          <span
+                            class="text-[9px] px-1 py-0.2 rounded font-medium"
+                            :class="m.isConfigured
+                              ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'"
+                          >
+                            {{ m.tag }}
+                          </span>
+                          <span class="text-[10px] text-gray-400 font-mono truncate max-w-[120px]">
+                            {{ m.id }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <span
+                      v-if="selectedSettingId === group.settingId && selectedModel === m.id"
+                      class="text-blue-600 dark:text-blue-400 font-bold shrink-0 text-xs"
+                    >
+                      ✓
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer banner if fallback -->
+            <div
+              v-if="!hasConfiguredProviders"
+              class="mt-1 pt-1.5 px-3 border-t border-gray-100 dark:border-gray-800 text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1"
+            >
+              <span>⚠️ Используются системные fallback-настройки</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Effort Selector Dropdown -->
+        <div class="relative" ref="effortDropdownRef">
+          <button
+            @click="isEffortMenuOpen = !isEffortMenuOpen"
+            class="px-2.5 py-1.5 rounded-xl text-xs font-medium bg-gray-50 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-700/80 text-gray-700 dark:text-gray-200 border border-gray-200/80 dark:border-gray-700 flex items-center gap-1.5 transition-colors shadow-xs"
+            title="Уровень глубины рассуждений"
+          >
+            <span
+              class="w-2 h-2 rounded-full shrink-0"
+              :class="{
+                'bg-emerald-500': selectedEffort === 'low',
+                'bg-amber-500': selectedEffort === 'medium',
+                'bg-purple-500': selectedEffort === 'high',
+              }"
+            ></span>
+            <span class="hidden sm:inline">Effort:</span>
+            <span class="capitalize">{{ selectedEffort }}</span>
+            <ChevronDown :size="12" class="text-gray-400" />
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div
+            v-if="isEffortMenuOpen"
+            class="absolute right-0 mt-1.5 w-60 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100"
+          >
+            <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-gray-800">
+              Глубина рассуждений (Effort)
+            </div>
+            <button
+              v-for="eff in effortOptions"
+              :key="eff.id"
+              @click="selectEffort(eff.id)"
+              class="w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-blue-50/70 dark:hover:bg-blue-900/20 transition-colors"
+              :class="selectedEffort === eff.id ? 'text-blue-600 font-semibold bg-blue-50/50 dark:bg-blue-900/10' : 'text-gray-700 dark:text-gray-300'"
+            >
+              <div class="flex flex-col min-w-0 pr-2">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full" :class="eff.color"></span>
+                  <span class="font-medium">{{ eff.name }}</span>
+                </div>
+                <span class="text-[10px] text-gray-400 mt-0.5">{{ eff.desc }}</span>
+              </div>
+              <span v-if="selectedEffort === eff.id" class="text-blue-600 shrink-0">✓</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas Toggle -->
         <button
           v-if="currentArtifact"
           @click="isCanvasOpen = !isCanvasOpen"
-          class="px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm"
+          class="px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all shadow-xs"
           :class="isCanvasOpen
             ? 'bg-blue-600 text-white shadow-blue-500/25'
             : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/60'"
         >
-          <TableIcon :size="14" />
-          <span>{{ isCanvasOpen ? 'Скрыть Canvas' : 'Открыть Canvas' }}</span>
+          <TableIcon :size="13" />
+          <span class="hidden sm:inline">{{ isCanvasOpen ? 'Скрыть Canvas' : 'Canvas' }}</span>
           <span
             v-if="currentArtifact?.rows?.length"
-            class="px-1.5 py-0.2 text-[10px] rounded-full bg-blue-500/20 text-blue-100"
+            class="px-1.5 py-0.2 text-[9px] rounded-full bg-blue-500/20 text-blue-100"
           >
             {{ currentArtifact.rows.length }}
           </span>
         </button>
 
+        <!-- New Chat Button -->
         <button
           @click="startNewSession"
-          class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 transition-colors shadow-sm shadow-blue-500/20"
+          class="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 transition-colors shadow-xs shadow-blue-500/20 shrink-0"
         >
           <Plus :size="14" />
-          <span class="hidden sm:inline">Новый диалог</span>
+          <span class="hidden sm:inline">Новый</span>
         </button>
       </div>
     </div>
 
     <!-- Main Workspace Layout (Sidebar + Chat Feed + Canvas) -->
-    <div class="flex-1 flex min-h-0 relative">
+    <div class="flex-1 flex min-h-0 relative overflow-hidden">
       <!-- Left Sidebar: Session History -->
       <aside
         v-show="isSidebarOpen"
@@ -159,7 +353,7 @@
               Аналитический AI-Ассистент ATC
             </h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mb-8 max-w-lg leading-relaxed">
-              Задавайте вопросы на естественном языке. Ассистент выполнит безопасные SQL-запросы к базе данных, найдет слушателей или проверит файлы и построит интерактивный отчет.
+              Задавайте вопросы на естественном языке. Ассистент выполнит безопасные SQL-запросы к базе данных, найдет слушателей, проверит выданные сертификаты и построит отчет.
             </p>
 
             <!-- Quick Action Chips -->
@@ -276,6 +470,57 @@
                   {{ msg.content }}
                 </div>
 
+                <!-- Certificates Widget (if present in message) -->
+                <div
+                  v-if="msg.certificates && msg.certificates.length"
+                  class="mt-3 p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 space-y-3"
+                >
+                  <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <div class="flex items-center gap-2">
+                      <Award class="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                      <span class="text-xs font-bold text-amber-900 dark:text-amber-200">
+                        Найдено сертификатов: {{ msg.certificates.length }} шт.
+                      </span>
+                    </div>
+
+                    <!-- Batch ZIP Download Button -->
+                    <button
+                      v-if="msg.certificates.length > 1"
+                      @click="downloadCertificatesZip(msg.certificates.map(c => c.id))"
+                      class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shadow-amber-600/20"
+                    >
+                      <Archive class="w-3.5 h-3.5" />
+                      <span>Скачать архив (.ZIP)</span>
+                    </button>
+                  </div>
+
+                  <!-- Cards Grid -->
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div
+                      v-for="cert in msg.certificates"
+                      :key="cert.id"
+                      class="p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-amber-200/60 dark:border-amber-900/40 flex items-center justify-between gap-2 text-xs shadow-xs"
+                    >
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-1.5">
+                          <span class="font-bold text-gray-900 dark:text-white truncate">№ {{ cert.certificateNumber }}</span>
+                          <span class="px-1.5 py-0.2 text-[9px] font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 rounded-full">Выдан</span>
+                        </div>
+                        <p class="text-[11px] text-gray-700 dark:text-gray-300 truncate mt-0.5">{{ cert.studentName }}</p>
+                        <p class="text-[10px] text-gray-400 truncate">{{ cert.courseName }}</p>
+                      </div>
+
+                      <button
+                        @click="downloadCertificatePdf(cert.id, cert.certificateNumber)"
+                        class="p-2 rounded-lg bg-gray-100 hover:bg-amber-100 dark:bg-gray-800 dark:hover:bg-amber-950/60 text-gray-600 hover:text-amber-700 dark:text-gray-300 dark:hover:text-amber-300 transition-colors shrink-0"
+                        title="Скачать PDF"
+                      >
+                        <Download class="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Artifact Button (Canvas trigger) -->
                 <div
                   v-if="msg.artifact"
@@ -321,13 +566,13 @@
             </div>
             <div class="p-4 rounded-2xl rounded-tl-sm bg-gray-50 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/60 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-3">
               <Loader2 :size="16" class="animate-spin text-blue-600" />
-              <span>ИИ анализирует вопрос, проверяет таблицы БД и файлы...</span>
+              <span>ИИ анализирует вопрос, проверяет базу данных и файлы...</span>
             </div>
           </div>
         </div>
 
         <!-- Input Box Area -->
-        <div class="p-4 border-t border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div class="p-3 border-t border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900">
           <div class="max-w-3xl mx-auto space-y-2">
             <!-- Attached File Chip (if any) -->
             <div
@@ -360,7 +605,7 @@
                 v-model="inputPrompt"
                 @keydown.enter.exact.prevent="handleSubmit"
                 rows="1"
-                placeholder="Задайте вопрос по слушателям, курсам, группам или файлам... (Enter для отправки)"
+                placeholder="Задайте вопрос или попросите найти сертификаты/слушателей... (Enter для отправки)"
                 class="flex-1 bg-transparent border-0 resize-none text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-0 max-h-36 py-2 custom-scrollbar"
                 :disabled="isGenerating"
               ></textarea>
@@ -376,7 +621,7 @@
               </button>
             </div>
             <p class="text-[10px] text-gray-400 text-center">
-              Shift + Enter для переноса строки. Доступ к базе данных ограничен политикой безопасности в режиме только для чтения.
+              Shift + Enter для переноса строки • Доступ к БД только для чтения • Защита персональных данных
             </p>
           </div>
         </div>
@@ -389,7 +634,7 @@
         :class="isCanvasFullscreen ? 'flex-1 w-full' : 'w-[520px] xl:w-[640px] shrink-0'"
       >
         <!-- Canvas Header -->
-        <div class="h-14 px-4 border-b border-gray-200/80 dark:border-gray-800 flex items-center justify-between shrink-0 bg-gray-50/50 dark:bg-gray-950/50">
+        <div class="h-13 px-4 border-b border-gray-200/80 dark:border-gray-800 flex items-center justify-between shrink-0 bg-gray-50/50 dark:bg-gray-950/50">
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
               <TableIcon :size="16" />
@@ -423,6 +668,16 @@
                 <span>График</span>
               </button>
             </div>
+
+            <!-- Batch Certificates ZIP Download (if available in artifact) -->
+            <button
+              v-if="currentArtifact.certificates && currentArtifact.certificates.length > 0"
+              @click="downloadCertificatesZip(currentArtifact.certificates.map(c => c.id))"
+              class="p-1.5 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="Скачать все сертификаты в ZIP"
+            >
+              <Archive :size="16" />
+            </button>
 
             <!-- Export to Excel -->
             <button
@@ -653,7 +908,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import {
   Sparkles,
   Bot,
@@ -682,7 +937,10 @@ import {
   Users,
   GraduationCap,
   Building2,
-  Calendar,
+  Award,
+  Download,
+  Archive,
+  Cpu,
 } from 'lucide-vue-next';
 import * as XLSX from 'xlsx';
 import DynamicBarChart from '~/components/charts/DynamicBarChart.vue';
@@ -690,11 +948,186 @@ import Modal from '~/components/ui/Modal.vue';
 import Button from '~/components/ui/Button.vue';
 
 definePageMeta({
-  layout: 'default',
+  layout: 'report-builder' as any,
 });
 
 const { authFetch } = useAuthFetch();
 const notification = useNotification();
+
+// --- Интерфейсы моделей и провайдеров ---
+interface ConfiguredModelItem {
+  id: string;
+  name: string;
+  icon: string;
+  tag: string;
+  isConfigured: boolean;
+}
+
+interface ConfiguredProviderGroup {
+  settingId: string;
+  provider: string;
+  providerName: string;
+  name: string;
+  isDefault: boolean;
+  models: ConfiguredModelItem[];
+}
+
+// --- Выбор модели из реально настроенных подключений ---
+const configuredProviders = ref<ConfiguredProviderGroup[]>([]);
+const loadingModels = ref(false);
+const hasConfiguredProviders = ref(true);
+const selectedSettingId = ref<string>('');
+const selectedModel = ref<string>('gpt-4o-mini');
+const modelSearchQuery = ref('');
+const isModelMenuOpen = ref(false);
+const modelDropdownRef = ref<HTMLElement | null>(null);
+
+const currentSelectedProvider = computed(() => {
+  return configuredProviders.value.find((g) => g.settingId === selectedSettingId.value) || null;
+});
+
+const currentSelectedModelMeta = computed(() => {
+  if (currentSelectedProvider.value) {
+    return currentSelectedProvider.value.models.find((m) => m.id === selectedModel.value) || null;
+  }
+  for (const group of configuredProviders.value) {
+    const found = group.models.find((m) => m.id === selectedModel.value);
+    if (found) return found;
+  }
+  return null;
+});
+
+const selectedModelLabel = computed(() => {
+  if (currentSelectedModelMeta.value) {
+    return `${currentSelectedModelMeta.value.icon} ${currentSelectedModelMeta.value.name}`;
+  }
+  return selectedModel.value || 'Модель ИИ';
+});
+
+const filteredProviderGroups = computed(() => {
+  const query = modelSearchQuery.value.trim().toLowerCase();
+  if (!query) return configuredProviders.value;
+
+  return configuredProviders.value
+    .map((group) => {
+      const matchesGroup =
+        group.name.toLowerCase().includes(query) ||
+        group.providerName.toLowerCase().includes(query) ||
+        group.provider.toLowerCase().includes(query);
+
+      const filteredModels = group.models.filter(
+        (m) =>
+          matchesGroup ||
+          m.name.toLowerCase().includes(query) ||
+          m.id.toLowerCase().includes(query) ||
+          m.tag.toLowerCase().includes(query)
+      );
+
+      return {
+        ...group,
+        models: filteredModels,
+      };
+    })
+    .filter((group) => group.models.length > 0);
+});
+
+function getProviderBadgeColor(provider: string): string {
+  switch (provider) {
+    case 'openai':
+      return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800';
+    case 'deepseek':
+      return 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800';
+    case 'anthropic':
+      return 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border-amber-200 dark:border-amber-800';
+    case 'gemini':
+      return 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border-blue-200 dark:border-blue-800';
+    case 'groq':
+      return 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400 border-orange-200 dark:border-orange-800';
+    case 'openrouter':
+      return 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400 border-purple-200 dark:border-purple-800';
+    case 'mistral':
+      return 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border-rose-200 dark:border-rose-800';
+    default:
+      return 'bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700';
+  }
+}
+
+async function loadAvailableModels() {
+  loadingModels.value = true;
+  try {
+    const res: any = await authFetch('/api/ai/chat/models');
+    if (res?.success && res.data) {
+      configuredProviders.value = res.data.providers || [];
+      hasConfiguredProviders.value = res.data.hasConfiguredProviders ?? true;
+
+      // Восстанавливаем сохраненный выбор пользователя
+      const savedSetting = import.meta.client ? localStorage.getItem('atc_ai_selected_setting') : null;
+      const savedModel = import.meta.client ? localStorage.getItem('atc_ai_selected_model') : null;
+
+      let matched = false;
+      if (savedSetting && savedModel) {
+        const foundGroup = configuredProviders.value.find((g) => g.settingId === savedSetting);
+        if (foundGroup) {
+          const foundModel = foundGroup.models.find((m) => m.id === savedModel);
+          if (foundModel) {
+            selectedSettingId.value = savedSetting;
+            selectedModel.value = savedModel;
+            matched = true;
+          }
+        }
+      }
+
+      if (!matched && configuredProviders.value.length > 0) {
+        selectedSettingId.value = res.data.defaultSettingId || configuredProviders.value[0].settingId;
+        selectedModel.value = res.data.defaultModel || configuredProviders.value[0].models[0]?.id || 'gpt-4o-mini';
+      }
+    }
+  } catch (err: any) {
+    console.error('Ошибка загрузки настроенных моделей AI:', err);
+  } finally {
+    loadingModels.value = false;
+  }
+}
+
+function selectConfiguredModel(settingId: string, modelId: string) {
+  selectedSettingId.value = settingId;
+  selectedModel.value = modelId;
+  isModelMenuOpen.value = false;
+  if (import.meta.client) {
+    localStorage.setItem('atc_ai_selected_setting', settingId);
+    localStorage.setItem('atc_ai_selected_model', modelId);
+  }
+}
+
+// --- Выбор Effort (Reasoning Effort) ---
+const effortOptions = [
+  { id: 'low', name: 'Low (Быстрый)', desc: '1-2 шага, мгновенный ответ', color: 'bg-emerald-500' },
+  { id: 'medium', name: 'Medium (Баланс)', desc: 'До 4 шагов, поиск в БД', color: 'bg-amber-500' },
+  { id: 'high', name: 'High (Глубокий)', desc: 'До 8 шагов, детальная проверка', color: 'bg-purple-500' },
+];
+
+const selectedEffort = ref<'low' | 'medium' | 'high'>('medium');
+const isEffortMenuOpen = ref(false);
+const effortDropdownRef = ref<HTMLElement | null>(null);
+
+function selectEffort(eff: string) {
+  selectedEffort.value = eff as 'low' | 'medium' | 'high';
+  isEffortMenuOpen.value = false;
+  if (import.meta.client) {
+    localStorage.setItem('atc_ai_selected_effort', eff);
+  }
+}
+
+// Закрытие дропдаунов по клику вне
+function handleWindowClick(e: MouseEvent) {
+  const target = e.target as Node;
+  if (modelDropdownRef.value && !modelDropdownRef.value.contains(target)) {
+    isModelMenuOpen.value = false;
+  }
+  if (effortDropdownRef.value && !effortDropdownRef.value.contains(target)) {
+    isEffortMenuOpen.value = false;
+  }
+}
 
 // --- Состояние сессий ---
 const sessions = ref<Array<{ id: string; title: string; createdAt: string; updatedAt: string }>>([]);
@@ -713,12 +1146,22 @@ interface AgentStep {
   output?: any;
 }
 
+interface CertificateItem {
+  id: string;
+  certificateNumber: string;
+  studentName: string;
+  courseName: string;
+  issueDate?: string;
+  status?: string;
+}
+
 interface ReportArtifact {
   title: string;
   description?: string;
   columns: Array<{ key: string; label: string; type?: 'text' | 'number' | 'date' }>;
   rows: Record<string, any>[];
   summaryMetrics?: Array<{ label: string; value: string | number; change?: string }>;
+  certificates?: CertificateItem[];
   chartSuggestion?: {
     type?: 'bar' | 'doughnut' | 'line';
     xKey?: string;
@@ -734,6 +1177,7 @@ interface ChatMessage {
   steps?: AgentStep[];
   isStepsOpen?: boolean;
   artifact?: ReportArtifact;
+  certificates?: CertificateItem[];
   sqlExecuted?: string;
   createdAt: string;
 }
@@ -769,9 +1213,9 @@ const newSessionTitle = ref('');
 // --- Быстрые сценарии ---
 const quickChips = [
   { text: 'Сколько групп сейчас в процессе обучения?', icon: Users },
-  { text: 'Выведи топ самых популярных учебных курсов', icon: GraduationCap },
+  { text: 'Выгрузи все сертификаты по курсу Авиационная безопасность', icon: Award },
   { text: 'Покажи статистику слушателей по организациям', icon: Building2 },
-  { text: 'Какие файлы и приказы загружены в систему?', icon: FileText },
+  { text: 'Какие приказы и файлы загружены в систему?', icon: FileText },
 ];
 
 // --- Вычисляемые свойства ---
@@ -843,7 +1287,6 @@ async function loadSessions() {
     const res: any = await authFetch('/api/ai/chat/sessions');
     if (res.success) {
       sessions.value = res.data;
-      // Если сессия не выбрана, выбираем первую
       if (!currentSessionId.value && sessions.value.length > 0) {
         const first = sessions.value[0];
         if (first) {
@@ -870,7 +1313,6 @@ async function selectSession(sessionId: string) {
         ...m,
         isStepsOpen: false,
       }));
-      // Находим последний артефакт в диалоге
       const lastWithArtifact = [...messages.value].reverse().find((m) => m.artifact);
       if (lastWithArtifact?.artifact) {
         currentArtifact.value = lastWithArtifact.artifact;
@@ -955,7 +1397,6 @@ async function handleSubmit() {
   inputPrompt.value = '';
   isGenerating.value = true;
 
-  // Оптимистичное добавление сообщения пользователя
   const tempUserMsgId = 'temp-' + Date.now();
   messages.value.push({
     id: tempUserMsgId,
@@ -975,6 +1416,9 @@ async function handleSubmit() {
         sessionId: currentSessionId.value,
         message: userMsgText,
         fileAttachmentUuid: fileUuid,
+        settingId: selectedSettingId.value || undefined,
+        model: selectedModel.value,
+        effort: selectedEffort.value,
       },
     });
 
@@ -983,25 +1427,21 @@ async function handleSubmit() {
       currentSessionId.value = data.sessionId;
       currentSessionTitle.value = data.sessionTitle;
 
-      // Заменяем временное сообщение реальным
       const idx = messages.value.findIndex((m) => m.id === tempUserMsgId);
       if (idx !== -1) {
         messages.value[idx] = data.userMessage;
       }
 
-      // Добавляем ответ ассистента
       messages.value.push({
         ...data.assistantMessage,
         isStepsOpen: false,
       });
 
-      // Если вернулся артефакт, открываем Canvas
       if (data.assistantMessage?.artifact) {
         currentArtifact.value = data.assistantMessage.artifact;
         isCanvasOpen.value = true;
       }
 
-      // Обновляем список сессий
       loadSessions();
     }
   } catch (err: any) {
@@ -1057,6 +1497,46 @@ function exportArtifactToExcel() {
     notification.success('Файл Excel успешно скачан');
   } catch (err: any) {
     notification.error('Ошибка экспорта в Excel: ' + err.message);
+  }
+}
+
+// --- Скачивание сертификатов ---
+function downloadCertificatePdf(certId: string, certNumber?: string) {
+  const url = `/api/certificates/download/${certId}?format=pdf`;
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${certNumber || 'certificate'}.pdf`;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+async function downloadCertificatesZip(certificateIds: string[]) {
+  if (!certificateIds || !certificateIds.length) {
+    notification.warning('Список сертификатов пуст');
+    return;
+  }
+
+  try {
+    notification.info('Формирование архива сертификатов...');
+    const blob: Blob = await authFetch('/api/certificates/archive', {
+      method: 'POST',
+      body: { certificateIds },
+      responseType: 'blob',
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `certificates_archive_${new Date().toISOString().slice(0, 10)}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    notification.success('Архив сертификатов успешно скачан!');
+  } catch (err: any) {
+    notification.error(err.message || 'Ошибка скачивания архива сертификатов');
   }
 }
 
@@ -1128,8 +1608,22 @@ function getStepWord(count: number): string {
 }
 
 onMounted(() => {
+  if (import.meta.client) {
+    const savedEffort = localStorage.getItem('atc_ai_selected_effort');
+    if (savedEffort && ['low', 'medium', 'high'].includes(savedEffort)) {
+      selectedEffort.value = savedEffort as 'low' | 'medium' | 'high';
+    }
+    window.addEventListener('click', handleWindowClick);
+  }
+  loadAvailableModels();
   loadSessions();
   loadSystemFiles();
+});
+
+onUnmounted(() => {
+  if (import.meta.client) {
+    window.removeEventListener('click', handleWindowClick);
+  }
 });
 </script>
 
