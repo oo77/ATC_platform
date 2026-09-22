@@ -72,7 +72,7 @@
             </div>
 
             <!-- Body (scrollable) -->
-            <div class="px-6 py-5 overflow-y-auto flex-1">
+            <div :class="['flex-1', bodyClass || 'px-6 py-5 overflow-y-auto']">
               <slot></slot>
             </div>
 
@@ -100,6 +100,7 @@ interface ModalProps {
   title?: string;
   size?: ModalSize;
   closeOnBackdrop?: boolean;
+  bodyClass?: string;
 }
 
 const props = withDefaults(defineProps<ModalProps>(), {

@@ -1,5 +1,10 @@
 <template>
-  <UiModal :is-open="isOpen" size="full" @close="$emit('close')">
+  <UiModal
+    :is-open="isOpen"
+    size="full"
+    body-class="p-0 overflow-hidden flex flex-col flex-1"
+    @close="$emit('close')"
+  >
     <!-- Кастомная шапка с информацией о группе и переключателем вкладок -->
     <template #header>
       <div class="flex items-center justify-between w-full pr-6 gap-4 flex-wrap">
@@ -28,20 +33,6 @@
         <div class="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-xs shrink-0">
           <button
             type="button"
-            @click="activeTab = 'ai'"
-            :class="[
-              'px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 cursor-pointer',
-              activeTab === 'ai'
-                ? 'bg-white text-primary shadow-xs dark:bg-slate-700 dark:text-white'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-300'
-            ]"
-          >
-            <Sparkles class="w-4 h-4 text-amber-500" />
-            <span>ИИ-Помощник зачисления</span>
-          </button>
-
-          <button
-            type="button"
             @click="activeTab = 'current'"
             :class="[
               'px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 cursor-pointer',
@@ -64,30 +55,32 @@
                 : 'text-slate-500 hover:text-slate-700 dark:text-slate-300'
             ]"
           >
-            <Search class="w-4 h-4" />
-            <span>Поиск в базе</span>
+            <Database class="w-4 h-4" />
+            <span>Добавить из базы</span>
+          </button>
+
+          <button
+            type="button"
+            @click="activeTab = 'ai'"
+            :class="[
+              'px-4 py-2 rounded-lg font-bold transition-all flex items-center gap-2 cursor-pointer',
+              activeTab === 'ai'
+                ? 'bg-white text-primary shadow-xs dark:bg-slate-700 dark:text-white'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-300'
+            ]"
+          >
+            <Sparkles class="w-4 h-4 text-amber-500" />
+            <span>ИИ-Помощник зачисления</span>
           </button>
         </div>
       </div>
     </template>
 
-    <!-- Основное тело модального окна с фиксированной высотой (нет раздувания страницы) -->
-    <div class="h-[84vh] max-h-[84vh] flex flex-col min-h-0 overflow-hidden -mx-6 -my-5">
-      
-      <!-- ==================== ВКЛАДКА 1: ИИ-ПОМОЩНИК (ПОЛНОЭКРАННЫЙ СПЛИТ) ==================== -->
-      <div v-if="activeTab === 'ai'" class="flex-1 min-h-0 h-full overflow-hidden flex flex-col">
-        <GroupsAiStudentAssistant
-          :group-id="group?.id"
-          :start-date="groupStartDate"
-          :end-date="groupEndDate"
-          :existing-student-ids="existingStudentIds"
-          @confirm="handleAiAddStudents"
-          class="flex-1 min-h-0 h-full"
-        />
-      </div>
+    <!-- Основное тело модального окна без раздувания и без двойных скроллбаров -->
+    <div class="h-[76vh] max-h-[80vh] flex flex-col min-h-0 overflow-hidden">
 
-      <!-- ==================== ВКЛАДКА 2: ТЕКУЩИЕ СЛУШАТЕЛИ ГРУППЫ ==================== -->
-      <div v-else-if="activeTab === 'current'" class="flex-1 min-h-0 h-full overflow-hidden flex flex-col p-6 space-y-4">
+      <!-- ==================== ВКЛАДКА 1: ТЕКУЩИЕ СЛУШАТЕЛИ ГРУППЫ ==================== -->
+      <div v-if="activeTab === 'current'" class="flex-1 min-h-0 h-full overflow-hidden flex flex-col p-6 space-y-4">
         <div class="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h4 class="font-bold text-sm text-slate-900 dark:text-white">
@@ -98,15 +91,26 @@
             </p>
           </div>
 
-          <!-- Поиск по текущим слушателям -->
-          <div class="relative w-72">
-            <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              v-model="currentSearchQuery"
-              type="text"
-              placeholder="Поиск по ФИО, организации..."
-              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
-            />
+          <div class="flex items-center gap-2">
+            <!-- Поиск по текущим слушателям -->
+            <div class="relative w-64">
+              <Search class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                v-model="currentSearchQuery"
+                type="text"
+                placeholder="Фильтр по ФИО, организации..."
+                class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800 text-slate-800 dark:text-slate-200"
+              />
+            </div>
+
+            <button
+              type="button"
+              @click="activeTab = 'search'"
+              class="inline-flex items-center gap-1.5 px-3 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 transition-colors cursor-pointer shadow-xs"
+            >
+              <UserPlus class="w-3.5 h-3.5" />
+              <span>Добавить слушателей</span>
+            </button>
           </div>
         </div>
 
@@ -117,9 +121,27 @@
             <p class="text-sm font-bold text-slate-700 dark:text-slate-300">
               {{ currentSearchQuery ? 'Ничего не найдено по запросу' : 'В группе пока нет слушателей' }}
             </p>
-            <p class="text-xs text-slate-400 mt-1 max-w-sm">
-              Используйте вкладку «ИИ-Помощник зачисления» для распознавания приказов или «Поиск в базе» для ручного зачисления.
+            <p class="text-xs text-slate-400 mt-1 max-w-sm mb-4">
+              Зачислите слушателей вручную из базы данных или используйте ИИ-Помощник для распознавания приказов.
             </p>
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                @click="activeTab = 'search'"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 transition-colors cursor-pointer shadow-xs"
+              >
+                <Database class="w-3.5 h-3.5" />
+                <span>Добавить из базы</span>
+              </button>
+              <button
+                type="button"
+                @click="activeTab = 'ai'"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <Sparkles class="w-3.5 h-3.5 text-amber-500" />
+                <span>ИИ-Помощник</span>
+              </button>
+            </div>
           </div>
 
           <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -148,7 +170,7 @@
               </div>
 
               <!-- Действия -->
-              <div class="flex items-center gap-1 shrink-0">
+              <div class="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   @click="openTransferModal(gs)"
@@ -172,49 +194,89 @@
         </div>
       </div>
 
-      <!-- ==================== ВКЛАДКА 3: РУЧНОЙ ПОИСК В БАЗЕ ==================== -->
+      <!-- ==================== ВКЛАДКА 2: ДОБАВЛЕНИЕ ИЗ БАЗЫ ДАННЫХ ==================== -->
       <div v-else-if="activeTab === 'search'" class="flex-1 min-h-0 h-full overflow-hidden flex flex-col p-6 space-y-4">
         <div class="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h4 class="font-bold text-sm text-slate-900 dark:text-white">
-              Поиск слушателей в базе данных
+            <h4 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+              <span>Добавление слушателей из базы данных</span>
+              <span v-if="totalDbStudents > 0" class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-mono font-bold text-slate-600 dark:text-slate-400">
+                Всего в базе: {{ totalDbStudents }}
+              </span>
             </h4>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Введите ФИО или ПИНФЛ для выбора слушателей
+              Выберите слушателей флажками для зачисления в группу
             </p>
           </div>
 
-          <button
-            v-if="selectedStudentIds.length > 0"
-            type="button"
-            @click="addSelectedStudents"
-            :disabled="addingStudents"
-            class="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm"
-          >
-            <Loader2 v-if="addingStudents" class="w-3.5 h-3.5 animate-spin" />
-            <UserCheck v-else class="w-3.5 h-3.5" />
-            <span>Добавить выбранных ({{ selectedStudentIds.length }})</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              v-if="searchResults.length > 0"
+              type="button"
+              @click="toggleSelectAllDisplayed"
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              {{ isAllDisplayedSelected ? 'Снять выбор' : 'Выбрать всех отображаемых' }}
+            </button>
+
+            <button
+              v-if="selectedStudentIds.length > 0"
+              type="button"
+              @click="addSelectedStudents"
+              :disabled="addingStudents"
+              class="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <Loader2 v-if="addingStudents" class="w-3.5 h-3.5 animate-spin" />
+              <UserCheck v-else class="w-3.5 h-3.5" />
+              <span>Добавить выбранных ({{ selectedStudentIds.length }})</span>
+            </button>
+          </div>
         </div>
 
+        <!-- Поисковая строка -->
         <div class="relative">
           <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="Введите минимум 2 символа для поиска..."
-            class="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
+            placeholder="Поиск по ФИО, ПИНФЛ, организации или должности..."
+            class="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 text-slate-900 dark:text-white"
             @input="debouncedSearch"
           />
+          <button
+            v-if="searchQuery"
+            type="button"
+            @click="clearSearch"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+          >
+            <X class="w-4 h-4" />
+          </button>
         </div>
 
-        <!-- Результаты ручного поиска -->
+        <!-- Список слушателей из базы -->
         <div class="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 custom-scrollbar p-3">
+          <!-- Состояние загрузки -->
           <div v-if="loading" class="h-48 flex flex-col items-center justify-center text-center">
             <Loader2 class="w-6 h-6 animate-spin text-primary mb-2" />
-            <p class="text-xs text-slate-500">Поиск по базе...</p>
+            <p class="text-xs text-slate-500 font-medium">Загрузка слушателей из базы данных...</p>
           </div>
 
+          <!-- Состояние ошибки -->
+          <div v-else-if="fetchError" class="h-48 flex flex-col items-center justify-center text-center p-4">
+            <AlertCircle class="w-8 h-8 text-rose-500 mb-2" />
+            <p class="text-sm font-bold text-slate-800 dark:text-slate-200">Ошибка подключения к базе</p>
+            <p class="text-xs text-slate-400 mt-1 max-w-sm">{{ fetchError }}</p>
+            <button
+              type="button"
+              @click="loadStudents(searchQuery)"
+              class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+            >
+              <RefreshCw class="w-3.5 h-3.5" />
+              <span>Повторить попытку</span>
+            </button>
+          </div>
+
+          <!-- Результаты поиска / начальный список -->
           <div v-else-if="searchResults.length > 0" class="space-y-1">
             <label
               v-for="student in searchResults"
@@ -235,15 +297,20 @@
                 @change="toggleStudent(student)"
                 class="w-4 h-4 rounded text-primary focus:ring-primary disabled:opacity-40 accent-primary"
               />
-              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold font-mono">
                 {{ getInitials(student.fullName) }}
               </div>
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-bold text-slate-900 dark:text-white truncate">
-                  {{ student.fullName }}
-                </p>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <p class="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    {{ student.fullName }}
+                  </p>
+                  <span v-if="student.pinfl" class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    {{ student.pinfl }}
+                  </span>
+                </div>
                 <p class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                  {{ student.pinfl }} • {{ student.organization }}
+                  {{ [student.organization, student.department, student.position].filter(Boolean).join(" · ") }}
                 </p>
               </div>
               <span v-if="existingStudentIds.includes(student.id)" class="text-xs font-bold text-slate-400 shrink-0">
@@ -252,16 +319,25 @@
             </label>
           </div>
 
-          <div v-else-if="searchQuery && !loading" class="h-48 flex flex-col items-center justify-center text-center text-slate-400">
-            <Search class="w-8 h-8 mb-2 opacity-50" />
-            <p class="text-xs">Слушатели не найдены</p>
-          </div>
-
+          <!-- Ничего не найдено -->
           <div v-else class="h-48 flex flex-col items-center justify-center text-center text-slate-400">
             <Search class="w-8 h-8 mb-2 opacity-50" />
-            <p class="text-xs">Введите ФИО или ПИНФЛ в строке поиска выше</p>
+            <p class="text-sm font-semibold">Слушатели не найдены</p>
+            <p class="text-xs mt-1">Попробуйте изменить поисковый запрос</p>
           </div>
         </div>
+      </div>
+
+      <!-- ==================== ВКЛАДКА 3: ИИ-ПОМОЩНИК (СВЕРКА И РАСПОЗНАВАНИЕ) ==================== -->
+      <div v-else-if="activeTab === 'ai'" class="flex-1 min-h-0 h-full overflow-hidden flex flex-col">
+        <GroupsAiStudentAssistant
+          :group-id="group?.id"
+          :start-date="groupStartDate"
+          :end-date="groupEndDate"
+          :existing-student-ids="existingStudentIds"
+          @confirm="handleAiAddStudents"
+          class="flex-1 min-h-0 h-full"
+        />
       </div>
     </div>
 
@@ -337,6 +413,11 @@ import {
   Trash2,
   Loader2,
   UserCheck,
+  Database,
+  RefreshCw,
+  X,
+  UserPlus,
+  AlertCircle,
 } from 'lucide-vue-next';
 import GroupsAiStudentAssistant from './AiStudentAssistant.vue';
 import type { GroupStudent } from '~/types/group';
@@ -363,13 +444,15 @@ const { authFetch } = useAuthFetch();
 const toast = useNotification();
 
 // State
-const activeTab = ref<'ai' | 'current' | 'search'>('ai');
+const activeTab = ref<'current' | 'search' | 'ai'>('current');
 const searchQuery = ref('');
 const currentSearchQuery = ref('');
 const searchResults = ref<Student[]>([]);
+const totalDbStudents = ref<number>(0);
 const selectedStudentIds = ref<string[]>([]);
 const loading = ref(false);
 const addingStudents = ref(false);
+const fetchError = ref<string | null>(null);
 
 // State для переноса
 const showTransferModal = ref(false);
@@ -398,69 +481,60 @@ const filteredCurrentStudents = computed(() => {
   );
 });
 
+const isAllDisplayedSelected = computed(() => {
+  const selectable = searchResults.value.filter(
+    (s) => !existingStudentIds.value.includes(s.id)
+  );
+  if (selectable.length === 0) return false;
+  return selectable.every((s) => selectedStudentIds.value.includes(s.id));
+});
+
 const groupStartDate = computed(() => {
   if (!props.group?.startDate) return undefined;
-  return new Date(props.group.startDate).toISOString().split('T')[0];
+  const d = new Date(props.group.startDate);
+  return isNaN(d.getTime()) ? undefined : d.toISOString().split('T')[0];
 });
 
 const groupEndDate = computed(() => {
   if (!props.group?.endDate) return undefined;
-  return new Date(props.group.endDate).toISOString().split('T')[0];
+  const d = new Date(props.group.endDate);
+  return isNaN(d.getTime()) ? undefined : d.toISOString().split('T')[0];
 });
 
-// Добавление слушателей через ИИ
-const handleAiAddStudents = async (ids: string[]) => {
-  if (!props.group || !ids.length) return;
-  addingStudents.value = true;
-  try {
-    const response = await authFetch<{ success: boolean; message?: string; conflicts?: any[] }>(
-      `/api/groups/${props.group.id}/students`,
-      {
-        method: 'POST',
-        body: { studentIds: ids },
-      }
-    );
-
-    if (response.success) {
-      toast.success(response.message || `Успешно зачислено: ${ids.length} слушателей`);
-      emit('updated');
-      // Переключаем на вкладку текущих слушателей, чтобы сразу видеть результат
-      activeTab.value = 'current';
-    } else if (response.conflicts && response.conflicts.length > 0) {
-      const conflictNames = response.conflicts.map((c: any) => c.studentName).join(', ');
-      toast.error(`Конфликт расписания: ${conflictNames}`);
-    } else {
-      toast.error(response.message || 'Ошибка добавления слушателей');
-    }
-  } catch (error: any) {
-    toast.error(error.data?.message || 'Ошибка при зачислении слушателей');
-  } finally {
-    addingStudents.value = false;
-  }
-};
-
-// Ручной поиск слушателей
-const searchStudents = async () => {
-  if (!searchQuery.value || searchQuery.value.length < 2) {
-    searchResults.value = [];
-    return;
-  }
-
+// Загрузка слушателей из базы данных (прямое подключение)
+const loadStudents = async (query = '') => {
   loading.value = true;
+  fetchError.value = null;
   try {
-    const response = await authFetch<{ success: boolean; students: Student[] }>('/api/students', {
+    const params: any = {
+      limit: 50,
+    };
+    if (query && query.trim()) {
+      params.search = query.trim();
+    }
+
+    const response = await authFetch<{
+      success: boolean;
+      students: Student[];
+      total?: number;
+      message?: string;
+    }>('/api/students', {
       method: 'GET',
-      params: {
-        search: searchQuery.value,
-        limit: 30,
-      },
+      params,
     });
 
     if (response.success && response.students) {
       searchResults.value = response.students;
+      totalDbStudents.value = response.total ?? response.students.length;
+    } else {
+      searchResults.value = [];
+      if (response.message) {
+        fetchError.value = response.message;
+      }
     }
-  } catch (error) {
-    console.error('Error searching students:', error);
+  } catch (error: any) {
+    console.error('Error fetching students from DB:', error);
+    fetchError.value = error.data?.message || 'Не удалось подключиться к базе слушателей';
     searchResults.value = [];
   } finally {
     loading.value = false;
@@ -470,8 +544,13 @@ const searchStudents = async () => {
 const debouncedSearch = () => {
   if (searchTimeout) clearTimeout(searchTimeout);
   searchTimeout = setTimeout(() => {
-    searchStudents();
+    loadStudents(searchQuery.value);
   }, 300);
+};
+
+const clearSearch = () => {
+  searchQuery.value = '';
+  loadStudents('');
 };
 
 const toggleStudent = (student: Student) => {
@@ -484,34 +563,81 @@ const toggleStudent = (student: Student) => {
   }
 };
 
+const toggleSelectAllDisplayed = () => {
+  const selectable = searchResults.value.filter(
+    (s) => !existingStudentIds.value.includes(s.id)
+  );
+  if (isAllDisplayedSelected.value) {
+    const selectableIds = new Set(selectable.map((s) => s.id));
+    selectedStudentIds.value = selectedStudentIds.value.filter((id) => !selectableIds.has(id));
+  } else {
+    const currentSet = new Set(selectedStudentIds.value);
+    selectable.forEach((s) => currentSet.add(s.id));
+    selectedStudentIds.value = Array.from(currentSet);
+  }
+};
+
+// Добавление выбранных слушателей в группу
 const addSelectedStudents = async () => {
   if (selectedStudentIds.value.length === 0 || !props.group) return;
 
   addingStudents.value = true;
   try {
-    const response = await authFetch<{ success: boolean; message?: string; conflicts?: any[] }>(
-      `/api/groups/${props.group.id}/students`,
-      {
-        method: 'POST',
-        body: { studentIds: selectedStudentIds.value },
-      }
-    );
+    const response = await authFetch<{
+      success: boolean;
+      message?: string;
+      conflicts?: any[];
+      added?: string[];
+    }>(`/api/groups/${props.group.id}/students`, {
+      method: 'POST',
+      body: { studentIds: selectedStudentIds.value },
+    });
 
     if (response.success) {
-      toast.success(response.message || 'Слушатели добавлены');
+      toast.success(response.message || `Добавлено слушателей: ${selectedStudentIds.value.length}`);
       selectedStudentIds.value = [];
       searchQuery.value = '';
-      searchResults.value = [];
       emit('updated');
       activeTab.value = 'current';
     } else if (response.conflicts && response.conflicts.length > 0) {
       const conflictNames = response.conflicts.map((c: any) => c.studentName).join(', ');
-      toast.error(`Конфликт дат: ${conflictNames}`);
+      toast.error(`Конфликт расписания: ${conflictNames}`);
     } else {
-      toast.error(response.message || 'Ошибка добавления');
+      toast.error(response.message || 'Ошибка добавления слушателей');
     }
-  } catch (error) {
-    toast.error('Ошибка при добавлении слушателей');
+  } catch (error: any) {
+    toast.error(error.data?.message || 'Ошибка при добавлении слушателей');
+  } finally {
+    addingStudents.value = false;
+  }
+};
+
+// Добавление слушателей через ИИ
+const handleAiAddStudents = async (ids: string[]) => {
+  if (!props.group || !ids.length) return;
+  addingStudents.value = true;
+  try {
+    const response = await authFetch<{
+      success: boolean;
+      message?: string;
+      conflicts?: any[];
+    }>(`/api/groups/${props.group.id}/students`, {
+      method: 'POST',
+      body: { studentIds: ids },
+    });
+
+    if (response.success) {
+      toast.success(response.message || `Успешно зачислено: ${ids.length} слушателей`);
+      emit('updated');
+      activeTab.value = 'current';
+    } else if (response.conflicts && response.conflicts.length > 0) {
+      const conflictNames = response.conflicts.map((c: any) => c.studentName).join(', ');
+      toast.error(`Конфликт расписания: ${conflictNames}`);
+    } else {
+      toast.error(response.message || 'Ошибка добавления слушателей');
+    }
+  } catch (error: any) {
+    toast.error(error.data?.message || 'Ошибка при зачислении слушателей');
   } finally {
     addingStudents.value = false;
   }
@@ -551,8 +677,8 @@ const removeStudent = async (studentId: string) => {
     } else {
       toast.error(response.message || 'Ошибка удаления');
     }
-  } catch (error) {
-    toast.error('Ошибка исключения слушателя');
+  } catch (error: any) {
+    toast.error(error.data?.message || 'Ошибка исключения слушателя');
   }
 };
 
@@ -601,8 +727,8 @@ const transferStudentToGroup = async (toGroupId: string) => {
     } else {
       toast.error(response.message || 'Ошибка перемещения');
     }
-  } catch (error) {
-    toast.error('Ошибка перемещения слушателя');
+  } catch (error: any) {
+    toast.error(error.data?.message || 'Ошибка перемещения слушателя');
   }
 };
 
@@ -621,11 +747,22 @@ watch(
   () => props.isOpen,
   (isOpen) => {
     if (isOpen) {
-      activeTab.value = 'ai';
+      activeTab.value = currentStudents.value.length > 0 ? 'current' : 'search';
       searchQuery.value = '';
       currentSearchQuery.value = '';
-      searchResults.value = [];
       selectedStudentIds.value = [];
+      fetchError.value = null;
+      loadStudents('');
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => activeTab.value,
+  (tab) => {
+    if (tab === 'search' && searchResults.value.length === 0 && !loading.value) {
+      loadStudents(searchQuery.value);
     }
   }
 );

@@ -118,7 +118,10 @@ export class StudentMatcher {
     const defaultHeaders =
       config.provider === "openrouter" || clientBaseUrl?.includes("openrouter")
         ? {
-            "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
+            "HTTP-Referer":
+              process.env.APP_URL ||
+              process.env.SITE_URL ||
+              "https://atc.uz",
             "X-Title": "ATC Platform - Student Matcher",
           }
         : undefined;
@@ -155,7 +158,10 @@ export class StudentMatcher {
           apiKey: apiKey,
           baseURL: "https://openrouter.ai/api/v1",
           defaultHeaders: {
-            "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
+            "HTTP-Referer":
+              process.env.APP_URL ||
+              process.env.SITE_URL ||
+              "https://atc.uz",
             "X-Title": "ATC Platform - Student Matcher",
           },
         });

@@ -388,7 +388,8 @@ export async function fetchProviderModels(params: {
       };
 
       if (provider === "openrouter") {
-        headers["HTTP-Referer"] = process.env.SITE_URL || "http://localhost:3000";
+        headers["HTTP-Referer"] =
+          process.env.APP_URL || process.env.SITE_URL || "https://atc.uz";
         headers["X-Title"] = "ATC Platform";
       }
 

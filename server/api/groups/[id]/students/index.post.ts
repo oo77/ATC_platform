@@ -55,25 +55,27 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-    // Проверяем конфликты: сравниваем конкретные даты занятий
-    const startDate = formatDateLocal(group.startDate);
-    const endDate = formatDateLocal(group.endDate);
+    // Проверяем конфликты только если у группы заданы корректные даты
+    const startDate = group.startDate ? formatDateLocal(group.startDate) : null;
+    const endDate = group.endDate ? formatDateLocal(group.endDate) : null;
 
-    const conflicts = await checkStudentConflicts(
-      studentIds,
-      startDate,
-      endDate,
-      groupId, // исключаем саму группу из «чужих»
-      groupId, // targetGroupId: проверяем по фактическим событиям этой группы
-    );
+    if (startDate && endDate) {
+      const conflicts = await checkStudentConflicts(
+        studentIds,
+        startDate,
+        endDate,
+        groupId, // исключаем саму группу из «чужих»
+        groupId, // targetGroupId: проверяем по фактическим событиям этой группы
+      );
 
-    if (conflicts.length > 0) {
-      return {
-        success: false,
-        message:
-          "Некоторые слушатели уже имеют занятия в другой группе в те же дни",
-        conflicts,
-      };
+      if (conflicts.length > 0) {
+        return {
+          success: false,
+          message:
+            "Некоторые слушатели уже имеют занятия в другой группе в те же дни",
+          conflicts,
+        };
+      }
     }
 
     // Добавляем слушателей
@@ -113,6 +115,7 @@ export default defineEventHandler(async (event) => {
 // Форматирует дату в YYYY-MM-DD без сдвига временной зоны
 function formatDateLocal(date: Date | string): string {
   const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return "";
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");

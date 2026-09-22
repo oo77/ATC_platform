@@ -78,24 +78,26 @@ export default defineEventHandler(async (event) => {
     // Конфликт = одна и та же дата занятия в двух разных группах.
     // fromGroupId исключается, т.к. студент будет из неё удалён.
     // toGroupId передаётся как targetGroupId: сравниваем по её событиям.
-    const toStartDate = formatDateLocal(toGroup.startDate);
-    const toEndDate = formatDateLocal(toGroup.endDate);
+    const toStartDate = toGroup.startDate ? formatDateLocal(toGroup.startDate) : null;
+    const toEndDate = toGroup.endDate ? formatDateLocal(toGroup.endDate) : null;
 
-    const conflicts = await checkStudentConflicts(
-      [studentId],
-      toStartDate,
-      toEndDate,
-      fromGroupId, // excludeGroupId: исходную группу исключаем
-      toGroupId, // targetGroupId: проверяем по событиям целевой группы
-    );
+    if (toStartDate && toEndDate) {
+      const conflicts = await checkStudentConflicts(
+        [studentId],
+        toStartDate,
+        toEndDate,
+        fromGroupId, // excludeGroupId: исходную группу исключаем
+        toGroupId, // targetGroupId: проверяем по событиям целевой группы
+      );
 
-    if (conflicts.length > 0) {
-      return {
-        success: false,
-        message:
-          "Перемещение создаст конфликт занятий с другой группой у слушателя",
-        conflicts,
-      };
+      if (conflicts.length > 0) {
+        return {
+          success: false,
+          message:
+            "Перемещение создаст конфликт занятий с другой группой у слушателя",
+          conflicts,
+        };
+      }
     }
 
     // Выполняем перемещение
@@ -121,6 +123,7 @@ export default defineEventHandler(async (event) => {
 // Форматирует дату в YYYY-MM-DD без сдвига временной зоны
 function formatDateLocal(date: Date | string): string {
   const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return "";
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");

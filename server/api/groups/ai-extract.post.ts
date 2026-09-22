@@ -307,7 +307,12 @@ export default defineEventHandler(async (event) => {
   }
 
   // 2. Получение настроек AI
-  const dbSettings = await aiSettingsRepository.getDefault().catch(() => null);
+  let dbSettings = await aiSettingsRepository.getDefault().catch(() => null);
+  if (!dbSettings) {
+    const allSettings = await aiSettingsRepository.getAll().catch(() => []);
+    dbSettings = allSettings.find((s) => s.isActive) || null;
+  }
+
   let apiKey = "";
   let provider = "openai";
   let baseUrl: string | null = null;
@@ -343,11 +348,13 @@ export default defineEventHandler(async (event) => {
   const { resolveBaseUrl } = await import("../../utils/ai/aiProvidersConfig");
   const resolvedBaseUrl = resolveBaseUrl(provider, baseUrl);
 
+  const siteReferer = process.env.APP_URL || process.env.SITE_URL || getHeader(event, "origin") || "https://atc.uz";
+
   const openai = new OpenAI({
     apiKey,
     baseURL: resolvedBaseUrl,
     defaultHeaders: provider === "openrouter"
-      ? { "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000", "X-Title": "ATC Platform Group AI" }
+      ? { "HTTP-Referer": siteReferer, "X-Title": "ATC Platform Group AI" }
       : undefined,
   });
 

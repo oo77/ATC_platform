@@ -117,8 +117,13 @@ export async function initSystemSettings(): Promise<void> {
           };
           settingsCache.set(row.id, item);
 
-          // Синхронизируем значение в process.env для обратной совместимости
-          if (row.value !== null && row.value !== undefined) {
+          // Синхронизируем значение в process.env для обратной совместимости,
+          // НО никогда не перезаписываем параметры подключения к БД из таблицы настроек!
+          if (
+            row.value !== null &&
+            row.value !== undefined &&
+            !row.id.startsWith("DATABASE_")
+          ) {
             process.env[row.id] = row.value;
           }
         }
@@ -150,7 +155,7 @@ export const getSystemSetting = getSettingSync;
 /**
  * Асинхронное получение настройки (гарантирует инициализацию кэша)
  */
-export async function getSetting(key: string, defaultValue = ""): string {
+export async function getSetting(key: string, defaultValue = ""): Promise<string> {
   if (!isInitialized) {
     await initSystemSettings();
   }
