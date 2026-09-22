@@ -1,8 +1,9 @@
 /**
  * PDF-версия «Ведомости проведения контроля знаний» — тот же бланк, что и Word
  * (server/assets/templates/assessment-sheet-template.docx): геометрия (A4, поля, ширины
- * колонок, шрифт Montserrat) взята из шаблона. Ячейки баллов и «Итого, %» — пустые
- * (форма для заполнения от руки), как и в Word-версии; см. assessmentSheetService.ts.
+ * колонок, шрифт Montserrat) взята из шаблона. Ячейки баллов показывают уже выставленную
+ * оценку, если она есть, иначе пусты (форма для заполнения от руки); «Итого, %» всегда пусто —
+ * как и в Word-версии, см. assessmentSheetService.ts.
  *
  * Реализовано на pdf-lib, как и остальные PDF проекта.
  */
@@ -218,7 +219,7 @@ function drawTableHead(ctx: Ctx): number {
   return bottom - top;
 }
 
-function drawStudentRow(ctx: Ctx, index: number, name: string) {
+function drawStudentRow(ctx: Ctx, index: number, name: string, scores: (number | null)[]) {
   const { regular, times } = ctx.fonts;
   const { gx } = ctx;
   const lastCol = gx.length - 2;
@@ -235,6 +236,15 @@ function drawStudentRow(ctx: Ctx, index: number, name: string) {
   const label = `${index}.`;
   drawText(ctx, label, gx[COL_NUM]! + (tw(NUM_TW) - times.widthOfTextAtSize(label, BODY_SIZE)) / 2, top + ASCENT * BODY_SIZE, times, BODY_SIZE);
   nameLines.forEach((line, i) => drawText(ctx, line, gx[COL_NAME]! + CELL_PAD_X, top + i * BODY_LINE + ASCENT * BODY_SIZE, regular, BODY_SIZE));
+
+  // Уже выставленный балл — по центру своей колонки (пусто, если ещё не выставлен, см. Word)
+  scores.forEach((score, di) => {
+    if (score === null || score === undefined) return;
+    const text = String(score);
+    const cx = (gx[COL_DISC0 + di]! + gx[COL_DISC0 + di + 1]!) / 2;
+    const width = regular.widthOfTextAtSize(text, BODY_SIZE);
+    drawText(ctx, text, cx - width / 2, top + ASCENT * BODY_SIZE, regular, BODY_SIZE);
+  });
 
   hLine(ctx, gx[0]!, gx[lastCol + 1]!, bottom);
   for (const x of gx) vLine(ctx, x, top, bottom);
@@ -329,9 +339,14 @@ export async function renderAssessmentSheetPdf(model: AssessmentSheetModel): Pro
     ctx.gx = gx;
     ctx.disciplines = disciplines;
 
+    const colOffset = i * MAX_DISCIPLINES_PER_BLOCK;
+
     drawHeader(ctx, model);
     drawTableHead(ctx);
-    model.students.forEach((name, si) => drawStudentRow(ctx, si + 1, name));
+    model.students.forEach((name, si) => {
+      const scores = model.scores[si]?.slice(colOffset, colOffset + disciplines.length) ?? [];
+      drawStudentRow(ctx, si + 1, name, scores);
+    });
     drawSignatureBlock(ctx);
   });
 
