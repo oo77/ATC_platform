@@ -302,7 +302,7 @@ async function loadFonts(doc: PDFDocument): Promise<Fonts> {
 export async function renderAssessmentSheetPdf(model: AssessmentSheetModel): Promise<Buffer> {
   if (model.disciplines.length === 0) {
     throw new Error(
-      "У группы нет запланированных контролей знаний (событий типа «assessment» в расписании) — печатать нечего",
+      "У группы нет ни одного контроля знаний в расписании, ни дисциплин с проверкой знаний в программе курса — печатать нечего",
     );
   }
 

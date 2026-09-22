@@ -8,7 +8,9 @@
  * шрифты, рамки, автонумерация и блок подписей ответственных лиц остаются точно такими,
  * как в шаблоне. Подставляются поля, помеченные в шаблоне жёлтым маркером: курс, группа,
  * дисциплины с датами их контроля, слушатели — по одной колонке на каждый «контроль знаний»
- * (schedule_events.event_type = 'assessment') в расписании группы.
+ * (schedule_events.event_type = 'assessment') в расписании группы, а если он ещё не назначен —
+ * по дисциплинам курса с проверкой знаний в программе (assessment_hours > 0), с пустой датой
+ * для заполнения от руки (см. loadAssessmentSheetModel).
  *
  * Ячейки баллов и «Итого, %» оставлены пустыми для заполнения от руки во время контроля —
  * ровно как в присланном образце (там дата контроля уже вписана, а баллы — нет): это бланк,
@@ -73,6 +75,7 @@ export interface AssessmentSheetModel {
 
 interface GroupRow extends RowDataPacket {
   code: string;
+  course_id: string | null;
   course_name: string | null;
 }
 
@@ -80,6 +83,10 @@ interface DisciplineEventRow extends RowDataPacket {
   discipline_name: string | null;
   day: string;
   is_retake: number;
+}
+
+interface CourseDisciplineRow extends RowDataPacket {
+  name: string;
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -91,15 +98,22 @@ function formatDdMmYyyy(ymd: string): string {
 
 /**
  * Собирает данные бланка. null — группа не найдена.
- * Дисциплины — по событиям расписания с event_type='assessment' (контроль знаний/экзамен);
- * события одной дисциплины в один день схлопываются в одну колонку, пересдача (у события
- * есть original_event_id) — в отдельную колонку с пометкой «(пересдача)».
+ *
+ * Дисциплины — в первую очередь по событиям расписания с event_type='assessment' (контроль
+ * знаний/экзамен): события одной дисциплины в один день схлопываются в одну колонку,
+ * пересдача (у события есть original_event_id) — в отдельную колонку с пометкой «(пересдача)».
+ *
+ * Пока у группы ни один контроль знаний в расписании не назначен (обычное дело — так у
+ * большинства групп на момент разработки), даты неоткуда взять, но дисциплины известны заранее:
+ * тогда колонки берутся из дисциплин курса группы с assessment_hours > 0 (в них по программе
+ * предусмотрена проверка знаний), а дата остаётся пустой — вписывается от руки, когда контроль
+ * назначат.
  */
 export async function loadAssessmentSheetModel(
   groupId: string,
 ): Promise<AssessmentSheetModel | null> {
   const groupRows = await executeQuery<GroupRow[]>(
-    `SELECT g.code, c.name AS course_name
+    `SELECT g.code, g.course_id, c.name AS course_name
      FROM study_groups g
      LEFT JOIN courses c ON c.id = g.course_id
      WHERE g.id = ?
@@ -131,14 +145,30 @@ export async function loadAssessmentSheetModel(
     ),
   ]);
 
+  let disciplines: AssessmentSheetDiscipline[] = disciplineRows.map((r) => ({
+    name: r.discipline_name ?? "Дисциплина",
+    date: formatDdMmYyyy(r.day),
+    isRetake: Boolean(r.is_retake),
+  }));
+
+  if (disciplines.length === 0 && group.course_id) {
+    const courseDisciplines = await executeQuery<CourseDisciplineRow[]>(
+      `SELECT name FROM disciplines
+       WHERE course_id = ? AND assessment_hours > 0
+       ORDER BY order_index`,
+      [group.course_id],
+    );
+    disciplines = courseDisciplines.map((r) => ({
+      name: r.name,
+      date: "", // контроль ещё не назначен в расписании — дата вписывается от руки
+      isRetake: false,
+    }));
+  }
+
   return {
     groupCode: group.code,
     courseName: group.course_name ?? "",
-    disciplines: disciplineRows.map((r) => ({
-      name: r.discipline_name ?? "Дисциплина",
-      date: formatDdMmYyyy(r.day),
-      isRetake: Boolean(r.is_retake),
-    })),
+    disciplines,
     students: studentRows
       .map((r) => formatPersonName(String(r.full_name ?? "")))
       .filter(Boolean),
@@ -469,7 +499,7 @@ export async function renderAssessmentSheetDocx(
 ): Promise<Buffer> {
   if (model.disciplines.length === 0) {
     throw new Error(
-      "У группы нет запланированных контролей знаний (событий типа «assessment» в расписании) — печатать нечего",
+      "У группы нет ни одного контроля знаний в расписании, ни дисциплин с проверкой знаний в программе курса — печатать нечего",
     );
   }
 
