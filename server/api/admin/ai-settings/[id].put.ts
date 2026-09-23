@@ -8,6 +8,7 @@ import {
   type UpdateAISettingsInput,
 } from "../../../repositories/aiSettingsRepository";
 import { requirePermission } from "../../../utils/permissions";
+import { invalidateAiClientCache } from "../../../utils/ai/chatEngine";
 import { Permission } from "../../../types/permissions";
 
 export default defineEventHandler(async (event) => {
@@ -53,6 +54,7 @@ export default defineEventHandler(async (event) => {
       ...body,
       updatedBy: user.userId,
     });
+    invalidateAiClientCache();
 
     console.log(`[AI Settings API] ✅ Updated settings: ${id}`);
 

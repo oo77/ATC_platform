@@ -407,156 +407,13 @@
                 <Bot :size="16" />
               </div>
 
-              <div class="flex-1 min-w-0 bg-gray-50/80 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/60 rounded-2xl rounded-tl-sm p-4 text-sm text-gray-900 dark:text-gray-100 shadow-xs space-y-3">
-                <!-- ReAct Reasoning Accordion -->
-                <div
-                  v-if="msg.steps && msg.steps.length"
-                  class="rounded-xl border border-blue-200/60 dark:border-blue-900/50 bg-blue-50/50 dark:bg-blue-950/30 overflow-hidden text-xs"
-                >
-                  <button
-                    @click="msg.isStepsOpen = !msg.isStepsOpen"
-                    class="w-full px-3 py-2 flex items-center justify-between text-blue-700 dark:text-blue-400 font-medium hover:bg-blue-100/40 dark:hover:bg-blue-900/40 transition-colors"
-                  >
-                    <div class="flex items-center gap-2">
-                      <Database :size="13" />
-                      <span>Поиск в БД и файлах ({{ msg.steps.length }} {{ getStepWord(msg.steps.length) }})</span>
-                    </div>
-                    <ChevronDown
-                      :size="14"
-                      class="transition-transform duration-200"
-                      :class="msg.isStepsOpen ? 'rotate-180' : ''"
-                    />
-                  </button>
-
-                  <div
-                    v-show="msg.isStepsOpen"
-                    class="p-3 border-t border-blue-200/60 dark:border-blue-900/50 space-y-2.5 bg-white/50 dark:bg-gray-900/50"
-                  >
-                    <div
-                      v-for="step in msg.steps"
-                      :key="step.step"
-                      class="space-y-1.5"
-                    >
-                      <div class="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-300 text-[11px]">
-                        <span class="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px]">
-                          {{ step.step }}
-                        </span>
-                        <span>Действие: {{ step.action }}</span>
-                      </div>
-                      <p v-if="step.thought" class="text-gray-600 dark:text-gray-400 text-xs italic pl-6">
-                        "{{ step.thought }}"
-                      </p>
-
-                      <!-- SQL Display -->
-                      <div v-if="step.input?.sql" class="pl-6">
-                        <div class="flex items-center justify-between bg-gray-900 text-gray-200 px-3 py-1.5 rounded-t-lg text-[10px] font-mono">
-                          <span>MySQL SELECT</span>
-                          <button
-                            @click="copyToClipboard(step.input.sql)"
-                            class="hover:text-blue-400 flex items-center gap-1"
-                          >
-                            <Copy :size="11" />
-                            <span>Копировать</span>
-                          </button>
-                        </div>
-                        <pre class="bg-gray-950 text-emerald-400 p-2.5 rounded-b-lg text-[11px] font-mono overflow-x-auto custom-scrollbar"><code>{{ step.input.sql }}</code></pre>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Text Content -->
-                <div class="prose dark:prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap font-sans">
-                  {{ msg.content }}
-                </div>
-
-                <!-- Certificates Widget (if present in message) -->
-                <div
-                  v-if="msg.certificates && msg.certificates.length"
-                  class="mt-3 p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 space-y-3"
-                >
-                  <div class="flex items-center justify-between gap-2 flex-wrap">
-                    <div class="flex items-center gap-2">
-                      <Award class="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                      <span class="text-xs font-bold text-amber-900 dark:text-amber-200">
-                        Найдено сертификатов: {{ msg.certificates.length }} шт.
-                      </span>
-                    </div>
-
-                    <!-- Batch ZIP Download Button -->
-                    <button
-                      v-if="msg.certificates.length > 1"
-                      @click="downloadCertificatesZip(msg.certificates.map(c => c.id))"
-                      class="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shadow-amber-600/20"
-                    >
-                      <Archive class="w-3.5 h-3.5" />
-                      <span>Скачать архив (.ZIP)</span>
-                    </button>
-                  </div>
-
-                  <!-- Cards Grid -->
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div
-                      v-for="cert in msg.certificates"
-                      :key="cert.id"
-                      class="p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-amber-200/60 dark:border-amber-900/40 flex items-center justify-between gap-2 text-xs shadow-xs"
-                    >
-                      <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-1.5">
-                          <span class="font-bold text-gray-900 dark:text-white truncate">№ {{ cert.certificateNumber }}</span>
-                          <span class="px-1.5 py-0.2 text-[9px] font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 rounded-full">Выдан</span>
-                        </div>
-                        <p class="text-[11px] text-gray-700 dark:text-gray-300 truncate mt-0.5">{{ cert.studentName }}</p>
-                        <p class="text-[10px] text-gray-400 truncate">{{ cert.courseName }}</p>
-                      </div>
-
-                      <button
-                        @click="downloadCertificatePdf(cert.id, cert.certificateNumber)"
-                        class="p-2 rounded-lg bg-gray-100 hover:bg-amber-100 dark:bg-gray-800 dark:hover:bg-amber-950/60 text-gray-600 hover:text-amber-700 dark:text-gray-300 dark:hover:text-amber-300 transition-colors shrink-0"
-                        title="Скачать PDF"
-                      >
-                        <Download class="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Artifact Button (Canvas trigger) -->
-                <div
-                  v-if="msg.artifact"
-                  class="mt-3 p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200/70 dark:border-blue-800/70 flex items-center justify-between"
-                >
-                  <div class="flex items-center gap-2.5 min-w-0">
-                    <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
-                      <TableIcon :size="16" />
-                    </div>
-                    <div class="min-w-0">
-                      <h4 class="text-xs font-bold text-gray-900 dark:text-white truncate">
-                        {{ msg.artifact.title || 'Сводная аналитика' }}
-                      </h4>
-                      <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                        {{ msg.artifact.rows?.length || 0 }} записей в таблице
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    @click="openArtifactInCanvas(msg.artifact)"
-                    class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-sm shadow-blue-500/20 flex items-center gap-1.5"
-                  >
-                    <span>Открыть Canvas</span>
-                    <ArrowRight :size="13" />
-                  </button>
-                </div>
-
-                <span class="block text-right text-[10px] text-gray-400">
-                  {{ formatTime(msg.createdAt) }}
-                </span>
+              <div class="flex-1 min-w-0 bg-gray-50/80 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/60 rounded-2xl rounded-tl-sm p-4 text-sm text-gray-900 dark:text-gray-100 shadow-xs">
+                <AiMessageBody :message="msg" @open-artifact="openArtifactInCanvas" />
               </div>
             </div>
           </div>
 
-          <!-- Loading Indicator -->
+          <!-- Loading Indicator (live progress via SSE) -->
           <div
             v-if="isGenerating"
             class="max-w-3xl mx-auto flex items-start gap-3"
@@ -564,9 +421,21 @@
             <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs animate-pulse">
               <Bot :size="16" />
             </div>
-            <div class="p-4 rounded-2xl rounded-tl-sm bg-gray-50 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/60 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-3">
-              <Loader2 :size="16" class="animate-spin text-blue-600" />
-              <span>ИИ анализирует вопрос, проверяет базу данных и файлы...</span>
+            <div class="p-3.5 rounded-2xl rounded-tl-sm bg-gray-50 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/60 text-xs text-gray-500 dark:text-gray-400 space-y-1.5 min-w-[260px]">
+              <div class="flex items-center gap-2.5">
+                <Loader2 :size="15" class="animate-spin text-blue-600" />
+                <span>{{ liveStatus }}</span>
+                <span class="ml-auto tabular-nums text-[10px] text-gray-400">{{ liveElapsed }} с</span>
+              </div>
+              <div
+                v-for="s in liveSteps"
+                :key="s.step"
+                class="flex items-center gap-1.5 pl-6 text-[11px]"
+              >
+                <Check :size="12" class="text-emerald-500 shrink-0" />
+                <span class="truncate">{{ s.thought || s.action }}</span>
+                <span v-if="s.ms !== undefined" class="text-gray-400 shrink-0">· {{ s.ms }} мс</span>
+              </div>
             </div>
           </div>
         </div>
@@ -610,8 +479,19 @@
                 :disabled="isGenerating"
               ></textarea>
 
+              <!-- Stop Button (во время генерации) -->
+              <button
+                v-if="isGenerating"
+                @click="stopGeneration"
+                class="p-2.5 rounded-xl bg-gray-900 hover:bg-red-600 dark:bg-gray-100 dark:hover:bg-red-500 text-white dark:text-gray-900 dark:hover:text-white transition-all shrink-0 shadow-sm"
+                title="Остановить запрос (Esc)"
+              >
+                <Square :size="16" class="fill-current" />
+              </button>
+
               <!-- Send Button -->
               <button
+                v-else
                 @click="handleSubmit"
                 :disabled="!inputPrompt.trim() || isGenerating"
                 class="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:hover:bg-blue-600 text-white transition-all shrink-0 shadow-sm shadow-blue-500/25"
@@ -660,6 +540,16 @@
                 Таблица
               </button>
               <button
+                v-if="currentArtifact.students?.length || currentArtifact.certificates?.length"
+                @click="canvasTab = 'cards'"
+                class="px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1"
+                :class="canvasTab === 'cards' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'"
+              >
+                <Award :size="12" />
+                <span>{{ currentArtifact.students?.length ? 'Карточки' : 'Сертификаты' }}</span>
+              </button>
+              <button
+                v-if="hasNumericColumns"
                 @click="canvasTab = 'chart'"
                 class="px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1"
                 :class="canvasTab === 'chart' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'"
@@ -813,24 +703,14 @@
           </div>
 
           <!-- Tab 2: Chart View -->
-          <div v-show="canvasTab === 'chart'" class="space-y-4">
-            <div class="p-4 rounded-2xl bg-gray-50/80 dark:bg-gray-800/60 border border-gray-200/80 dark:border-gray-700/80">
-              <h4 class="text-xs font-bold text-gray-900 dark:text-white mb-3">
-                {{ currentArtifact.chartSuggestion?.title || 'Графическое распределение' }}
-              </h4>
+          <div v-if="canvasTab === 'chart'">
+            <AiChartView :artifact="currentArtifact" />
+          </div>
 
-              <div v-if="chartCategories.length && chartSeriesData.length">
-                <DynamicBarChart
-                  chart-id="ai-canvas-bar-chart"
-                  :categories="chartCategories"
-                  :series="[{ name: 'Значение', data: chartSeriesData }]"
-                  :height="320"
-                />
-              </div>
-              <div v-else class="py-12 text-center text-xs text-gray-400">
-                Недостаточно числовых данных для построения графика
-              </div>
-            </div>
+          <!-- Tab 3: Student cards / certificates -->
+          <div v-if="canvasTab === 'cards'" class="space-y-3">
+            <AiStudentCards v-if="currentArtifact.students?.length" :students="currentArtifact.students" />
+            <AiCertificateList v-else-if="currentArtifact.certificates?.length" :certificates="currentArtifact.certificates" />
           </div>
         </div>
       </section>
@@ -915,7 +795,6 @@ import {
   Send,
   Loader2,
   Table as TableIcon,
-  Copy,
   Search,
   ArrowUpDown,
   FileSpreadsheet,
@@ -927,7 +806,6 @@ import {
   PanelLeft,
   MessageSquare,
   ArrowRight,
-  Database,
   ChevronDown,
   Paperclip,
   FileText,
@@ -938,12 +816,17 @@ import {
   GraduationCap,
   Building2,
   Award,
-  Download,
   Archive,
   Cpu,
+  Check,
+  Square,
 } from 'lucide-vue-next';
 import * as XLSX from 'xlsx';
-import DynamicBarChart from '~/components/charts/DynamicBarChart.vue';
+import AiMessageBody from '~/components/ai/AiMessageBody.vue';
+import AiChartView from '~/components/ai/AiChartView.vue';
+import AiStudentCards from '~/components/ai/AiStudentCards.vue';
+import AiCertificateList from '~/components/ai/AiCertificateList.vue';
+import type { AiAgentStep, AiChatMessage, AiReportArtifact } from '~/types/aiChat';
 import Modal from '~/components/ui/Modal.vue';
 import Button from '~/components/ui/Button.vue';
 
@@ -952,7 +835,15 @@ definePageMeta({
 });
 
 const { authFetch } = useAuthFetch();
+const { sendAiMessage, isAbortError } = useAiChatStream();
+let abortController: AbortController | null = null;
 const notification = useNotification();
+const route = useRoute();
+
+// --- Живой прогресс генерации (SSE) ---
+const liveStatus = ref('');
+const liveSteps = ref<AiAgentStep[]>([]);
+const liveElapsed = ref('0.0');
 
 // --- Интерфейсы моделей и провайдеров ---
 interface ConfiguredModelItem {
@@ -1101,9 +992,9 @@ function selectConfiguredModel(settingId: string, modelId: string) {
 
 // --- Выбор Effort (Reasoning Effort) ---
 const effortOptions = [
-  { id: 'low', name: 'Low (Быстрый)', desc: '1-2 шага, мгновенный ответ', color: 'bg-emerald-500' },
-  { id: 'medium', name: 'Medium (Баланс)', desc: 'До 4 шагов, поиск в БД', color: 'bg-amber-500' },
-  { id: 'high', name: 'High (Глубокий)', desc: 'До 8 шагов, детальная проверка', color: 'bg-purple-500' },
+  { id: 'low', name: 'Low (Быстрый)', desc: 'Обычно 1 вызов модели, 1–3 с', color: 'bg-emerald-500' },
+  { id: 'medium', name: 'Medium (Баланс)', desc: 'До 4 шагов, исправляет ошибки SQL', color: 'bg-amber-500' },
+  { id: 'high', name: 'High (Глубокий)', desc: 'До 7 шагов + аналитические выводы ИИ', color: 'bg-purple-500' },
 ];
 
 const selectedEffort = ref<'low' | 'medium' | 'high'>('medium');
@@ -1138,49 +1029,8 @@ const sessionSearch = ref('');
 const isSidebarOpen = ref(true);
 
 // --- Состояние сообщений ---
-interface AgentStep {
-  step: number;
-  thought: string;
-  action: string;
-  input?: any;
-  output?: any;
-}
-
-interface CertificateItem {
-  id: string;
-  certificateNumber: string;
-  studentName: string;
-  courseName: string;
-  issueDate?: string;
-  status?: string;
-}
-
-interface ReportArtifact {
-  title: string;
-  description?: string;
-  columns: Array<{ key: string; label: string; type?: 'text' | 'number' | 'date' }>;
-  rows: Record<string, any>[];
-  summaryMetrics?: Array<{ label: string; value: string | number; change?: string }>;
-  certificates?: CertificateItem[];
-  chartSuggestion?: {
-    type?: 'bar' | 'doughnut' | 'line';
-    xKey?: string;
-    yKey?: string;
-    title?: string;
-  };
-}
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  steps?: AgentStep[];
-  isStepsOpen?: boolean;
-  artifact?: ReportArtifact;
-  certificates?: CertificateItem[];
-  sqlExecuted?: string;
-  createdAt: string;
-}
+type ChatMessage = AiChatMessage;
+type ReportArtifact = AiReportArtifact;
 
 const messages = ref<ChatMessage[]>([]);
 const inputPrompt = ref('');
@@ -1191,7 +1041,7 @@ const promptInput = ref<HTMLTextAreaElement | null>(null);
 // --- Состояние Canvas ---
 const isCanvasOpen = ref(false);
 const isCanvasFullscreen = ref(false);
-const canvasTab = ref<'table' | 'chart'>('table');
+const canvasTab = ref<'table' | 'chart' | 'cards'>('table');
 const currentArtifact = ref<ReportArtifact | null>(null);
 const tableFilter = ref('');
 const tableSortKey = ref('');
@@ -1212,9 +1062,11 @@ const newSessionTitle = ref('');
 
 // --- Быстрые сценарии ---
 const quickChips = [
-  { text: 'Сколько групп сейчас в процессе обучения?', icon: Users },
-  { text: 'Выгрузи все сертификаты по курсу Авиационная безопасность', icon: Award },
   { text: 'Покажи статистику слушателей по организациям', icon: Building2 },
+  { text: 'Активные группы сейчас', icon: Users },
+  { text: 'Сертификаты, истекающие в течение 60 дней', icon: Award },
+  { text: 'Динамика выдачи сертификатов по месяцам', icon: BarChart3 },
+  { text: 'Найди слушателя Джалилов Феруз', icon: GraduationCap },
   { text: 'Какие приказы и файлы загружены в систему?', icon: FileText },
 ];
 
@@ -1262,23 +1114,10 @@ const pagedRows = computed(() => {
   return filteredRows.value.slice(start, start + tablePageSize.value);
 });
 
-// Данные для графика
-const chartCategories = computed(() => {
-  if (!currentArtifact.value?.rows || !currentArtifact.value?.chartSuggestion) return [];
-  const xKey = currentArtifact.value.chartSuggestion.xKey || currentArtifact.value.columns[0]?.key;
-  if (!xKey) return [];
-  return currentArtifact.value.rows.slice(0, 12).map((r) => String(r[xKey] ?? ''));
-});
-
-const chartSeriesData = computed(() => {
-  if (!currentArtifact.value?.rows || !currentArtifact.value?.chartSuggestion) return [];
-  const yKey = currentArtifact.value.chartSuggestion.yKey || currentArtifact.value.columns[1]?.key;
-  if (!yKey) return [];
-  return currentArtifact.value.rows.slice(0, 12).map((r) => {
-    const num = Number(r[yKey]);
-    return isNaN(num) ? 0 : num;
-  });
-});
+// Есть ли числовые колонки для графика
+const hasNumericColumns = computed(() =>
+  !!currentArtifact.value?.columns?.some((c) => c.type === 'number') && (currentArtifact.value?.rows?.length || 0) > 1
+);
 
 // --- Методы работы с сессиями ---
 async function loadSessions() {
@@ -1287,7 +1126,10 @@ async function loadSessions() {
     const res: any = await authFetch('/api/ai/chat/sessions');
     if (res.success) {
       sessions.value = res.data;
-      if (!currentSessionId.value && sessions.value.length > 0) {
+      const requested = typeof route.query.session === 'string' ? route.query.session : null;
+      if (!currentSessionId.value && requested) {
+        selectSession(requested);
+      } else if (!currentSessionId.value && sessions.value.length > 0) {
         const first = sessions.value[0];
         if (first) {
           selectSession(first.id);
@@ -1409,10 +1251,15 @@ async function handleSubmit() {
   const fileUuid = attachedFile.value?.uuid;
   attachedFile.value = null;
 
+  liveStatus.value = 'Отправляю запрос…';
+  liveSteps.value = [];
+  const started = Date.now();
+  const timer = setInterval(() => (liveElapsed.value = ((Date.now() - started) / 1000).toFixed(1)), 100);
+  abortController = new AbortController();
+
   try {
-    const res: any = await authFetch('/api/ai/chat/message', {
-      method: 'POST',
-      body: {
+    const data = await sendAiMessage(
+      {
         sessionId: currentSessionId.value,
         message: userMsgText,
         fileAttachmentUuid: fileUuid,
@@ -1420,36 +1267,67 @@ async function handleSubmit() {
         model: selectedModel.value,
         effort: selectedEffort.value,
       },
-    });
+      {
+        onStatus: (t) => (liveStatus.value = t),
+        onStep: (s) => {
+          liveSteps.value = [...liveSteps.value, s];
+          scrollToBottom();
+        },
+        // Сессия создаётся на сервере сразу — сохраняем её, чтобы после «Стоп» диалог продолжался в ней же
+        onSession: (sess) => {
+          currentSessionId.value = sess.sessionId;
+          currentSessionTitle.value = sess.sessionTitle;
+        },
+      },
+      abortController.signal,
+    );
 
-    if (res.success) {
-      const data = res.data;
-      currentSessionId.value = data.sessionId;
-      currentSessionTitle.value = data.sessionTitle;
+    currentSessionId.value = data.sessionId;
+    currentSessionTitle.value = data.sessionTitle;
 
-      const idx = messages.value.findIndex((m) => m.id === tempUserMsgId);
-      if (idx !== -1) {
-        messages.value[idx] = data.userMessage;
-      }
-
-      messages.value.push({
-        ...data.assistantMessage,
-        isStepsOpen: false,
-      });
-
-      if (data.assistantMessage?.artifact) {
-        currentArtifact.value = data.assistantMessage.artifact;
-        isCanvasOpen.value = true;
-      }
-
-      loadSessions();
+    const idx = messages.value.findIndex((m) => m.id === tempUserMsgId);
+    if (idx !== -1) {
+      messages.value[idx] = data.userMessage;
     }
+
+    messages.value.push(data.assistantMessage);
+
+    const art = data.assistantMessage?.artifact;
+    if (art?.rows?.length) {
+      currentArtifact.value = art;
+      canvasTab.value = art.chartSuggestion && !art.students?.length ? 'chart' : 'table';
+      // Карточки/сертификаты уже видны в ленте — Canvas открываем автоматически только для аналитики
+      if (!art.students?.length && !art.certificates?.length) isCanvasOpen.value = true;
+    }
+
+    loadSessions();
   } catch (err: any) {
-    notification.error(err.message || 'Ошибка генерации ответа');
+    if (isAbortError(err)) {
+      messages.value.push({
+        id: 'stopped-' + Date.now(),
+        role: 'assistant',
+        content: '⏹ *Запрос остановлен.* Можно изменить вопрос и отправить снова.',
+        createdAt: new Date().toISOString(),
+      });
+      if (!inputPrompt.value) inputPrompt.value = userMsgText;
+      loadSessions();
+    } else {
+      notification.error(err.message || 'Ошибка генерации ответа');
+    }
   } finally {
+    clearInterval(timer);
+    abortController = null;
     isGenerating.value = false;
     scrollToBottom();
   }
+}
+
+function stopGeneration() {
+  abortController?.abort();
+}
+
+function handleStopKey(e: KeyboardEvent) {
+  if (e.key === 'Escape' && isGenerating.value) stopGeneration();
 }
 
 function rollbackMessage(msg: ChatMessage) {
@@ -1463,7 +1341,9 @@ function rollbackMessage(msg: ChatMessage) {
 function openArtifactInCanvas(art: ReportArtifact) {
   currentArtifact.value = art;
   isCanvasOpen.value = true;
-  canvasTab.value = 'table';
+  tableCurrentPage.value = 1;
+  tableFilter.value = '';
+  canvasTab.value = art.chartSuggestion && art.rows.length > 1 && !art.students?.length ? 'chart' : 'table';
 }
 
 function sortBy(key: string) {
@@ -1501,17 +1381,6 @@ function exportArtifactToExcel() {
 }
 
 // --- Скачивание сертификатов ---
-function downloadCertificatePdf(certId: string, certNumber?: string) {
-  const url = `/api/certificates/download/${certId}?format=pdf`;
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${certNumber || 'certificate'}.pdf`;
-  a.target = '_blank';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
 async function downloadCertificatesZip(certificateIds: string[]) {
   if (!certificateIds || !certificateIds.length) {
     notification.warning('Список сертификатов пуст');
@@ -1537,15 +1406,6 @@ async function downloadCertificatesZip(certificateIds: string[]) {
     notification.success('Архив сертификатов успешно скачан!');
   } catch (err: any) {
     notification.error(err.message || 'Ошибка скачивания архива сертификатов');
-  }
-}
-
-async function copyToClipboard(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    notification.success('SQL-запрос скопирован в буфер обмена');
-  } catch {
-    notification.error('Не удалось скопировать в буфер');
   }
 }
 
@@ -1601,12 +1461,6 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-function getStepWord(count: number): string {
-  if (count === 1) return 'шаг';
-  if (count >= 2 && count <= 4) return 'шага';
-  return 'шагов';
-}
-
 onMounted(() => {
   if (import.meta.client) {
     const savedEffort = localStorage.getItem('atc_ai_selected_effort');
@@ -1614,6 +1468,7 @@ onMounted(() => {
       selectedEffort.value = savedEffort as 'low' | 'medium' | 'high';
     }
     window.addEventListener('click', handleWindowClick);
+    window.addEventListener('keydown', handleStopKey);
   }
   loadAvailableModels();
   loadSessions();
@@ -1623,6 +1478,8 @@ onMounted(() => {
 onUnmounted(() => {
   if (import.meta.client) {
     window.removeEventListener('click', handleWindowClick);
+    window.removeEventListener('keydown', handleStopKey);
+    abortController?.abort();
   }
 });
 </script>

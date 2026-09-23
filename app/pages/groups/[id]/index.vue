@@ -144,7 +144,37 @@
       </div>
 
       <!-- Bento Box Metrics -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8"
+      >
+        <!-- Students Count Card -->
+        <div
+          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Слушатели
+              </p>
+              <h3
+                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
+              >
+                {{ group.students?.length || 0 }} чел.
+              </h3>
+            </div>
+            <div
+              class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12"
+            >
+              <GraduationCap class="w-6 h-6" />
+            </div>
+          </div>
+          <div class="mt-4 flex items-center gap-2">
+            <span class="text-xs text-slate-400 font-medium"
+              >Зачислено в группу</span
+            >
+          </div>
+        </div>
+
         <!-- Attendance Card -->
         <div
           class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
