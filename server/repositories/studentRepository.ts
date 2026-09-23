@@ -35,7 +35,15 @@ export interface PaginationParams {
   position?: string;
   hasCertificates?: boolean;
   noCertificates?: boolean;
+  /** Облегчённый режим для поиска/выбора: без photo_base64 и без сертификатов */
+  compact?: boolean;
 }
+
+/** Колонки students без тяжёлого photo_base64 (для compact-режима) */
+const STUDENT_COMPACT_COLUMNS = `s.id, s.full_name, s.pinfl, s.organization, s.organization_id,
+  s.department, s.department_uz, s.department_en, s.department_ru,
+  s.position, s.position_uz, s.position_en, s.position_ru,
+  s.birth_date, s.user_id, s.created_at, s.updated_at`;
 
 export interface PaginatedResult<T> {
   data: T[];
@@ -442,6 +450,7 @@ export async function getStudentsPaginated(
     position,
     hasCertificates,
     noCertificates,
+    compact = false,
   } = params;
 
   // Строим WHERE условия
@@ -503,25 +512,36 @@ export async function getStudentsPaginated(
   const whereClause =
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  // Получаем общее количество
   const countQuery = `SELECT COUNT(*) as total FROM students ${whereClause}`;
-  const countResult = await executeQuery<CountRow[]>(countQuery, queryParams);
-  const total = countResult[0]?.total || 0;
 
-  // Получаем данные с пагинацией
+  // Deferred join: фильтрация, сортировка и LIMIT идут только по узким колонкам,
+  // а полные строки (с многомегабайтным photo_base64) читаются лишь для итоговой страницы.
+  // Иначе MySQL сортирует все совпавшие строки вместе с фото (секунды на редких запросах).
   const offset = (page - 1) * limit;
   const dataQuery = `
-    SELECT * FROM students 
-    ${whereClause} 
-    ORDER BY full_name 
-    LIMIT ? OFFSET ?
+    SELECT ${compact ? STUDENT_COMPACT_COLUMNS : "s.*"}
+    FROM students s
+    JOIN (
+      SELECT id FROM students
+      ${whereClause}
+      ORDER BY full_name
+      LIMIT ? OFFSET ?
+    ) page_ids ON page_ids.id = s.id
+    ORDER BY s.full_name
   `;
   const dataParams = [...queryParams, limit, offset];
-  const rows = await executeQuery<StudentRow[]>(dataQuery, dataParams);
 
-  // Загружаем сертификаты
+  const [countResult, rows] = await Promise.all([
+    executeQuery<CountRow[]>(countQuery, queryParams),
+    executeQuery<StudentRow[]>(dataQuery, dataParams),
+  ]);
+  const total = countResult[0]?.total || 0;
+
+  // Загружаем сертификаты (в compact-режиме не нужны)
   let students: Student[] = [];
-  if (rows.length > 0) {
+  if (compact) {
+    students = rows.map((row) => mapRowToStudent(row));
+  } else if (rows.length > 0) {
     const studentIds = rows.map((r) => r.id);
     const certificatesMap = await getCertificatesByStudentIds(studentIds);
     students = rows.map((row) =>

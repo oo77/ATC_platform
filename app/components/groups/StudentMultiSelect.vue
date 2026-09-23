@@ -146,7 +146,8 @@ const searchStudents = async () => {
       method: 'GET',
       params: { 
         search: searchQuery.value,
-        limit: 20 
+        limit: 20,
+        compact: true,
       },
     });
     
