@@ -991,7 +991,7 @@ const onManualQueryInput = (item: ReviewItem) => {
     item.manualSearching = true;
     try {
       const res = await authFetch<{ success: boolean; students: any[] }>('/api/students', {
-        params: { search: item.manualQuery!.trim(), limit: 5 },
+        params: { search: item.manualQuery!.trim(), limit: 5, compact: true },
       });
       item.manualResults = (res.students || []).map((s) => ({
         id: s.id,

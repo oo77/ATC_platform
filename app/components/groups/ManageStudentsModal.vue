@@ -502,12 +502,16 @@ const groupEndDate = computed(() => {
 });
 
 // Загрузка слушателей из базы данных (прямое подключение)
+let loadRequestId = 0;
+
 const loadStudents = async (query = '') => {
+  const requestId = ++loadRequestId;
   loading.value = true;
   fetchError.value = null;
   try {
     const params: any = {
       limit: 50,
+      compact: true,
     };
     if (query && query.trim()) {
       params.search = query.trim();
@@ -523,6 +527,9 @@ const loadStudents = async (query = '') => {
       params,
     });
 
+    // Пришёл ответ на устаревший запрос — игнорируем
+    if (requestId !== loadRequestId) return;
+
     if (response.success && response.students) {
       searchResults.value = response.students;
       totalDbStudents.value = response.total ?? response.students.length;
@@ -533,11 +540,12 @@ const loadStudents = async (query = '') => {
       }
     }
   } catch (error: any) {
+    if (requestId !== loadRequestId) return;
     console.error('Error fetching students from DB:', error);
     fetchError.value = error.data?.message || 'Не удалось подключиться к базе слушателей';
     searchResults.value = [];
   } finally {
-    loading.value = false;
+    if (requestId === loadRequestId) loading.value = false;
   }
 };
 

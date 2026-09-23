@@ -20,6 +20,7 @@ export default defineEventHandler(async (event) => {
       position: query.position as string | undefined,
       hasCertificates: query.hasCertificates === 'true',
       noCertificates: query.noCertificates === 'true',
+      compact: query.compact === 'true',
     };
 
     // Ограничиваем limit для предотвращения злоупотреблений
