@@ -19,6 +19,7 @@
         <slot />
       </div>
     </div>
+    <AiAssistantWidget />
   </div>
 </template>
 
@@ -28,6 +29,7 @@
 import AppHeader from "@/components/layout/AppHeader.vue";
 import AppSidebar from "@/components/layout/AppSidebar.vue";
 import Backdrop from "@/components/layout/Backdrop.vue";
+import AiAssistantWidget from "~/components/ai/AiAssistantWidget.vue";
 import { useSidebar } from "~/composables/useSidebar";
 
 const { isExpanded, isHovered } = useSidebar();

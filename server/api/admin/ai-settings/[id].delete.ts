@@ -5,6 +5,7 @@
 
 import { aiSettingsRepository } from "../../../repositories/aiSettingsRepository";
 import { requirePermission } from "../../../utils/permissions";
+import { invalidateAiClientCache } from "../../../utils/ai/chatEngine";
 import { Permission } from "../../../types/permissions";
 
 export default defineEventHandler(async (event) => {
@@ -43,6 +44,7 @@ export default defineEventHandler(async (event) => {
 
     // Удаляем
     await aiSettingsRepository.delete(id);
+    invalidateAiClientCache();
 
     console.log(`[AI Settings API] ✅ Deleted settings: ${id}`);
 
