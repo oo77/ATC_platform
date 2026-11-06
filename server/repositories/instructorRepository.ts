@@ -38,6 +38,9 @@ export interface WorkExperienceEntry {
 export interface Instructor {
   id: string;
   fullName: string;
+  full_name_ru?: string | null;
+  short_name_uz?: string | null;
+  short_name_ru?: string | null;
   email?: string | null;
   phone?: string | null;
   hireDate?: Date | null;
@@ -88,6 +91,9 @@ export interface PaginatedResult<T> {
 
 export interface CreateInstructorInput {
   fullName: string;
+  full_name_ru?: string;
+  short_name_uz?: string;
+  short_name_ru?: string;
   email?: string;
   phone?: string;
   hireDate?: Date | string;
@@ -113,6 +119,9 @@ export interface CreateInstructorInput {
 
 export interface UpdateInstructorInput {
   fullName?: string;
+  full_name_ru?: string | null;
+  short_name_uz?: string | null;
+  short_name_ru?: string | null;
   email?: string | null;
   phone?: string | null;
   hireDate?: Date | string | null;
@@ -143,6 +152,9 @@ export interface UpdateInstructorInput {
 interface InstructorRow extends RowDataPacket {
   id: string;
   full_name: string;
+  full_name_ru: string | null;
+  short_name_uz: string | null;
+  short_name_ru: string | null;
   email: string | null;
   phone: string | null;
   hire_date: Date | null;
@@ -199,6 +211,9 @@ function mapRowToInstructor(
   return {
     id: row.id,
     fullName: row.full_name,
+    full_name_ru: row.full_name_ru,
+    short_name_uz: row.short_name_uz,
+    short_name_ru: row.short_name_ru,
     email: row.email,
     phone: row.phone,
     hireDate: row.hire_date,
@@ -356,14 +371,17 @@ export async function createInstructor(
 
   await executeQuery(
     `INSERT INTO instructors (
-      id, full_name, email, phone, hire_date, contract_info, max_hours, is_active, 
+      id, full_name, full_name_ru, short_name_uz, short_name_ru, email, phone, hire_date, contract_info, max_hours, is_active, 
       birth_date, passport_data, education, university, diploma_file_ids, specialty, academic_degree, academic_rank, 
       education_history, work_experience, certificates, languages, photo_base64, additional_files,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.fullName,
+      data.full_name_ru || null,
+      data.short_name_uz || null,
+      data.short_name_ru || null,
       data.email || null,
       data.phone || null,
       hireDate,
@@ -408,6 +426,18 @@ export async function updateInstructor(
   if (data.fullName !== undefined) {
     updates.push("full_name = ?");
     params.push(data.fullName);
+  }
+  if (data.full_name_ru !== undefined) {
+    updates.push("full_name_ru = ?");
+    params.push(data.full_name_ru ?? null);
+  }
+  if (data.short_name_uz !== undefined) {
+    updates.push("short_name_uz = ?");
+    params.push(data.short_name_uz ?? null);
+  }
+  if (data.short_name_ru !== undefined) {
+    updates.push("short_name_ru = ?");
+    params.push(data.short_name_ru ?? null);
   }
   if (data.email !== undefined) {
     updates.push("email = ?");

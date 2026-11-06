@@ -1340,7 +1340,8 @@ async function onImageSelected(e: Event) {
 
 <style scoped>
 .editor-sidebar {
-  width: 280px;
+  width: 320px;
+  flex-shrink: 0;
   background: white;
   border-left: 1px solid var(--color-gray-200);
   display: flex;

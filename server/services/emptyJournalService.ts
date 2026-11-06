@@ -5,7 +5,9 @@
  * Шаблон правится «на месте» (pizzip + XML), поэтому шрифты, рамки, ширины колонок,
  * поворот дат, автонумерация и титульный лист остаются ровно такими, как в шаблоне.
  * Подставляются только поля, помеченные в шаблоне жёлтым маркером: код группы, даты курса,
- * название курса, даты в шапке таблицы, ФИО слушателей и инструктор.
+ * название курса (на узбекском, если оно задано в карточке программы), даты в шапке таблицы,
+ * ФИО слушателей и инструкторы — те из инструкторов группы, кого пользователь оставил
+ * при скачивании (см. loadEmptyJournalInstructors).
  * (Маркер в готовом файле убирается, подчёркивание и начертание сохраняются.)
  *
  * PDF-версия того же бланка — в emptyJournalPdfService.ts.
@@ -31,8 +33,11 @@ export const JOURNAL_DATE_COLUMNS = 13;
 /** Защита от ошибочных дат группы: больше стольких дней подряд в колонки не берём */
 const MAX_COURSE_DAYS = 366;
 
-/** В строку «Instruktor F.I.Sh» помещается не больше стольких фамилий; иначе — линия для рукописного ввода */
-const MAX_INSTRUCTORS_IN_LINE = 2;
+/**
+ * В строке «Instruktor F.I.Sh: … Imzo: ____» слово «Imzo» стоит на десятом стандартном шаге
+ * табуляции (10 × 708 twips от левого поля), как в шаблоне
+ */
+const INSTRUCTOR_IMZO_TWIPS = 10 * 708;
 
 // ============================================================================
 // ДАННЫЕ
@@ -47,15 +52,27 @@ export interface EmptyJournalModel {
   year: string;
   /** «Фамилия Имя» слушателей в алфавитном порядке (как в шаблоне) */
   students: string[];
-  /** «Фамилия И.» (несколько — через запятую) или пустая строка, если однозначно определить нельзя */
-  instructor: string;
+  /**
+   * «Фамилия И.» выбранных инструкторов — у каждого своя строка «Instruktor F.I.Sh: … Imzo: ____»;
+   * пусто — одна строка с линией для рукописного ввода
+   */
+  instructors: string[];
   /** Все колонки дат вида «17.09», по возрастанию (см. buildDateColumns) */
   dates: string[];
+}
+
+/** Инструктор группы — для выбора перед скачиванием журнала */
+export interface EmptyJournalInstructor {
+  id: string;
+  fullName: string;
+  /** Как он будет записан в бланке: «Rasulov K.» */
+  shortName: string;
 }
 
 interface GroupRow extends RowDataPacket {
   code: string;
   course_name: string | null;
+  course_name_uz: string | null;
   start_date: string;
   end_date: string;
 }
@@ -135,16 +152,40 @@ export function chunk<T>(list: T[], size: number): T[][] {
   return pages.length > 0 ? pages : [[]];
 }
 
+/** Инструкторы, которые ведут занятия группы по расписанию, — в порядке первого занятия */
+export async function loadEmptyJournalInstructors(
+  groupId: string,
+): Promise<EmptyJournalInstructor[]> {
+  const rows = await executeQuery<RowDataPacket[]>(
+    `SELECT i.id, i.full_name
+     FROM schedule_events se
+     JOIN instructors i ON i.id = se.instructor_id
+     WHERE se.group_id = ?
+     GROUP BY i.id, i.full_name
+     ORDER BY MIN(se.start_time), i.full_name`,
+    [groupId],
+  );
+  return rows
+    .map((r) => {
+      const fullName = String(r.full_name ?? "").replace(/\s+/g, " ").trim();
+      return { id: String(r.id), fullName, shortName: shortPersonName(fullName) };
+    })
+    .filter((instructor) => instructor.shortName);
+}
+
 /**
  * Собирает данные бланка. null — группа не найдена.
- * Инструктор — из расписания группы: одна-две фамилии; больше не помещаются в строку бланка.
+ * instructorIds — инструкторы группы, которых пользователь оставил при скачивании
+ * (остальные и посторонние id в бланк не попадают).
  */
 export async function loadEmptyJournalModel(
   groupId: string,
+  instructorIds: string[],
 ): Promise<EmptyJournalModel | null> {
   const groupRows = await executeQuery<GroupRow[]>(
     `SELECT g.code,
             c.name AS course_name,
+            c.name_uz AS course_name_uz,
             DATE_FORMAT(g.start_date, '%Y-%m-%d') AS start_date,
             DATE_FORMAT(g.end_date, '%Y-%m-%d') AS end_date
      FROM study_groups g
@@ -156,7 +197,7 @@ export async function loadEmptyJournalModel(
   const group = groupRows[0];
   if (!group) return null;
 
-  const [studentRows, dateRows, instructorRows] = await Promise.all([
+  const [studentRows, dateRows, instructors] = await Promise.all([
     executeQuery<RowDataPacket[]>(
       `SELECT s.full_name
        FROM study_group_students sgs
@@ -172,33 +213,21 @@ export async function loadEmptyJournalModel(
        ORDER BY day`,
       [groupId],
     ),
-    executeQuery<RowDataPacket[]>(
-      `SELECT i.full_name
-       FROM schedule_events se
-       JOIN instructors i ON i.id = se.instructor_id
-       WHERE se.group_id = ?
-       GROUP BY i.id, i.full_name
-       ORDER BY MIN(se.start_time), i.full_name`,
-      [groupId],
-    ),
+    loadEmptyJournalInstructors(groupId),
   ]);
-
-  const instructorNames = instructorRows
-    .map((r) => shortPersonName(String(r.full_name ?? "")))
-    .filter(Boolean);
 
   return {
     groupCode: group.code,
-    courseName: group.course_name ?? "",
+    // Название программы на узбекском, а если оно не заполнено — основное
+    courseName: group.course_name_uz?.trim() || group.course_name || "",
     courseDates: formatCourseDates(group.start_date, group.end_date),
     year: String(parseYmd(group.start_date).y),
     students: studentRows
       .map((r) => formatPersonName(String(r.full_name ?? "")))
       .filter(Boolean),
-    instructor:
-      instructorNames.length > 0 && instructorNames.length <= MAX_INSTRUCTORS_IN_LINE
-        ? instructorNames.join(", ")
-        : "",
+    instructors: instructors
+      .filter((instructor) => instructorIds.includes(instructor.id))
+      .map((instructor) => instructor.shortName),
     dates: buildDateColumns(
       group.start_date,
       group.end_date,
@@ -390,6 +419,36 @@ function renderGroupLine(p: string, model: EmptyJournalModel): string {
   );
 }
 
+/**
+ * Строки «Instruktor F.I.Sh: … Imzo: ____» — своя у каждого инструктора (абзац шаблона
+ * повторяется); без инструкторов — одна, с линией вместо фамилии.
+ *
+ * В шаблоне «Imzo» отодвинут пятью табуляциями со стандартным шагом, и после фамилии длиннее
+ * образца он уехал бы за край строки. Поэтому абзацу задаётся позиция табуляции там, где
+ * «Imzo» стоит в шаблоне, и остаётся одна табуляция: «Imzo» во всех строках на одном месте.
+ */
+function renderInstructorLines(p: string, instructors: string[]): string {
+  const tabRuns = [...p.matchAll(RUN_RE)].filter((run) => run[0].includes("<w:tab/>"));
+  const firstTab = tabRuns[0];
+  const lastTab = tabRuns[tabRuns.length - 1];
+  if (!firstTab || !lastTab || textOf(p.slice(firstTab.index, lastTab.index)).trim()) {
+    throw templateError("в строке «Instruktor F.I.Sh» между ФИО и «Imzo» ожидались табуляции");
+  }
+  const lineTpl = (p.slice(0, firstTab.index) + p.slice(lastTab.index)).replace(
+    // По схеме OOXML tabs идёт в pPr после pStyle/keepNext/keepLines/pageBreakBefore
+    /(<w:pPr>(?:<w:pStyle [^>]*\/>)?(?:<w:keepNext\/>)?(?:<w:keepLines\/>)?(?:<w:pageBreakBefore\/>)?)/,
+    `$1<w:tabs><w:tab w:val="left" w:pos="${INSTRUCTOR_IMZO_TWIPS}"/></w:tabs>`,
+  );
+
+  const names: FieldValue[] =
+    instructors.length > 0
+      ? instructors.map((text) => ({ text }))
+      : [{ text: "________________", blank: true }];
+  return names
+    .map((name) => fillMarkedFields(lineTpl, [name], "Instruktor F.I.Sh"))
+    .join("");
+}
+
 function renderPage(
   blockTpl: string,
   model: EmptyJournalModel,
@@ -429,17 +488,7 @@ function renderPage(
   }
 
   const renderedPost = post.replace(PARA_RE, (p) =>
-    textOf(p).startsWith("Instruktor")
-      ? fillMarkedFields(
-          p,
-          [
-            model.instructor
-              ? { text: model.instructor }
-              : { text: "________________", blank: true },
-          ],
-          "Instruktor F.I.Sh",
-        )
-      : p,
+    textOf(p).startsWith("Instruktor") ? renderInstructorLines(p, model.instructors) : p,
   );
 
   return (

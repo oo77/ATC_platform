@@ -590,8 +590,11 @@ export async function getStudentAssignments(
       finalEndDate = `${eventDay} 23:59:59`;
     }
 
-    // Если дата окончания группы раньше конца дня занятия — ограничиваем ею
-    if (groupEndDate && finalEndDate && groupEndDate < finalEndDate) {
+    // Если дата окончания группы раньше конца дня занятия — ограничиваем ею.
+    // Пересдачи (original_event_id задан) могут назначаться после окончания обучения,
+    // поэтому для них ограничение по дате группы не применяется.
+    const isRetake = !!row.original_event_id;
+    if (!isRetake && groupEndDate && finalEndDate && groupEndDate < finalEndDate) {
       finalEndDate = groupEndDate;
     }
 

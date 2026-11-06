@@ -115,6 +115,18 @@
           <!-- Right: Action Buttons Group -->
           <div class="flex flex-wrap items-center gap-2">
             <UiButton
+              v-if="canCreateCourses"
+              variant="outline"
+              size="sm"
+              class="h-10 px-4 gap-2 font-bold"
+              :loading="isDuplicating"
+              @click="handleDuplicate"
+            >
+              <Copy class="w-4 h-4" />
+              Дублировать
+            </UiButton>
+
+            <UiButton
               v-if="canEditCourses && !course.isArchived"
               variant="outline"
               size="sm"
@@ -578,6 +590,7 @@ import {
   LayoutDashboard,
   FileText,
   Plus,
+  Copy,
 } from "lucide-vue-next";
 import type { Course, Discipline } from "~/types/course";
 import { ref, computed, onMounted } from "vue";
@@ -600,6 +613,7 @@ const { success: showSuccess, error: showError } = useNotification();
 
 // Проверка прав доступа
 const {
+  canCreateCourses,
   canEditCourses,
   canDeleteCourses,
   canArchiveCourses,
@@ -616,6 +630,7 @@ const isArchiveModalOpen = ref(false);
 const isArchiving = ref(false);
 const isRestoreModalOpen = ref(false);
 const isRestoring = ref(false);
+const isDuplicating = ref(false);
 const isDisciplineModalOpen = ref(false);
 const selectedDiscipline = ref<Discipline | undefined>(undefined);
 const isDeleteDisciplineModalOpen = ref(false);
@@ -776,6 +791,40 @@ const confirmRestore = async () => {
   } finally {
     isRestoring.value = false;
     isRestoreModalOpen.value = false;
+  }
+};
+
+// Duplicate course: создаёт копию и сразу открывает её для редактирования
+const handleDuplicate = async () => {
+  if (isDuplicating.value) return;
+
+  isDuplicating.value = true;
+
+  try {
+    const response = await authFetch<{
+      success: boolean;
+      message?: string;
+      course?: Course;
+    }>(`/api/courses/${id}/duplicate`, {
+      method: "POST",
+    });
+
+    if (response.success && response.course) {
+      showSuccess("Копия учебной программы создана", "Успех");
+      router.push(`/programs/edit/${response.course.id}`);
+    } else {
+      showError(
+        response.message || "Не удалось создать копию учебной программы",
+        "Ошибка",
+      );
+    }
+  } catch (err: any) {
+    showError(
+      err.data?.message || "Не удалось создать копию учебной программы",
+      "Ошибка",
+    );
+  } finally {
+    isDuplicating.value = false;
   }
 };
 

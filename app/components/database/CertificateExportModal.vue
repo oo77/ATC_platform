@@ -309,6 +309,8 @@ async function startExport() {
       if (props.filters.dateFrom)
         params.append("dateFrom", props.filters.dateFrom);
       if (props.filters.dateTo) params.append("dateTo", props.filters.dateTo);
+      if (props.filters.templateId)
+        params.append("templateId", props.filters.templateId);
 
       const response = await authFetch(
         `/api/certificates?${params.toString()}`

@@ -30,6 +30,9 @@ export interface WorkExperienceEntry {
 export interface Instructor {
   id: string;
   fullName: string;
+  full_name_ru?: string | null; // ФИО на русском
+  short_name_uz?: string | null; // Сокращенное ФИО на узбекском
+  short_name_ru?: string | null; // Сокращенное ФИО на русском
   email?: string | null;
   phone?: string | null;
   hireDate?: Date | string | null;
@@ -61,6 +64,9 @@ export interface Instructor {
 
 export interface CreateInstructorInput {
   fullName: string;
+  full_name_ru?: string;
+  short_name_uz?: string;
+  short_name_ru?: string;
   email?: string;
   phone?: string;
   hireDate?: Date | string;
@@ -86,6 +92,9 @@ export interface CreateInstructorInput {
 
 export interface UpdateInstructorInput {
   fullName?: string;
+  full_name_ru?: string | null;
+  short_name_uz?: string | null;
+  short_name_ru?: string | null;
   email?: string | null;
   phone?: string | null;
   hireDate?: Date | string | null;

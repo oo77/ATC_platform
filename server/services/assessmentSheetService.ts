@@ -24,7 +24,9 @@
  *
  * Блок подписей («Ответственный специалист (оператор): …», «Проверил: …») — фиксированные
  * должности и ФИО из шаблона (аналогично DEFAULT_APPROVER_NAME в schedule/export.get.ts);
- * при смене ответственных лиц шаблон нужно поправить вручную.
+ * при смене ответственных лиц шаблон нужно поправить вручную. Если при скачивании выбран
+ * экзаменатор (инструктор группы), первая подпись заменяется на «Экзаменатор : Инструктор»
+ * с его коротким ФИО на русском (см. loadAssessmentSheetModel, examinerInstructorId).
  */
 
 import fs from "fs/promises";
@@ -34,7 +36,7 @@ import PizZip from "pizzip";
 import fontkit from "@pdf-lib/fontkit";
 import type { RowDataPacket } from "mysql2/promise";
 import { executeQuery } from "../utils/db";
-import { formatPersonName } from "./emptyJournalService";
+import { formatPersonName, shortPersonName } from "./emptyJournalService";
 
 const TEMPLATE_PATH = path.join(
   process.cwd(),
@@ -76,7 +78,15 @@ export interface AssessmentSheetModel {
   students: string[];
   /** scores[i][j] — балл i-го слушателя по j-й дисциплине (уже выставленный), null — ещё нет */
   scores: (number | null)[][];
+  /**
+   * Экзаменатор в первой подписи — короткое ФИО инструктора на русском («Атаханов Ф.Л.»);
+   * null — блок подписей как в шаблоне («Ответственный специалист (оператор): …»)
+   */
+  examinerName: string | null;
 }
+
+/** Выбранный экзаменатор не ведёт занятия этой группы */
+export class UnknownExaminerError extends Error {}
 
 interface GroupRow extends RowDataPacket {
   code: string;
@@ -103,6 +113,11 @@ interface GradeRow extends RowDataPacket {
   best_grade: number | null;
 }
 
+interface ExaminerRow extends RowDataPacket {
+  full_name: string;
+  short_name_ru: string | null;
+}
+
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
 function formatDdMmYyyy(ymd: string): string {
@@ -126,8 +141,30 @@ function formatDdMmYyyy(ymd: string): string {
  * программе предусмотрена проверка знаний), дата и баллы остаются пустыми — заполняются от
  * руки, когда контроль назначат и проведут.
  */
+/**
+ * Короткое ФИО экзаменатора на русском: short_name_ru, а если его не заполнили — из полного ФИО.
+ * Инструктор должен вести занятия этой группы (иначе UnknownExaminerError).
+ */
+async function loadExaminerName(groupId: string, instructorId: string): Promise<string> {
+  const rows = await executeQuery<ExaminerRow[]>(
+    `SELECT i.full_name, i.short_name_ru
+     FROM instructors i
+     JOIN schedule_events se ON se.instructor_id = i.id
+     WHERE se.group_id = ? AND i.id = ?
+     LIMIT 1`,
+    [groupId, instructorId],
+  );
+  const examiner = rows[0];
+  if (!examiner) throw new UnknownExaminerError("Инструктор не ведёт занятия этой группы");
+
+  const shortNameRu = examiner.short_name_ru?.trim();
+  if (shortNameRu) return shortNameRu;
+  return shortPersonName(String(examiner.full_name ?? "").replace(/\s+/g, " ").trim());
+}
+
 export async function loadAssessmentSheetModel(
   groupId: string,
+  examinerInstructorId: string | null = null,
 ): Promise<AssessmentSheetModel | null> {
   const groupRows = await executeQuery<GroupRow[]>(
     `SELECT g.code, g.course_id, c.name AS course_name
@@ -139,6 +176,10 @@ export async function loadAssessmentSheetModel(
   );
   const group = groupRows[0];
   if (!group) return null;
+
+  const examinerName = examinerInstructorId
+    ? await loadExaminerName(groupId, examinerInstructorId)
+    : null;
 
   const [disciplineRows, studentRows] = await Promise.all([
     executeQuery<DisciplineEventRow[]>(
@@ -228,6 +269,7 @@ export async function loadAssessmentSheetModel(
     disciplines,
     students,
     scores,
+    examinerName,
   };
 }
 
@@ -559,6 +601,25 @@ function renderTable(
   );
 }
 
+/**
+ * Первая подпись шаблона («Ответственный специалист (оператор): / Специалист отдела ИКТ / Исмаилов С.У.»)
+ * при выбранном экзаменаторе становится «Экзаменатор : / Инструктор / <ФИО>»; остальное — как в шаблоне.
+ */
+function applyExaminerToSignature(signatureXml: string, examinerName: string): string {
+  const replacements: [string, string][] = [
+    ["Ответственный специалист (оператор):", "Экзаменатор :"],
+    ["Специалист отдела ИКТ", "Инструктор"],
+    ["Исмаилов С.У.", examinerName],
+  ];
+  return replacements.reduce((xml, [from, to]) => {
+    const needle = `>${from}</w:t>`;
+    if (xml.split(needle).length !== 2) {
+      throw templateError(`в блоке подписей нет единственного текста «${from}»`);
+    }
+    return xml.replace(needle, () => `>${escapeXml(to)}</w:t>`);
+  }, signatureXml);
+}
+
 export async function renderAssessmentSheetDocx(
   model: AssessmentSheetModel,
 ): Promise<Buffer> {
@@ -601,7 +662,10 @@ export async function renderAssessmentSheetDocx(
   const sigEnd = tail.indexOf("</w:tbl>", sigStart) + "</w:tbl>".length;
   if (sigStart < 0) throw templateError("не найден блок подписей (вторая таблица)");
   const preSignature = tail.slice(0, sigStart); // обычно пусто
-  const signatureBlock = preSignature + tail.slice(sigStart, sigEnd);
+  const signatureTpl = preSignature + tail.slice(sigStart, sigEnd);
+  const signatureBlock = model.examinerName
+    ? applyExaminerToSignature(signatureTpl, model.examinerName)
+    : signatureTpl;
   const documentEnd = tail.slice(sigEnd); // финальный абзац + sectPr — ровно один раз, в самом конце
 
   const templateNumId = Number(/<w:numId w:val="(\d+)"/.exec(table)?.[1]);

@@ -71,6 +71,11 @@ export const AVAILABLE_VARIABLES: {
     placeholder: "Отдел разработки",
   },
   { key: "student.pinfl", label: "ПИНФЛ", placeholder: "12345678901234" },
+  {
+    key: "student.averageScore",
+    label: "Средний балл (числом)",
+    placeholder: "86.5",
+  },
   // Курс
   {
     key: "course.name",
@@ -118,6 +123,21 @@ export const AVAILABLE_VARIABLES: {
     label: "Дата выдачи (прописью)",
     placeholder: "26 декабря 2025 года",
   },
+  {
+    key: "certificate.issueDateEn",
+    label: "Дата выдачи (англ.)",
+    placeholder: "November 18, 2026",
+  },
+  {
+    key: "certificate.theoryDate",
+    label: "Дата теоретического обучения",
+    placeholder: "10.11.2026",
+  },
+  {
+    key: "certificate.practiceDate",
+    label: "Дата проведения практического занятия",
+    placeholder: "17.11.2026",
+  },
   // Инструктор
   {
     key: "instructor.fullName",
@@ -125,9 +145,14 @@ export const AVAILABLE_VARIABLES: {
     placeholder: "Петров Петр Петрович",
   },
   {
-    key: "instructor.shortName",
-    label: "ФИО инструктора (сокращённо)",
+    key: "instructor.shortNameRu",
+    label: "ФИО инструктора сокращённо (RU)",
     placeholder: "Петров П.П.",
+  },
+  {
+    key: "instructor.shortNameUz",
+    label: "ФИО инструктора сокращённо (UZ)",
+    placeholder: "Petrov P.P.",
   },
   {
     key: "instructor.position",
@@ -400,10 +425,14 @@ export function useCertificateEditor() {
   // Множественный выбор элементов
   const selectedElementIds = ref<Set<string>>(new Set());
 
-  // История изменений для Undo/Redo
-  const history = ref<CertificateTemplateData[]>([]);
-  const historyIndex = ref<number>(-1);
+  // История изменений для Undo/Redo: снимки состояний ДО изменения
+  const undoStack = ref<string[]>([]);
+  const redoStack = ref<string[]>([]);
   const maxHistoryLength = 50;
+  // Пока идёт пакетная операция (перетаскивание, ресайз, выравнивание группы),
+  // промежуточные изменения не пишутся в историю — только один снимок в начале
+  let historyBatchDepth = 0;
+  let historyBatchSnapshot: string | null = null;
 
   // Флаги состояния
   const isDirty = ref(false);
@@ -412,8 +441,9 @@ export function useCertificateEditor() {
 
   // Масштаб холста
   const zoom = ref(1);
-  const minZoom = 0.25;
-  const maxZoom = 2;
+  const minZoom = 0.1;
+  const maxZoom = 4;
+  const ZOOM_PRESETS = [0.1, 0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.25, 1.5, 2, 3, 4];
 
   // ── Вычисляемые свойства страниц ────────────────────────────
 
@@ -458,41 +488,77 @@ export function useCertificateEditor() {
     );
   });
 
-  const canUndo = computed(() => historyIndex.value > 0);
-  const canRedo = computed(() => historyIndex.value < history.value.length - 1);
+  const canUndo = computed(() => undoStack.value.length > 0);
+  const canRedo = computed(() => redoStack.value.length > 0);
   const elementsCount = computed(() => activePageElements.value.length);
 
   // ── История ─────────────────────────────────────────────────
 
+  function snapshot(): string {
+    return JSON.stringify(templateData.value);
+  }
+
+  function pushUndo(state: string) {
+    undoStack.value.push(state);
+    if (undoStack.value.length > maxHistoryLength) {
+      undoStack.value.shift();
+    }
+    redoStack.value = [];
+  }
+
+  /** Вызывается ПЕРЕД изменением данных */
   function saveToHistory() {
-    if (historyIndex.value < history.value.length - 1) {
-      history.value = history.value.slice(0, historyIndex.value + 1);
+    isDirty.value = true;
+    if (historyBatchDepth > 0) return;
+    pushUndo(snapshot());
+  }
+
+  /** Начать пакетную операцию: все изменения до endHistoryBatch — один шаг Undo */
+  function beginHistoryBatch() {
+    if (historyBatchDepth === 0) {
+      historyBatchSnapshot = snapshot();
     }
-    history.value.push(JSON.parse(JSON.stringify(templateData.value)));
-    if (history.value.length > maxHistoryLength) {
-      history.value.shift();
-    } else {
-      historyIndex.value++;
+    historyBatchDepth++;
+  }
+
+  function endHistoryBatch() {
+    if (historyBatchDepth === 0) return;
+    historyBatchDepth--;
+    if (historyBatchDepth > 0) return;
+    const before = historyBatchSnapshot;
+    historyBatchSnapshot = null;
+    // Клик без перемещения не должен создавать пустой шаг истории
+    if (before !== null && before !== snapshot()) {
+      pushUndo(before);
+      isDirty.value = true;
     }
+  }
+
+  function restoreSnapshot(state: string) {
+    templateData.value = JSON.parse(state);
+    if (activePageIndex.value >= templateData.value.pages.length) {
+      activePageIndex.value = templateData.value.pages.length - 1;
+    }
+    // Удаляем из выделения элементы, которых больше нет
+    const ids = new Set(getActivePageElements().map((el) => el.id));
+    selectedElementIds.value.forEach((id) => {
+      if (!ids.has(id)) selectedElementIds.value.delete(id);
+    });
     isDirty.value = true;
   }
 
   function undo() {
-    if (!canUndo.value) return;
-    historyIndex.value--;
-    templateData.value = JSON.parse(
-      JSON.stringify(history.value[historyIndex.value]),
-    );
-    isDirty.value = true;
+    const prev = undoStack.value.pop();
+    if (prev === undefined) return;
+    redoStack.value.push(snapshot());
+    restoreSnapshot(prev);
   }
 
   function redo() {
-    if (!canRedo.value) return;
-    historyIndex.value++;
-    templateData.value = JSON.parse(
-      JSON.stringify(history.value[historyIndex.value]),
-    );
-    isDirty.value = true;
+    const next = redoStack.value.pop();
+    if (next === undefined) return;
+    undoStack.value.push(snapshot());
+    restoreSnapshot(next);
   }
 
   // ── Инициализация ────────────────────────────────────────────
@@ -502,8 +568,10 @@ export function useCertificateEditor() {
     const migrated = data ? migrateLegacyData(data) : createEmptyTemplate();
     templateData.value = JSON.parse(JSON.stringify(migrated));
 
-    history.value = [JSON.parse(JSON.stringify(templateData.value))];
-    historyIndex.value = 0;
+    undoStack.value = [];
+    redoStack.value = [];
+    historyBatchDepth = 0;
+    historyBatchSnapshot = null;
     activePageIndex.value = 0;
     selectedElementIds.value.clear();
     isDirty.value = false;
@@ -653,6 +721,40 @@ export function useCertificateEditor() {
     }
   }
 
+  /** Удалить несколько элементов одним шагом истории */
+  function deleteElements(ids: string[]) {
+    if (ids.length === 0) return;
+    saveToHistory();
+    const idx = Math.min(activePageIndex.value, templateData.value.pages.length - 1);
+    const page = templateData.value.pages[idx];
+    if (page) {
+      const toDelete = new Set(ids);
+      page.elements = page.elements.filter(
+        (el: TemplateElement) => !toDelete.has(el.id),
+      );
+    }
+    ids.forEach((id) => selectedElementIds.value.delete(id));
+  }
+
+  /** Сдвинуть элементы на dx/dy (стрелки клавиатуры), не выходя за холст */
+  function nudgeElements(ids: string[], dx: number, dy: number) {
+    const els = getActivePageElements();
+    const targets = els.filter(
+      (el: TemplateElement) => ids.includes(el.id) && !el.locked,
+    );
+    if (targets.length === 0) return;
+    saveToHistory();
+    const { width, height } = templateData.value;
+    targets.forEach((el) => {
+      const index = els.indexOf(el);
+      els[index] = {
+        ...el,
+        x: Math.max(0, Math.min(width - el.width, el.x + dx)),
+        y: Math.max(0, Math.min(height - el.height, el.y + dy)),
+      } as TemplateElement;
+    });
+  }
+
   function deleteSelectedElement() {
     if (selectedElementId.value) deleteElement(selectedElementId.value);
   }
@@ -747,7 +849,7 @@ export function useCertificateEditor() {
       (el: TemplateElement) => ids.includes(el.id) && !el.locked,
     );
     if (elements.length < 2) return;
-    saveToHistory();
+    beginHistoryBatch();
     let referenceValue: number;
     switch (direction) {
       case "left":
@@ -777,6 +879,7 @@ export function useCertificateEditor() {
         elements.forEach((el) => updateElement(el.id, { y: referenceValue - el.height }));
         break;
     }
+    endHistoryBatch();
   }
 
   function distributeElements(
@@ -787,12 +890,11 @@ export function useCertificateEditor() {
     const elements = getActivePageElements()
       .filter((el: TemplateElement) => ids.includes(el.id) && !el.locked)
       .sort((a, b) => (direction === "horizontal" ? a.x - b.x : a.y - b.y));
-    if (elements.length < 3) return;
-    saveToHistory();
+    const first = elements[0];
+    const last = elements[elements.length - 1];
+    if (elements.length < 3 || !first || !last) return;
+    beginHistoryBatch();
     if (direction === "horizontal") {
-      const first = elements[0];
-      const last = elements[elements.length - 1];
-      if (!first || !last) return;
       const totalSpace = last.x - (first.x + first.width);
       const gap = totalSpace / (elements.length - 1);
       let currentX = first.x + first.width + gap;
@@ -804,9 +906,6 @@ export function useCertificateEditor() {
         }
       }
     } else {
-      const first = elements[0];
-      const last = elements[elements.length - 1];
-      if (!first || !last) return;
       const totalSpace = last.y - (first.y + first.height);
       const gap = totalSpace / (elements.length - 1);
       let currentY = first.y + first.height + gap;
@@ -818,6 +917,7 @@ export function useCertificateEditor() {
         }
       }
     }
+    endHistoryBatch();
   }
 
   // Изменение масштаба
@@ -825,12 +925,15 @@ export function useCertificateEditor() {
     zoom.value = Math.min(maxZoom, Math.max(minZoom, value));
   }
 
+  // Кнопки +/- переходят к следующему «круглому» значению масштаба
   function zoomIn() {
-    setZoom(zoom.value + 0.1);
+    const next = ZOOM_PRESETS.find((z) => z > zoom.value + 0.001);
+    setZoom(next ?? maxZoom);
   }
 
   function zoomOut() {
-    setZoom(zoom.value - 0.1);
+    const prev = [...ZOOM_PRESETS].reverse().find((z) => z < zoom.value - 0.001);
+    setZoom(prev ?? minZoom);
   }
 
   function resetZoom() {
@@ -850,10 +953,11 @@ export function useCertificateEditor() {
     let updates: Partial<TemplateElement> = {};
     switch (direction) {
       case "left": updates.x = 0; break;
-      case "center-h": updates.x = (canvasWidth - element.width) / 2; break;
+      // Блок шире холста (например, 800 px при холсте 794) не уходит в минус: X = 0, а не -3
+      case "center-h": updates.x = Math.max(0, (canvasWidth - element.width) / 2); break;
       case "right": updates.x = canvasWidth - element.width; break;
       case "top": updates.y = 0; break;
-      case "center-v": updates.y = (canvasHeight - element.height) / 2; break;
+      case "center-v": updates.y = Math.max(0, (canvasHeight - element.height) / 2); break;
       case "bottom": updates.y = canvasHeight - element.height; break;
     }
     updateElement(id, updates);
@@ -956,6 +1060,8 @@ export function useCertificateEditor() {
     undo,
     redo,
     saveToHistory,
+    beginHistoryBatch,
+    endHistoryBatch,
 
     // Методы макета и фона
     setLayout,
@@ -975,6 +1081,8 @@ export function useCertificateEditor() {
     updateMultipleElements,
     deleteElement,
     deleteSelectedElement,
+    deleteElements,
+    nudgeElements,
     duplicateElement,
     bringToFront,
     sendToBack,
@@ -1000,5 +1108,6 @@ export function useCertificateEditor() {
     // Константы
     minZoom,
     maxZoom,
+    ZOOM_PRESETS,
   };
 }

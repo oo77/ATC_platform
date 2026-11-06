@@ -934,3 +934,92 @@ export async function archiveCourse(
 
   return getCourseById(id);
 }
+
+// ============================================================================
+// COURSE DUPLICATION
+// ============================================================================
+
+/**
+ * Подбирает свободный код для копии: CODE-COPY, CODE-COPY-2, ...
+ */
+async function generateCopyCode(sourceCode: string): Promise<string> {
+  let candidate = `${sourceCode}-COPY`;
+  let counter = 2;
+
+  while (await courseCodeExists(candidate)) {
+    candidate = `${sourceCode}-COPY-${counter}`;
+    counter++;
+  }
+
+  return candidate;
+}
+
+/**
+ * Создаёт копию программы вместе с дисциплинами и инструкторами.
+ * Название получает суффикс " (копия)", код — уникальный суффикс.
+ * Копия всегда неархивная; группы и архивные метаданные не копируются.
+ * @returns Созданная копия или null, если исходная программа не найдена
+ */
+export async function duplicateCourse(sourceId: string): Promise<Course | null> {
+  const source = await getCourseById(sourceId, true);
+  if (!source) return null;
+
+  const newId = uuidv4();
+  const now = new Date();
+  const newCode = await generateCopyCode(source.code);
+
+  await executeTransaction(async (connection: PoolConnection) => {
+    await connection.execute(
+      `INSERT INTO courses (id, name, name_uz, short_name, code, description, course_type, total_hours, certificate_template_id, certificate_validity_months, is_active, is_archived, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?, ?)`,
+      [
+        newId,
+        `${source.name} (копия)`,
+        source.nameUz ? `${source.nameUz} (копия)` : null,
+        source.shortName,
+        newCode,
+        source.description ?? null,
+        source.courseType,
+        source.totalHours,
+        source.certificateTemplateId ?? null,
+        source.certificateValidityMonths ?? null,
+        source.isActive,
+        now,
+        now,
+      ]
+    );
+
+    for (const discipline of source.disciplines ?? []) {
+      const disciplineId = uuidv4();
+
+      await connection.execute(
+        `INSERT INTO disciplines (id, course_id, name, short_name, description, hours, theory_hours, practice_hours, assessment_hours, order_index, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          disciplineId,
+          newId,
+          discipline.name,
+          discipline.shortName ?? null,
+          discipline.description ?? null,
+          discipline.hours,
+          discipline.theoryHours,
+          discipline.practiceHours,
+          discipline.assessmentHours,
+          discipline.orderIndex,
+          now,
+          now,
+        ]
+      );
+
+      for (const link of discipline.instructors ?? []) {
+        await connection.execute(
+          `INSERT INTO discipline_instructors (id, discipline_id, instructor_id, is_primary, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
+          [uuidv4(), disciplineId, link.instructorId, link.isPrimary, now]
+        );
+      }
+    }
+  });
+
+  return getCourseById(newId);
+}

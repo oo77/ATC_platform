@@ -49,6 +49,8 @@ export interface VariableContext {
     position: string;
     department?: string | null;
     pinfl: string;
+    /** Средний балл итоговых оценок (как в журнале выдачи сертификатов) */
+    averageScore?: number | null;
   };
   course: {
     id: string;
@@ -68,10 +70,15 @@ export interface VariableContext {
     number: string;
     issueDate: Date;
     verificationUrl?: string;
+    /** Расширенные функции выдачи: даты в формате YYYY-MM-DD, не заданы — пустая строка */
+    theoryDate?: string | null;
+    practiceDate?: string | null;
   };
   instructor?: {
     id: string;
     fullName: string;
+    shortNameRu?: string | null;
+    shortNameUz?: string | null;
     position?: string | null;
   } | null;
   attestation?: {
@@ -120,6 +127,43 @@ export function formatDateFormatted(date: Date | string): string {
 function formatDate(date: Date | string): string {
   const d = new Date(date);
   return `${d.getDate().toString().padStart(2, "0")}.${(d.getMonth() + 1).toString().padStart(2, "0")}.${d.getFullYear()}`;
+}
+
+/** "November 18, 2026" */
+export function formatDateEn(date: Date | string): string {
+  const d = new Date(date);
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+/**
+ * Дата из поля <input type="date"> (YYYY-MM-DD) → ДД.ММ.ГГГГ.
+ * Разбираем строку вручную: new Date("YYYY-MM-DD") — это полночь UTC,
+ * и в часовых поясах западнее UTC день съехал бы на предыдущий.
+ */
+function formatInputDate(value: string | null | undefined): string {
+  if (!value) return "";
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : value;
+}
+
+/** Средний балл числом: до одного знака после запятой, без лишнего ".0" */
+function formatScore(score: number | null | undefined): string {
+  if (score == null || !Number.isFinite(score)) return "";
+  return String(Math.round(score * 10) / 10);
 }
 
 // ============================================================================
@@ -391,7 +435,7 @@ async function getFallbackFont(
     const bytes = await fetchFontBytes(family, weight);
     if (bytes) {
       try {
-        return await pdfDoc.embedFont(bytes);
+        return await pdfDoc.embedFont(bytes, { subset: true });
       } catch {
         /* пробуем следующий */
       }
@@ -400,7 +444,33 @@ async function getFallbackFont(
   return null;
 }
 
+// Кэш шрифтов на один PDF: шрифт встраивается один раз, а не на каждый текстовый элемент
+const embeddedFontCache = new WeakMap<PDFDocument, Map<string, PDFFont>>();
+
 async function getEmbeddedFont(
+  pdfDoc: PDFDocument,
+  fontFamily: string,
+  fontWeight: string,
+  fontStyle: string,
+): Promise<PDFFont> {
+  const weight =
+    fontWeight === "bold" || parseInt(fontWeight) >= 700 ? 700 : 400;
+  const cacheKey = `${fontFamily}|${weight}|${fontStyle}`;
+
+  let cache = embeddedFontCache.get(pdfDoc);
+  if (!cache) {
+    cache = new Map();
+    embeddedFontCache.set(pdfDoc, cache);
+  }
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+
+  const font = await loadEmbeddedFont(pdfDoc, fontFamily, fontWeight, fontStyle);
+  cache.set(cacheKey, font);
+  return font;
+}
+
+async function loadEmbeddedFont(
   pdfDoc: PDFDocument,
   fontFamily: string,
   fontWeight: string,
@@ -445,7 +515,7 @@ async function getEmbeddedFont(
   const fontBytes = await fetchFontBytes(fontFamily, weight);
   if (fontBytes) {
     try {
-      return await pdfDoc.embedFont(fontBytes);
+      return await pdfDoc.embedFont(fontBytes, { subset: true });
     } catch {
       console.warn(
         `[pdfGenerator] Failed to embed font ${fontFamily}, trying Roboto fallback`,
@@ -500,8 +570,10 @@ export function resolveVariable(
       return student.organization;
     case "student.organizationUz":
       return student.organizationUz || "";
-    case "student.organizationEn":
-      return student.organizationEn || "";
+    case "student.organizationEn": {
+      const orgEn = student.organizationEn?.trim();
+      return orgEn ? `from ${orgEn}` : "";
+    }
     case "student.organizationRu":
       return student.organizationRu || "";
     case "student.position":
@@ -510,6 +582,8 @@ export function resolveVariable(
       return student.department || "";
     case "student.pinfl":
       return student.pinfl;
+    case "student.averageScore":
+      return formatScore(student.averageScore);
     case "course.name":
       return course.name;
     case "course.shortName":
@@ -534,12 +608,32 @@ export function resolveVariable(
       return formatDate(certificate.issueDate);
     case "certificate.issueDateFormatted":
       return formatDateFormatted(certificate.issueDate);
+    case "certificate.issueDateEn":
+      return formatDateEn(certificate.issueDate);
+    case "certificate.theoryDate":
+      return formatInputDate(certificate.theoryDate);
+    case "certificate.practiceDate":
+      return formatInputDate(certificate.practiceDate);
     case "instructor.fullName":
       return context.instructor?.fullName || "";
-    case "instructor.shortName":
+    case "instructor.shortName": {
+      // Сохранённые сокращения инструктора: русское и узбекское через «/»
+      const stored = [
+        context.instructor?.shortNameRu,
+        context.instructor?.shortNameUz,
+      ].filter(Boolean);
+      if (stored.length > 0) return stored.join(" / ");
       return context.instructor?.fullName
         ? getShortName(context.instructor.fullName)
         : "";
+    }
+    case "instructor.shortNameRu":
+      if (context.instructor?.shortNameRu) return context.instructor.shortNameRu;
+      return context.instructor?.fullName
+        ? getShortName(context.instructor.fullName)
+        : "";
+    case "instructor.shortNameUz":
+      return context.instructor?.shortNameUz || "";
     case "instructor.position":
       return context.instructor?.position || "";
     case "attestation.examScore":

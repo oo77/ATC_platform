@@ -59,39 +59,14 @@
             >
               Учебная программа <span class="text-danger">*</span>
             </label>
-            <div class="relative">
-              <select
-                v-model="form.courseId"
-                class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 appearance-none transition-all font-medium"
-                :class="{ 'border-danger focus:border-danger focus:ring-danger': errors.courseId }"
-              >
-                <option value="">Выберите программу...</option>
-                <option
-                  v-for="course in courses"
-                  :key="course.id"
-                  :value="course.id"
-                >
-                  {{ course.shortName }} - {{ course.name }}
-                </option>
-              </select>
-              <div
-                class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-            </div>
+            <UiSearchSelect
+              v-model="form.courseId"
+              :options="courseOptions"
+              placeholder="Выберите программу..."
+              search-placeholder="Поиск по названию или коду..."
+              :invalid="!!errors.courseId"
+              button-class="rounded-xl border border-slate-200 bg-transparent py-3 pl-4 pr-10 font-medium focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
+            />
             <p v-if="errors.courseId" class="mt-1 text-xs text-danger">
               {{ errors.courseId }}
             </p>
@@ -430,6 +405,7 @@ import { ref, computed, watch, onMounted } from "vue";
 import { Sparkles, FileText } from "lucide-vue-next";
 import type { StudyGroup } from "~/types/group";
 import type { Course } from "~/types/course";
+import UiSearchSelect from "~/components/ui/SearchSelect.vue";
 
 const props = defineProps<{
   isOpen: boolean;
@@ -449,6 +425,13 @@ const { user } = useAuth();
 // State
 const loading = ref(false);
 const courses = ref<Course[]>([]);
+const courseOptions = computed(() =>
+  courses.value.map((c) => ({
+    id: c.id,
+    label: c.name,
+    description: c.shortName,
+  })),
+);
 const form = ref({
   code: "",
   courseId: "",

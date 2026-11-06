@@ -37,6 +37,17 @@
           variant="outline"
           size="sm"
           class="h-10 px-4 gap-2 font-bold"
+          :loading="isDownloadingExcel"
+          :disabled="loading || isDownloadingExcel || !pagination.total"
+          @click="downloadExcel"
+        >
+          <FileSpreadsheet v-if="!isDownloadingExcel" class="w-4 h-4" />
+          Скачать Excel
+        </UiButton>
+        <UiButton
+          variant="outline"
+          size="sm"
+          class="h-10 px-4 gap-2 font-bold"
           @click="openExportModal"
           :disabled="loading || !data.length"
         >
@@ -180,6 +191,36 @@
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
               >
                 {{ opt.label }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Шаблон сертификата (chips) -->
+          <div v-if="templates.length" class="space-y-3">
+            <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
+              <FileCheck class="w-3.5 h-3.5" />
+              Шаблон
+            </label>
+            <div class="flex flex-wrap gap-2">
+              <button
+                @click="filters.templateId = ''; handleFilterChange()"
+                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+                :class="filters.templateId === ''
+                  ? 'bg-primary text-white shadow-md shadow-primary/20'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
+              >
+                Все
+              </button>
+              <button
+                v-for="tpl in templates"
+                :key="tpl.id"
+                @click="filters.templateId = tpl.id; handleFilterChange()"
+                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+                :class="filters.templateId === tpl.id
+                  ? 'bg-primary text-white shadow-md shadow-primary/20'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
+              >
+                {{ tpl.name }}
               </button>
             </div>
           </div>
@@ -406,6 +447,14 @@
                   >
                     <XCircle class="h-4 w-4" />
                   </button>
+                  <button
+                    v-else-if="cert.status === 'revoked'"
+                    @click="openDeleteModal(cert)"
+                    class="p-2 rounded-lg text-danger hover:bg-danger/10 transition-colors"
+                    title="Удалить полностью"
+                  >
+                    <Trash2 class="h-4 w-4" />
+                  </button>
                 </div>
               </td>
             </tr>
@@ -502,6 +551,20 @@
       </div>
     </UiModal>
 
+    <UiConfirmModal
+      :is-open="isDeleteModalOpen"
+      title="Удаление сертификата"
+      message="Отозванный сертификат будет удалён из базы полностью, вместе с PDF-файлом."
+      :item-name="deleteTarget ? `${deleteTarget.certificateNumber} — ${deleteTarget.student.fullName}` : undefined"
+      warning="Это действие нельзя отменить"
+      confirm-text="Удалить полностью"
+      cancel-text="Отмена"
+      variant="danger"
+      :loading="isDeleting"
+      @confirm="confirmDelete"
+      @cancel="closeDeleteModal"
+    />
+
     <DatabaseCertificateExportModal
       :is-open="isExportModalOpen"
       :filters="filters"
@@ -521,10 +584,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, defineComponent, h } from 'vue';
+import * as XLSX from 'xlsx';
 import {
   Plus, FileCheck, CheckCircle, XCircle, Building2, Users, Filter,
   RotateCcw, Search, Download, Eye, Zap, FileSpreadsheet, Layers,
-  CalendarRange, AlertTriangle,
+  CalendarRange, AlertTriangle, Trash2,
 } from 'lucide-vue-next';
 
 const { authFetch } = useAuthFetch();
@@ -574,6 +638,7 @@ const filters = ref({
   organizationName: '',
   dateFrom: '',
   dateTo: '',
+  templateId: '',
   sortBy: 'issue_date',
   sortOrder: 'desc' as 'asc' | 'desc',
 });
@@ -585,11 +650,16 @@ const revokeTarget = ref<any>(null);
 const revokeReason = ref('');
 const isManualFormModalOpen = ref(false);
 const isRevoking = ref(false);
+const isDeleteModalOpen = ref(false);
+const deleteTarget = ref<any>(null);
+const isDeleting = ref(false);
 const isExportModalOpen = ref(false);
+const templates = ref<{ id: string; name: string }[]>([]);
+const isDownloadingExcel = ref(false);
 
 const hasActiveFilters = computed(() =>
   !!(filters.value.search || filters.value.status !== 'all' || filters.value.sourceType !== 'all' ||
-    filters.value.organizationName || filters.value.dateFrom || filters.value.dateTo)
+    filters.value.organizationName || filters.value.dateFrom || filters.value.dateTo || filters.value.templateId)
 );
 
 async function loadData() {
@@ -607,6 +677,7 @@ async function loadData() {
     if (filters.value.organizationName) params.append('organizationName', filters.value.organizationName);
     if (filters.value.dateFrom) params.append('dateFrom', filters.value.dateFrom);
     if (filters.value.dateTo) params.append('dateTo', filters.value.dateTo);
+    if (filters.value.templateId) params.append('templateId', filters.value.templateId);
 
     const response = await authFetch(`/api/certificates?${params.toString()}`);
     if (response.success) {
@@ -631,7 +702,7 @@ function debouncedSearch() {
 function handleFilterChange() { pagination.value.page = 1; loadData(); }
 
 function resetFilters() {
-  filters.value = { search: '', status: 'all', sourceType: 'all', organizationName: '', dateFrom: '', dateTo: '', sortBy: 'issue_date', sortOrder: 'desc' };
+  filters.value = { search: '', status: 'all', sourceType: 'all', organizationName: '', dateFrom: '', dateTo: '', templateId: '', sortBy: 'issue_date', sortOrder: 'desc' };
   pagination.value.page = 1;
   loadData();
 }
@@ -678,8 +749,95 @@ async function confirmRevoke() {
   }
 }
 
+function openDeleteModal(cert: any) { deleteTarget.value = cert; isDeleteModalOpen.value = true; }
+function closeDeleteModal() { isDeleteModalOpen.value = false; deleteTarget.value = null; }
+
+// Полное удаление отозванного (архивного) сертификата вместе с PDF
+async function confirmDelete() {
+  const target = deleteTarget.value;
+  if (!target) return;
+  isDeleting.value = true;
+  try {
+    const response = await authFetch(`/api/certificates/${target.id}`, { method: 'DELETE' });
+    if (response.success) {
+      notification.success(`Сертификат ${target.certificateNumber} удалён из базы`, 'Сертификат удалён');
+      closeDeleteModal();
+      // Удалили единственную запись на странице — возвращаемся на предыдущую
+      if (data.value.length === 1 && pagination.value.page > 1) pagination.value.page--;
+      loadData();
+    } else {
+      notification.error(response.message || 'Не удалось удалить сертификат', 'Ошибка');
+    }
+  } catch (error: any) {
+    notification.error(error.data?.message || error.message || 'Не удалось удалить сертификат', 'Ошибка');
+  } finally {
+    isDeleting.value = false;
+  }
+}
+
 function openExportModal() { isExportModalOpen.value = true; }
 function closeExportModal() { isExportModalOpen.value = false; }
+
+async function loadTemplates() {
+  try {
+    const response = await authFetch<{ success: boolean; templates: { id: string; name: string }[] }>('/api/certificates/templates');
+    templates.value = response.templates.map((tpl) => ({ id: tpl.id, name: tpl.name }));
+  } catch (error: any) {
+    console.error('Error loading certificate templates:', error);
+  }
+}
+
+// Excel по всем сертификатам, подходящим под текущие фильтры (включая шаблон):
+// кому выдан, дата выдачи, номер сертификата
+async function downloadExcel() {
+  if (isDownloadingExcel.value || !pagination.value.total) return;
+  isDownloadingExcel.value = true;
+  try {
+    const params = new URLSearchParams({
+      page: '1',
+      limit: String(pagination.value.total),
+      sortBy: filters.value.sortBy,
+      sortOrder: filters.value.sortOrder,
+    });
+    if (filters.value.search) params.append('search', filters.value.search);
+    if (filters.value.status !== 'all') params.append('status', filters.value.status);
+    if (filters.value.sourceType !== 'all') params.append('sourceType', filters.value.sourceType);
+    if (filters.value.organizationName) params.append('organizationName', filters.value.organizationName);
+    if (filters.value.dateFrom) params.append('dateFrom', filters.value.dateFrom);
+    if (filters.value.dateTo) params.append('dateTo', filters.value.dateTo);
+    if (filters.value.templateId) params.append('templateId', filters.value.templateId);
+
+    const response = await authFetch(`/api/certificates?${params.toString()}`);
+    if (!response.success) throw new Error(response.message || 'Не удалось загрузить сертификаты');
+
+    const rows = response.data.items.map((cert: any) => ({
+      'Кому выдан (ФИО)': cert.student?.fullName || '',
+      'Организация': cert.student?.organization || '',
+      'Дата выдачи': cert.issueDate ? formatDate(cert.issueDate) : '',
+      '№ сертификата': cert.certificateNumber,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: Math.max(...rows.map((r: any) => String(r['Кому выдан (ФИО)']).length), 20) + 2 },
+      { wch: Math.max(...rows.map((r: any) => String(r['Организация']).length), 20) + 2 },
+      { wch: 12 },
+      { wch: Math.max(...rows.map((r: any) => String(r['№ сертификата']).length), 16) + 2 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Сертификаты');
+
+    const templateName = templates.value.find((tpl) => tpl.id === filters.value.templateId)?.name;
+    const namePart = templateName ? `_${templateName.replace(/[\\/:*?"<>|]/g, '_')}` : '';
+    const dateStr = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `sertifikaty${namePart}_${dateStr}.xlsx`);
+  } catch (error: any) {
+    console.error('Error exporting certificates to Excel:', error);
+    notification.error('Ошибка экспорта', error.message || 'Не удалось скачать Excel');
+  } finally {
+    isDownloadingExcel.value = false;
+  }
+}
 function openManualFormModal() { isManualFormModalOpen.value = true; }
 function closeManualFormModal() { isManualFormModalOpen.value = false; }
 function handleCertificateCreated(certificate: any) {
@@ -687,5 +845,5 @@ function handleCertificateCreated(certificate: any) {
   loadData();
 }
 
-onMounted(() => { loadData(); });
+onMounted(() => { loadData(); loadTemplates(); });
 </script>

@@ -198,7 +198,7 @@ export default defineEventHandler(async (event) => {
                 testTemplateId,
                 originalEvent.group_id,
                 retakeEventId,
-                "published",
+                "scheduled",
                 user.id,
                 JSON.stringify(body.studentIds), // Ограничиваем доступ к тесту
               ]

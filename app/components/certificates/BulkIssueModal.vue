@@ -40,18 +40,12 @@
                 Вы собираетесь выдать сертификаты <strong>{{ studentsCount }}</strong> слушателям.
               </p>
               
-              <!-- Информация о шаблоне -->
-              <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
-                <div class="flex items-center gap-3">
-                  <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <div>
-                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ templateName }}</p>
-                    <p class="text-xs text-gray-500">Шаблон сертификата</p>
-                  </div>
-                </div>
-              </div>
+              <!-- Выбор шаблона -->
+              <CertificatesTemplateChoice
+                v-model="selectedTemplate"
+                :standard-template="standardTemplate"
+                class="mb-4"
+              />
 
               <p class="text-sm text-gray-500 dark:text-gray-400">
                 Продолжить выдачу?
@@ -173,7 +167,7 @@
               <UiButton variant="outline" @click="handleClose">
                 Отмена
               </UiButton>
-              <UiButton variant="primary" @click="handleConfirm" :disabled="isConfirming">
+              <UiButton variant="primary" @click="handleConfirm" :disabled="isConfirming || !selectedTemplate">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -194,6 +188,8 @@
 </template>
 
 <script setup lang="ts">
+import type { CertificateTemplate } from '~/types/certificate';
+
 interface BulkIssueResult {
   studentId: string;
   studentName: string;
@@ -204,17 +200,20 @@ interface BulkIssueResult {
   error?: string;
 }
 
+type TemplateChoiceValue = Pick<CertificateTemplate, 'id' | 'name'>;
+
 interface Props {
   isOpen: boolean;
   studentsCount: number;
-  templateName: string;
+  /** Шаблон, прикреплённый к программе (курсу) */
+  standardTemplate: TemplateChoiceValue | null;
 }
 
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
   close: [];
-  confirm: [];
+  confirm: [template: TemplateChoiceValue];
   progress: [{ processed: number; current: string }];
   complete: [results: BulkIssueResult[]];
 }>();
@@ -223,6 +222,7 @@ const emit = defineEmits<{
 const isProcessing = ref(false);
 const isCompleted = ref(false);
 const isConfirming = ref(false); // Защита от двойного клика
+const selectedTemplate = ref<TemplateChoiceValue | null>(null);
 const processedCount = ref(0);
 const currentStudentName = ref('');
 const successCount = ref(0);
@@ -252,9 +252,9 @@ const handleClose = () => {
 
 const handleConfirm = () => {
   // Защита от двойного клика
-  if (isConfirming.value) return;
+  if (isConfirming.value || !selectedTemplate.value) return;
   isConfirming.value = true;
-  emit('confirm');
+  emit('confirm', selectedTemplate.value);
 };
 
 const resetState = () => {

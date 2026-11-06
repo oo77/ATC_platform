@@ -569,7 +569,7 @@
                   {{ group.students?.length || 0 }} подтвержденных участников
                 </p>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2">
                 <UiButton
                   v-if="canManageGroupStudents && !group.isArchived"
                   variant="outline"
@@ -581,41 +581,106 @@
                   Управление слушателями
                 </UiButton>
 
-                <div
+                <UiButton
                   v-if="group.students && group.students.length > 0"
-                  class="relative group/journal"
+                  variant="outline"
+                  size="sm"
+                  class="gap-2 font-bold"
+                  title="Пустой журнал группы для заполнения на занятиях — PDF или Word"
+                  @click="showEmptyJournalModal = true"
+                  :disabled="generatingEmptyJournal"
                 >
-                  <UiButton
-                    variant="outline"
-                    size="sm"
-                    class="gap-2 font-bold"
-                    @click="toggleEmptyJournalDropdown"
-                    :disabled="generatingEmptyJournal"
-                  >
-                    <Download class="w-4 h-4" />
-                    Пустой журнал
-                  </UiButton>
-                  <!-- Dropdown Menu (logic remains same) -->
-                  <div
-                    v-if="showEmptyJournalDropdown"
-                    class="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden"
-                  >
-                    <button
-                      @click="downloadEmptyJournal('pdf')"
-                      class="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors"
-                    >
-                      <FileText class="w-4 h-4 text-danger" />
-                      Скачать PDF
-                    </button>
-                    <button
-                      @click="downloadEmptyJournal('docx')"
-                      class="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors border-t border-slate-100 dark:border-slate-700"
-                    >
-                      <FileText class="w-4 h-4 text-primary" />
-                      Скачать Word
-                    </button>
-                  </div>
-                </div>
+                  <Download class="w-4 h-4" />
+                  Пустой журнал
+                </UiButton>
+
+                <UiButton
+                  v-if="group.students && group.students.length > 0"
+                  variant="outline"
+                  size="sm"
+                  class="gap-2 font-bold"
+                  title="Оценочные листы (BAHOLASH VARAQASI) на всех слушателей — одним Word-файлом"
+                  @click="showEvaluationSheetsModal = true"
+                  :disabled="generatingEvaluationSheets"
+                >
+                  <Download class="w-4 h-4" />
+                  Оценочные листы
+                </UiButton>
+
+                <UiButton
+                  v-if="group.students && group.students.length > 0"
+                  variant="outline"
+                  size="sm"
+                  class="gap-2 font-bold"
+                  title="Протокол итогового экзамена (Bayonnoma) со списком слушателей — Word-файл"
+                  @click="showFinalExamProtocolModal = true"
+                  :disabled="generatingFinalExamProtocol"
+                >
+                  <Download class="w-4 h-4" />
+                  Протокол экзамена
+                </UiButton>
+
+                <UiButton
+                  v-if="group.students && group.students.length > 0"
+                  variant="outline"
+                  size="sm"
+                  class="gap-2 font-bold"
+                  title="Ведомость проведения контроля знаний по дисциплинам — Word или PDF"
+                  @click="showAssessmentSheetModal = true"
+                  :disabled="generatingAssessmentSheet"
+                >
+                  <Download class="w-4 h-4" />
+                  Ведомость контроля
+                </UiButton>
+
+                <UiButton
+                  v-if="group.students && group.students.length > 0"
+                  variant="outline"
+                  size="sm"
+                  class="gap-2 font-bold"
+                  title="Реестр — лист регистрации слушателей и подтверждения личности, Word-файл"
+                  @click="showRegistryModal = true"
+                  :disabled="generatingRegistry"
+                >
+                  <Download class="w-4 h-4" />
+                  Реестр
+                </UiButton>
+
+                <UiButton
+                  variant="outline"
+                  size="sm"
+                  class="gap-2 font-bold"
+                  title="Лист ознакомления с вводным инструктажем и инструктажем по охране труда — Word-файл"
+                  @click="showAcquaintanceSheetModal = true"
+                  :disabled="generatingAcquaintanceSheet"
+                >
+                  <Download class="w-4 h-4" />
+                  Лист ознакомления
+                </UiButton>
+
+                <UiButton
+                  variant="outline"
+                  size="sm"
+                  class="gap-2 font-bold"
+                  title="Список группы — пустая таблица слушателей с номером группы и датами обучения, Word-файл"
+                  @click="downloadGroupList"
+                  :disabled="generatingGroupList"
+                >
+                  <Download class="w-4 h-4" />
+                  Список группы
+                </UiButton>
+
+                <UiButton
+                  variant="outline"
+                  size="sm"
+                  class="gap-2 font-bold"
+                  title="Обезличенный вопросник — оценка слушателями качества преподавания с реквизитами группы, Word-файл"
+                  @click="showQuestionnaireModal = true"
+                  :disabled="generatingQuestionnaire"
+                >
+                  <Download class="w-4 h-4" />
+                  Вопросник
+                </UiButton>
               </div>
             </div>
 
@@ -1119,6 +1184,72 @@
       @updated="loadGroup"
     />
 
+    <!-- Инструкторы и формат пустого журнала -->
+    <GroupsEmptyJournalModal
+      v-if="group"
+      :is-open="showEmptyJournalModal"
+      :group-id="group.id"
+      :loading="generatingEmptyJournal"
+      @close="showEmptyJournalModal = false"
+      @submit="downloadEmptyJournal"
+    />
+
+    <!-- Состав комиссии для оценочных листов -->
+    <GroupsEvaluationSheetsModal
+      :is-open="showEvaluationSheetsModal"
+      :loading="generatingEvaluationSheets"
+      @close="showEvaluationSheetsModal = false"
+      @submit="downloadEvaluationSheets"
+    />
+
+    <!-- Данные протокола итогового экзамена -->
+    <GroupsFinalExamProtocolModal
+      v-if="group"
+      :is-open="showFinalExamProtocolModal"
+      :group-id="group.id"
+      :loading="generatingFinalExamProtocol"
+      @close="showFinalExamProtocolModal = false"
+      @submit="downloadFinalExamProtocol"
+    />
+
+    <!-- Блок подписей ведомости контроля знаний: шаблон или экзаменатор-инструктор -->
+    <GroupsAssessmentSheetModal
+      v-if="group"
+      :is-open="showAssessmentSheetModal"
+      :group-id="group.id"
+      :loading="generatingAssessmentSheet"
+      @close="showAssessmentSheetModal = false"
+      @submit="downloadAssessmentSheet"
+    />
+
+    <!-- Данные реестра (листа регистрации слушателей) -->
+    <GroupsRegistryModal
+      :is-open="showRegistryModal"
+      :loading="generatingRegistry"
+      @close="showRegistryModal = false"
+      @submit="downloadRegistry"
+    />
+
+    <!-- Инструктор для листа ознакомления -->
+    <GroupsAcquaintanceSheetModal
+      v-if="group"
+      :is-open="showAcquaintanceSheetModal"
+      :group-id="group.id"
+      :loading="generatingAcquaintanceSheet"
+      @close="showAcquaintanceSheetModal = false"
+      @submit="downloadAcquaintanceSheet"
+    />
+
+    <!-- Место, дата заполнения и инструктор для обезличенного вопросника -->
+    <GroupsQuestionnaireModal
+      v-if="group"
+      :is-open="showQuestionnaireModal"
+      :group-id="group.id"
+      :loading="generatingQuestionnaire"
+      @close="showQuestionnaireModal = false"
+      @submit="downloadQuestionnaire"
+    />
+
     <!-- Архив модал -->
     <UiConfirmModal
       :is-open="showArchiveModal"
@@ -1251,6 +1382,9 @@ import {
   ArrowLeft,
 } from "lucide-vue-next";
 import type { StudyGroup } from "~/types/group";
+import type { EvaluationSheetsCommission } from "../../../../shared/utils/evaluationSheets";
+import type { FinalExamProtocolForm } from "../../../../shared/utils/finalExamProtocol";
+import type { RegistryForm } from "../../../../shared/utils/registry";
 
 interface Discipline {
   id: string;
@@ -1303,7 +1437,20 @@ const studentAttendanceData = ref<
 const reports = ref<any[]>([]); // Добавлено для отчетов
 const loadingReports = ref(false);
 const generatingEmptyJournal = ref(false); // Состояние генерации пустого журнала
-const showEmptyJournalDropdown = ref(false); // Состояние выпадающего меню формата
+const showEmptyJournalModal = ref(false); // Форма выбора инструкторов и формата журнала
+const generatingEvaluationSheets = ref(false); // Состояние генерации оценочных листов
+const showEvaluationSheetsModal = ref(false); // Форма состава комиссии перед скачиванием листов
+const generatingFinalExamProtocol = ref(false); // Состояние генерации протокола экзамена
+const showFinalExamProtocolModal = ref(false); // Форма данных протокола перед скачиванием
+const generatingAssessmentSheet = ref(false); // Состояние генерации ведомости контроля знаний
+const showAssessmentSheetModal = ref(false); // Форма блока подписей и формата ведомости
+const generatingRegistry = ref(false); // Состояние генерации реестра
+const showRegistryModal = ref(false); // Форма данных реестра перед скачиванием
+const generatingAcquaintanceSheet = ref(false); // Состояние генерации листа ознакомления
+const showAcquaintanceSheetModal = ref(false); // Выбор инструктора для листа ознакомления
+const generatingQuestionnaire = ref(false); // Состояние генерации обезличенного вопросника
+const showQuestionnaireModal = ref(false); // Форма вопросника: место, дата, инструктор
+const generatingGroupList = ref(false); // Состояние генерации списка группы
 
 // Состояния для просмотра и удаления документов
 const showPreviewModal = ref(false);
@@ -1768,17 +1915,16 @@ const loadReports = async (groupId: string) => {
   }
 };
 
-// Функция переключения выпадающего меню формата журнала
-const toggleEmptyJournalDropdown = () => {
-  showEmptyJournalDropdown.value = !showEmptyJournalDropdown.value;
-};
-
-// Функция для скачивания пустого журнала
-const downloadEmptyJournal = async (format: "pdf" | "docx" = "pdf") => {
+// Функция для скачивания пустого журнала. Формат и инструкторов для строки
+// «Instruktor F.I.Sh» пользователь выбирает в форме (GroupsEmptyJournalModal)
+const downloadEmptyJournal = async ({
+  format,
+  instructorIds,
+}: {
+  format: "pdf" | "docx";
+  instructorIds: string[];
+}) => {
   if (generatingEmptyJournal.value || !group.value) return;
-
-  // Закрываем выпадающее меню
-  showEmptyJournalDropdown.value = false;
 
   try {
     generatingEmptyJournal.value = true;
@@ -1790,8 +1936,11 @@ const downloadEmptyJournal = async (format: "pdf" | "docx" = "pdf") => {
 
     // Бланк формирует сервер по утверждённому шаблону журнала (Word или PDF)
     const blob = await authFetch<Blob>(
-      `/api/groups/${group.value.id}/empty-journal?format=${format}`,
-      { responseType: "blob" },
+      `/api/groups/${group.value.id}/empty-journal`,
+      {
+        query: { format, instructorIds: instructorIds.join(",") },
+        responseType: "blob",
+      },
     );
 
     const url = window.URL.createObjectURL(blob);
@@ -1819,6 +1968,7 @@ const downloadEmptyJournal = async (format: "pdf" | "docx" = "pdf") => {
       // Не показываем ошибку пользователю, это не критично
     }
 
+    showEmptyJournalModal.value = false;
     toast.success(
       `Пустой журнал успешно сформирован (${format.toUpperCase()})`,
     );
@@ -1831,6 +1981,409 @@ const downloadEmptyJournal = async (format: "pdf" | "docx" = "pdf") => {
     );
   } finally {
     generatingEmptyJournal.value = false;
+  }
+};
+
+// Ведомость проведения контроля знаний — бланк по утверждённому образцу, формирует сервер
+// (server/services/assessmentSheetService.ts). Блок подписей и формат пользователь выбирает
+// в форме (GroupsAssessmentSheetModal)
+const downloadAssessmentSheet = async ({
+  format,
+  examinerInstructorId,
+}: {
+  format: "pdf" | "docx";
+  examinerInstructorId: string | null;
+}) => {
+  if (generatingAssessmentSheet.value || !group.value) return;
+
+  try {
+    generatingAssessmentSheet.value = true;
+
+    const blob = await authFetch<Blob>(`/api/groups/${group.value.id}/assessment-sheet`, {
+      query: { format, examinerInstructorId: examinerInstructorId ?? undefined },
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Vedomost_${group.value.code}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "assessment_sheet",
+          format,
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+    }
+
+    showAssessmentSheetModal.value = false;
+    toast.success(`Ведомость контроля знаний сформирована (${format.toUpperCase()})`);
+  } catch (error: any) {
+    console.error("Error generating assessment sheet:", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания ведомости"
+        : error?.data?.message || "Ошибка при формировании ведомости",
+    );
+  } finally {
+    generatingAssessmentSheet.value = false;
+  }
+};
+
+// Функция для скачивания оценочных листов (BAHOLASH VARAQASI) — один Word-файл на всю группу.
+// Состав комиссии пользователь заполняет в форме (GroupsEvaluationSheetsModal)
+const downloadEvaluationSheets = async (
+  commission: EvaluationSheetsCommission,
+) => {
+  if (generatingEvaluationSheets.value || !group.value) return;
+
+  try {
+    generatingEvaluationSheets.value = true;
+
+    if (!group.value.students?.length) {
+      toast.error("В группе нет студентов");
+      return;
+    }
+
+    // Листы формирует сервер по утверждённому образцу (по листу на слушателя)
+    const blob = await authFetch<Blob>(
+      `/api/groups/${group.value.id}/evaluation-sheets`,
+      { method: "POST", body: commission, responseType: "blob" },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${group.value.code} Оценочные листы (устный).docx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    // Логируем скачивание
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "evaluation_sheets",
+          format: "docx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+      // Не показываем ошибку пользователю, это не критично
+    }
+
+    showEvaluationSheetsModal.value = false;
+    toast.success("Оценочные листы успешно сформированы (DOCX)");
+  } catch (error: any) {
+    console.error("Error generating evaluation sheets:", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания оценочных листов"
+        : "Ошибка при формировании оценочных листов",
+    );
+  } finally {
+    generatingEvaluationSheets.value = false;
+  }
+};
+
+// Функция для скачивания протокола итогового экзамена (Bayonnoma) со списком слушателей.
+// Дату, номер, сведения об экзамене и состав комиссии пользователь заполняет в форме
+// (GroupsFinalExamProtocolModal)
+const downloadFinalExamProtocol = async (protocol: FinalExamProtocolForm) => {
+  if (generatingFinalExamProtocol.value || !group.value) return;
+
+  try {
+    generatingFinalExamProtocol.value = true;
+
+    if (!group.value.students?.length) {
+      toast.error("В группе нет студентов");
+      return;
+    }
+
+    // Протокол формирует сервер по утверждённому образцу
+    const blob = await authFetch<Blob>(
+      `/api/groups/${group.value.id}/final-exam-protocol`,
+      { method: "POST", body: protocol, responseType: "blob" },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    // Как у образца: «Bayonnoma_AX-26-04_AB-APA-02PP.docx»
+    link.download = `Bayonnoma_${protocol.number.replace(/[\\/:*?"<>|]/g, "_")}_${group.value.code}.docx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    // Логируем скачивание
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "final_exam_protocol",
+          format: "docx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+      // Не показываем ошибку пользователю, это не критично
+    }
+
+    showFinalExamProtocolModal.value = false;
+    toast.success("Протокол экзамена успешно сформирован (DOCX)");
+  } catch (error: any) {
+    console.error("Error generating final exam protocol:", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания протокола экзамена"
+        : "Ошибка при формировании протокола экзамена",
+    );
+  } finally {
+    generatingFinalExamProtocol.value = false;
+  }
+};
+
+// Функция для скачивания реестра — листа регистрации слушателей и подтверждения личности.
+// Дату, время, место и комиссию пользователь заполняет в форме (GroupsRegistryModal)
+const downloadRegistry = async (registry: RegistryForm) => {
+  if (generatingRegistry.value || !group.value) return;
+
+  try {
+    generatingRegistry.value = true;
+
+    if (!group.value.students?.length) {
+      toast.error("В группе нет студентов");
+      return;
+    }
+
+    // Реестр формирует сервер по образцу
+    const blob = await authFetch<Blob>(`/api/groups/${group.value.id}/registry`, {
+      method: "POST",
+      body: registry,
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Реестр ${group.value.code}.docx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    // Логируем скачивание
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "registry",
+          format: "docx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+      // Не показываем ошибку пользователю, это не критично
+    }
+
+    showRegistryModal.value = false;
+    toast.success("Реестр успешно сформирован (DOCX)");
+  } catch (error: any) {
+    console.error("Error generating registry:", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания реестра"
+        : "Ошибка при формировании реестра",
+    );
+  } finally {
+    generatingRegistry.value = false;
+  }
+};
+
+// Функция для скачивания листа ознакомления с инструктажем. Группа, программа и дата
+// подставляются на сервере, инструктора пользователь выбирает в форме (GroupsAcquaintanceSheetModal)
+const downloadAcquaintanceSheet = async ({
+  instructorId,
+}: {
+  instructorId: string | null;
+}) => {
+  if (generatingAcquaintanceSheet.value || !group.value) return;
+
+  try {
+    generatingAcquaintanceSheet.value = true;
+
+    const blob = await authFetch<Blob>(
+      `/api/groups/${group.value.id}/acquaintance-sheet`,
+      {
+        query: instructorId ? { instructorId } : {},
+        responseType: "blob",
+      },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Лист ознакомления ${group.value.code}.docx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    // Логируем скачивание
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "acquaintance_sheet",
+          format: "docx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+      // Не показываем ошибку пользователю, это не критично
+    }
+
+    showAcquaintanceSheetModal.value = false;
+    toast.success("Лист ознакомления успешно сформирован (DOCX)");
+  } catch (error: any) {
+    console.error("Error generating acquaintance sheet:", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания листа ознакомления"
+        : "Ошибка при формировании листа ознакомления",
+    );
+  } finally {
+    generatingAcquaintanceSheet.value = false;
+  }
+};
+
+// «Обезличенный вопросник»: программа, группа, число слушателей и период подставляются на
+// сервере, место, дату заполнения и инструктора пользователь вводит в форме (GroupsQuestionnaireModal)
+const downloadQuestionnaire = async (questionnaire: {
+  placeUz: string;
+  placeRu: string;
+  filledDate: string;
+  instructorId: string | null;
+}) => {
+  if (generatingQuestionnaire.value || !group.value) return;
+
+  try {
+    generatingQuestionnaire.value = true;
+
+    const blob = await authFetch<Blob>(`/api/groups/${group.value.id}/questionnaire`, {
+      method: "POST",
+      body: questionnaire,
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Вопросник ${group.value.code}.docx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    // Логируем скачивание
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "questionnaire",
+          format: "docx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+      // Не показываем ошибку пользователю, это не критично
+    }
+
+    showQuestionnaireModal.value = false;
+    toast.success("Вопросник успешно сформирован (DOCX)");
+  } catch (error: any) {
+    console.error("Error generating questionnaire:", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания вопросника"
+        : "Ошибка при формировании вопросника",
+    );
+  } finally {
+    generatingQuestionnaire.value = false;
+  }
+};
+
+// «Список группы» — бланк таблицы слушателей: заполнены только номер группы и даты обучения
+const downloadGroupList = async () => {
+  if (generatingGroupList.value || !group.value) return;
+
+  try {
+    generatingGroupList.value = true;
+
+    const blob = await authFetch<Blob>(
+      `/api/groups/${group.value.id}/group-list`,
+      { responseType: "blob" },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Список группы ${group.value.code}.docx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    // Логируем скачивание
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "group_list",
+          format: "docx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+      // Не показываем ошибку пользователю, это не критично
+    }
+
+    toast.success("Список группы успешно сформирован (DOCX)");
+  } catch (error: any) {
+    console.error("Error generating group list:", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания списка группы"
+        : "Ошибка при формировании списка группы",
+    );
+  } finally {
+    generatingGroupList.value = false;
   }
 };
 

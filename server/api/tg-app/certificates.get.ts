@@ -41,8 +41,9 @@ export default defineEventHandler(async (event) => {
         cert.id,
         cert.certificate_number AS certificateNumber,
         cert.issue_date AS issueDate,
-        CASE 
-          WHEN cert.expiry_date < CURRENT_DATE THEN 'expired' 
+        CASE
+          WHEN cert.status = 'revoked' THEN 'revoked'
+          WHEN cert.expiry_date < CURRENT_DATE THEN 'expired'
           ELSE 'issued' 
         END as status,
         cert.pdf_file_url AS pdfFileUrl,

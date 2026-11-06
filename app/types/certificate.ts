@@ -20,6 +20,7 @@ export type VariableSource =
   | "student.position"
   | "student.department"
   | "student.pinfl"
+  | "student.averageScore"
   | "course.name"
   | "course.shortName"
   | "course.code"
@@ -32,9 +33,14 @@ export type VariableSource =
   | "certificate.number"
   | "certificate.issueDate"
   | "certificate.issueDateFormatted"
+  | "certificate.issueDateEn"
+  | "certificate.theoryDate"
+  | "certificate.practiceDate"
   // Данные инструктора
   | "instructor.fullName"
   | "instructor.shortName"
+  | "instructor.shortNameRu"
+  | "instructor.shortNameUz"
   | "instructor.position"
   | "custom";
 

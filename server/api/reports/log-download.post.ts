@@ -35,6 +35,12 @@ export default defineEventHandler(async (event: H3Event) => {
     group_report: "Зачётная ведомость",
     certificate_report: "Ведомость выдачи сертификатов",
     assessment_sheet: "Ведомость контроля знаний",
+    evaluation_sheets: "Оценочные листы",
+    final_exam_protocol: "Протокол итогового экзамена",
+    registry: "Реестр",
+    acquaintance_sheet: "Лист ознакомления",
+    group_list: "Список группы",
+    questionnaire: "Обезличенный вопросник",
   };
 
   const reportName = reportNames[reportType] || reportType;

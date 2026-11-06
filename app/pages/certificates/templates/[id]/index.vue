@@ -238,6 +238,32 @@
               </div>
             </div>
 
+            <!-- Листание страниц шаблона в предпросмотре -->
+            <div
+              v-if="previewPageCount > 1"
+              class="mt-3 flex items-center justify-center gap-3"
+            >
+              <UiButton
+                variant="outline"
+                size="sm"
+                :disabled="previewLoading || previewPageIndex === 0"
+                @click="loadPreview(previewPageIndex - 1)"
+              >
+                ← Назад
+              </UiButton>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Страница {{ previewPageIndex + 1 }} из {{ previewPageCount }}
+              </span>
+              <UiButton
+                variant="outline"
+                size="sm"
+                :disabled="previewLoading || previewPageIndex >= previewPageCount - 1"
+                @click="loadPreview(previewPageIndex + 1)"
+              >
+                Далее →
+              </UiButton>
+            </div>
+
             <!-- Информация о шаблоне -->
             <div
               v-if="template.templateData"
@@ -565,6 +591,8 @@ const previewData = ref<{
   height: number;
   elementsCount: number;
 } | null>(null);
+const previewPageIndex = ref(0);
+const previewPageCount = ref(1);
 
 // Number format
 const numberFormat = ref("ATC{YY}_{CODE}_{NUM}");
@@ -658,7 +686,7 @@ useHead(() => ({
 }));
 
 // Load preview
-const loadPreview = async () => {
+const loadPreview = async (page = previewPageIndex.value) => {
   if (!template.value) return;
 
   previewLoading.value = true;
@@ -671,9 +699,11 @@ const loadPreview = async () => {
         width: number;
         height: number;
         elementsCount: number;
+        page: number;
+        pageCount: number;
       };
       message?: string;
-    }>(`/api/certificates/templates/${id.value}/preview`);
+    }>(`/api/certificates/templates/${id.value}/preview?page=${page}`);
 
     if (response.success && response.hasTemplate && response.preview) {
       previewHtml.value = response.preview.html;
@@ -682,6 +712,9 @@ const loadPreview = async () => {
         height: response.preview.height,
         elementsCount: response.preview.elementsCount,
       };
+      // Сервер мог сдвинуть страницу (например, если шаблон уменьшили), поэтому берём его значения
+      previewPageIndex.value = response.preview.page;
+      previewPageCount.value = response.preview.pageCount;
     }
   } catch (e) {
     console.error("Error loading preview:", e);

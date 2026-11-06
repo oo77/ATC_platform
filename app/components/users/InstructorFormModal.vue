@@ -103,6 +103,45 @@
                     />
                   </div>
 
+                  <!-- ФИО на русском -->
+                  <div class="sm:col-span-2">
+                    <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      ФИО на русском
+                    </label>
+                    <input
+                      v-model="formData.full_name_ru"
+                      type="text"
+                      placeholder="Иванов Иван Иванович"
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
+                    />
+                  </div>
+
+                  <!-- Сокращенное ФИО на узбекском -->
+                  <div>
+                    <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      Сокращенное ФИО (узбекский)
+                    </label>
+                    <input
+                      v-model="formData.short_name_uz"
+                      type="text"
+                      placeholder="Ivanov I.I."
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
+                    />
+                  </div>
+
+                  <!-- Сокращенное ФИО на русском -->
+                  <div>
+                    <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      Сокращенное ФИО (русский)
+                    </label>
+                    <input
+                      v-model="formData.short_name_ru"
+                      type="text"
+                      placeholder="Иванов И.И."
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50"
+                    />
+                  </div>
+
                   <!-- Email -->
                   <div>
                     <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
@@ -600,6 +639,9 @@ const languageOptions = [
 // Данные формы
 const formData = reactive({
   fullName: '',
+  full_name_ru: '',
+  short_name_uz: '',
+  short_name_ru: '',
   email: '',
   phone: '',
   hireDate: '',
@@ -783,12 +825,19 @@ const handleSubmit = async () => {
     const endpoint = isEditMode.value ? `/api/instructors/${props.instructor!.id}` : '/api/instructors';
     const method = isEditMode.value ? 'PUT' : 'POST';
 
+    // При редактировании очищенное поле отправляем как null: undefined выпадает
+    // из запроса, и сервер оставляет старое значение
+    const emptyValue = isEditMode.value ? null : undefined;
+
     const payload: any = {
       fullName: formData.fullName,
-      email: formData.email || undefined,
-      phone: formData.phone || undefined,
-      hireDate: formData.hireDate || undefined,
-      contractInfo: formData.contractInfo || undefined,
+      full_name_ru: formData.full_name_ru.trim() || null,
+      short_name_uz: formData.short_name_uz.trim() || null,
+      short_name_ru: formData.short_name_ru.trim() || null,
+      email: formData.email.trim() || emptyValue,
+      phone: formData.phone.trim() || emptyValue,
+      hireDate: formData.hireDate || emptyValue,
+      contractInfo: formData.contractInfo || emptyValue,
       maxHours: formData.maxHours,
       isActive: formData.isActive,
       
@@ -854,6 +903,9 @@ onMounted(() => {
 
   if (props.instructor) {
     formData.fullName = props.instructor.fullName;
+    formData.full_name_ru = props.instructor.full_name_ru || '';
+    formData.short_name_uz = props.instructor.short_name_uz || '';
+    formData.short_name_ru = props.instructor.short_name_ru || '';
     formData.email = props.instructor.email || '';
     formData.phone = props.instructor.phone || '';
     formData.hireDate = props.instructor.hireDate 

@@ -97,6 +97,12 @@ export default defineEventHandler(async (event) => {
     // ВАЛИДАЦИЯ ГРУППЫ И ДАТ
     // ===============================
 
+    // Пересдачи (с ограниченным списком студентов) не учитываются в часах дисциплины
+    // и не проверяются на конфликты расписания (как в /api/schedule/retake)
+    const isRetake = Boolean(
+      body.allowedStudentIds && body.allowedStudentIds.length > 0,
+    );
+
     if (body.groupId) {
       const groupRows = await executeQuery<GroupRow[]>(
         "SELECT id, start_date, end_date, course_id FROM study_groups WHERE id = ? LIMIT 1",
@@ -130,7 +136,12 @@ export default defineEventHandler(async (event) => {
       // ВАЛИДАЦИЯ ДИСЦИПЛИНЫ И ЧАСОВ
       // ===============================
 
-      if (body.disciplineId && body.eventType && body.eventType !== "other") {
+      if (
+        !isRetake &&
+        body.disciplineId &&
+        body.eventType &&
+        body.eventType !== "other"
+      ) {
         // Получаем информацию о дисциплине
         const disciplineRows = await executeQuery<DisciplineRow[]>(
           "SELECT id, theory_hours, practice_hours, assessment_hours FROM disciplines WHERE id = ? AND course_id = ? LIMIT 1",
@@ -228,7 +239,7 @@ export default defineEventHandler(async (event) => {
     // ПРОВЕРКА КОНФЛИКТОВ РАСПИСАНИЯ
     // ===============================
 
-    if (body.classroomId || body.instructorId || body.groupId) {
+    if (!isRetake && (body.classroomId || body.instructorId || body.groupId)) {
       const conflicts = await checkScheduleConflicts(
         body.startTime,
         body.endTime,

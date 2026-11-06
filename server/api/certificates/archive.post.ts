@@ -12,6 +12,7 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event).catch(() => ({}));
   const certificateIds: string[] = body?.certificateIds || [];
+  const byOrganization = body?.byOrganization === true;
 
   if (!Array.isArray(certificateIds) || certificateIds.length === 0) {
     throw createError({
@@ -32,11 +33,13 @@ export default defineEventHandler(async (event) => {
       ic.docx_file_url,
       ic.issue_date,
       s.full_name as student_name,
-      c.name as course_name
+      c.name as course_name,
+      o.name as organization_name
     FROM issued_certificates ic
     LEFT JOIN students s ON ic.student_id = s.id
     LEFT JOIN study_groups g ON ic.group_id = g.id
     LEFT JOIN courses c ON g.course_id = c.id
+    LEFT JOIN organizations o ON s.organization_id = o.id
     WHERE ic.id IN (${placeholders})
   `;
 
@@ -55,7 +58,7 @@ export default defineEventHandler(async (event) => {
   setHeader(event, "Content-Disposition", `attachment; filename="${filename}"`);
 
   try {
-    return await createCertificatesArchive(certificates);
+    return await createCertificatesArchive(certificates, { byOrganization });
   } catch (error: any) {
     throw createError({
       statusCode: 404,

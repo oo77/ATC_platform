@@ -52,6 +52,7 @@ export default defineEventHandler(async (event) => {
         position: "Инженер-программист",
         department: "IT-отдел",
         pinfl: "12345678901234",
+        averageScore: 86.5,
       },
       course: {
         id: "test-course-id",
@@ -71,11 +72,21 @@ export default defineEventHandler(async (event) => {
         number: "ATC24_IT_0001",
         issueDate: new Date(),
         verificationUrl: "https://atc.uz/verify/ATC24_IT_0001",
+        theoryDate: "2024-12-02",
+        practiceDate: "2024-12-10",
       },
     };
 
-    // Генерируем HTML
-    const html = await generateCertificateHtml(templateData, testContext);
+    // По одной странице за запрос: предпросмотр листает страницы шаблона (?page=0, 1, …)
+    const allPages = templateData.pages?.length
+      ? templateData.pages
+      : [{ id: "page_0", background: templateData.background, elements: templateData.elements || [] }];
+    const requestedPage = Number(getQuery(event).page) || 0;
+    const pageIndex = Math.min(Math.max(requestedPage, 0), allPages.length - 1);
+    const html = await generateCertificateHtml(
+      { ...templateData, pages: [allPages[pageIndex]!] },
+      testContext,
+    );
 
     // Подсчет элементов
     let elementsCount = 0;
@@ -94,6 +105,8 @@ export default defineEventHandler(async (event) => {
         height: templateData.height,
         layout: templateData.layout,
         elementsCount,
+        page: pageIndex,
+        pageCount: allPages.length,
       },
       template: {
         id: template.id,

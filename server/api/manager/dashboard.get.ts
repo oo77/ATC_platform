@@ -158,8 +158,8 @@ export default defineEventHandler(async (event) => {
       SELECT 
         (SELECT COUNT(*) FROM study_groups 
          WHERE end_date >= ? AND end_date < ?) as groups_completed,
-        (SELECT COUNT(*) FROM issued_certificates 
-         WHERE DATE(issue_date) >= ? AND DATE(issue_date) < ?) as certificates_issued,
+        (SELECT COUNT(*) FROM issued_certificates
+         WHERE status = 'issued' AND DATE(issue_date) >= ? AND DATE(issue_date) < ?) as certificates_issued,
         (SELECT COUNT(DISTINCT sgs.student_id) 
          FROM study_group_students sgs 
          JOIN study_groups sg ON sgs.group_id = sg.id 
@@ -222,7 +222,7 @@ export default defineEventHandler(async (event) => {
                 DATE_FORMAT(issue_date, '%Y-%m') as month,
                 COUNT(*) as count
             FROM issued_certificates
-            WHERE issue_date >= ?
+            WHERE status = 'issued' AND issue_date >= ?
             GROUP BY DATE_FORMAT(issue_date, '%Y-%m')
             ORDER BY month ASC
         `;

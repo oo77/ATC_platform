@@ -92,6 +92,8 @@ export async function issueAttestationCertificateIfConfigured(
     instructor: {
       id: instructor.id,
       fullName: instructor.fullName,
+      shortNameRu: instructor.short_name_ru ?? null,
+      shortNameUz: instructor.short_name_uz ?? null,
       position: instructor.specialty || null,
     },
     attestation: {

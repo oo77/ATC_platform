@@ -18,7 +18,8 @@ export default defineEventHandler(async () => {
     { value: 'student.position', label: 'Должность', group: 'Студент' },
     { value: 'student.department', label: 'Отдел', group: 'Студент' },
     { value: 'student.pinfl', label: 'ПИНФЛ', group: 'Студент' },
-    
+    { value: 'student.averageScore', label: 'Средний балл (числом)', group: 'Студент' },
+
     // Данные курса
     { value: 'course.name', label: 'Название курса', group: 'Курс' },
     { value: 'course.shortName', label: 'Краткое название', group: 'Курс' },
@@ -36,6 +37,9 @@ export default defineEventHandler(async () => {
     { value: 'certificate.number', label: 'Номер сертификата', group: 'Сертификат' },
     { value: 'certificate.issueDate', label: 'Дата выдачи (ДД.ММ.ГГГГ)', group: 'Сертификат' },
     { value: 'certificate.issueDateFormatted', label: 'Дата выдачи прописью', group: 'Сертификат' },
+    { value: 'certificate.issueDateEn', label: 'Дата выдачи (англ., November 18, 2026)', group: 'Сертификат' },
+    { value: 'certificate.theoryDate', label: 'Дата теоретического обучения', group: 'Сертификат' },
+    { value: 'certificate.practiceDate', label: 'Дата проведения практического занятия', group: 'Сертификат' },
   ];
 
   // Группируем по категориям

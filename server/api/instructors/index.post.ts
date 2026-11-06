@@ -16,6 +16,9 @@ import type { User } from '../../types/auth';
 
 const instructorSchema = z.object({
   fullName: z.string().min(1, 'ФИО обязательно'),
+  full_name_ru: z.string().nullable().optional(),
+  short_name_uz: z.string().nullable().optional(),
+  short_name_ru: z.string().nullable().optional(),
   email: z.string().email('Некорректный email').optional().or(z.literal('')),
   phone: z.string().optional(),
   hireDate: z.string().optional().or(z.literal('')),

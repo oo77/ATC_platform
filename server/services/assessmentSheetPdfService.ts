@@ -280,8 +280,11 @@ const SIGN_BLOCK: Array<{ label: string; role: string; name: string }> = [
   { label: "Проверил:", role: "Специалист отдела по организации обучения", name: "Садиров И.Р." },
 ];
 
-function drawSignatureBlock(ctx: Ctx) {
+function drawSignatureBlock(ctx: Ctx, examinerName: string | null) {
   const { regular, bold } = ctx.fonts;
+  const rows = examinerName
+    ? [{ label: "Экзаменатор :", role: "Инструктор", name: examinerName }, ...SIGN_BLOCK.slice(1)]
+    : SIGN_BLOCK;
   const nameColW = tw(3471);
   const signColW = tw(2257);
   const labelColW = TEXT_W - nameColW - signColW;
@@ -291,7 +294,7 @@ function drawSignatureBlock(ctx: Ctx) {
   ensureSpace(ctx, BODY_LINE * 5);
   ctx.y += BODY_LINE; // отступ от таблицы
 
-  for (const row of SIGN_BLOCK) {
+  for (const row of rows) {
     ensureSpace(ctx, BODY_LINE * 2);
     drawText(ctx, row.label, M_LEFT, ctx.y + ASCENT * BODY_SIZE, bold, BODY_SIZE, true);
     ctx.y += BODY_LINE;
@@ -357,7 +360,7 @@ export async function renderAssessmentSheetPdf(model: AssessmentSheetModel): Pro
   model.students.forEach((name, si) => {
     drawStudentRow(ctx, si + 1, name, model.scores[si] ?? []);
   });
-  drawSignatureBlock(ctx);
+  drawSignatureBlock(ctx, model.examinerName);
 
   return Buffer.from(await doc.save());
 }

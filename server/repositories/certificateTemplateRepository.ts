@@ -474,7 +474,7 @@ export async function generateCertificateNumber(
 
 /**
  * Синхронизировать счетчик номеров с реальными данными
- * Полезно после импорта сертификатов или если счетчик сбился
+ * Полезно после импорта или удаления сертификатов, если счетчик сбился
  */
 export async function syncCertificateNumberCounter(
   templateId: string,
@@ -524,7 +524,9 @@ export async function syncCertificateNumberCounter(
       }
     }
 
-    const newCounter = Math.max(oldCounter, maxNumber);
+    // Счётчик равен реальному максимуму: если последний сертификат удалён,
+    // его номер освобождается и счётчик откатывается назад
+    const newCounter = maxNumber;
     const synced = newCounter !== oldCounter;
 
     if (synced) {
@@ -551,7 +553,16 @@ export async function syncCertificateNumberCounter(
 // ============================================================================
 
 /**
- * Получить выданные сертификаты для группы
+ * Порядок записей одного слушателя в группе. После отзыва и повторной выдачи
+ * записей несколько: первым идёт выданный сертификат, за ним — отозванные
+ * (архив) от свежего к старому.
+ */
+const CURRENT_CERTIFICATE_FIRST =
+  "(ic.status = 'issued') DESC, ic.created_at DESC, ic.id DESC";
+
+/**
+ * Получить выданные сертификаты для группы (включая архив отозванных).
+ * У каждого слушателя первой идёт текущая запись.
  */
 export async function getIssuedCertificatesByGroup(
   groupId: string,
@@ -568,11 +579,30 @@ export async function getIssuedCertificatesByGroup(
      LEFT JOIN students s ON ic.student_id = s.id
      LEFT JOIN organizations o ON s.organization_id = o.id
      WHERE ic.group_id = ?
-     ORDER BY s.full_name ASC`,
+     ORDER BY s.full_name ASC, ${CURRENT_CERTIFICATE_FIRST}`,
     [groupId],
   );
 
   return rows.map(mapRowToIssuedCertificate);
+}
+
+/**
+ * Текущий сертификат каждого слушателя группы: выданный, а если его нет —
+ * самый свежий отозванный
+ */
+export async function getCurrentCertificatesByGroup(
+  groupId: string,
+): Promise<Map<string, IssuedCertificate>> {
+  const certificates = await getIssuedCertificatesByGroup(groupId);
+  const current = new Map<string, IssuedCertificate>();
+
+  for (const certificate of certificates) {
+    if (certificate.studentId && !current.has(certificate.studentId)) {
+      current.set(certificate.studentId, certificate);
+    }
+  }
+
+  return current;
 }
 
 /**
@@ -601,15 +631,17 @@ export async function getIssuedCertificateById(
 }
 
 /**
- * Получить сертификат студента в группе
+ * Получить текущий сертификат студента в группе: выданный, а если его нет —
+ * самый свежий отозванный
  */
 export async function getStudentCertificateInGroup(
   studentId: string,
   groupId: string,
 ): Promise<IssuedCertificate | null> {
   const rows = await executeQuery<IssuedCertificateRow[]>(
-    `SELECT * FROM issued_certificates 
-     WHERE student_id = ? AND group_id = ?
+    `SELECT ic.* FROM issued_certificates ic
+     WHERE ic.student_id = ? AND ic.group_id = ?
+     ORDER BY ${CURRENT_CERTIFICATE_FIRST}
      LIMIT 1`,
     [studentId, groupId],
   );
@@ -860,7 +892,22 @@ export async function revokeCertificate(
 }
 
 /**
- * Удалить сертификат (только черновики)
+ * Используется ли файл каким-либо сертификатом (по ссылке на PDF или DOCX)
+ */
+export async function isCertificateFileInUse(
+  fileUrl: string,
+): Promise<boolean> {
+  const [countRow] = await executeQuery<CountRow[]>(
+    `SELECT COUNT(*) as total FROM issued_certificates
+     WHERE pdf_file_url = ? OR docx_file_url = ?`,
+    [fileUrl, fileUrl],
+  );
+
+  return Number(countRow?.total) > 0;
+}
+
+/**
+ * Удалить сертификат (черновик или отозванный; выданный сначала отзывают)
  */
 export async function deleteCertificate(id: string): Promise<boolean> {
   // Сначала проверяем статус
@@ -883,7 +930,8 @@ export async function deleteCertificate(id: string): Promise<boolean> {
 
 /**
  * Переиздать сертификат (обновить существующий вместо создания нового)
- * Используется для сертификатов со статусом 'draft' или 'revoked'
+ * Используется только для черновиков: отозванный сертификат остаётся в базе
+ * как архив, повторная выдача создаёт рядом новую запись
  */
 export async function reissueCertificate(
   existingCertId: string,

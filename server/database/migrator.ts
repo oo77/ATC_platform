@@ -53,6 +53,8 @@ import * as systemSettings from "./migrations/20260909_042_system_settings";
 import * as flexibleAiProviders from "./migrations/20260910_043_flexible_ai_providers";
 import * as addNameUzToCoursesAndShortNameToDisciplines from "./migrations/20260922_044_add_name_uz_to_courses_and_short_name_to_disciplines";
 import * as aiChatSystem from "./migrations/20260922_045_ai_chat_system";
+import * as courseNamesWithoutLengthLimit from "./migrations/20261012_046_course_names_without_length_limit";
+import * as addInstructorMultilingualNames from "./migrations/20261029_047_add_instructor_multilingual_names";
 
 /**
  * ============================================================================
@@ -478,6 +480,24 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: aiChatSystem.up,
     down: aiChatSystem.down,
     description: aiChatSystem.description,
+  },
+  // ============================================================
+  // Миграция 046: Название курса без ограничения в 255 символов
+  // ============================================================
+  {
+    name: "20261012_046_course_names_without_length_limit",
+    up: courseNamesWithoutLengthLimit.up,
+    down: courseNamesWithoutLengthLimit.down,
+    description: courseNamesWithoutLengthLimit.description,
+  },
+  // ============================================================
+  // Миграция 047: Трехъязычные ФИО инструкторов
+  // ============================================================
+  {
+    name: "20261029_047_add_instructor_multilingual_names",
+    up: addInstructorMultilingualNames.up,
+    down: addInstructorMultilingualNames.down,
+    description: addInstructorMultilingualNames.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

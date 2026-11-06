@@ -22,6 +22,9 @@ export interface CertificateIssueJob {
   templateName: string;
   issueDate: string;
   instructorId: string | null; // ID инструктора для сертификата
+  // Расширенные функции (YYYY-MM-DD или null — пустая строка в шаблоне)
+  theoryDate?: string | null;
+  practiceDate?: string | null;
   studentIds: string[];
   studentData: Array<{
     id: string;
@@ -150,6 +153,8 @@ export const useCertificateIssueStore = () => {
             studentIds: [student.id],
             issueDate: job.issueDate,
             instructorId: job.instructorId,
+            theoryDate: job.theoryDate ?? null,
+            practiceDate: job.practiceDate ?? null,
             expiryMode: job.expiryMode,
             overrideWarnings: !student.isEligible,
           },

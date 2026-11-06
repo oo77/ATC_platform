@@ -71,12 +71,11 @@
 
         <div class="toolbar-divider"></div>
 
-        <span class="zoom-label">{{ Math.round(zoom * 100) }}%</span>
         <button
           class="toolbar-btn"
-          @click="zoomOut"
+          @click="zoomOutCentered"
           :disabled="zoom <= minZoom"
-          title="Уменьшить"
+          title="Уменьшить (Ctrl+−)"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -94,11 +93,45 @@
             <path d="M8 11h6" />
           </svg>
         </button>
+
+        <!-- Масштаб: клик открывает список пресетов -->
+        <div class="dropdown" ref="zoomMenuRef">
+          <button
+            class="zoom-label-btn"
+            :class="{ active: openMenu === 'zoom' }"
+            @click="toggleMenu('zoom')"
+            title="Выбрать масштаб"
+          >
+            {{ Math.round(zoom * 100) }}%
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+          <div v-if="openMenu === 'zoom'" class="dropdown-menu zoom-menu">
+            <button class="menu-item" @click="fitToScreen(); closeMenu()">
+              <span>По размеру экрана</span>
+              <kbd>Ctrl+0</kbd>
+            </button>
+            <button class="menu-item" @click="fitToWidth(); closeMenu()">
+              <span>По ширине</span>
+            </button>
+            <div class="menu-divider"></div>
+            <button
+              v-for="preset in zoomMenuPresets"
+              :key="preset"
+              class="menu-item"
+              :class="{ current: Math.abs(zoom - preset) < 0.001 }"
+              @click="zoomToCenter(preset); closeMenu()"
+            >
+              <span>{{ Math.round(preset * 100) }}%</span>
+              <kbd v-if="preset === 1">Ctrl+1</kbd>
+            </button>
+          </div>
+        </div>
+
         <button
           class="toolbar-btn"
-          @click="zoomIn"
+          @click="zoomInCentered"
           :disabled="zoom >= maxZoom"
-          title="Увеличить"
+          title="Увеличить (Ctrl++)"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -117,20 +150,109 @@
             <path d="M8 11h6" />
           </svg>
         </button>
-        <button class="toolbar-btn" @click="resetZoom" title="Сбросить масштаб">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+        <button class="toolbar-btn" @click="fitToScreen" title="По размеру экрана (Ctrl+0)">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+            <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+            <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+            <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+          </svg>
+        </button>
+
+        <div class="toolbar-divider"></div>
+
+        <!-- Быстрые переключатели вида -->
+        <button
+          class="toolbar-btn"
+          :class="{ toggled: view.showGrid }"
+          @click="view.showGrid = !view.showGrid"
+          title="Сетка (Ctrl+')"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M3 9h18" /><path d="M3 15h18" /><path d="M9 3v18" /><path d="M15 3v18" />
+          </svg>
+        </button>
+        <button
+          class="toolbar-btn"
+          :class="{ toggled: view.snapToGrid }"
+          @click="view.snapToGrid = !view.snapToGrid"
+          title="Привязка к сетке (Ctrl+Shift+')"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15" />
+            <path d="m5 8 4 4" /><path d="m12 15 4 4" />
+          </svg>
+        </button>
+
+        <div class="dropdown" ref="viewMenuRef">
+          <button
+            class="toolbar-btn wide"
+            :class="{ active: openMenu === 'view' }"
+            @click="toggleMenu('view')"
+            title="Настройки вида"
           >
-            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.83 6.72 2.24" />
-            <path d="M21 3v6h-6" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />
+            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+          <div v-if="openMenu === 'view'" class="dropdown-menu view-menu">
+            <label class="menu-check">
+              <input type="checkbox" v-model="view.showRulers" />
+              <span>Линейки</span>
+              <kbd>Shift+R</kbd>
+            </label>
+            <label class="menu-check">
+              <input type="checkbox" v-model="view.showGrid" />
+              <span>Сетка</span>
+              <kbd>Ctrl+'</kbd>
+            </label>
+            <label class="menu-check">
+              <input type="checkbox" v-model="view.snapToGrid" />
+              <span>Привязка к сетке</span>
+              <kbd>Ctrl+Shift+'</kbd>
+            </label>
+            <label class="menu-field">
+              <span>Шаг сетки</span>
+              <select v-model.number="view.gridSize">
+                <option v-for="size in GRID_SIZES" :key="size.px" :value="size.px">
+                  {{ size.label }}
+                </option>
+              </select>
+            </label>
+            <div class="menu-divider"></div>
+            <label class="menu-check">
+              <input type="checkbox" v-model="view.showMargins" />
+              <span>Поля печати и центр</span>
+              <kbd>Shift+M</kbd>
+            </label>
+            <label class="menu-field">
+              <span>Поля, мм</span>
+              <input
+                type="number"
+                min="0"
+                max="50"
+                step="1"
+                v-model.number="view.marginMm"
+              />
+            </label>
+            <p class="menu-note">
+              Безопасная зона: важный текст лучше держать внутри пунктирной рамки,
+              чтобы его не срезало при печати.
+            </p>
+          </div>
+        </div>
+
+        <button
+          class="toolbar-btn"
+          @click="showShortcuts = true"
+          title="Горячие клавиши (?)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="16" x="2" y="4" rx="2" />
+            <path d="M6 8h.01" /><path d="M10 8h.01" /><path d="M14 8h.01" /><path d="M18 8h.01" />
+            <path d="M8 12h.01" /><path d="M12 12h.01" /><path d="M16 12h.01" /><path d="M7 16h10" />
           </svg>
         </button>
       </div>
@@ -214,20 +336,75 @@
         :template-id="templateId"
       />
 
-      <!-- Холст -->
-      <div class="canvas-container" ref="canvasContainerRef">
-        <EditorCanvas
-          v-if="activePage"
-          :template-data="templateData"
-          :active-page="activePage"
-          :selected-element-ids="selectedElementIds"
-          :zoom="zoom"
-          @select="selectElement"
-          @select-multiple="selectMultipleElements"
-          @update-element="updateElement"
-          @delete-element="deleteElement"
-          @set-custom-dimensions="setCustomDimensions"
-        />
+      <div class="canvas-column">
+        <!-- Область холста с линейками -->
+        <div class="canvas-area" :class="{ 'with-rulers': view.showRulers }">
+          <template v-if="view.showRulers">
+            <div class="ruler-corner" title="px шаблона">px</div>
+            <EditorRuler
+              orientation="horizontal"
+              :zoom="zoom"
+              :origin="canvasOrigin.x"
+              :canvas-size="templateData.width"
+              :cursor="cursorPos ? cursorPos.x : null"
+              :highlight="selectionBounds ? { start: selectionBounds.x, end: selectionBounds.x + selectionBounds.width } : null"
+            />
+            <EditorRuler
+              orientation="vertical"
+              :zoom="zoom"
+              :origin="canvasOrigin.y"
+              :canvas-size="templateData.height"
+              :cursor="cursorPos ? cursorPos.y : null"
+              :highlight="selectionBounds ? { start: selectionBounds.y, end: selectionBounds.y + selectionBounds.height } : null"
+            />
+          </template>
+
+          <div
+            class="canvas-container"
+            ref="canvasContainerRef"
+            :class="{ 'is-panning': isPanning, 'pan-ready': spaceHeld && !isPanning }"
+            @mousedown.capture="handleViewportMouseDown"
+            @auxclick.prevent
+            @mousemove="handleViewportMouseMove"
+            @mouseleave="cursorPos = null"
+            @scroll="scheduleViewportUpdate"
+          >
+            <div class="canvas-stage">
+              <div class="canvas-frame" ref="canvasFrameRef">
+                <EditorCanvas
+                  v-if="activePage"
+                  :template-data="templateData"
+                  :active-page="activePage"
+                  :selected-element-ids="selectedElementIds"
+                  :zoom="zoom"
+                  :show-grid="view.showGrid"
+                  :grid-size="view.gridSize"
+                  :snap-to-grid="view.snapToGrid"
+                  :show-margins="view.showMargins"
+                  :margin-px="marginPx"
+                  @select="selectElement"
+                  @select-multiple="selectMultipleElements"
+                  @update-element="updateElement"
+                  @delete-element="deleteElement"
+                  @set-custom-dimensions="setCustomDimensions"
+                  @transform-start="beginHistoryBatch"
+                  @transform-end="endHistoryBatch"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Подсказка по навигации -->
+          <div v-if="view.showNavHint" class="nav-hint">
+            <span><b>Колесо</b> — прокрутка</span>
+            <span><b>Shift+колесо</b> — по горизонтали</span>
+            <span><b>Ctrl+колесо</b> — масштаб</span>
+            <span><b>Зажать колесо</b> или <b>Пробел</b> — перемещать лист</span>
+            <button class="nav-hint-close" @click="view.showNavHint = false" title="Скрыть подсказку">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+            </button>
+          </div>
+        </div>
 
         <!-- Панель навигации страниц -->
         <div class="pages-panel">
@@ -290,8 +467,23 @@
             </button>
           </div>
 
-          <div class="pages-info">
-            <span>Стр. {{ activePageIndex + 1 }} / {{ pagesCount }}</span>
+          <div class="status-info">
+            <span class="status-item" title="Размер листа">
+              {{ templateData.width }}×{{ templateData.height }} px
+              <small>({{ pxToMm(templateData.width) }}×{{ pxToMm(templateData.height) }} мм)</small>
+            </span>
+            <span v-if="selectionBounds" class="status-item" title="Выделение: позиция и размер">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3a2 2 0 0 0-2 2" /><path d="M19 3a2 2 0 0 1 2 2" /><path d="M21 19a2 2 0 0 1-2 2" /><path d="M5 21a2 2 0 0 1-2-2" /><path d="M9 3h1" /><path d="M9 21h1" /><path d="M14 3h1" /><path d="M14 21h1" /><path d="M3 9v1" /><path d="M21 9v1" /><path d="M3 14v1" /><path d="M21 14v1" /></svg>
+              {{ Math.round(selectionBounds.x) }}, {{ Math.round(selectionBounds.y) }}
+              · {{ Math.round(selectionBounds.width) }}×{{ Math.round(selectionBounds.height) }}
+            </span>
+            <span class="status-item cursor-pos" title="Координаты курсора">
+              <template v-if="cursorPos">
+                X {{ Math.round(cursorPos.x) }} · Y {{ Math.round(cursorPos.y) }}
+              </template>
+              <template v-else>X — · Y —</template>
+            </span>
+            <span class="status-item">Стр. {{ activePageIndex + 1 }} / {{ pagesCount }}</span>
           </div>
         </div>
       </div>
@@ -353,12 +545,39 @@
           </div>
         </div>
       </div>
+
+      <!-- Справка по горячим клавишам -->
+      <div
+        v-if="showShortcuts"
+        class="preset-confirm-overlay"
+        @click.self="showShortcuts = false"
+      >
+        <div class="shortcuts-modal">
+          <div class="shortcuts-header">
+            <h3>Управление и горячие клавиши</h3>
+            <button class="toolbar-btn" @click="showShortcuts = false" title="Закрыть">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+            </button>
+          </div>
+          <div class="shortcuts-grid">
+            <section v-for="group in SHORTCUT_GROUPS" :key="group.title">
+              <h4>{{ group.title }}</h4>
+              <div v-for="item in group.items" :key="item.label" class="shortcut-row">
+                <span>{{ item.label }}</span>
+                <span class="keys">
+                  <kbd v-for="key in item.keys" :key="key">{{ key }}</kbd>
+                </span>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
     </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, reactive, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import {
   useCertificateEditor,
   createTextElement,
@@ -380,6 +599,7 @@ import type {
 import EditorToolbar from "./EditorToolbar.vue";
 import EditorCanvas from "./EditorCanvas.vue";
 import EditorSidebar from "./EditorSidebar.vue";
+import EditorRuler from "./EditorRuler.vue";
 
 const props = defineProps<{
   templateId: string;
@@ -394,6 +614,7 @@ const emit = defineEmits<{
 }>();
 
 const canvasContainerRef = ref<HTMLElement | null>(null);
+const canvasFrameRef = ref<HTMLElement | null>(null);
 
 const {
   templateData,
@@ -414,6 +635,8 @@ const {
   exportData,
   undo,
   redo,
+  beginHistoryBatch,
+  endHistoryBatch,
   setLayout,
   setCustomDimensions,
   setBackground,
@@ -427,7 +650,8 @@ const {
   updateMultipleElements,
   deleteElement,
   deleteSelectedElement,
-  duplicateElement,
+  deleteElements,
+  nudgeElements,
   bringToFront,
   sendToBack,
   toggleLock,
@@ -438,9 +662,8 @@ const {
   alignElement,
   alignMultipleElements,
   distributeElements,
-  zoomIn,
-  zoomOut,
-  resetZoom,
+  setZoom,
+  ZOOM_PRESETS,
 } = useCertificateEditor();
 
 // Состояние модального окна пресетов
@@ -448,7 +671,305 @@ const showPresetConfirm = ref(false);
 const pendingPresetData = ref<CertificateTemplateData | null>(null);
 
 // Буфер обмена для копирования элементов
-const clipboard = ref<TemplateElement | null>(null);
+const clipboard = ref<TemplateElement[]>([]);
+
+// ── Настройки вида (запоминаются в браузере) ─────────────────
+const VIEW_STORAGE_KEY = "certificate_editor_view";
+// Шаблон рисуется в px при 96 DPI
+const PX_PER_MM = 96 / 25.4;
+const GRID_SIZES = [
+  { px: 10, label: "10 px" },
+  { px: 19, label: "5 мм (19 px)" },
+  { px: 20, label: "20 px" },
+  { px: 25, label: "25 px" },
+  { px: 38, label: "10 мм (38 px)" },
+  { px: 50, label: "50 px" },
+];
+
+const view = reactive({
+  showRulers: true,
+  showGrid: false,
+  snapToGrid: false,
+  gridSize: 20,
+  showMargins: false,
+  marginMm: 10,
+  showNavHint: true,
+});
+
+try {
+  const saved = localStorage.getItem(VIEW_STORAGE_KEY);
+  if (saved) Object.assign(view, JSON.parse(saved));
+} catch {
+  // Нет доступа к localStorage — работаем с настройками по умолчанию
+}
+
+watch(
+  view,
+  () => {
+    try {
+      localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify(view));
+    } catch {
+      // ignore
+    }
+  },
+  { deep: true },
+);
+
+const marginPx = computed(() => Math.max(0, view.marginMm || 0) * PX_PER_MM);
+
+function pxToMm(px: number) {
+  return Math.round(px / PX_PER_MM);
+}
+
+// ── Меню в шапке ─────────────────────────────────────────────
+const openMenu = ref<"zoom" | "view" | null>(null);
+const zoomMenuRef = ref<HTMLElement | null>(null);
+const viewMenuRef = ref<HTMLElement | null>(null);
+const showShortcuts = ref(false);
+
+const zoomMenuPresets = computed(() =>
+  ZOOM_PRESETS.filter((z) => z >= 0.25),
+);
+
+function toggleMenu(name: "zoom" | "view") {
+  openMenu.value = openMenu.value === name ? null : name;
+}
+
+function closeMenu() {
+  openMenu.value = null;
+}
+
+function handleDocumentMouseDown(e: MouseEvent) {
+  if (!openMenu.value) return;
+  const target = e.target as Node;
+  if (zoomMenuRef.value?.contains(target) || viewMenuRef.value?.contains(target)) {
+    return;
+  }
+  closeMenu();
+}
+
+// ── Вьюпорт: положение холста, курсор, линейки ──────────────
+const canvasOrigin = reactive({ x: 0, y: 0 });
+const cursorPos = ref<{ x: number; y: number } | null>(null);
+let viewportFrame = 0;
+let viewportObserver: ResizeObserver | null = null;
+
+function getCanvasEl(): HTMLElement | null {
+  return (canvasFrameRef.value?.firstElementChild as HTMLElement) ?? null;
+}
+
+function updateViewport() {
+  viewportFrame = 0;
+  const container = canvasContainerRef.value;
+  const canvasEl = getCanvasEl();
+  if (!container || !canvasEl) return;
+  const c = container.getBoundingClientRect();
+  const r = canvasEl.getBoundingClientRect();
+  canvasOrigin.x = r.left - c.left;
+  canvasOrigin.y = r.top - c.top;
+}
+
+function scheduleViewportUpdate() {
+  if (viewportFrame) return;
+  viewportFrame = requestAnimationFrame(updateViewport);
+}
+
+watch(
+  () => [zoom.value, templateData.value.width, templateData.value.height, view.showRulers, activePageIndex.value],
+  () => nextTick(scheduleViewportUpdate),
+);
+
+function handleViewportMouseMove(e: MouseEvent) {
+  const canvasEl = getCanvasEl();
+  if (!canvasEl) return;
+  const r = canvasEl.getBoundingClientRect();
+  cursorPos.value = {
+    x: (e.clientX - r.left) / zoom.value,
+    y: (e.clientY - r.top) / zoom.value,
+  };
+}
+
+// Рамка вокруг выделенных элементов (для линеек и строки состояния)
+const selectionBounds = computed(() => {
+  const els = selectedElements.value;
+  if (els.length === 0) return null;
+  const left = Math.min(...els.map((el) => el.x));
+  const top = Math.min(...els.map((el) => el.y));
+  const right = Math.max(...els.map((el) => el.x + el.width));
+  const bottom = Math.max(...els.map((el) => el.y + el.height));
+  return { x: left, y: top, width: right - left, height: bottom - top };
+});
+
+// ── Масштаб ──────────────────────────────────────────────────
+// Точка листа под курсором остаётся на месте при изменении масштаба
+let pendingZoomAnchor: {
+  contentX: number;
+  contentY: number;
+  clientX: number;
+  clientY: number;
+} | null = null;
+
+function zoomAt(value: number, clientX: number, clientY: number) {
+  const container = canvasContainerRef.value;
+  const canvasEl = getCanvasEl();
+  if (!container || !canvasEl) {
+    setZoom(value);
+    return;
+  }
+  if (pendingZoomAnchor) {
+    // Несколько событий колеса до перерисовки: якорь на листе тот же
+    pendingZoomAnchor.clientX = clientX;
+    pendingZoomAnchor.clientY = clientY;
+    setZoom(value);
+    return;
+  }
+  const r = canvasEl.getBoundingClientRect();
+  pendingZoomAnchor = {
+    contentX: (clientX - r.left) / zoom.value,
+    contentY: (clientY - r.top) / zoom.value,
+    clientX,
+    clientY,
+  };
+  // nextTick вызываем ПОСЛЕ изменения масштаба, чтобы он сработал после перерисовки
+  setZoom(value);
+  nextTick(() => {
+    const anchor = pendingZoomAnchor;
+    pendingZoomAnchor = null;
+    if (!anchor) return;
+    const after = canvasEl.getBoundingClientRect();
+    container.scrollLeft += after.left + anchor.contentX * zoom.value - anchor.clientX;
+    container.scrollTop += after.top + anchor.contentY * zoom.value - anchor.clientY;
+    scheduleViewportUpdate();
+  });
+}
+
+function containerCenter() {
+  const r = canvasContainerRef.value?.getBoundingClientRect();
+  if (!r) return { x: 0, y: 0 };
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+}
+
+function zoomToCenter(value: number) {
+  const c = containerCenter();
+  zoomAt(value, c.x, c.y);
+}
+
+// Кнопки +/- переходят к следующему «круглому» значению масштаба
+function zoomInCentered() {
+  const next = ZOOM_PRESETS.find((z) => z > zoom.value + 0.001);
+  zoomToCenter(next ?? maxZoom);
+}
+
+function zoomOutCentered() {
+  const prev = [...ZOOM_PRESETS].reverse().find((z) => z < zoom.value - 0.001);
+  zoomToCenter(prev ?? minZoom);
+}
+
+// Отступ вокруг листа внутри области прокрутки (совпадает с padding .canvas-stage)
+const STAGE_PADDING = 48;
+
+function centerCanvas() {
+  nextTick(() => {
+    const container = canvasContainerRef.value;
+    if (!container) return;
+    container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
+    container.scrollTop = (container.scrollHeight - container.clientHeight) / 2;
+    scheduleViewportUpdate();
+  });
+}
+
+function fitZoomValue(widthOnly = false) {
+  const container = canvasContainerRef.value;
+  if (!container) return zoom.value;
+  const availW = container.clientWidth - STAGE_PADDING * 2;
+  const availH = container.clientHeight - STAGE_PADDING * 2;
+  const byWidth = availW / templateData.value.width;
+  const byHeight = availH / templateData.value.height;
+  return widthOnly ? byWidth : Math.min(byWidth, byHeight);
+}
+
+function fitToScreen() {
+  setZoom(fitZoomValue());
+  centerCanvas();
+}
+
+function fitToWidth() {
+  setZoom(fitZoomValue(true));
+  nextTick(() => {
+    const container = canvasContainerRef.value;
+    if (!container) return;
+    container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
+    container.scrollTop = 0;
+    scheduleViewportUpdate();
+  });
+}
+
+function handleWheel(e: WheelEvent) {
+  // Ctrl+колесо (и щипок на тачпаде) — масштаб к курсору; обычное колесо — прокрутка
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  const unit = e.deltaMode === 1 ? 0.05 : 0.0015;
+  const factor = Math.exp(-e.deltaY * unit);
+  zoomAt(zoom.value * factor, e.clientX, e.clientY);
+}
+
+// ── Панорамирование: зажатое колесо или Пробел + левая кнопка ─
+const isPanning = ref(false);
+const spaceHeld = ref(false);
+let panStart = { x: 0, y: 0, left: 0, top: 0 };
+
+function handleViewportMouseDown(e: MouseEvent) {
+  const isMiddle = e.button === 1;
+  const isSpaceDrag = e.button === 0 && spaceHeld.value;
+  if (!isMiddle && !isSpaceDrag) return;
+  const container = canvasContainerRef.value;
+  if (!container) return;
+  // Не даём событию дойти до элементов и отключаем автопрокрутку браузера
+  e.preventDefault();
+  e.stopPropagation();
+  isPanning.value = true;
+  panStart = {
+    x: e.clientX,
+    y: e.clientY,
+    left: container.scrollLeft,
+    top: container.scrollTop,
+  };
+  document.addEventListener("mousemove", handlePanMove);
+  document.addEventListener("mouseup", handlePanEnd);
+}
+
+function handlePanMove(e: MouseEvent) {
+  const container = canvasContainerRef.value;
+  if (!isPanning.value || !container) return;
+  container.scrollLeft = panStart.left - (e.clientX - panStart.x);
+  container.scrollTop = panStart.top - (e.clientY - panStart.y);
+}
+
+function handlePanEnd() {
+  isPanning.value = false;
+  document.removeEventListener("mousemove", handlePanMove);
+  document.removeEventListener("mouseup", handlePanEnd);
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  return (
+    el.isContentEditable ||
+    el.tagName === "INPUT" ||
+    el.tagName === "TEXTAREA" ||
+    el.tagName === "SELECT"
+  );
+}
+
+function handleKeyup(e: KeyboardEvent) {
+  if (e.code === "Space") spaceHeld.value = false;
+}
+
+function handleWindowBlur() {
+  spaceHeld.value = false;
+  handlePanEnd();
+}
 
 // Ключ для localStorage
 const getStorageKey = () => `certificate_template_draft_${props.templateId}`;
@@ -459,7 +980,6 @@ function autoSave() {
     try {
       const data = exportData();
       localStorage.setItem(getStorageKey(), JSON.stringify(data));
-      console.log("✅ Автосохранение выполнено");
     } catch (error) {
       console.error("Ошибка автосохранения:", error);
     }
@@ -480,12 +1000,13 @@ function loadFromStorage() {
   return null;
 }
 
+let autoSaveInterval: ReturnType<typeof setInterval> | undefined;
+
 // Инициализация при монтировании
 onMounted(() => {
   // Пытаемся загрузить сохраненную версию
   const savedData = loadFromStorage();
   if (savedData) {
-    console.log("📂 Загружена сохраненная версия из localStorage");
     initTemplate(savedData);
   } else {
     initTemplate(props.initialData);
@@ -496,82 +1017,263 @@ onMounted(() => {
 
   // Клавиатурные сочетания
   window.addEventListener("keydown", handleKeydown);
+  window.addEventListener("keyup", handleKeyup);
+  window.addEventListener("blur", handleWindowBlur);
+  document.addEventListener("mousedown", handleDocumentMouseDown);
+
+  // Колесо слушаем не-пассивно, чтобы Ctrl+колесо не масштабировало всю страницу
+  canvasContainerRef.value?.addEventListener("wheel", handleWheel, { passive: false });
+  if (canvasContainerRef.value && typeof ResizeObserver !== "undefined") {
+    viewportObserver = new ResizeObserver(scheduleViewportUpdate);
+    viewportObserver.observe(canvasContainerRef.value);
+  }
+
+  // Стартовый вид: лист целиком, но не крупнее 100%
+  nextTick(() => {
+    setZoom(Math.min(1, fitZoomValue()));
+    centerCanvas();
+  });
 
   // Автосохранение каждые 5 секунд
-  const autoSaveInterval = setInterval(autoSave, 5000);
-
-  // Очистка при размонтировании
-  onUnmounted(() => {
-    clearInterval(autoSaveInterval);
-  });
+  autoSaveInterval = setInterval(autoSave, 5000);
 });
 
 onUnmounted(() => {
+  clearInterval(autoSaveInterval);
   window.removeEventListener("keydown", handleKeydown);
+  window.removeEventListener("keyup", handleKeyup);
+  window.removeEventListener("blur", handleWindowBlur);
+  document.removeEventListener("mousedown", handleDocumentMouseDown);
+  canvasContainerRef.value?.removeEventListener("wheel", handleWheel);
+  viewportObserver?.disconnect();
+  if (viewportFrame) cancelAnimationFrame(viewportFrame);
+  handlePanEnd();
 });
 
-// Обработка клавиатурных сочетаний
+// ── Операции с выделением ────────────────────────────────────
+function newElementId() {
+  return `el_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/** Вставить копии элементов со смещением; всё — один шаг Undo */
+function insertCopies(elements: TemplateElement[], offset: number) {
+  if (elements.length === 0) return;
+  const { width, height } = templateData.value;
+  const newIds: string[] = [];
+  beginHistoryBatch();
+  // Сохраняем исходный порядок слоёв
+  [...elements]
+    .sort((a, b) => a.zIndex - b.zIndex)
+    .forEach((source) => {
+      const copy = JSON.parse(JSON.stringify(source)) as TemplateElement;
+      copy.id = newElementId();
+      copy.locked = false;
+      copy.x = Math.max(0, Math.min(width - copy.width, source.x + offset));
+      copy.y = Math.max(0, Math.min(height - copy.height, source.y + offset));
+      addElement(copy);
+      newIds.push(copy.id);
+    });
+  endHistoryBatch();
+  selectMultipleElements(newIds);
+}
+
+function duplicateSelected() {
+  insertCopies(selectedElements.value, 20);
+}
+
+function deleteSelected() {
+  const ids = selectedElements.value
+    .filter((el) => !el.locked)
+    .map((el) => el.id);
+  deleteElements(ids);
+}
+
+const SHORTCUT_GROUPS = [
+  {
+    title: "Навигация",
+    items: [
+      { label: "Прокрутка листа", keys: ["Колесо"] },
+      { label: "Прокрутка по горизонтали", keys: ["Shift", "Колесо"] },
+      { label: "Масштаб к курсору", keys: ["Ctrl", "Колесо"] },
+      { label: "Перемещать лист", keys: ["Зажать колесо"] },
+      { label: "Перемещать лист", keys: ["Пробел", "Перетащить"] },
+      { label: "Увеличить / уменьшить", keys: ["Ctrl", "+ / −"] },
+      { label: "По размеру экрана", keys: ["Ctrl", "0"] },
+      { label: "Масштаб 100%", keys: ["Ctrl", "1"] },
+    ],
+  },
+  {
+    title: "Элементы",
+    items: [
+      { label: "Выделить все", keys: ["Ctrl", "A"] },
+      { label: "Добавить к выделению", keys: ["Ctrl", "Клик"] },
+      { label: "Сдвиг на 1 px", keys: ["Стрелки"] },
+      { label: "Сдвиг на 10 px", keys: ["Shift", "Стрелки"] },
+      { label: "Копировать / вставить", keys: ["Ctrl", "C / V"] },
+      { label: "Дублировать", keys: ["Ctrl", "D"] },
+      { label: "Удалить", keys: ["Delete"] },
+      { label: "Снять выделение", keys: ["Esc"] },
+      { label: "Редактировать текст", keys: ["Двойной клик"] },
+    ],
+  },
+  {
+    title: "Общее",
+    items: [
+      { label: "Отменить", keys: ["Ctrl", "Z"] },
+      { label: "Повторить", keys: ["Ctrl", "Y"] },
+      { label: "Сохранить", keys: ["Ctrl", "S"] },
+      { label: "Сетка", keys: ["Ctrl", "'"] },
+      { label: "Привязка к сетке", keys: ["Ctrl", "Shift", "'"] },
+      { label: "Линейки", keys: ["Shift", "R"] },
+      { label: "Поля печати", keys: ["Shift", "M"] },
+      { label: "Эта справка", keys: ["?"] },
+    ],
+  },
+];
+
+// Обработка клавиатурных сочетаний.
+// Используем e.code, чтобы сочетания работали и в русской раскладке.
 function handleKeydown(e: KeyboardEvent) {
-  // Ctrl+Z - Undo
-  if (e.ctrlKey && e.key === "z" && !e.shiftKey) {
-    e.preventDefault();
-    undo();
-  }
-  // Ctrl+Y или Ctrl+Shift+Z - Redo
-  if (
-    (e.ctrlKey && e.key === "y") ||
-    (e.ctrlKey && e.shiftKey && e.key === "z")
-  ) {
-    e.preventDefault();
-    redo();
-  }
-  // Delete - удалить выбранный элемент
-  if (e.key === "Delete" && selectedElementId.value) {
-    e.preventDefault();
-    deleteSelectedElement();
-  }
-  // Ctrl+D - дублировать
-  if (e.ctrlKey && e.key === "d" && selectedElementId.value) {
-    e.preventDefault();
-    duplicateElement(selectedElementId.value);
-  }
-  // Ctrl+C - копировать
-  if (e.ctrlKey && e.key === "c" && selectedElementId.value) {
-    e.preventDefault();
-    const element = activePage.value?.elements.find(
-      (el: TemplateElement) => el.id === selectedElementId.value,
-    );
-    if (element) {
-      clipboard.value = JSON.parse(JSON.stringify(element));
-      console.log("📋 Элемент скопирован в буфер обмена");
-    }
-  }
-  // Ctrl+V - вставить
-  if (e.ctrlKey && e.key === "v" && clipboard.value) {
-    e.preventDefault();
-    const newElement = {
-      ...JSON.parse(JSON.stringify(clipboard.value)),
-      id: `el_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      x: clipboard.value.x + 20,
-      y: clipboard.value.y + 20,
-    };
-    addElement(newElement);
-    console.log("📌 Элемент вставлен из буфера обмена");
-  }
-  // Escape - снять выделение
-  if (e.key === "Escape") {
-    selectElement(null);
-  }
-  // Ctrl+S - сохранить
-  if (e.ctrlKey && (e.key === "s" || e.key === "S")) {
+  const ctrl = e.ctrlKey || e.metaKey;
+
+  // Ctrl+S - сохранить (работает везде, в том числе в полях ввода)
+  if (ctrl && e.code === "KeyS") {
     e.preventDefault();
     e.stopPropagation();
     if (isDirty.value) {
-      // Сохраняем в localStorage
       autoSave();
-      // Отправляем на сервер
       emit("save", exportData());
     }
+    return;
+  }
+
+  // В полях ввода и при редактировании текста остальные сочетания не перехватываем
+  if (isEditableTarget(e.target)) return;
+
+  if (e.code === "Space") {
+    e.preventDefault();
+    if (!e.repeat) spaceHeld.value = true;
+    return;
+  }
+
+  if (e.key === "Escape") {
+    if (showShortcuts.value) showShortcuts.value = false;
+    else if (openMenu.value) closeMenu();
+    else selectElement(null);
+    return;
+  }
+
+  if (e.key === "?") {
+    e.preventDefault();
+    showShortcuts.value = !showShortcuts.value;
+    return;
+  }
+
+  if (ctrl) {
+    switch (e.code) {
+      case "KeyZ":
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      case "KeyY":
+        e.preventDefault();
+        redo();
+        return;
+      case "KeyD":
+        e.preventDefault();
+        duplicateSelected();
+        return;
+      case "KeyC":
+        if (selectedElements.value.length > 0) {
+          e.preventDefault();
+          clipboard.value = JSON.parse(JSON.stringify(selectedElements.value));
+        }
+        return;
+      case "KeyX":
+        if (selectedElements.value.length > 0) {
+          e.preventDefault();
+          clipboard.value = JSON.parse(JSON.stringify(selectedElements.value));
+          deleteSelected();
+        }
+        return;
+      case "KeyV":
+        if (clipboard.value.length > 0) {
+          e.preventDefault();
+          insertCopies(clipboard.value, 20);
+          // Следующая вставка сместится ещё на 20 px
+          clipboard.value = clipboard.value.map((el) => ({
+            ...el,
+            x: el.x + 20,
+            y: el.y + 20,
+          }));
+        }
+        return;
+      case "KeyA":
+        e.preventDefault();
+        selectMultipleElements(
+          (activePage.value?.elements ?? []).map((el: TemplateElement) => el.id),
+        );
+        return;
+      case "Equal":
+      case "NumpadAdd":
+        e.preventDefault();
+        zoomInCentered();
+        return;
+      case "Minus":
+      case "NumpadSubtract":
+        e.preventDefault();
+        zoomOutCentered();
+        return;
+      case "Digit0":
+      case "Numpad0":
+        e.preventDefault();
+        fitToScreen();
+        return;
+      case "Digit1":
+      case "Numpad1":
+        e.preventDefault();
+        zoomToCenter(1);
+        return;
+      case "Quote":
+        e.preventDefault();
+        if (e.shiftKey) view.snapToGrid = !view.snapToGrid;
+        else view.showGrid = !view.showGrid;
+        return;
+    }
+    return;
+  }
+
+  if (e.shiftKey && e.code === "KeyR") {
+    view.showRulers = !view.showRulers;
+    return;
+  }
+  if (e.shiftKey && e.code === "KeyM") {
+    view.showMargins = !view.showMargins;
+    return;
+  }
+
+  // Delete / Backspace - удалить выбранные элементы
+  if (e.key === "Delete" || e.key === "Backspace") {
+    if (selectedElements.value.length > 0) {
+      e.preventDefault();
+      deleteSelected();
+    }
+    return;
+  }
+
+  // Стрелки - сдвиг выбранных элементов
+  const arrows: Record<string, [number, number]> = {
+    ArrowLeft: [-1, 0],
+    ArrowRight: [1, 0],
+    ArrowUp: [0, -1],
+    ArrowDown: [0, 1],
+  };
+  const dir = arrows[e.key];
+  if (dir && selectedElementIds.value.size > 0) {
+    e.preventDefault();
+    const step = e.shiftKey ? 10 : 1;
+    nudgeElements(Array.from(selectedElementIds.value), dir[0] * step, dir[1] * step);
   }
 }
 
@@ -703,14 +1405,12 @@ function getPagePreviewStyle(page: CertificatePage) {
 
 // Обработчики для группового редактирования
 function handleDeleteMultiple() {
-  const ids = Array.from(selectedElementIds.value);
-  ids.forEach((id) => deleteElement(id));
+  deleteElements(Array.from(selectedElementIds.value));
   clearSelection();
 }
 
 function handleDuplicateMultiple() {
-  const ids = Array.from(selectedElementIds.value);
-  ids.forEach((id) => duplicateElement(id));
+  duplicateSelected();
 }
 
 function handleAlignGroup(
@@ -726,9 +1426,7 @@ function handleDistribute(direction: "horizontal" | "vertical") {
 }
 
 function handleDuplicate() {
-  if (selectedElementId.value) {
-    duplicateElement(selectedElementId.value);
-  }
+  duplicateSelected();
 }
 
 function handleBringToFront() {
@@ -739,7 +1437,9 @@ function handleBringToFront() {
         ? [selectedElementId.value]
         : [];
 
+  beginHistoryBatch();
   ids.forEach((id) => bringToFront(id));
+  endHistoryBatch();
 }
 
 function handleSendToBack() {
@@ -750,7 +1450,9 @@ function handleSendToBack() {
         ? [selectedElementId.value]
         : [];
 
+  beginHistoryBatch();
   ids.forEach((id) => sendToBack(id));
+  endHistoryBatch();
 }
 </script>
 
@@ -955,13 +1657,24 @@ function handleSendToBack() {
   overflow: hidden;
 }
 
-.canvas-container {
+.canvas-column {
   flex: 1;
-  overflow: auto;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
+  flex-direction: column;
+}
+
+.canvas-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.canvas-container {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
   background:
     linear-gradient(45deg, var(--color-gray-200) 25%, transparent 25%),
     linear-gradient(-45deg, var(--color-gray-200) 25%, transparent 25%),
@@ -985,18 +1698,114 @@ function handleSendToBack() {
     linear-gradient(-45deg, transparent 75%, var(--color-gray-800) 75%);
 }
 
-/* Панель страниц */
-.canvas-container {
-  display: flex;
-  flex-direction: column;
-  position: relative;
+.canvas-area.with-rulers .canvas-container {
+  top: 20px;
+  left: 20px;
 }
 
-.pages-panel {
+.canvas-container.pan-ready,
+.canvas-container.pan-ready :deep(*) {
+  cursor: grab !important;
+}
+
+.canvas-container.is-panning,
+.canvas-container.is-panning :deep(*) {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/* Сцена: лист по центру, а если он больше окна — прокручивается целиком
+   (margin: auto вместо justify-content, чтобы не обрезался левый/верхний край) */
+.canvas-stage {
+  display: flex;
+  box-sizing: border-box;
+  min-width: 100%;
+  min-height: 100%;
+  width: max-content;
+  padding: 48px;
+}
+
+.canvas-frame {
+  margin: auto;
+  flex-shrink: 0;
+}
+
+.ruler-corner {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
-  right: 0;
+  width: 20px;
+  height: 20px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: var(--color-gray-400);
+  background: var(--color-gray-50);
+  border-right: 1px solid var(--color-gray-300);
+  border-bottom: 1px solid var(--color-gray-300);
+  box-sizing: border-box;
+}
+
+:root.dark .ruler-corner {
+  background: var(--color-gray-800);
+  border-color: var(--color-gray-600);
+}
+
+/* Подсказка по навигации */
+.nav-hint {
+  position: absolute;
+  left: 32px;
+  bottom: 12px;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.875rem;
+  max-width: calc(100% - 64px);
+  padding: 0.375rem 0.5rem 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--color-gray-600);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.nav-hint b {
+  font-weight: 600;
+  color: var(--color-gray-800);
+}
+
+:root.dark .nav-hint {
+  color: var(--color-gray-300);
+  background: rgba(31, 41, 55, 0.92);
+  border-color: var(--color-gray-700);
+}
+
+:root.dark .nav-hint b {
+  color: white;
+}
+
+.nav-hint-close {
+  display: flex;
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--color-gray-400);
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.nav-hint-close:hover {
+  color: var(--color-gray-700);
+  background: var(--color-gray-100);
+}
+
+/* Панель страниц */
+.pages-panel {
+  flex-shrink: 0;
   height: 88px;
   background: white;
   border-top: 1px solid var(--color-gray-200);
@@ -1168,8 +1977,11 @@ function handleSendToBack() {
   background: var(--color-gray-700);
 }
 
-.pages-info {
-  font-size: 0.875rem;
+.status-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--color-gray-500);
   font-weight: 500;
   padding-left: 1rem;
@@ -1177,8 +1989,279 @@ function handleSendToBack() {
   white-space: nowrap;
 }
 
-:root.dark .pages-info {
+:root.dark .status-info {
   border-color: var(--color-gray-700);
+}
+
+.status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.status-item small {
+  font-size: 0.75rem;
+  color: var(--color-gray-400);
+}
+
+.status-item.cursor-pos {
+  min-width: 7.5rem;
+}
+
+/* Выпадающие меню в шапке */
+.dropdown {
+  position: relative;
+}
+
+.zoom-label-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 64px;
+  height: 32px;
+  padding: 0 0.5rem;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-gray-700);
+  background: var(--color-gray-100);
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.zoom-label-btn:hover,
+.zoom-label-btn.active {
+  border-color: var(--color-gray-300);
+}
+
+:root.dark .zoom-label-btn {
+  color: var(--color-gray-200);
+  background: var(--color-gray-700);
+}
+
+.toolbar-btn.wide {
+  width: auto;
+  padding: 0 0.5rem;
+  gap: 0.125rem;
+}
+
+.toolbar-btn.toggled,
+.toolbar-btn.active {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+:root.dark .toolbar-btn.toggled,
+:root.dark .toolbar-btn.active {
+  background: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  min-width: 200px;
+  padding: 0.375rem;
+  background: white;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.625rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+:root.dark .dropdown-menu {
+  background: var(--color-gray-800);
+  border-color: var(--color-gray-700);
+}
+
+.view-menu {
+  min-width: 260px;
+}
+
+.menu-item,
+.menu-check,
+.menu-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4375rem 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--color-gray-700);
+  background: transparent;
+  border: none;
+  border-radius: 0.375rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item span,
+.menu-check span,
+.menu-field span {
+  flex: 1;
+}
+
+.menu-item:hover,
+.menu-check:hover {
+  background: var(--color-gray-100);
+}
+
+.menu-item.current {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+:root.dark .menu-item,
+:root.dark .menu-check,
+:root.dark .menu-field {
+  color: var(--color-gray-200);
+}
+
+:root.dark .menu-item:hover,
+:root.dark .menu-check:hover {
+  background: var(--color-gray-700);
+}
+
+.menu-check input {
+  accent-color: #3b82f6;
+}
+
+.menu-field {
+  cursor: default;
+}
+
+.menu-field select,
+.menu-field input {
+  width: 120px;
+  padding: 0.25rem 0.375rem;
+  font-size: 0.8125rem;
+  color: inherit;
+  background: white;
+  border: 1px solid var(--color-gray-300);
+  border-radius: 0.375rem;
+}
+
+.menu-field input {
+  width: 64px;
+}
+
+:root.dark .menu-field select,
+:root.dark .menu-field input {
+  background: var(--color-gray-900);
+  border-color: var(--color-gray-600);
+}
+
+.menu-divider {
+  height: 1px;
+  margin: 0.375rem 0;
+  background: var(--color-gray-200);
+}
+
+:root.dark .menu-divider {
+  background: var(--color-gray-700);
+}
+
+.menu-note {
+  margin: 0.25rem 0.625rem 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--color-gray-500);
+}
+
+kbd {
+  display: inline-block;
+  padding: 0.0625rem 0.375rem;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-gray-600);
+  background: var(--color-gray-100);
+  border: 1px solid var(--color-gray-300);
+  border-bottom-width: 2px;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+}
+
+:root.dark kbd {
+  color: var(--color-gray-300);
+  background: var(--color-gray-700);
+  border-color: var(--color-gray-600);
+}
+
+/* Справка по горячим клавишам */
+.shortcuts-modal {
+  width: min(880px, 94vw);
+  max-height: 86vh;
+  overflow: auto;
+  padding: 1.25rem 1.5rem 1.5rem;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  animation: modalSlideIn 0.2s ease;
+}
+
+:root.dark .shortcuts-modal {
+  background: var(--color-gray-800);
+}
+
+.shortcuts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.shortcuts-header h3 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+:root.dark .shortcuts-header h3 {
+  color: white;
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.shortcuts-grid h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-gray-500);
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.3125rem 0;
+  font-size: 0.8125rem;
+  color: var(--color-gray-700);
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+:root.dark .shortcut-row {
+  color: var(--color-gray-300);
+  border-color: var(--color-gray-700);
+}
+
+.shortcut-row .keys {
+  display: inline-flex;
+  gap: 0.25rem;
 }
 
 /* Анимация спиннера */

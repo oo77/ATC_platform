@@ -304,7 +304,9 @@ export default defineEventHandler(async (event) => {
     // ПРОВЕРКА КОНФЛИКТОВ РАСПИСАНИЯ
     // ===============================
 
-    if (checkClassroom || checkInstructor || finalGroupId) {
+    // Пересдачи не проверяем на конфликты: они проводятся для отдельных студентов
+    // и могут ставиться на занятых инструкторов и аудитории (как в /api/schedule/retake)
+    if (!isRetake && (checkClassroom || checkInstructor || finalGroupId)) {
       const conflicts = await checkScheduleConflicts(
         dateToLocalIsoString(startTime),
         dateToLocalIsoString(endTime),
@@ -432,6 +434,18 @@ export default defineEventHandler(async (event) => {
             await deleteTestAssignment(existingAssignment.id);
           }
         }
+      }
+    }
+
+    // Пересдача: тест должен быть доступен тем же студентам, что и занятие
+    // (иначе слушатель, добавленный при редактировании, не видит пересдачу в тестах)
+    if (isRetake && body.allowedStudentIds !== undefined) {
+      const retakeAssignment = await getTestAssignmentByScheduleEventId(id);
+
+      if (retakeAssignment) {
+        await updateTestAssignment(retakeAssignment.id, {
+          allowed_student_ids: body.allowedStudentIds,
+        });
       }
     }
 

@@ -5,6 +5,8 @@
  *
  * Query:
  *  - format — docx (по умолчанию) или pdf
+ *  - examinerInstructorId — инструктор группы, который указан экзаменатором в блоке подписей
+ *    («Экзаменатор : Инструктор / Ф.И.О.»); без него блок подписей — как в шаблоне
  *
  * Доступ: как к странице группы — GROUPS_VIEW_ALL / GROUPS_VIEW_OWN (инструктор — только своя группа).
  */
@@ -12,6 +14,7 @@
 import {
   loadAssessmentSheetModel,
   renderAssessmentSheetDocx,
+  UnknownExaminerError,
 } from "../../../services/assessmentSheetService";
 import { renderAssessmentSheetPdf } from "../../../services/assessmentSheetPdfService";
 import {
@@ -78,7 +81,8 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const model = await loadAssessmentSheetModel(groupId);
+    const examinerInstructorId = String(getQuery(event).examinerInstructorId ?? "") || null;
+    const model = await loadAssessmentSheetModel(groupId, examinerInstructorId);
     if (!model) {
       throw createError({
         statusCode: 404,
@@ -121,6 +125,13 @@ export default defineEventHandler(async (event) => {
     return send(event, buffer);
   } catch (error: any) {
     if (error.statusCode) throw error;
+    if (error instanceof UnknownExaminerError) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Bad Request",
+        message: error.message,
+      });
+    }
 
     console.error("[API] Ошибка формирования ведомости контроля знаний:", error);
     throw createError({

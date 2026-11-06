@@ -1,10 +1,14 @@
 /**
- * GET /api/groups/:id/empty-journal?format=docx|pdf
+ * GET /api/groups/:id/empty-journal?format=docx|pdf&instructorIds=id1,id2
  * «Пустой журнал» группы — бланк для ручного заполнения по утверждённому шаблону
  * (server/assets/templates/journal-template.docx).
  *
  * Query:
  *  - format — docx (по умолчанию) или pdf
+ *  - instructorIds — через запятую id инструкторов группы, которых указать в бланке: у каждого
+ *    своя строка «Instruktor F.I.Sh: … Imzo: ____» (список для выбора —
+ *    GET /api/groups/:id/empty-journal-instructors); не задан или пуст — одна строка
+ *    с линией для рукописного ввода
  *
  * Доступ: как к странице группы — GROUPS_VIEW_ALL / GROUPS_VIEW_OWN (инструктор — только своя группа).
  */
@@ -78,7 +82,11 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const model = await loadEmptyJournalModel(groupId);
+    const instructorIds = String(getQuery(event).instructorIds ?? "")
+      .split(",")
+      .filter(Boolean);
+
+    const model = await loadEmptyJournalModel(groupId, instructorIds);
     if (!model) {
       throw createError({
         statusCode: 404,

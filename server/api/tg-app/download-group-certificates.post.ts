@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
       LEFT JOIN study_groups g ON cert.group_id = g.id
       WHERE g.code = ? 
         AND s.organization_id = ?
+        AND cert.status = 'issued'
         AND cert.pdf_file_url IS NOT NULL
         AND cert.expiry_date >= CURRENT_DATE
       ORDER BY s.full_name`,

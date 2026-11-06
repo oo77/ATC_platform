@@ -708,7 +708,8 @@ onUnmounted(() => {
 
 <style scoped>
 .editor-toolbar {
-  width: 220px;
+  width: 260px;
+  flex-shrink: 0;
   background: white;
   border-right: 1px solid var(--color-gray-200);
   padding: 1rem;

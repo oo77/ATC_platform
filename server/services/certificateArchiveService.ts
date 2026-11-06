@@ -1,7 +1,15 @@
 import archiver from "archiver";
 import { findCertificateFile } from "../utils/certificateFile";
 
-export async function createCertificatesArchive(certificates: any[]) {
+export interface CertificatesArchiveOptions {
+  // Папка на каждую организацию, файлы внутри названы как при скачивании по одному
+  byOrganization?: boolean;
+}
+
+export async function createCertificatesArchive(
+  certificates: any[],
+  options: CertificatesArchiveOptions = {},
+) {
   const archive = archiver("zip", { zlib: { level: 9 } });
 
   let filesAdded = 0;
@@ -18,15 +26,30 @@ export async function createCertificatesArchive(certificates: any[]) {
     });
 
     if (filePath) {
-      const courseName = (cert.course_name || cert.courseName || "Course")
-        .replace(/[\/\\:*?"<>|]/g, "_")
-        .trim();
-      const studentName = (cert.student_name || cert.studentName || "Student")
-        .replace(/[\/\\:*?"<>|]/g, "_")
-        .trim();
       const safeCertNum = (certNum || "").replace(/[\/\\:*?"<>|]/g, "_").trim();
+      let fileName: string;
 
-      const fileName = `${courseName}/${studentName}_${safeCertNum}.pdf`;
+      if (options.byOrganization) {
+        const organizationName = (
+          cert.organization_name ||
+          cert.organizationName ||
+          "Без организации"
+        )
+          .replace(/[\/\\:*?"<>|]/g, "_")
+          .trim();
+
+        fileName = `${organizationName}/Certificate_${safeCertNum}.pdf`;
+      } else {
+        const courseName = (cert.course_name || cert.courseName || "Course")
+          .replace(/[\/\\:*?"<>|]/g, "_")
+          .trim();
+        const studentName = (cert.student_name || cert.studentName || "Student")
+          .replace(/[\/\\:*?"<>|]/g, "_")
+          .trim();
+
+        fileName = `${courseName}/${studentName}_${safeCertNum}.pdf`;
+      }
+
       archive.file(filePath, { name: fileName });
       filesAdded++;
     }

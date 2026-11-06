@@ -22,32 +22,14 @@
               {{ formatDateShort(selectedGroupInfo.endDate) }}
             </span>
           </div>
-          <div class="relative">
-            <select
-              v-model="form.groupId"
-              @change="handleGroupChange"
-              class="w-full rounded-lg border border-stroke bg-transparent py-2.5 pl-3 pr-10 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none text-sm"
-              :class="{ 'border-danger': errors.groupId }"
-            >
-              <option value="">Выберите группу</option>
-              <option v-for="group in groups" :key="group.id" :value="group.id">
-                {{ group.code }} — {{ group.courseName }}
-              </option>
-            </select>
-            <svg
-              class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </div>
+          <UiSearchSelect
+            v-model="form.groupId"
+            :options="groupOptions"
+            placeholder="Выберите группу"
+            search-placeholder="Поиск группы..."
+            :invalid="!!errors.groupId"
+            @change="handleGroupChange"
+          />
           <p v-if="errors.groupId" class="mt-1 text-xs text-danger">
             {{ errors.groupId }}
           </p>
@@ -585,6 +567,7 @@
 
 <script setup lang="ts">
 import UiMultiSelect from "~/components/ui/MultiSelect.vue";
+import UiSearchSelect from "~/components/ui/SearchSelect.vue";
 import type {
   ScheduleEvent,
   ScheduleEventColor,
@@ -599,7 +582,6 @@ import {
 interface Group {
   id: string;
   code: string;
-  courseName: string;
 }
 
 interface Discipline {
@@ -681,6 +663,9 @@ const {
 // ===================
 
 const groups = ref<Group[]>([]);
+const groupOptions = computed(() =>
+  groups.value.map((g) => ({ id: g.id, label: g.code })),
+);
 const disciplines = ref<Discipline[]>([]);
 const classrooms = ref<Classroom[]>([]);
 const selectedGroupInfo = ref<GroupInfo | null>(null);
@@ -1022,8 +1007,6 @@ const loadGroups = async () => {
       groups.value = response.groups.map((g) => ({
         id: g.id,
         code: g.code,
-        // API возвращает course как объект с полем name
-        courseName: g.course?.name || "",
       }));
 
       console.log("[EventModal] Загружено групп:", groups.value.length);
@@ -1232,7 +1215,8 @@ const validateHours = () => {
     remainingHours += currentEventHours;
   }
 
-  if (plannedHours > remainingHours) {
+  // Пересдачи не учитываются в лимите часов дисциплины (см. server/api/schedule/index.post.ts)
+  if (!isRetake.value && plannedHours > remainingHours) {
     const typeNames: Record<"theory" | "practice" | "assessment", string> = {
       theory: "теории",
       practice: "практики",

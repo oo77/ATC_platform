@@ -215,6 +215,18 @@
                   <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.passportData || '—' }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">ФИО на русском</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.full_name_ru || '—' }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Сокращенное ФИО (узб.)</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.short_name_uz || '—' }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
+                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Сокращенное ФИО (рус.)</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.short_name_ru || '—' }}</span>
+                </div>
+                <div class="flex items-center justify-between px-4 py-2.5">
                   <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Учёная степень</span>
                   <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.academic_degree || '—' }}</span>
                 </div>
@@ -407,6 +419,19 @@
               ref="courseHistoryRef"
             />
           </div>
+
+          <!-- SCHEDULE TAB -->
+          <div
+            v-show="activeTab === 'schedule'"
+            class="animate-in fade-in duration-500"
+          >
+            <InstructorsScheduleDownload
+              v-if="instructor"
+              :instructor-id="instructor.id"
+              :initial-load="false"
+              ref="scheduleDownloadRef"
+            />
+          </div>
         </div>
 
         <!-- Sidebar / Additional Info (4 cols) -->
@@ -554,6 +579,7 @@ import {
 } from "lucide-vue-next";
 import InstructorsHoursStats from "~/components/instructors/HoursStats.vue";
 import InstructorsCourseHistory from "~/components/instructors/CourseHistory.vue";
+import InstructorsScheduleDownload from "~/components/instructors/ScheduleDownload.vue";
 import UsersInstructorFormModal from "~/components/users/InstructorFormModal.vue";
 import { usePDFExport } from "~/composables/usePDFExport"; // Will need to implement this
 
@@ -599,6 +625,7 @@ const availableTabs = [
   { id: "info", label: "Профиль и Квалификация", icon: UserIcon },
   { id: "hours", label: "Отчётность и Часы", icon: ClockIcon },
   { id: "history", label: "История Дисциплин", icon: HistoryIcon },
+  { id: "schedule", label: "Расписание", icon: CalendarIcon },
 ];
 
 // Computed
@@ -825,6 +852,7 @@ const exportCertificate = async () => {
 // Refs for child components
 const hoursStatsRef = ref<any>(null);
 const courseHistoryRef = ref<any>(null);
+const scheduleDownloadRef = ref<any>(null);
 
 // Trigger updates when tab changes
 watch(activeTab, (newTab) => {
@@ -832,6 +860,8 @@ watch(activeTab, (newTab) => {
     setTimeout(() => hoursStatsRef.value?.load?.(), 100);
   } else if (newTab === "history") {
     setTimeout(() => courseHistoryRef.value?.load?.(), 100);
+  } else if (newTab === "schedule") {
+    setTimeout(() => scheduleDownloadRef.value?.load?.(), 100);
   }
 });
 

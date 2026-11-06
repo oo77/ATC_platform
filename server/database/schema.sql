@@ -162,8 +162,8 @@ CREATE TABLE IF NOT EXISTS certificate_templates (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS courses (
   id VARCHAR(191) PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  name_uz VARCHAR(255) NULL COMMENT 'Название курса на узбекском языке',
+  name TEXT NOT NULL,
+  name_uz TEXT NULL COMMENT 'Название курса на узбекском языке',
   short_name VARCHAR(10) NOT NULL COMMENT 'Короткое название',
   code VARCHAR(20) NOT NULL UNIQUE COMMENT 'Код курса',
   description TEXT,
@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS courses (
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   
-  INDEX idx_name (name),
+  INDEX idx_name (name(191)),
   INDEX idx_short_name (short_name),
   INDEX idx_code (code),
   INDEX idx_is_active (is_active),

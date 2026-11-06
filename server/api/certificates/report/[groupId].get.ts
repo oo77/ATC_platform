@@ -5,7 +5,7 @@
  */
 
 import {
-  getIssuedCertificatesByGroup,
+  getCurrentCertificatesByGroup,
   checkStudentEligibility,
 } from "../../../repositories/certificateTemplateRepository";
 import { getGroupById } from "../../../repositories/groupRepository";
@@ -64,11 +64,8 @@ export default defineEventHandler(async (event) => {
 
     const instructors = instructorRows.map((row) => row.full_name);
 
-    // Получаем выданные сертификаты
-    const issuedCertificates = await getIssuedCertificatesByGroup(groupId);
-    const certificatesByStudent = new Map(
-      issuedCertificates.map((c: any) => [c.studentId, c])
-    );
+    // Получаем текущие сертификаты слушателей (архив отозванных в ведомость не попадает)
+    const certificatesByStudent = await getCurrentCertificatesByGroup(groupId);
 
     // Получаем информацию о допуске для каждого студента
     const students = [];

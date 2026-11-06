@@ -533,29 +533,33 @@ async function loadFonts(doc: PDFDocument): Promise<Fonts> {
   };
 }
 
-function drawInstructorLine(ctx: Ctx, instructor: string) {
-  const height = 2 * CELL_LINE; // межстрочный «двойной»
-  const paragraphAfterTable = BODY_LINE; // пустой абзац между таблицей и подписью
-  if (ctx.y + paragraphAfterTable + height > PAGE_BOTTOM) newPage(ctx);
-  else ctx.y += paragraphAfterTable;
+/**
+ * Строки «Instruktor F.I.Sh: … Imzo: ____» — своя у каждого инструктора; без инструкторов —
+ * одна, с линией вместо фамилии. «Imzo» во всех строках стоит на десятом стандартном шаге
+ * табуляции, как в шаблоне.
+ */
+function drawInstructorLines(ctx: Ctx, instructors: string[]) {
+  const names: Piece[] =
+    instructors.length > 0
+      ? instructors.map((text) => ({ text, underline: true }))
+      : [{ text: "________________" }];
+  // Межстрочный «двойной»: как в Word, текст стоит вверху строки, а добавочный интервал —
+  // под ним, и последней строке на странице он не нужен
+  const lineHeight = 2 * CELL_LINE;
+  ctx.y += BODY_LINE; // пустой абзац между таблицей и подписью
 
-  const pieces: Piece[] = [
-    { text: "Instruktor F.I.Sh: " },
-    instructor
-      ? { text: instructor, underline: true }
-      : { text: "________________" },
-    { tab: true },
-    { tab: true },
-    { tab: true },
-    { text: "   ", bold: true },
-    { tab: true },
-    { tab: true },
-    { text: "  ", bold: true },
-    { text: "Imzo: " },
-    { text: "________________" },
-  ];
-  drawPieces(ctx, pieces, tw(142), ctx.y + height - DESCENT * BODY_SIZE);
-  ctx.y += height;
+  for (const name of names) {
+    if (ctx.y + CELL_LINE > PAGE_BOTTOM) newPage(ctx);
+    const baseline = ctx.y + ASCENT * BODY_SIZE;
+    drawPieces(ctx, [{ text: "Instruktor F.I.Sh: " }, name], tw(142), baseline);
+    drawPieces(
+      ctx,
+      [{ text: "  ", bold: true }, { text: "Imzo: " }, { text: "________________" }],
+      10 * DEFAULT_TAB,
+      baseline,
+    );
+    ctx.y += lineHeight;
+  }
 }
 
 export async function renderEmptyJournalPdf(model: EmptyJournalModel): Promise<Buffer> {
@@ -583,7 +587,7 @@ export async function renderEmptyJournalPdf(model: EmptyJournalModel): Promise<B
 
     drawTableHead(ctx, pageDates);
     model.students.forEach((name, i) => drawStudentRow(ctx, i + 1, name));
-    drawInstructorLine(ctx, model.instructor);
+    drawInstructorLines(ctx, model.instructors);
   });
 
   return Buffer.from(await doc.save());

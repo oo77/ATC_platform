@@ -26,6 +26,9 @@ import { z } from 'zod';
 
 const updateInstructorSchema = z.object({
   fullName: z.string().min(1).optional(),
+  full_name_ru: z.string().nullable().optional(),
+  short_name_uz: z.string().nullable().optional(),
+  short_name_ru: z.string().nullable().optional(),
   email: z.string().email('Некорректный email').nullable().optional(),
   phone: z.string().nullable().optional(),
   hireDate: z.string().nullable().optional(),
@@ -200,6 +203,9 @@ export default defineEventHandler(async (event) => {
     // Обновляем данные инструктора
     const updateData: UpdateInstructorInput = {};
     if (data.fullName !== undefined) updateData.fullName = data.fullName;
+    if (data.full_name_ru !== undefined) updateData.full_name_ru = data.full_name_ru;
+    if (data.short_name_uz !== undefined) updateData.short_name_uz = data.short_name_uz;
+    if (data.short_name_ru !== undefined) updateData.short_name_ru = data.short_name_ru;
     if (data.email !== undefined) updateData.email = data.email ?? null;
     if (data.phone !== undefined) updateData.phone = data.phone ?? null;
     if (data.hireDate !== undefined) updateData.hireDate = data.hireDate ?? null;

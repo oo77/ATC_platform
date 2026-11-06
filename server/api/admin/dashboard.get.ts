@@ -33,8 +33,8 @@ export default defineEventHandler(async (event) => {
         (SELECT COUNT(*) FROM students WHERE created_at >= ?) as students_last_week,
         (SELECT COUNT(*) FROM instructors) as total_instructors,
         (SELECT COUNT(*) FROM study_groups WHERE end_date >= ?) as active_groups,
-        (SELECT COUNT(*) FROM issued_certificates 
-         WHERE DATE(issue_date) >= ? AND DATE(issue_date) < ?) as certificates_this_month,
+        (SELECT COUNT(*) FROM issued_certificates
+         WHERE status = 'issued' AND DATE(issue_date) >= ? AND DATE(issue_date) < ?) as certificates_this_month,
         (SELECT COUNT(*) FROM users WHERE DATE(created_at) = DATE(?)) as today_registrations
     `;
 
@@ -273,7 +273,7 @@ export default defineEventHandler(async (event) => {
                     DATE_FORMAT(issue_date, '%Y-%m') as month,
                     COUNT(*) as count
                 FROM issued_certificates
-                WHERE issue_date >= ?
+                WHERE status = 'issued' AND issue_date >= ?
                 GROUP BY DATE_FORMAT(issue_date, '%Y-%m')
                 ORDER BY month ASC
             `;

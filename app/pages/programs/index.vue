@@ -212,6 +212,7 @@
               <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Дисциплины</th>
               <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Часы</th>
               <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Статус</th>
+              <th v-if="canCreateCourses" class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Действия</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -250,6 +251,18 @@
                   {{ course.isActive ? "Активна" : "Неактивна" }}
                 </span>
               </td>
+              <td v-if="canCreateCourses" class="px-6 py-4 text-right">
+                <button
+                  type="button"
+                  title="Создать копию программы"
+                  :disabled="duplicatingId !== null"
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-primary hover:text-primary disabled:opacity-50 transition-colors"
+                  @click.stop="duplicateCourse(course)"
+                >
+                  <Copy class="w-3.5 h-3.5" />
+                  {{ duplicatingId === course.id ? "Копирование..." : "Дублировать" }}
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -287,8 +300,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { definePageMeta, useAuthFetch, usePermissions, navigateTo } from "#imports";
-import { Plus, BookOpen, CheckCircle, Clock, Archive, Filter, RotateCcw, Search, Activity, ChevronDown } from "lucide-vue-next";
+import { definePageMeta, useAuthFetch, useNotification, usePermissions, navigateTo } from "#imports";
+import { Plus, BookOpen, CheckCircle, Clock, Archive, Filter, RotateCcw, Search, Activity, ChevronDown, Copy } from "lucide-vue-next";
 import type { Course, CourseType } from "~/types/course";
 
 // Определяем мета-данные страницы
@@ -298,10 +311,12 @@ definePageMeta({
 
 // Используем authFetch для авторизованных запросов
 const { authFetch } = useAuthFetch();
+const { success: showSuccess, error: showError } = useNotification();
 const { canCreateCourses } = usePermissions();
 
 // Состояние
 const loading = ref(false);
+const duplicatingId = ref<string | null>(null);
 const courses = ref<Course[]>([]);
 const pagination = ref({
   page: 1,
@@ -399,6 +414,40 @@ const changePage = (page: number) => {
 
 const viewCourse = (course: Course) => {
   navigateTo(`/programs/${course.id}`);
+};
+
+// Создаёт копию программы и открывает её для редактирования
+const duplicateCourse = async (course: Course) => {
+  if (duplicatingId.value) return;
+
+  duplicatingId.value = course.id;
+
+  try {
+    const response = await authFetch<{
+      success: boolean;
+      message?: string;
+      course?: Course;
+    }>(`/api/courses/${course.id}/duplicate`, {
+      method: "POST",
+    });
+
+    if (response.success && response.course) {
+      showSuccess("Копия учебной программы создана", "Успех");
+      navigateTo(`/programs/edit/${response.course.id}`);
+    } else {
+      showError(
+        response.message || "Не удалось создать копию учебной программы",
+        "Ошибка",
+      );
+    }
+  } catch (err: any) {
+    showError(
+      err.data?.message || "Не удалось создать копию учебной программы",
+      "Ошибка",
+    );
+  } finally {
+    duplicatingId.value = null;
+  }
 };
 
 // Инициализация

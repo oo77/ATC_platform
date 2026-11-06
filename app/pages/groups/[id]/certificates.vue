@@ -118,6 +118,49 @@
               />
             </div>
 
+            <!-- Расширенные функции: дополнительные даты для шаблона -->
+            <label
+              class="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm cursor-pointer select-none"
+            >
+              <input
+                v-model="extendedFeatures"
+                type="checkbox"
+                class="rounded-md border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/20 bg-white dark:bg-slate-800 w-4 h-4"
+              />
+              <span
+                class="text-sm font-bold text-slate-600 dark:text-slate-400"
+                >Расширенные функции</span
+              >
+            </label>
+            <template v-if="extendedFeatures">
+              <label
+                class="flex items-center gap-2 pl-3 pr-1 py-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"
+              >
+                <span
+                  class="text-xs font-bold text-slate-500 dark:text-slate-400"
+                  >Дата теоретического обучения</span
+                >
+                <input
+                  v-model="theoryDate"
+                  type="date"
+                  class="border-0 bg-transparent px-2 py-1 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-0 appearance-none"
+                />
+              </label>
+              <label
+                class="flex items-center gap-2 pl-3 pr-1 py-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"
+              >
+                <span
+                  class="text-xs font-bold text-slate-500 dark:text-slate-400"
+                  >Дата проведения практического занятия</span
+                >
+                <input
+                  v-model="practiceDate"
+                  type="date"
+                  class="border-0 bg-transparent px-2 py-1 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-0 appearance-none"
+                />
+              </label>
+            </template>
+
             <!-- Срок действия -->
             <div
               v-if="group.course?.certificateValidityMonths"
@@ -262,7 +305,6 @@
           <UiButton
             @click="openBulkIssueModal('eligible')"
             :disabled="
-              !template ||
               eligibleWithoutCertificate === 0 ||
               isIssuing ||
               certIssueStore.isIssuing.value
@@ -289,7 +331,6 @@
           <UiButton
             @click="openBulkIssueModal('selected')"
             :disabled="
-              !template ||
               selectedStudentIds.length === 0 ||
               isIssuing ||
               certIssueStore.isIssuing.value
@@ -310,6 +351,17 @@
               />
             </svg>
             Выдать выбранным ({{ selectedStudentIds.length }})
+          </UiButton>
+
+          <!-- Скачать все выданные сертификаты группы одним архивом -->
+          <UiButton
+            @click="downloadAllCertificates"
+            :disabled="issuedCertificateIds.length === 0 || downloadingArchive"
+            variant="outline"
+          >
+            <Loader2 v-if="downloadingArchive" class="w-4 h-4 mr-2 animate-spin" />
+            <Download v-else class="w-4 h-4 mr-2" />
+            Скачать все сертификаты ({{ issuedCertificateIds.length }})
           </UiButton>
 
           <!-- Скачать ведомость с выбором формата -->
@@ -352,67 +404,6 @@
               </button>
               <button
                 @click="downloadReport('docx')"
-                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-b-lg text-gray-900 dark:text-white"
-              >
-                <svg
-                  class="w-4 h-4 text-primary"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <span>Скачать Word</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Скачать ведомость контроля знаний (бланк по дисциплинам, для заполнения от руки) -->
-          <div class="relative inline-block">
-            <UiButton
-              @click="toggleAssessmentSheetDropdown"
-              :disabled="generatingAssessmentSheet"
-              variant="outline"
-              class="font-bold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              <FileIcon v-if="!generatingAssessmentSheet" class="w-4 h-4 mr-2" />
-              <Loader2 v-else class="w-4 h-4 mr-2 animate-spin" />
-              <span>{{
-                generatingAssessmentSheet ? "Генерация..." : "Ведомость контроля"
-              }}</span>
-              <ChevronDown class="w-4 h-4 ml-1 opacity-50" />
-            </UiButton>
-
-            <div
-              v-if="showAssessmentSheetDropdown"
-              class="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden"
-            >
-              <button
-                @click="downloadAssessmentSheet('pdf')"
-                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-t-lg text-gray-900 dark:text-white"
-              >
-                <svg
-                  class="w-4 h-4 text-danger"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <span>Скачать PDF</span>
-              </button>
-              <button
-                @click="downloadAssessmentSheet('docx')"
                 class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-b-lg text-gray-900 dark:text-white"
               >
                 <svg
@@ -690,9 +681,7 @@
                       "
                       @click="issueSingle(row)"
                       :disabled="
-                        !template ||
-                        isIssuing ||
-                        issuingStudentId === row.student.id
+                        isIssuing || issuingStudentId === row.student.id
                       "
                       class="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Выдать сертификат"
@@ -742,6 +731,15 @@
       </div>
     </template>
 
+    <!-- Модалка выбора шаблона (для одиночной выдачи) -->
+    <CertificatesTemplateSelectModal
+      :is-open="templateSelectModalOpen"
+      :student="templateSelectRow?.student ?? null"
+      :standard-template="template"
+      @close="templateSelectModalOpen = false"
+      @confirm="handleTemplateSelected"
+    />
+
     <!-- Модалка предупреждений -->
     <CertificatesWarningsModal
       :is-open="warningsModalOpen"
@@ -763,7 +761,7 @@
       ref="bulkIssueModalRef"
       :is-open="bulkIssueModalOpen"
       :students-count="bulkIssueStudentIds.length"
-      :template-name="template?.name || ''"
+      :standard-template="template"
       @close="bulkIssueModalOpen = false"
       @confirm="executeBulkIssue"
       @complete="handleBulkIssueComplete"
@@ -829,6 +827,16 @@ const template = ref<CertificateTemplate | null>(null);
 // Issue settings
 const issueDate = ref(new Date().toISOString().split("T")[0]); // Сегодняшняя дата
 
+// Расширенные функции: необязательные даты для переменных шаблона
+const extendedFeatures = ref(false);
+const theoryDate = ref("");
+const practiceDate = ref("");
+// Без галочки даты не отправляем — в сертификате будет пустая строка
+const extendedDates = computed(() => ({
+  theoryDate: extendedFeatures.value ? theoryDate.value || null : null,
+  practiceDate: extendedFeatures.value ? practiceDate.value || null : null,
+}));
+
 // Инструкторы для выбора
 interface InstructorOption {
   id: string;
@@ -850,14 +858,19 @@ const issueResults = ref<IssueCertificatesResponse["results"]>([]);
 const resultsModalOpen = ref(false);
 const generatingPdf = ref(false); // Состояние генерации ведомости
 const showReportDropdown = ref(false); // Состояние выпадающего меню формата
-const generatingAssessmentSheet = ref(false); // Состояние генерации ведомости контроля знаний
-const showAssessmentSheetDropdown = ref(false); // Состояние выпадающего меню формата
+const downloadingArchive = ref(false); // Состояние скачивания архива сертификатов
 
 // Bulk issue modal
 const bulkIssueModalOpen = ref(false);
 const bulkIssueModalRef = ref<any>(null);
 const bulkIssueStudentIds = ref<string[]>([]);
 const bulkIssueMode = ref<"eligible" | "selected">("eligible");
+
+// Выбор шаблона при одиночной выдаче
+type IssueTemplate = Pick<CertificateTemplate, "id" | "name">;
+const templateSelectModalOpen = ref(false);
+const templateSelectRow = ref<CertificateJournalRow | null>(null);
+const pendingIssueTemplateId = ref<string | null>(null);
 
 // Warnings modal
 const warningsModalOpen = ref(false);
@@ -887,6 +900,13 @@ const isPartialSelected = computed(() => {
   if (isAllSelected.value) return false;
   return selectedStudentIds.value.length > 0;
 });
+
+// Идентификаторы выданных сертификатов группы (для архива)
+const issuedCertificateIds = computed(() =>
+  journal.value.flatMap((r) =>
+    r.certificate?.status === "issued" ? [r.certificate.id] : [],
+  ),
+);
 
 // Количество допущенных без сертификата
 const eligibleWithoutCertificate = computed(() => {
@@ -986,34 +1006,44 @@ const showWarnings = (row: CertificateJournalRow) => {
   warningsModalOpen.value = true;
 };
 
-// Issue single
+// Issue single: сначала спрашиваем, по какому шаблону выдать
 const issueSingle = (row: CertificateJournalRow) => {
   if (isIssuing.value || issuingStudentId.value) return;
 
-  if (!template.value) {
-    showError("Шаблон сертификата не назначен для курса");
-    return;
-  }
+  templateSelectRow.value = row;
+  templateSelectModalOpen.value = true;
+};
+
+// Шаблон выбран — выдаём (или сначала показываем предупреждения)
+const handleTemplateSelected = (selected: IssueTemplate) => {
+  const row = templateSelectRow.value;
+  templateSelectModalOpen.value = false;
+  if (!row || isIssuing.value || issuingStudentId.value) return;
 
   if (!row.eligibility.isEligible) {
     selectedStudent.value = row.student;
     selectedWarnings.value = row.eligibility.warnings;
     pendingIssueStudentId.value = row.student.id;
+    pendingIssueTemplateId.value = selected.id;
     warningsModalOpen.value = true;
     return;
   }
 
   issuingStudentId.value = row.student.id;
-  issueToStudents([row.student.id], false);
+  issueToStudents([row.student.id], false, selected.id);
 };
 
 // Issue with warnings
 const handleIssueWithWarnings = () => {
   if (isIssuing.value || issuingStudentId.value) return;
 
-  if (pendingIssueStudentId.value) {
+  if (pendingIssueStudentId.value && pendingIssueTemplateId.value) {
     issuingStudentId.value = pendingIssueStudentId.value;
-    issueToStudents([pendingIssueStudentId.value], true);
+    issueToStudents(
+      [pendingIssueStudentId.value],
+      true,
+      pendingIssueTemplateId.value,
+    );
   }
   warningsModalOpen.value = false;
 };
@@ -1023,11 +1053,6 @@ const openBulkIssueModal = (mode: "eligible" | "selected") => {
   // Защита от открытия во время обработки
   if (isIssuing.value || certIssueStore.isIssuing.value) {
     console.warn("[Certificates] Выдача уже выполняется");
-    return;
-  }
-
-  if (!template.value) {
-    showError("Шаблон сертификата не назначен для курса");
     return;
   }
 
@@ -1054,14 +1079,14 @@ const openBulkIssueModal = (mode: "eligible" | "selected") => {
 };
 
 // Выполнить массовую выдачу с прогрессом (теперь использует глобальный store)
-const executeBulkIssue = async () => {
+const executeBulkIssue = async (selected: IssueTemplate) => {
   // Защита от двойного вызова
   if (isIssuing.value || certIssueStore.isIssuing.value) {
     console.warn("[Certificates] executeBulkIssue уже выполняется, пропускаем");
     return;
   }
 
-  if (!template.value || !group.value) return;
+  if (!group.value) return;
 
   // Получаем данные студентов для отображения имён
   const studentRows = journal.value.filter((r) =>
@@ -1073,10 +1098,11 @@ const executeBulkIssue = async () => {
     groupId: groupId.value,
     groupCode: group.value.code,
     courseName: group.value.course?.name || "",
-    templateId: template.value.id,
-    templateName: template.value.name,
+    templateId: selected.id,
+    templateName: selected.name,
     issueDate: issueDate.value ?? new Date().toISOString().split("T")[0]!,
     instructorId: selectedInstructorId.value,
+    ...extendedDates.value,
     studentIds: bulkIssueStudentIds.value,
     studentData: studentRows.map((r) => ({
       id: r.student.id,
@@ -1129,6 +1155,7 @@ watch(
 const issueToStudents = async (
   studentIds: string[],
   overrideWarnings: boolean,
+  templateId: string,
 ) => {
   isIssuing.value = true;
   try {
@@ -1137,10 +1164,11 @@ const issueToStudents = async (
       {
         method: "POST",
         body: {
-          templateId: template.value!.id,
+          templateId,
           studentIds,
           issueDate: issueDate.value,
           instructorId: selectedInstructorId.value,
+          ...extendedDates.value,
           expiryMode: group.value?.course?.certificateValidityMonths
             ? "auto"
             : "none",
@@ -1248,57 +1276,37 @@ const downloadReport = async (format: "pdf" | "docx" = "pdf") => {
   }
 };
 
-// Функция переключения выпадающего меню формата ведомости контроля знаний
-const toggleAssessmentSheetDropdown = () => {
-  showAssessmentSheetDropdown.value = !showAssessmentSheetDropdown.value;
-};
+// Скачивание всех выданных сертификатов группы одним ZIP-архивом
+// (server/api/certificates/archive.post.ts, не больше 200 за раз)
+const downloadAllCertificates = async () => {
+  if (downloadingArchive.value || issuedCertificateIds.value.length === 0) return;
 
-// Скачивание «Ведомости проведения контроля знаний» — бланк по утверждённому образцу,
-// формируется сервером (server/services/assessmentSheetService.ts)
-const downloadAssessmentSheet = async (format: "pdf" | "docx" = "pdf") => {
-  if (generatingAssessmentSheet.value || !groupId.value) return;
-
-  showAssessmentSheetDropdown.value = false;
-  generatingAssessmentSheet.value = true;
+  downloadingArchive.value = true;
   try {
-    const blob = await authFetch<Blob>(
-      `/api/groups/${groupId.value}/assessment-sheet?format=${format}`,
-      { responseType: "blob" },
-    );
+    const blob = await authFetch<Blob>("/api/certificates/archive", {
+      method: "POST",
+      body: {
+        certificateIds: issuedCertificateIds.value,
+        byOrganization: true,
+      },
+      responseType: "blob",
+    });
 
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `Vedomost_${group.value?.code || groupId.value}.${format}`;
+    link.download = `Sertifikaty_${group.value?.code || groupId.value}.zip`;
     document.body.appendChild(link);
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-
-    try {
-      await authFetch("/api/reports/log-download", {
-        method: "POST",
-        body: {
-          reportType: "assessment_sheet",
-          format,
-          groupCode: group.value?.code,
-          groupId: groupId.value,
-        },
-      });
-    } catch (logError) {
-      console.error("Failed to log download:", logError);
-    }
-
-    showSuccess(`Ведомость контроля знаний сформирована (${format.toUpperCase()})`);
   } catch (error: any) {
-    console.error("Error generating assessment sheet:", error);
+    console.error("Error downloading certificates archive:", error);
     showError(
-      error?.statusCode === 403
-        ? "Недостаточно прав для скачивания ведомости"
-        : error?.data?.message || error.message || "Ошибка при формировании ведомости",
+      error?.data?.message || error.message || "Ошибка при формировании архива",
     );
   } finally {
-    generatingAssessmentSheet.value = false;
+    downloadingArchive.value = false;
   }
 };
 

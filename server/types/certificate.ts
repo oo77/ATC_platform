@@ -24,6 +24,7 @@ export type VariableSource =
   | "student.position"
   | "student.department"
   | "student.pinfl"
+  | "student.averageScore" // Средний балл числом (86.5)
   // Данные курса
   | "course.name"
   | "course.shortName"
@@ -39,9 +40,14 @@ export type VariableSource =
   | "certificate.number"
   | "certificate.issueDate"
   | "certificate.issueDateFormatted" // "26 декабря 2025 года"
+  | "certificate.issueDateEn" // "November 18, 2026"
+  | "certificate.theoryDate" // Дата теоретического обучения (расширенные функции выдачи)
+  | "certificate.practiceDate" // Дата практического занятия (расширенные функции выдачи)
   // Данные инструктора
   | "instructor.fullName"
-  | "instructor.shortName" // Петров П.П.
+  | "instructor.shortName" // Петров П.П. / Petrov P.P. (устаревшее: RU / UZ одной строкой)
+  | "instructor.shortNameRu" // Петров П.П. (сохранённое RU, иначе из ФИО)
+  | "instructor.shortNameUz" // Petrov P.P. (сохранённое UZ)
   | "instructor.position"
   // Данные аттестации (сертификационный экзамен инструктора)
   | "attestation.examScore" // Балл за экзамен, %

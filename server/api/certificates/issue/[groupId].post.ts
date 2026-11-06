@@ -21,6 +21,7 @@ import { getGroupById } from "../../../repositories/groupRepository";
 import { getStudentById } from "../../../repositories/studentRepository";
 import {
   generateCertificatePdf,
+  resolveVariable,
   type VariableContext,
 } from "../../../utils/pdfGenerator";
 import { logActivity } from "../../../utils/activityLogger";
@@ -34,7 +35,15 @@ import type {
 interface InstructorRow extends RowDataPacket {
   id: string;
   full_name: string;
+  short_name_ru: string | null;
+  short_name_uz: string | null;
 }
+
+const optionalInputDate = z
+  .string()
+  .regex(/^(\d{4}-\d{2}-\d{2})?$/, "Некорректная дата")
+  .nullable()
+  .optional();
 
 const issueSchema = z.object({
   templateId: z.string().uuid("Некорректный ID шаблона"),
@@ -47,6 +56,9 @@ const issueSchema = z.object({
   instructorId: z.string().uuid().nullable().optional(), // ID инструктора для сертификата
   overrideWarnings: z.boolean().optional(),
   notes: z.string().max(1000).optional(),
+  // Расширенные функции: необязательные даты (YYYY-MM-DD), пусто — пустая строка в шаблоне
+  theoryDate: optionalInputDate,
+  practiceDate: optionalInputDate,
 });
 
 // Директория для генерируемых файлов
@@ -81,6 +93,17 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 404,
         message: "Шаблон не найден",
+      });
+    }
+
+    // Вместо стандартного шаблона программы можно выбрать только активный
+    if (
+      template.id !== group.course?.certificateTemplateId &&
+      !template.isActive
+    ) {
+      throw createError({
+        statusCode: 400,
+        message: "Выбранный шаблон неактивен",
       });
     }
 
@@ -122,17 +145,21 @@ export default defineEventHandler(async (event) => {
     let instructor: {
       id: string;
       fullName: string;
+      shortNameRu: string | null;
+      shortNameUz: string | null;
       position: null;
     } | null = null;
     if (validated.instructorId) {
       const instructorRows = await executeQuery<InstructorRow[]>(
-        `SELECT id, full_name FROM instructors WHERE id = ? AND is_active = true LIMIT 1`,
+        `SELECT id, full_name, short_name_ru, short_name_uz FROM instructors WHERE id = ? AND is_active = true LIMIT 1`,
         [validated.instructorId],
       );
       if (instructorRows.length > 0) {
         instructor = {
           id: instructorRows[0].id,
           fullName: instructorRows[0].full_name,
+          shortNameRu: instructorRows[0].short_name_ru,
+          shortNameUz: instructorRows[0].short_name_uz,
           position: null,
         };
       }
@@ -171,8 +198,8 @@ export default defineEventHandler(async (event) => {
             continue;
           }
 
-          // Если сертификат отозван или в черновике - будем переиздавать (обновлять)
-          // Для этого используем флаг, который обработаем ниже
+          // Черновик ниже переиздаём в той же записи, а вместо отозванного
+          // создаём новую: отозванный остаётся в базе как архив
         }
 
         // Получаем студента
@@ -221,6 +248,7 @@ export default defineEventHandler(async (event) => {
             position: student.position,
             department: student.department || null,
             pinfl: student.pinfl,
+            averageScore: eligibility.averageGrade,
           },
           course: {
             id: group.course?.id || "",
@@ -242,6 +270,8 @@ export default defineEventHandler(async (event) => {
             verificationUrl: `${
               process.env.APP_URL || "https://atc.uz"
             }/verify/${certificateNumber}`,
+            theoryDate: validated.theoryDate || null,
+            practiceDate: validated.practiceDate || null,
           },
           instructor,
         };
@@ -294,10 +324,15 @@ export default defineEventHandler(async (event) => {
           certificateNumber,
           issueDate,
           expiryDate,
+          // Снимок на момент выдачи: при перегенерации PDF значения берутся отсюда
           variablesData: {
             studentName: student.fullName,
             courseName: group.course?.name || "",
             certificateNumber,
+            averageScore: resolveVariable("student.averageScore", context),
+            issueDateEn: resolveVariable("certificate.issueDateEn", context),
+            theoryDate: resolveVariable("certificate.theoryDate", context),
+            practiceDate: resolveVariable("certificate.practiceDate", context),
           },
           warnings:
             eligibility.warnings.length > 0 ? eligibility.warnings : undefined,
@@ -306,17 +341,17 @@ export default defineEventHandler(async (event) => {
           notes: validated.notes,
         };
 
-        if (
-          existing &&
-          (existing.status === "draft" || existing.status === "revoked")
-        ) {
+        const reissueInPlace = existing?.status === "draft";
+
+        if (existing && reissueInPlace) {
           // Переиздаём существующий сертификат
           console.log(
             `[Certificates] Reissuing certificate for student ${studentId}, existing status: ${existing.status}`,
           );
           certificate = await reissueCertificate(existing.id, certData);
         } else {
-          // Создаём новый сертификат
+          // Создаём новый сертификат. Отозванный (existing) не трогаем: он
+          // остаётся архивом со своим номером, PDF и причиной отзыва
           certificate = await createIssuedCertificate({
             groupId,
             studentId,
@@ -328,7 +363,7 @@ export default defineEventHandler(async (event) => {
         await updateCertificateFiles(certificate.id, pdfUrl, pdfUrl);
 
         // Логируем
-        const logAction = existing ? "UPDATE" : "CREATE";
+        const logAction = reissueInPlace ? "UPDATE" : "CREATE";
         await logActivity(
           event,
           logAction,
@@ -339,9 +374,12 @@ export default defineEventHandler(async (event) => {
             groupId,
             studentId,
             certificateNumber,
+            templateId: template.id,
+            templateName: template.name,
             hasWarnings: eligibility.warnings.length > 0,
             overrideWarnings: validated.overrideWarnings,
             reissued: !!existing,
+            previousCertificateNumber: existing?.certificateNumber,
           },
         );
 

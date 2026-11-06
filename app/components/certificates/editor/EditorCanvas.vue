@@ -14,14 +14,35 @@
         height: `${templateData.height}px`,
         transform: `scale(${zoom})`,
         transformOrigin: 'top left',
-        background: backgroundStyle,
       }"
     >
+      <!-- Фон — отдельным слоем, чтобы перемещение элементов не перерисовывало его -->
+      <div class="background-layer" :style="{ background: backgroundStyle }" />
+
       <!-- Ручки изменения размера холста -->
       <template v-if="!isDragging && !isSelecting && selectedElementIds.size === 0">
         <div class="canvas-resize-handle right" @mousedown.stop="handleCanvasResizeStart($event, 'right')"></div>
         <div class="canvas-resize-handle bottom" @mousedown.stop="handleCanvasResizeStart($event, 'bottom')"></div>
         <div class="canvas-resize-handle bottom-right" @mousedown.stop="handleCanvasResizeStart($event, 'bottom-right')"></div>
+      </template>
+
+      <!-- Сетка -->
+      <div v-if="showGrid" class="grid-layer" :style="gridStyle" />
+
+      <!-- Поля печати и центральные оси -->
+      <template v-if="showMargins">
+        <div
+          class="margin-frame"
+          :style="{
+            left: `${marginPx}px`,
+            top: `${marginPx}px`,
+            right: `${marginPx}px`,
+            bottom: `${marginPx}px`,
+            borderWidth: `${1 / zoom}px`,
+          }"
+        />
+        <div class="center-axis vertical" :style="{ width: `${1 / zoom}px` }" />
+        <div class="center-axis horizontal" :style="{ height: `${1 / zoom}px` }" />
       </template>
 
       <!-- Направляющие линии -->
@@ -292,6 +313,11 @@ const props = defineProps<{
   activePage: CertificatePage;
   selectedElementIds: Set<string>;
   zoom: number;
+  showGrid?: boolean;
+  gridSize?: number;
+  snapToGrid?: boolean;
+  showMargins?: boolean;
+  marginPx?: number;
 }>();
 
 const emit = defineEmits<{
@@ -305,7 +331,47 @@ const emit = defineEmits<{
   ): void;
   (e: "delete-element", id: string): void;
   (e: "set-custom-dimensions", width: number, height: number, saveHistory: boolean): void;
+  // Начало/конец перетаскивания или ресайза — всё между ними один шаг Undo
+  (e: "transform-start"): void;
+  (e: "transform-end"): void;
 }>();
+
+const isTransforming = ref(false);
+
+function startTransform() {
+  if (isTransforming.value) return;
+  isTransforming.value = true;
+  emit("transform-start");
+}
+
+function endTransform() {
+  if (!isTransforming.value) return;
+  isTransforming.value = false;
+  emit("transform-end");
+}
+
+const gridStep = computed(() => Math.max(2, props.gridSize ?? 20));
+
+const gridStyle = computed(() => {
+  const step = gridStep.value;
+  // Толщина линии компенсирует масштаб, чтобы сетка не пропадала при уменьшении
+  const line = `${1 / props.zoom}px`;
+  const major = step * 5;
+  return {
+    backgroundImage: [
+      `linear-gradient(to right, rgba(59,130,246,0.28) ${line}, transparent ${line})`,
+      `linear-gradient(to bottom, rgba(59,130,246,0.28) ${line}, transparent ${line})`,
+      `linear-gradient(to right, rgba(59,130,246,0.12) ${line}, transparent ${line})`,
+      `linear-gradient(to bottom, rgba(59,130,246,0.12) ${line}, transparent ${line})`,
+    ].join(","),
+    backgroundSize: `${major}px ${major}px, ${major}px ${major}px, ${step}px ${step}px, ${step}px ${step}px`,
+  };
+});
+
+function snapValue(value: number): number {
+  const step = gridStep.value;
+  return Math.round(value / step) * step;
+}
 
 const editingId = ref<string | null>(null);
 const textEditorRef = ref<HTMLElement | null>(null);
@@ -560,6 +626,7 @@ function applySnapping(
 
 // Обработка клика на холсте
 function handleCanvasMouseDown(e: MouseEvent) {
+  if (e.button !== 0) return;
   if (
     e.target === e.currentTarget ||
     (e.target as HTMLElement).classList.contains("canvas-content")
@@ -634,6 +701,9 @@ function handleSelectionEnd() {
 
 // Обработка начала перетаскивания
 function handleMouseDown(e: MouseEvent, element: TemplateElement) {
+  if (e.button !== 0) return;
+  // Во время редактирования текста клики внутри него ставят курсор, а не тащат блок
+  if (editingId.value === element.id) return;
   if (element.locked) {
     emit("select", element.id, e.ctrlKey || e.metaKey);
     return;
@@ -647,6 +717,7 @@ function handleMouseDown(e: MouseEvent, element: TemplateElement) {
   }
 
   isDragging.value = true;
+  startTransform();
   dragStartX.value = e.clientX;
   dragStartY.value = e.clientY;
 
@@ -683,8 +754,10 @@ function handleMouseMove(e: MouseEvent) {
         // Вычисляем направляющие
         calculateGuides([firstElement], newX, newY);
 
-        // Применяем привязку
-        const snapped = applySnapping(newX, newY, firstElement);
+        // Применяем привязку: к сетке (если включена) или к направляющим
+        const snapped = props.snapToGrid
+          ? { x: snapValue(newX), y: snapValue(newY) }
+          : applySnapping(newX, newY, firstElement);
         const snapDeltaX = snapped.x - newX;
         const snapDeltaY = snapped.y - newY;
 
@@ -724,6 +797,7 @@ function handleMouseUp() {
   isResizing.value = false;
   resizeElement.value = null;
   guides.value = { vertical: [], horizontal: [], distances: [] };
+  endTransform();
 
   document.removeEventListener("mousemove", handleMouseMove);
   document.removeEventListener("mouseup", handleMouseUp);
@@ -731,7 +805,9 @@ function handleMouseUp() {
 
 // Начало изменения размера холста
 function handleCanvasResizeStart(e: MouseEvent, handle: string) {
+  if (e.button !== 0) return;
   isCanvasResizing.value = true;
+  startTransform();
   canvasResizeHandle.value = handle;
   canvasResizeStartX.value = e.clientX;
   canvasResizeStartY.value = e.clientY;
@@ -753,10 +829,14 @@ function handleCanvasMouseMove(e: MouseEvent) {
   let newHeight = canvasResizeStartHeight.value;
 
   if (canvasResizeHandle.value.includes("right")) {
-    newWidth = Math.max(200, Math.min(5000, canvasResizeStartWidth.value + deltaX));
+    newWidth = canvasResizeStartWidth.value + deltaX;
+    if (props.snapToGrid) newWidth = snapValue(newWidth);
+    newWidth = Math.max(200, Math.min(5000, newWidth));
   }
   if (canvasResizeHandle.value.includes("bottom")) {
-    newHeight = Math.max(200, Math.min(5000, canvasResizeStartHeight.value + deltaY));
+    newHeight = canvasResizeStartHeight.value + deltaY;
+    if (props.snapToGrid) newHeight = snapValue(newHeight);
+    newHeight = Math.max(200, Math.min(5000, newHeight));
   }
 
   // Обновляем размер без сохранения в историю
@@ -765,11 +845,8 @@ function handleCanvasMouseMove(e: MouseEvent) {
 
 // Окончание изменения размера холста
 function handleCanvasMouseUp() {
-  if (isCanvasResizing.value) {
-    // Сохраняем в историю
-    emit("set-custom-dimensions", props.templateData.width, props.templateData.height, true);
-  }
   isCanvasResizing.value = false;
+  endTransform();
   document.removeEventListener("mousemove", handleCanvasMouseMove);
   document.removeEventListener("mouseup", handleCanvasMouseUp);
 }
@@ -780,7 +857,9 @@ function handleResizeStart(
   element: TemplateElement,
   handle: string,
 ) {
+  if (e.button !== 0) return;
   isResizing.value = true;
+  startTransform();
   resizeHandle.value = handle;
   resizeStartX.value = e.clientX;
   resizeStartY.value = e.clientY;
@@ -843,6 +922,27 @@ function handleResize(e: MouseEvent) {
       newWidth = Math.max(minSize, resizeStartWidth.value - deltaX);
       newX = resizeStartElX.value + (resizeStartWidth.value - newWidth);
       break;
+  }
+
+  // Привязка перемещаемых краёв к сетке
+  if (props.snapToGrid) {
+    const handle = resizeHandle.value;
+    if (handle.includes("e")) {
+      newWidth = Math.max(minSize, snapValue(newX + newWidth) - newX);
+    }
+    if (handle.includes("w")) {
+      const right = newX + newWidth;
+      newX = Math.min(snapValue(newX), right - minSize);
+      newWidth = right - newX;
+    }
+    if (handle.includes("s")) {
+      newHeight = Math.max(minSize, snapValue(newY + newHeight) - newY);
+    }
+    if (handle.includes("n")) {
+      const bottom = newY + newHeight;
+      newY = Math.min(snapValue(newY), bottom - minSize);
+      newHeight = bottom - newY;
+    }
   }
 
   // Показываем направляющие с размерами
@@ -920,6 +1020,53 @@ function handleTextEnter() {
 .canvas-content {
   position: relative;
   background: white;
+}
+
+/*
+ * Фон на собственном слое композиции: браузер растеризует его один раз на масштаб.
+ * Иначе каждое перемещение элемента перерисовывает фон, и с большой картинкой
+ * (фон 7280×10292 px) перетаскивание падало до ~3 кадров в секунду.
+ */
+.background-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Сетка и поля печати поверх элементов, но не перехватывают мышь */
+.grid-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9990;
+}
+
+.margin-frame {
+  position: absolute;
+  border-style: dashed;
+  border-color: rgba(236, 72, 153, 0.7);
+  pointer-events: none;
+  z-index: 9991;
+}
+
+.center-axis {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9991;
+  background: rgba(236, 72, 153, 0.45);
+}
+
+.center-axis.vertical {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+}
+
+.center-axis.horizontal {
+  left: 0;
+  right: 0;
+  top: 50%;
 }
 
 /* Направляющие линии */

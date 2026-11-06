@@ -1,18 +1,113 @@
 /**
  * API endpoint для удаления сертификата
  * DELETE /api/certificates/:id
- * 
- * Удаляет сертификат и связанный файл (если есть)
- * ВАЖНО: Можно удалять только черновики. Выданные сертификаты нужно отзывать.
+ *
+ * Удаляет сертификат и связанные файлы (если есть)
+ * ВАЖНО: Выданный сертификат удалить нельзя — его сначала отзывают.
+ * Отозванный (архивный) удаляется полностью, вместе с PDF.
  */
 
-import { deleteCertificate, getIssuedCertificateById } from '../../repositories/certificateTemplateRepository';
+import * as fs from 'fs';
+import * as path from 'path';
+import {
+  deleteCertificate,
+  getIssuedCertificateById,
+  isCertificateFileInUse,
+} from '../../repositories/certificateTemplateRepository';
 import { deleteFile, getFileByUuid } from '../../repositories/fileRepository';
 import { storage } from '../../utils/storage';
 import { logActivity } from '../../utils/activityLogger';
 
+// Каталог PDF, сгенерированных при выдаче из журнала группы
+const CERTIFICATES_DIR = path.join(process.cwd(), 'storage', 'Certificates');
+const CERTIFICATES_URL_PREFIX = '/storage/Certificates/';
+
+/**
+ * Путь к файлу на диске по ссылке вида /storage/Certificates/<имя>.pdf.
+ * Ссылки, ведущие за пределы каталога сертификатов, не разрешаются.
+ */
+function resolveCertificateFilePath(fileUrl: string): string | null {
+  if (!fileUrl.startsWith(CERTIFICATES_URL_PREFIX)) {
+    return null;
+  }
+
+  const filePath = path.resolve(CERTIFICATES_DIR, fileUrl.slice(CERTIFICATES_URL_PREFIX.length));
+  const relativePath = path.relative(CERTIFICATES_DIR, filePath);
+
+  if (
+    !relativePath ||
+    relativePath === '..' ||
+    relativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativePath)
+  ) {
+    return null;
+  }
+
+  return filePath;
+}
+
+/**
+ * Удаляет файлы сертификата после удаления записи. Ошибки только логируются:
+ * записи уже нет, и из-за файла удаление не откатывается.
+ */
+async function deleteCertificateFiles(fileUrls: (string | null)[]): Promise<void> {
+  const uniqueUrls = [...new Set(fileUrls.filter((url): url is string => !!url))];
+
+  for (const fileUrl of uniqueUrls) {
+    try {
+      // Файл может быть общим с другим сертификатом — тогда его не трогаем
+      if (await isCertificateFileInUse(fileUrl)) {
+        console.warn(`⚠️ Файл ${fileUrl} используется другим сертификатом, не удаляем`);
+        continue;
+      }
+
+      // PDF из журнала группы лежит прямо в storage/Certificates
+      const filePath = resolveCertificateFilePath(fileUrl);
+      if (filePath) {
+        await fs.promises.rm(filePath, { force: true });
+        console.log(`✅ Файл сертификата удален: ${fileUrl}`);
+        continue;
+      }
+
+      // Загруженный файл: URL в формате /api/files/{uuid} или просто {uuid}
+      const uuidPattern = /([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i;
+      const match = fileUrl.match(uuidPattern);
+
+      if (match) {
+        const fileUuid = match[1];
+
+        // Получаем информацию о файле
+        const fileRecord = await getFileByUuid(fileUuid);
+
+        if (fileRecord) {
+          // Удаляем запись из БД (soft delete)
+          await deleteFile(fileUuid);
+
+          // Удаляем физический файл
+          try {
+            await storage.delete(fileRecord.fullPath);
+            console.log(`✅ Файл сертификата удален: ${fileUuid}`);
+          } catch (fileError) {
+            console.warn('⚠️ Не удалось удалить физический файл сертификата:', fileError);
+          }
+        }
+      }
+    } catch (fileError) {
+      console.warn('⚠️ Ошибка при удалении файла сертификата:', fileError);
+    }
+  }
+}
 
 export default defineEventHandler(async (event) => {
+  // Проверка авторизации
+  const user = event.context.user;
+  if (!user) {
+    throw createError({
+      statusCode: 401,
+      message: 'Требуется авторизация',
+    });
+  }
+
   try {
     const id = getRouterParam(event, 'id');
 
@@ -25,7 +120,7 @@ export default defineEventHandler(async (event) => {
 
     // Получаем сертификат для получения file_url и названия
     const certificate = await getIssuedCertificateById(id);
-    
+
     if (!certificate) {
       return {
         success: false,
@@ -33,47 +128,17 @@ export default defineEventHandler(async (event) => {
       };
     }
 
+    if (certificate.status === 'issued') {
+      return {
+        success: false,
+        message: 'Нельзя удалить выданный сертификат. Сначала отзовите его.',
+      };
+    }
+
     // Извлекаем название курса из variablesData
     const courseName = certificate.variablesData?.courseName || 'Неизвестный курс';
 
-    // Если есть file_url, пытаемся удалить файл
-    if (certificate.pdfFileUrl) {
-      try {
-        // Извлекаем UUID файла из URL
-        // URL может быть в формате: /api/files/{uuid} или просто {uuid}
-        const fileUrl = certificate.pdfFileUrl;
-        let fileUuid: string | null = null;
-
-        // Паттерн для извлечения UUID
-        const uuidPattern = /([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i;
-        const match = fileUrl.match(uuidPattern);
-        
-        if (match) {
-          fileUuid = match[1];
-          
-          // Получаем информацию о файле
-          const fileRecord = await getFileByUuid(fileUuid);
-          
-          if (fileRecord) {
-            // Удаляем запись из БД (soft delete)
-            await deleteFile(fileUuid);
-            
-            // Удаляем физический файл
-            try {
-              await storage.delete(fileRecord.fullPath);
-              console.log(`✅ Файл сертификата удален: ${fileUuid}`);
-            } catch (fileError) {
-              console.warn('⚠️ Не удалось удалить физический файл сертификата:', fileError);
-            }
-          }
-        }
-      } catch (fileError) {
-        console.warn('⚠️ Ошибка при удалении файла сертификата:', fileError);
-        // Продолжаем удаление сертификата даже при ошибке файла
-      }
-    }
-
-    // Удаляем сертификат из БД
+    // Сначала удаляем сертификат из БД: если это не удалось, файлы остаются на месте
     const deleted = await deleteCertificate(id);
 
     if (!deleted) {
@@ -82,6 +147,8 @@ export default defineEventHandler(async (event) => {
         message: 'Не удалось удалить сертификат',
       };
     }
+
+    await deleteCertificateFiles([certificate.pdfFileUrl, certificate.docxFileUrl]);
 
     // Логируем действие
     await logActivity(
@@ -103,7 +170,7 @@ export default defineEventHandler(async (event) => {
     };
   } catch (error) {
     console.error('Ошибка удаления сертификата:', error);
-    
+
     return {
       success: false,
       message: 'Ошибка при удалении сертификата',
