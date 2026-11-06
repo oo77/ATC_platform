@@ -3,11 +3,14 @@
  *
  * Форма повторяет печатную форму учебного центра:
  *  - справа сверху блок «УТВЕРЖДАЮ», ниже — заголовок с периодом;
- *  - строки: дни недели → академические часы (по 2 часа в паре);
- *  - колонки: места проведения (аудитории), внутри — блоки по 5 колонок
- *    «Группа | Дисциплина | Вид | Инструктор | Ожидаемое кол-во слушателей».
+ *  - строки: дни недели (Пн, Вт, …) → академические часы (по 2 часа в паре);
+ *  - слева один раз «День недели | Дата», дальше — места проведения (аудитории).
+ *    В каждом месте проведения свои колонки «Пара | Ак. час | Время» (время считается
+ *    отдельно для каждой аудитории и дня) и затем блоки по 5 колонок
+ *    «Группа | Дисциплина | Вид | Инструктор»; после ФИО инструктора через пробел — число слушателей.
  *    Блоков в аудитории столько, сколько групп занимается в ней одновременно;
- *  - ячейка «Группа» залита цветом группы (тем же, что в календаре расписания).
+ *  - ячейка «Группа» залита цветом группы (тем же, что в календаре расписания);
+ *  - печать: A3, альбомная, на одну страницу.
  *
  * Модуль не обращается к БД: всё, что нужно, передаётся в `buildScheduleWorkbook`.
  */
@@ -16,6 +19,7 @@ import ExcelJS from "exceljs";
 import type { ScheduleEvent } from "../repositories/scheduleRepository";
 import { resolveGroupColor, readableTextOn } from "../../shared/utils/groupColors";
 import { eventKindShort } from "../../shared/utils/scheduleLabels";
+import { latinToCyrillic } from "../../shared/utils/latinToCyrillic";
 
 // ============================================================================
 // ТИПЫ
@@ -50,31 +54,37 @@ export interface ScheduleExcelInput {
   approverName: string;
 }
 
+/** Начало и конец академического часа, минуты от полуночи */
+export interface HourSpan {
+  start: number;
+  end: number;
+}
+
 // ============================================================================
 // КОНСТАНТЫ ОФОРМЛЕНИЯ
 // ============================================================================
 
 const FONT_NAME = "Montserrat";
-const BLOCK_COLUMNS = 5;
-/** Ширина колонок блока: Группа | Дисциплина | Вид | Инструктор | Кол-во */
-const BLOCK_WIDTHS = [16, 28, 6, 20, 12];
-const FIRST_BLOCK_COL = 7; // G
-const MIN_PERIODS_SHOWN = 10; // 5 пар — как в печатной форме
+/** Группа | Дисциплина | Вид | Инструктор (с количеством слушателей после ФИО) */
+const BLOCK_COLUMNS = 4;
+const BLOCK_WIDTHS = [17, 30, 6, 22];
+/** Колонки времени внутри каждого места проведения: Пара | Ак. час | Время */
+const TIME_COLUMNS = 3;
+const TIME_WIDTHS = [6.5, 6.5, 14];
+const FIRST_LOC_COL = 4; // D: B — день недели, C — дата
+const MIN_PERIODS_SHOWN = 8; // 4 пары — как в печатной форме; больше — только если есть занятия
+
+/** Академический час в паре, где меняется дисциплина или вид занятия, и перерыв внутри такой пары */
+export const MIXED_HOUR_MINUTES = 45;
+export const MIXED_BREAK_MINUTES = 5;
 
 const HEADER_FILL = "FFE2EFDA";
 const DAY_FILL = "FFF2F2F2";
 const WEEKEND_FILL = "FFD9D9D9";
 const BLACK = "FF000000";
 
-const DAY_NAMES = [
-  "Понедельник",
-  "Вторник",
-  "Среда",
-  "Четверг",
-  "Пятница",
-  "Суббота",
-  "Воскресенье",
-];
+/** Сокращённые названия дней недели (пн … вс) */
+const DAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
 const MONTHS_GENITIVE = [
   "января",
@@ -109,6 +119,16 @@ const FALLBACK_PERIODS: ExcelPeriod[] = [
 
 const UNASSIGNED_LOCATION = "Без аудитории";
 
+const TIMING_NOTE =
+  "Примечание: Одна пара общей продолжительностью 1 час 20 минут состоит из двух академических часов по 40 минут каждый. " +
+  "Продолжительность перерыва между парами составляет 10 минут. После третьей пары устанавливается обеденный перерыв " +
+  "продолжительностью 40 минут. По желанию слушателей, не планирующих принимать пищу, обеденный перерыв может быть сокращён " +
+  "до 10 минут по согласованию с инструктором-преподавателем и администрацией Центра. В этом случае последующие занятия " +
+  "могут быть начаты с 13:30 при условии соблюдения полного объёма учебной нагрузки и требований образовательной программы. " +
+  "В парах, где внутри пары меняется дисциплина или вид занятия (Т/П → Э), академический час составляет 45 минут, " +
+  "перерыв между академическими часами такой пары — 5 минут. Если занятие заканчивается на нечётном академическом часе " +
+  "(1, 3, 5, 7, 9), последний академический час составляет 45 минут.";
+
 // ============================================================================
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================================
@@ -118,10 +138,11 @@ function toMinutes(hhmm: string): number {
   return (h || 0) * 60 + (m || 0);
 }
 
-/** «09:00» → «9:00» (формат печатной формы) */
-function formatClock(hhmm: string): string {
-  const [h, m] = hhmm.split(":");
-  return `${Number(h)}:${m}`;
+/** 540 → «9:00» (формат печатной формы) */
+export function formatMinutes(total: number): string {
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
 }
 
 function startOfDay(d: Date): Date {
@@ -156,10 +177,13 @@ export function formatWeekRange(start: Date, end: Date): string {
   return `с ${sd} по ${ed} ${em} ${ey} года`;
 }
 
-/** «Мусаев Олимжон Мансурович» → «Мусаев О.» */
+/**
+ * «Мусаев Олимжон Мансурович» → «Мусаев О.».
+ * Имя, записанное латиницей («Yunusov Xurshid»), переводится на русский: «Юнусов Х.».
+ */
 export function shortPersonName(fullName: string | null | undefined): string {
   if (!fullName) return "";
-  const parts = fullName.trim().split(/\s+/);
+  const parts = latinToCyrillic(fullName).trim().split(/\s+/);
   if (parts.length === 1) return parts[0] ?? "";
   const first = parts[1] ?? "";
   return `${parts[0]} ${first.charAt(0).toUpperCase()}.`;
@@ -227,6 +251,99 @@ function argb(hex: string): string {
 }
 
 // ============================================================================
+// ВРЕМЯ ПАР
+// ============================================================================
+
+function pairOf(periodNumber: number): number {
+  return Math.ceil(periodNumber / 2);
+}
+
+/**
+ * Время академических часов дня для одного места проведения.
+ *
+ * Обычная пара — по сетке настроек (40 + 40 минут). В «смешанной» паре (внутри пары меняется
+ * дисциплина или вид занятия, например Т/П → Э) часы идут по 45 минут с перерывом 5 минут,
+ * а все следующие пары сдвигаются на разницу — перерывы между парами сохраняются как в сетке.
+ *
+ * Если занятие заканчивается на нечётном часе (1, 3, 5, 7, 9) и второй час пары свободен,
+ * этот последний час идёт 45 минут; следующие пары при этом не сдвигаются.
+ *
+ * @param periods      академические часы дня (по возрастанию номера)
+ * @param mixedPairs   номера «смешанных» пар (45 + 5 + 45)
+ * @param endingPairs  номера пар, где занятие кончается на нечётном часе (первый час — 45 минут)
+ */
+export function computeHourSpans(
+  periods: ExcelPeriod[],
+  mixedPairs: ReadonlySet<number>,
+  endingPairs: ReadonlySet<number> = new Set(),
+): Map<number, HourSpan> {
+  const spans = new Map<number, HourSpan>();
+
+  const byPair = new Map<number, ExcelPeriod[]>();
+  for (const p of periods) {
+    const pair = pairOf(p.periodNumber);
+    if (!byPair.has(pair)) byPair.set(pair, []);
+    byPair.get(pair)!.push(p);
+  }
+
+  let shift = 0;
+  for (const pair of [...byPair.keys()].sort((a, b) => a - b)) {
+    const hours = byPair.get(pair)!;
+    const baseStart = toMinutes(hours[0]!.startTime);
+    const baseEnd = toMinutes(hours[hours.length - 1]!.endTime);
+
+    if (mixedPairs.has(pair) && hours.length === 2) {
+      const start = baseStart + shift;
+      const secondStart = start + MIXED_HOUR_MINUTES + MIXED_BREAK_MINUTES;
+      spans.set(hours[0]!.periodNumber, { start, end: start + MIXED_HOUR_MINUTES });
+      spans.set(hours[1]!.periodNumber, {
+        start: secondStart,
+        end: secondStart + MIXED_HOUR_MINUTES,
+      });
+      shift += 2 * MIXED_HOUR_MINUTES + MIXED_BREAK_MINUTES - (baseEnd - baseStart);
+    } else if (endingPairs.has(pair)) {
+      // Последний (нечётный) час занятия — 45 минут. Следующий час пары (свободный) идёт сразу
+      // за ним, а следующие пары сдвигаются на разницу (+5 минут)
+      const start = baseStart + shift;
+      let cursor = start + MIXED_HOUR_MINUTES;
+      spans.set(hours[0]!.periodNumber, { start, end: cursor });
+      for (const h of hours.slice(1)) {
+        const duration = toMinutes(h.endTime) - toMinutes(h.startTime);
+        spans.set(h.periodNumber, { start: cursor, end: cursor + duration });
+        cursor += duration;
+      }
+      shift += cursor - (baseEnd + shift);
+    } else {
+      for (const h of hours) {
+        spans.set(h.periodNumber, {
+          start: toMinutes(h.startTime) + shift,
+          end: toMinutes(h.endTime) + shift,
+        });
+      }
+    }
+  }
+
+  return spans;
+}
+
+function disciplineKey(ev: ScheduleEvent): string {
+  return (ev.discipline?.name || ev.title || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+/**
+ * Внутри пары идут разные занятия: меняется дисциплина или теория/практика сменяется экзаменом.
+ * Если практика занимает пару целиком, а экзамен — следующую, это не «смешанная» пара.
+ */
+export function isMixedPair(first: ScheduleEvent | undefined, second: ScheduleEvent | undefined): boolean {
+  if (!first || !second || first.id === second.id) return false;
+  if (disciplineKey(first) !== disciplineKey(second)) return true;
+  return (
+    first.eventType !== second.eventType &&
+    (first.eventType === "assessment" || second.eventType === "assessment")
+  );
+}
+
+// ============================================================================
 // ПЛАНИРОВАНИЕ СЕТКИ
 // ============================================================================
 
@@ -244,7 +361,7 @@ interface LocationPlan {
   name: string;
   /** Для каждой «дорожки» (блока из 5 колонок): день|час → событие */
   lanes: Map<string, PlacedEvent>[];
-  /** Индекс первой колонки локации */
+  /** Индекс первой колонки локации (колонка «Пара») */
   firstCol: number;
 }
 
@@ -254,6 +371,8 @@ interface DayPlan {
   name: string;
   isWeekend: boolean;
   hasEvents: boolean;
+  /** Академические часы, показанные в этот день */
+  periods: ExcelPeriod[];
   /** Excel-строки дня (первая…последняя) */
   firstRow: number;
   lastRow: number;
@@ -352,15 +471,21 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
     placed.push({ event, day, startMin, endMin, periodNumbers });
   }
 
-  // Сколько академических часов показывать: не меньше 10 (5 пар), больше — только если есть занятия
-  const maxUsed = placed.reduce(
-    (m, p) => Math.max(m, ...p.periodNumbers),
-    0,
-  );
-  const roundedMax = maxUsed % 2 === 0 ? maxUsed : maxUsed + 1;
-  const limit = Math.max(MIN_PERIODS_SHOWN, roundedMax);
-  const periods = allPeriods.filter((p) => p.periodNumber <= limit);
-  const periodByNumber = new Map(periods.map((p) => [p.periodNumber, p]));
+  // Сколько академических часов показывать в каждый день: не меньше 8 (4 пары), больше — только
+  // если в этот день есть более поздние занятия (как в печатной форме: пятница — 5 пар)
+  const maxUsedByDay = new Map<number, number>();
+  for (const p of placed) {
+    maxUsedByDay.set(
+      p.day,
+      Math.max(maxUsedByDay.get(p.day) ?? 0, ...p.periodNumbers),
+    );
+  }
+  const periodsForDay = (day: number): ExcelPeriod[] => {
+    const maxUsed = maxUsedByDay.get(day) ?? 0;
+    const limit = Math.max(MIN_PERIODS_SHOWN, maxUsed % 2 === 0 ? maxUsed : maxUsed + 1);
+    return allPeriods.filter((p) => p.periodNumber <= limit);
+  };
+  const periodNumbersShown = new Set(allPeriods.map((p) => p.periodNumber));
 
   // ---- 3. Локации и дорожки ------------------------------------------------
   const byLocation = new Map<string, PlacedEvent[]>();
@@ -377,7 +502,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
   });
 
   const locations: LocationPlan[] = [];
-  let colCursor = FIRST_BLOCK_COL;
+  let colCursor = FIRST_LOC_COL;
 
   if (locationNames.length === 0) {
     // Пустая неделя — оставляем «пустую форму» с аудиториями из справочника
@@ -389,7 +514,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
       .sort((a, b) => a.localeCompare(b, "ru", { numeric: true }));
     for (const name of names) {
       locations.push({ name, lanes: [new Map()], firstCol: colCursor });
-      colCursor += BLOCK_COLUMNS;
+      colCursor += TIME_COLUMNS + BLOCK_COLUMNS;
     }
   } else {
     for (const name of locationNames) {
@@ -397,7 +522,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
         const cells = new Map<string, PlacedEvent>();
         for (const p of laneEvents) {
           for (const n of p.periodNumbers) {
-            if (!periodByNumber.has(n)) continue;
+            if (!periodNumbersShown.has(n)) continue;
             const key = laneKey(p.day, n);
             if (!cells.has(key)) cells.set(key, p);
           }
@@ -405,11 +530,13 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
         return cells;
       });
       locations.push({ name, lanes, firstCol: colCursor });
-      colCursor += lanes.length * BLOCK_COLUMNS;
+      colCursor += TIME_COLUMNS + lanes.length * BLOCK_COLUMNS;
     }
   }
 
   const lastCol = colCursor - 1;
+  const laneFirstCol = (loc: LocationPlan, lane: number) =>
+    loc.firstCol + TIME_COLUMNS + lane * BLOCK_COLUMNS;
 
   // ---- 4. Дни и строки -----------------------------------------------------
   const HEADER_TOP = 10;
@@ -423,13 +550,15 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
   for (let i = 0; i < 7; i++) {
     const isWeekend = i >= 5;
     const hasEvents = dayHasEvents.has(i);
-    const rowCount = isWeekend && !hasEvents ? 1 : periods.length;
+    const dayPeriods = periodsForDay(i);
+    const rowCount = isWeekend && !hasEvents ? 1 : dayPeriods.length;
     days.push({
       index: i,
       date: addDays(weekStart, i),
       name: DAY_NAMES[i]!,
       isWeekend,
       hasEvents,
+      periods: dayPeriods,
       firstRow: rowCursor,
       lastRow: rowCursor + rowCount - 1,
     });
@@ -449,7 +578,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
   const ws = workbook.addWorksheet(sheetName, {
     views: [{ showGridLines: false, zoomScale: 70, zoomScaleNormal: 70 }],
     pageSetup: {
-      paperSize: 9, // A4
+      paperSize: 8, // A3
       orientation: "landscape",
       fitToPage: true,
       fitToWidth: 1,
@@ -469,13 +598,17 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
 
   // Ширина колонок
   ws.getColumn(1).width = 3;
-  ws.getColumn(2).width = 16;
-  ws.getColumn(3).width = 12;
-  ws.getColumn(4).width = 7.5;
-  ws.getColumn(5).width = 7.5;
-  ws.getColumn(6).width = 15;
-  for (let c = FIRST_BLOCK_COL; c <= lastCol; c++) {
-    ws.getColumn(c).width = BLOCK_WIDTHS[(c - FIRST_BLOCK_COL) % BLOCK_COLUMNS]!;
+  ws.getColumn(2).width = 9;
+  ws.getColumn(3).width = 11.5;
+  for (const loc of locations) {
+    for (let c = 0; c < TIME_COLUMNS; c++) {
+      ws.getColumn(loc.firstCol + c).width = TIME_WIDTHS[c]!;
+    }
+    for (let lane = 0; lane < loc.lanes.length; lane++) {
+      for (let c = 0; c < BLOCK_COLUMNS; c++) {
+        ws.getColumn(laneFirstCol(loc, lane) + c).width = BLOCK_WIDTHS[c]!;
+      }
+    }
   }
 
   const baseFont: Partial<ExcelJS.Font> = { name: FONT_NAME, size: 11 };
@@ -486,7 +619,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
   };
 
   // ---- 6. Блок «УТВЕРЖДАЮ» (правый верхний угол) ---------------------------
-  const approvalFirstCol = lastCol - BLOCK_COLUMNS + 1;
+  const approvalFirstCol = Math.max(FIRST_LOC_COL, lastCol - BLOCK_COLUMNS + 1);
   const putApproval = (row: number, text: string, bold: boolean, height: number) => {
     ws.mergeCells(row, approvalFirstCol, row, lastCol);
     const cell = ws.getCell(row, approvalFirstCol);
@@ -519,37 +652,34 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
     fgColor: { argb: HEADER_FILL },
   };
 
-  const fixedHeaders = ["День недели", "Дата", "Пара", "Ак. Час", "Время"];
-  fixedHeaders.forEach((text, i) => {
+  ["День недели", "Дата"].forEach((text, i) => {
     const col = 2 + i;
     ws.mergeCells(HEADER_TOP, col, HEADER_BOTTOM, col);
     ws.getCell(HEADER_TOP, col).value = text;
   });
 
-  ws.mergeCells(HEADER_TOP, FIRST_BLOCK_COL, HEADER_TOP, lastCol);
-  ws.getCell(HEADER_TOP, FIRST_BLOCK_COL).value = "Место проведения";
+  ws.mergeCells(HEADER_TOP, FIRST_LOC_COL, HEADER_TOP, lastCol);
+  ws.getCell(HEADER_TOP, FIRST_LOC_COL).value = "Место проведения";
 
-  const blockTitles = [
-    "Группа",
-    "Дисциплина",
-    "Вид",
-    "Инструктор",
-    "Ожидаемое кол-во слушателей",
-  ];
+  const timeTitles = ["Пара", "Ак. Час", "Время"];
+  const blockTitles = ["Группа", "Дисциплина", "Вид", "Инструктор"];
   for (const loc of locations) {
-    const width = loc.lanes.length * BLOCK_COLUMNS;
+    const width = TIME_COLUMNS + loc.lanes.length * BLOCK_COLUMNS;
     ws.mergeCells(HEADER_TOP + 1, loc.firstCol, HEADER_TOP + 1, loc.firstCol + width - 1);
     ws.getCell(HEADER_TOP + 1, loc.firstCol).value = loc.name;
+    timeTitles.forEach((text, i) => {
+      ws.getCell(HEADER_BOTTOM, loc.firstCol + i).value = text;
+    });
     for (let lane = 0; lane < loc.lanes.length; lane++) {
       blockTitles.forEach((text, i) => {
-        ws.getCell(HEADER_BOTTOM, loc.firstCol + lane * BLOCK_COLUMNS + i).value = text;
+        ws.getCell(HEADER_BOTTOM, laneFirstCol(loc, lane) + i).value = text;
       });
     }
   }
 
   ws.getRow(HEADER_TOP).height = 21;
   ws.getRow(HEADER_TOP + 1).height = 31;
-  ws.getRow(HEADER_BOTTOM).height = 50;
+  ws.getRow(HEADER_BOTTOM).height = 36;
 
   for (let r = HEADER_TOP; r <= HEADER_BOTTOM; r++) {
     for (let c = 2; c <= lastCol; c++) {
@@ -573,6 +703,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
 
   for (const day of days) {
     const compactWeekend = day.isWeekend && !day.hasEvents;
+    const periods = day.periods;
 
     // День недели и дата — на весь блок дня
     if (day.lastRow > day.firstRow) {
@@ -594,45 +725,68 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
 
     if (compactWeekend) {
       // Выходной без занятий: одна серая строка
-      for (let c = 4; c <= lastCol; c++) {
+      for (let c = FIRST_LOC_COL; c <= lastCol; c++) {
         ws.getCell(day.firstRow, c).fill = dayFill(true);
       }
       ws.getRow(day.firstRow).height = 17.4;
       continue;
     }
 
-    // Пара, академический час, время
-    periods.forEach((period, i) => {
-      const row = day.firstRow + i;
-
-      const hourCell = ws.getCell(row, 5);
-      hourCell.value = period.periodNumber;
-      hourCell.font = baseFont;
-      hourCell.alignment = center;
-
-      const timeCell = ws.getCell(row, 6);
-      timeCell.value = `${formatClock(period.startTime)}-${formatClock(period.endTime)}`;
-      timeCell.font = baseFont;
-      timeCell.alignment = center;
-
-      const pairNumber = Math.ceil(period.periodNumber / 2);
-      const isPairStart = period.periodNumber % 2 === 1;
-      if (isPairStart) {
-        const partner = periods[i + 1];
-        if (partner && partner.periodNumber === period.periodNumber + 1) {
-          ws.mergeCells(row, 4, row + 1, 4);
-        }
-        const pairCell = ws.getCell(row, 4);
-        pairCell.value = pairNumber;
-        pairCell.font = baseFont;
-        pairCell.alignment = center;
-      }
-    });
-
-    // Занятия
     for (const loc of locations) {
+      // Пары, где меняется дисциплина или вид занятия, — по 45 минут (в любой из «дорожек» аудитории)
+      const mixedPairs = new Set<number>();
+      const endingPairs = new Set<number>();
+      for (const period of periods) {
+        if (period.periodNumber % 2 !== 1) continue;
+        let mixed = false;
+        let endsOnOdd = false;
+        let secondUsed = false;
+        for (const lane of loc.lanes) {
+          const e1 = lane.get(laneKey(day.index, period.periodNumber))?.event;
+          const e2 = lane.get(laneKey(day.index, period.periodNumber + 1))?.event;
+          if (e2) secondUsed = true;
+          if (isMixedPair(e1, e2)) mixed = true;
+          else if (e1 && !e2) endsOnOdd = true; // занятие кончается на нечётном часе
+        }
+        const pair = pairOf(period.periodNumber);
+        // Второй час пары занят другой «дорожкой» — по времени это та же смешанная пара
+        if (mixed || (endsOnOdd && secondUsed)) mixedPairs.add(pair);
+        else if (endsOnOdd) endingPairs.add(pair);
+      }
+      const spans = computeHourSpans(periods, mixedPairs, endingPairs);
+
+      // Пара, академический час, время (свои для каждой аудитории)
+      periods.forEach((period, i) => {
+        const row = day.firstRow + i;
+
+        const hourCell = ws.getCell(row, loc.firstCol + 1);
+        hourCell.value = period.periodNumber;
+        hourCell.font = baseFont;
+        hourCell.alignment = center;
+
+        const span = spans.get(period.periodNumber);
+        const timeCell = ws.getCell(row, loc.firstCol + 2);
+        timeCell.value = span
+          ? `${formatMinutes(span.start)}-${formatMinutes(span.end)}`
+          : "";
+        timeCell.font = baseFont;
+        timeCell.alignment = { horizontal: "center", vertical: "middle" };
+
+        if (period.periodNumber % 2 === 1) {
+          const partner = periods[i + 1];
+          if (partner && partner.periodNumber === period.periodNumber + 1) {
+            ws.mergeCells(row, loc.firstCol, row + 1, loc.firstCol);
+          }
+          const pairCell = ws.getCell(row, loc.firstCol);
+          pairCell.value = pairOf(period.periodNumber);
+          pairCell.font = baseFont;
+          pairCell.alignment = center;
+        }
+      });
+
+      // Занятия
       loc.lanes.forEach((lane, laneIdx) => {
-        const c0 = loc.firstCol + laneIdx * BLOCK_COLUMNS;
+        const c0 = laneFirstCol(loc, laneIdx);
 
         periods.forEach((period, i) => {
           const row = day.firstRow + i;
@@ -663,13 +817,13 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
           put(1, discipline, { ...baseFont, size: 10 });
           if (truncated) ws.getCell(row, c0 + 1).note = disciplineFull;
           put(2, eventKindShort(ev.eventType), { ...baseFont, bold: true });
-          put(3, instructor, baseFont);
-          if (count !== null) put(4, count, { ...baseFont, italic: true });
+          const instructorCell = count !== null ? `${instructor} ${count}`.trim() : instructor;
+          put(3, instructorCell, baseFont);
 
           // Высота строки под самый длинный текст (переносы включены)
           const lines = Math.max(
             estimateLines(discipline, BLOCK_WIDTHS[1]! * 1.1),
-            estimateLines(instructor, BLOCK_WIDTHS[3]!),
+            estimateLines(instructorCell, BLOCK_WIDTHS[3]!),
           );
           bumpHeight(row, Math.max(19.5, lines * 15 + 4));
         });
@@ -704,7 +858,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
     // Одинарные ячейки «Группа» (без пары) — учитываем высоту текста
     for (const loc of locations) {
       loc.lanes.forEach((lane, laneIdx) => {
-        const c0 = loc.firstCol + laneIdx * BLOCK_COLUMNS;
+        const c0 = laneFirstCol(loc, laneIdx);
         periods.forEach((period, i) => {
           const row = day.firstRow + i;
           const cell = ws.getCell(row, c0);
@@ -726,13 +880,15 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
   }
 
   // ---- 10. Границы (после объединений — чтобы рамка была и у скрытых ячеек) -
-  const blockStartCols = new Set<number>();
-  const blockEndCols = new Set<number>();
+  const mediumLeftCols = new Set<number>([2, FIRST_LOC_COL]);
+  const mediumRightCols = new Set<number>([3, lastCol]);
   for (const loc of locations) {
+    mediumLeftCols.add(loc.firstCol);
+    mediumRightCols.add(loc.firstCol + TIME_COLUMNS - 1);
     for (let lane = 0; lane < loc.lanes.length; lane++) {
-      const start = loc.firstCol + lane * BLOCK_COLUMNS;
-      blockStartCols.add(start);
-      blockEndCols.add(start + BLOCK_COLUMNS - 1);
+      const start = laneFirstCol(loc, lane);
+      mediumLeftCols.add(start);
+      mediumRightCols.add(start + BLOCK_COLUMNS - 1);
     }
   }
   const dayFirstRows = new Set(days.map((d) => d.firstRow));
@@ -748,30 +904,43 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
         top: r === HEADER_TOP || (isDataRow && dayFirstRows.has(r)) ? medium : thin,
         bottom:
           r === HEADER_BOTTOM || (isDataRow && dayLastRows.has(r)) ? medium : thin,
-        left: c === 2 || c === FIRST_BLOCK_COL || blockStartCols.has(c) ? medium : thin,
-        right: c === lastCol || c === 6 || blockEndCols.has(c) ? medium : thin,
+        left: mediumLeftCols.has(c) ? medium : thin,
+        right: mediumRightCols.has(c) ? medium : thin,
       };
     }
   }
 
-  // ---- 11. Легенда ---------------------------------------------------------
-  const legendRow = lastRow + 2;
-  const legendParts = [
-    "Условные обозначения: Т — теория; П — практика; Э — проверка знаний (экзамен); Д — другое.",
-    "Цвет ячейки «Группа» совпадает с цветом группы в календаре расписания.",
+  // ---- 11. Примечания ------------------------------------------------------
+  const notes: Array<{ text: string; size: number; italic: boolean }> = [
+    { text: TIMING_NOTE, size: 10, italic: false },
+    {
+      text: "Условные обозначения: Т — теория; П — практика; Э — проверка знаний (экзамен); Д — другое. Цвет ячейки «Группа» совпадает с цветом группы в календаре расписания.",
+      size: 10,
+      italic: true,
+    },
   ];
   if (skippedOutsideGrid > 0) {
-    legendParts.push(
-      `Не отражено занятий вне сетки академических часов: ${skippedOutsideGrid}.`,
-    );
+    notes.push({
+      text: `Не отражено занятий вне сетки академических часов: ${skippedOutsideGrid}.`,
+      size: 10,
+      italic: true,
+    });
   }
-  legendParts.forEach((text, i) => {
-    const row = legendRow + i;
+
+  let totalWidth = 0;
+  for (let c = 2; c <= lastCol; c++) totalWidth += ws.getColumn(c).width ?? 8;
+
+  notes.forEach((note, i) => {
+    const row = lastRow + 2 + i;
     ws.mergeCells(row, 2, row, lastCol);
     const cell = ws.getCell(row, 2);
-    cell.value = text;
-    cell.font = { ...baseFont, size: 10, italic: true };
-    cell.alignment = { horizontal: "left", vertical: "middle" };
+    cell.value = note.text;
+    cell.font = { ...baseFont, size: note.size, italic: note.italic };
+    cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+    ws.getRow(row).height = Math.max(
+      16,
+      estimateLines(note.text, totalWidth * 1.1) * (note.size + 5) + 4,
+    );
   });
 
   return workbook;
