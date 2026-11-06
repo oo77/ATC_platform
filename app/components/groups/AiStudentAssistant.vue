@@ -43,7 +43,7 @@
             </div>
           </div>
 
-          <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+          <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             Онлайн
           </span>
@@ -64,7 +64,7 @@
             </h5>
             <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed text-left">
               1. Прикрепите <strong>PDF приказа</strong> или служебной записки.<br />
-              2. Либо вставьте скриншот из буфера (<kbd class="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-mono text-[10px]">Ctrl+V</kbd>).<br />
+              2. Либо вставьте скриншот из буфера (<kbd class="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-mono text-[11px]">Ctrl+V</kbd>).<br />
               3. Либо вставьте текст списка из Telegram или письма.
             </p>
           </div>
@@ -92,7 +92,7 @@
               </div>
               <p class="whitespace-pre-wrap">{{ msg.text }}</p>
             </div>
-            <span class="text-[10px] text-slate-400 mt-1 px-1">
+            <span class="text-[11px] text-slate-400 mt-1 px-1">
               {{ msg.role === 'user' ? 'Вы' : 'ИИ-Ассистент' }}
             </span>
           </div>
@@ -118,7 +118,7 @@
               <ImageIcon v-else class="w-4 h-4 shrink-0 text-blue-500" />
               <div class="min-w-0 flex-1">
                 <p class="font-bold truncate text-slate-900 dark:text-white">{{ selectedFile.name }}</p>
-                <p class="text-[10px] text-slate-500 opacity-80">{{ formatBytes(selectedFile.size) }}</p>
+                <p class="text-[11px] text-slate-500 opacity-80">{{ formatBytes(selectedFile.size) }}</p>
               </div>
             </div>
             <button
@@ -378,7 +378,7 @@
                       </span>
                       <span
                         v-if="isAlreadyEnrolled(item.chosenId)"
-                        class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                        class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
                       >
                         Уже в группе
                       </span>
@@ -471,7 +471,7 @@
                           <span class="font-bold text-xs text-slate-900 dark:text-white truncate">
                             {{ c.fullName }}
                           </span>
-                          <span v-if="c.pinfl" class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                          <span v-if="c.pinfl" class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                             {{ c.pinfl }}
                           </span>
                         </div>

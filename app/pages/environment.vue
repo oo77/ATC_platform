@@ -355,6 +355,26 @@
         </div>
       </form>
     </div>
+
+    <!-- Подтверждения запуска миграций и перезапуска (заменяют нативный confirm) -->
+    <UiConfirmModal
+      :is-open="showMigrateConfirm"
+      variant="warning"
+      title="Запустить миграции?"
+      message="Запустить миграции базы данных?"
+      confirm-text="Запустить"
+      @confirm="runMigrationsConfirmed"
+      @cancel="showMigrateConfirm = false"
+    />
+    <UiConfirmModal
+      :is-open="showSaveConfirm"
+      variant="warning"
+      title="Сохранить и перезапустить?"
+      message="Сохранить все настройки и перезапустить приложение?"
+      confirm-text="Сохранить и перезапустить"
+      @confirm="handleSaveAndRestartConfirmed"
+      @cancel="showSaveConfirm = false"
+    />
   </div>
 </template>
 
@@ -505,16 +525,19 @@ const testConnection = async () => {
 };
 
 // Запуск миграций
-const runMigrations = async () => {
+// Безопасность UX: проверка подключения как раньше, затем вместо нативного confirm() открываем UiConfirmModal
+const showMigrateConfirm = ref(false);
+const runMigrations = () => {
   if (!connectionTest.value?.success) {
     alert("Сначала проверьте подключение к базе данных");
     return;
   }
+  showMigrateConfirm.value = true;
+};
 
-  if (!confirm("Запустить миграции базы данных?")) {
-    return;
-  }
-
+// Прежняя логика запуска миграций — после подтверждения
+const runMigrationsConfirmed = async () => {
+  showMigrateConfirm.value = false;
   loading.value = true;
   migrationsStatus.value = "⏳";
   migrationsText.value = "Выполнение...";
@@ -541,11 +564,15 @@ const runMigrations = async () => {
 };
 
 // Сохранение и перезапуск
-const handleSaveAndRestart = async () => {
-  if (!confirm("Сохранить все настройки и перезапустить приложение?")) {
-    return;
-  }
+// Безопасность UX: отправка формы только открывает UiConfirmModal (вместо нативного confirm())
+const showSaveConfirm = ref(false);
+const handleSaveAndRestart = () => {
+  showSaveConfirm.value = true;
+};
 
+// Прежняя логика сохранения и перезапуска — после подтверждения
+const handleSaveAndRestartConfirmed = async () => {
+  showSaveConfirm.value = false;
   loading.value = true;
 
   try {

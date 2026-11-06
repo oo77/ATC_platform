@@ -119,7 +119,7 @@
           >
             <div
               class="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200"
-              :class="config.is_public ? 'translate-x-4' : 'translate-x-0'"
+              :class="config.is_public ? 'trangray-x-4' : 'trangray-x-0'"
             />
             <input type="checkbox" v-model="config.is_public" class="sr-only" />
           </div>
@@ -129,11 +129,11 @@
           >
         </label>
 
-        <!-- Excel -->
+        <!-- Excel — вторичное действие результата: спокойная обводка вместо яркой зелёной кнопки (главное действие — «Конструктор») -->
         <button
           v-if="result.rows.length > 0"
           :disabled="exporting"
-          class="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-60 transition-all shadow-sm"
+          class="flex h-9 items-center gap-1.5 px-3 border border-stroke dark:border-strokedark text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 transition-colors"
           @click="exportExcel"
         >
           <svg
@@ -170,7 +170,7 @@
         <!-- Сохранить -->
         <button
           :disabled="saving"
-          class="flex items-center gap-1.5 px-3 py-2 border border-stroke dark:border-strokedark text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 transition-all"
+          class="flex h-9 items-center gap-1.5 px-3 border border-stroke dark:border-strokedark text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 transition-colors"
           @click="saveTemplate"
         >
           <svg
@@ -193,7 +193,7 @@
 
         <!-- Кнопка открытия конструктора -->
         <button
-          class="flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-all shadow-sm relative"
+          class="relative flex h-9 items-center gap-2 px-4 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
           @click="drawerOpen = true"
         >
           <svg
@@ -213,7 +213,7 @@
           <!-- Бейдж если есть активные настройки -->
           <span
             v-if="config.columns.length > 0"
-            class="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 min-w-[18px] min-h-[18px] flex items-center justify-center bg-amber-400 text-white text-[10px] font-bold rounded-full leading-none"
+            class="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 min-w-[18px] min-h-[18px] flex items-center justify-center bg-amber-400 text-white text-[11px] font-bold rounded-full leading-none"
             >{{ config.columns.length }}</span
           >
         </button>
@@ -332,7 +332,7 @@
         class="h-full flex flex-col items-center justify-center text-center p-10"
       >
         <div
-          class="w-20 h-20 rounded-2xl bg-primary/5 dark:bg-primary/10 flex items-center justify-center mb-5 border border-primary/10"
+          class="w-20 h-20 rounded-xl bg-primary/5 dark:bg-primary/10 flex items-center justify-center mb-5 border border-primary/10"
         >
           <svg
             class="w-10 h-10 text-primary/40"
@@ -442,7 +442,7 @@
     >
       <div
         v-if="drawerOpen"
-        class="fixed inset-0 bg-black/30 backdrop-blur-[1px] z-100000"
+        class="fixed inset-0 bg-black/30-[1px] z-100000"
         @click="drawerOpen = false"
       />
     </Transition>
@@ -450,15 +450,15 @@
     <!-- Сам drawer -->
     <Transition
       enter-active-class="transition-transform duration-300 ease-out"
-      enter-from-class="translate-x-full"
-      enter-to-class="translate-x-0"
+      enter-from-class="trangray-x-full"
+      enter-to-class="trangray-x-0"
       leave-active-class="transition-transform duration-200 ease-in"
-      leave-from-class="translate-x-0"
-      leave-to-class="translate-x-full"
+      leave-from-class="trangray-x-0"
+      leave-to-class="trangray-x-full"
     >
       <div
         v-if="drawerOpen"
-        class="fixed top-0 right-0 h-full w-[85%] max-w-[1100px] z-100001 flex flex-col bg-white dark:bg-boxdark border-l border-stroke dark:border-strokedark shadow-2xl"
+        class="fixed top-0 right-0 h-full w-[85%] max-w-[1100px] z-100001 flex flex-col bg-white dark:bg-boxdark border-l border-stroke dark:border-strokedark"
       >
         <!-- Шапка drawer -->
         <div
@@ -489,12 +489,12 @@
                 Настройка отчёта
               </h2>
               <div class="flex items-center gap-2 mt-0.5">
-                <span class="text-[10px] text-gray-400"
+                <span class="text-[11px] text-gray-400"
                   >Сконструируйте структуру и фильтры</span
                 >
                 <span
                   v-if="config.columns.length > 0"
-                  class="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] font-bold rounded-md uppercase leading-none"
+                  class="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary text-[11px] font-bold rounded-md leading-none"
                 >
                   {{ config.columns.length }}
                   {{ pluralFields(config.columns.length) }}
@@ -529,7 +529,7 @@
             <div class="mb-4">
               <div class="flex items-center gap-2 mb-2">
                 <span
-                  class="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500"
+                  class="text-[11px] font-semibold tracking-[0.15em] text-gray-400 dark:text-gray-500"
                   >1. Базовая сущность</span
                 >
                 <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
@@ -597,7 +597,7 @@
                 <div>
                   <div class="flex items-center gap-2 mb-2">
                     <span
-                      class="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500"
+                      class="text-[11px] font-semibold tracking-[0.15em] text-gray-400 dark:text-gray-500"
                       >2. Поля данных</span
                     >
                     <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
@@ -605,7 +605,7 @@
 
                   <div
                     v-if="metaLoading"
-                    class="flex justify-center py-10 bg-gray-50/50 dark:bg-gray-800/20 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700"
+                    class="flex justify-center py-10 bg-gray-50/50 dark:bg-gray-800/20 rounded-xl border border-dashed border-gray-200 dark:border-gray-700"
                   >
                     <div
                       class="h-7 w-7 animate-spin rounded-full border-3 border-primary border-r-transparent"
@@ -633,7 +633,7 @@
                 <div>
                   <div class="flex items-center gap-2 mb-2">
                     <span
-                      class="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 dark:text-gray-500"
+                      class="text-[11px] font-semibold tracking-[0.15em] text-gray-400 dark:text-gray-500"
                       >3. Структура</span
                     >
                     <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
@@ -641,7 +641,7 @@
 
                   <div
                     v-if="config.columns.length === 0"
-                    class="py-10 text-center bg-gray-50/50 dark:bg-gray-800/10 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700"
+                    class="py-10 text-center bg-gray-50/50 dark:bg-gray-800/10 rounded-xl border border-dashed border-gray-200 dark:border-gray-700"
                   >
                     <p class="text-xs text-gray-400">
                       Выберите поля слева, чтобы настроить их порядок
@@ -684,7 +684,7 @@
                           {{ col.label }}
                         </p>
                         <p
-                          class="text-[9px] text-gray-400 uppercase tracking-tighter"
+                          class="text-[11px] text-gray-400 tracking-tighter"
                         >
                           {{ col.field_key }}
                         </p>
@@ -696,13 +696,13 @@
                           class="relative group/agg flex items-center bg-gray-50 dark:bg-gray-800/80 rounded-lg p-0.5 border border-gray-100 dark:border-gray-700 hover:border-primary/30 transition-all"
                         >
                           <div
-                            class="flex items-center gap-1 px-1.5 py-0.5 text-[9px] text-primary/60 font-black uppercase tracking-tighter border-r border-gray-200 dark:border-gray-700 mr-1"
+                            class="flex items-center gap-1 px-1.5 py-0.5 text-[11px] text-primary/60 font-semibold tracking-tighter border-r border-gray-200 dark:border-gray-700 mr-1"
                           >
                             Σ
                           </div>
                           <select
                             v-model="col.aggregation"
-                            class="text-[10px] font-bold text-primary bg-transparent border-none px-1 py-0.5 outline-none cursor-pointer appearance-none pr-4"
+                            class="text-[11px] font-bold text-primary bg-transparent border-none px-1 py-0.5 outline-none cursor-pointer appearance-none pr-4"
                           >
                             <option value="none">НЕТ</option>
                             <option value="count">COUNT</option>
@@ -742,7 +742,7 @@
                             @click="col.show_in_total = !col.show_in_total"
                             title="Показывать в строке ИТОГО (Σ)"
                           >
-                            <span class="text-[9px] font-black uppercase"
+                            <span class="text-[11px] font-semibold"
                               >Σ</span
                             >
                           </button>
@@ -752,7 +752,7 @@
                           >
                             <select
                               v-model="col.total_aggregation"
-                              class="text-[10px] font-bold text-orange-600 bg-transparent border-none px-1 py-0.5 outline-none cursor-pointer appearance-none pr-3"
+                              class="text-[11px] font-bold text-orange-600 bg-transparent border-none px-1 py-0.5 outline-none cursor-pointer appearance-none pr-3"
                             >
                               <option value="sum">SUM</option>
                               <option value="avg">AVG</option>
@@ -809,13 +809,13 @@
                 <div>
                   <div class="flex items-center gap-2 mb-3">
                     <span
-                      class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
+                      class="text-[11px] font-bold text-gray-400 dark:text-gray-500"
                       >4. Группировка строк</span
                     >
                     <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
                   </div>
                   <div
-                    class="bg-white dark:bg-boxdark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-4"
+                    class="bg-white dark:bg-boxdark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm p-4"
                   >
                     <ReportsGroupingSection
                       :groupings="config.groupings"
@@ -831,13 +831,13 @@
               <div class="xl:col-span-4">
                 <div class="flex items-center gap-2 mb-3">
                   <span
-                    class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
+                    class="text-[11px] font-bold text-gray-400 dark:text-gray-500"
                     >5. Фильтрация данных</span
                   >
                   <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
                 </div>
                 <div
-                  class="bg-white dark:bg-boxdark rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 h-full min-h-[400px]"
+                  class="bg-white dark:bg-boxdark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 h-full min-h-[400px]"
                 >
                   <ReportsFiltersSection
                     :filters="config.filters"
@@ -849,7 +849,7 @@
                     class="mt-8 pt-6 border-t border-gray-50 dark:border-gray-800"
                   >
                     <button
-                      class="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider text-red-500 hover:text-white border border-red-200 dark:border-red-900/40 rounded-xl hover:bg-red-500 dark:hover:bg-red-600 transition-all"
+                      class="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[11px] font-bold text-red-500 hover:text-white border border-red-200 dark:border-red-900/40 rounded-xl hover:bg-red-500 dark:hover:bg-red-600 transition-all"
                       @click="resetAll"
                     >
                       <svg

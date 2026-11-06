@@ -1,92 +1,64 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-in fade-in slide-in-from-top-4 duration-700">
-      <div class="flex items-center gap-4">
-        <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-info/10 text-info shrink-0">
-          <Gavel class="w-7 h-7" />
-        </div>
-        <div>
-          <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Комиссия аттестации</h1>
-          <p class="text-sm font-bold text-slate-500 dark:text-slate-400 mt-0.5">Реестр членов аттестационной комиссии</p>
-        </div>
-      </div>
-      <UiButton size="sm" class="h-10 px-4 gap-2 font-bold shadow-sm shrink-0" @click="openCreate">
-        <Plus class="w-4 h-4" /> Добавить
-      </UiButton>
-    </div>
+  <!-- Обёртка без двойного отступа (отступы задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок; «Добавить» — главное действие -->
+    <UiPageHeader title="Комиссия аттестации" description="Реестр членов аттестационной комиссии">
+      <template #actions>
+        <UiButton size="sm" @click="openCreate"><Plus class="mr-1.5 h-4 w-4" /> Добавить</UiButton>
+      </template>
+    </UiPageHeader>
 
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <div v-if="loading" class="flex items-center justify-center py-20">
         <div class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
       </div>
 
-      <div v-else-if="members.length === 0" class="p-16 text-center">
-        <div class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-full inline-block mb-4">
-          <Gavel class="w-10 h-10 text-slate-300 dark:text-slate-600" />
-        </div>
-        <p class="text-slate-500 font-medium">Реестр пуст</p>
-        <UiButton class="mt-6 gap-2 font-bold" @click="openCreate">
-          <Plus class="w-4 h-4" /> Добавить первого члена комиссии
-        </UiButton>
-      </div>
+      <!-- Пусто: общий компонент с кнопкой следующего шага -->
+      <UiEmptyState v-else-if="members.length === 0" :icon="Gavel" title="Реестр пуст">
+        <template #actions>
+          <UiButton size="sm" @click="openCreate"><Plus class="mr-1.5 h-4 w-4" /> Добавить первого члена комиссии</UiButton>
+        </template>
+      </UiEmptyState>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-slate-50/50 dark:bg-slate-800/50">
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Ф.И.О.</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Должность</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Организация</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Статус</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Действия</th>
+      <div v-else class="max-h-[70vh] overflow-auto">
+        <table class="w-full border-collapse text-left">
+          <!-- Sticky-шапка без CAPS -->
+          <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+            <tr class="border-b border-gray-200 dark:border-gray-800">
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Ф.И.О.</th>
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Должность</th>
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Организация</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Статус</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Действия</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-            <tr
-              v-for="m in members"
-              :key="m.id"
-              class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group"
-            >
-              <td class="px-6 py-4">
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <tr v-for="m in members" :key="m.id" class="group transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]">
+              <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
-                  <div
-                    class="h-9 w-9 shrink-0 rounded-full bg-linear-to-br from-info/20 to-info/5 text-info flex items-center justify-center font-bold text-xs border border-info/10"
-                  >
+                  <!-- Аватар-инициалы без градиента -->
+                  <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-info/10 text-xs font-semibold text-info">
                     {{ getInitials(m.fullName) }}
                   </div>
-                  <p class="font-bold text-slate-900 dark:text-white text-sm tracking-tight">{{ m.fullName }}</p>
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ m.fullName }}</p>
                 </div>
               </td>
-              <td class="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-400 max-w-[280px] truncate">
-                {{ m.position || "—" }}
+              <td class="max-w-[280px] truncate px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{{ m.position || "—" }}</td>
+              <td class="max-w-[220px] truncate px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{{ m.organization || "—" }}</td>
+              <td class="px-4 py-3 text-center">
+                <UiBadge size="sm" :color="m.isActive ? 'success' : 'light'">{{ m.isActive ? "Активен" : "Неактивен" }}</UiBadge>
               </td>
-              <td class="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-400 max-w-[220px] truncate">
-                {{ m.organization || "—" }}
-              </td>
-              <td class="px-6 py-4 text-center">
-                <span
-                  class="inline-flex items-center rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest border"
-                  :class="m.isActive
-                    ? 'bg-success/10 text-success border-success/20'
-                    : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'"
-                >
-                  {{ m.isActive ? "Активен" : "Неактивен" }}
-                </span>
-              </td>
-              <td class="px-6 py-4">
-                <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
-                    @click="openEdit(m)"
-                  >
-                    <Pencil class="w-4 h-4" />
-                  </button>
-                  <button
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-danger hover:bg-danger/10 transition-all"
-                    @click="remove(m)"
-                  >
-                    <Trash2 class="w-4 h-4" />
-                  </button>
+              <td class="px-4 py-3">
+                <!-- Действия: одна иконка (изменить) + «⋯» с опасным удалением последним. Всегда видимы на touch, на lg — по hover/focus -->
+                <div class="flex items-center justify-end gap-1 opacity-100 transition-opacity focus-within:opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
+                  <UiButton variant="ghost" size="xs" icon title="Изменить" aria-label="Изменить" @click="openEdit(m)">
+                    <Pencil class="h-4 w-4" />
+                  </UiButton>
+                  <UiDropdown
+                    icon-only
+                    :groups="[{ items: [{ key: 'delete', label: 'Удалить', icon: Trash2, danger: true }] }]"
+                    @select="remove(m)"
+                  />
                 </div>
               </td>
             </tr>
@@ -95,56 +67,64 @@
       </div>
     </div>
 
+    <!-- Модалка формы: поля h-9..h-10, подписи без CAPS -->
     <UiModal :is-open="showModal" :title="editing ? 'Изменить члена комиссии' : 'Новый член комиссии'" @close="showModal = false">
-      <div class="p-6 space-y-5">
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+      <div class="space-y-4 p-6">
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
             Ф.И.О. <span class="text-danger">*</span>
           </label>
           <input
             v-model="form.fullName"
             type="text"
             placeholder="О.М. Мусаев"
-            class="w-full rounded-xl border bg-transparent py-3 px-4 outline-none focus:ring-1 transition-all font-medium dark:bg-slate-800"
-            :class="errors.fullName ? 'border-danger focus:border-danger focus:ring-danger' : 'border-slate-200 dark:border-slate-700 focus:border-primary focus:ring-primary'"
+            class="h-10 w-full rounded-lg border bg-transparent px-3 text-sm outline-none transition-all focus:ring-1 dark:bg-gray-900"
+            :class="errors.fullName ? 'border-danger focus:border-danger focus:ring-danger' : 'border-gray-200 focus:border-primary focus:ring-primary dark:border-gray-700'"
           />
-          <p v-if="errors.fullName" class="text-xs text-danger font-semibold">{{ errors.fullName }}</p>
+          <p v-if="errors.fullName" class="text-xs font-medium text-danger">{{ errors.fullName }}</p>
         </div>
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Должность</label>
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Должность</label>
           <input
             v-model="form.position"
             type="text"
             placeholder="Директор ООО «Airports Training Center»"
-            class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 transition-all font-medium"
+            class="h-10 w-full rounded-lg border border-gray-200 bg-transparent px-3 text-sm outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-900"
           />
         </div>
-        <div class="space-y-2">
-          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Организация</label>
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Организация</label>
           <input
             v-model="form.organization"
             type="text"
-            class="w-full rounded-xl border border-slate-200 bg-transparent py-3 px-4 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 transition-all font-medium"
+            class="h-10 w-full rounded-lg border border-gray-200 bg-transparent px-3 text-sm outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary dark:border-gray-700 dark:bg-gray-900"
           />
         </div>
-        <label v-if="editing" class="flex items-center gap-3 pt-1 cursor-pointer select-none">
+        <label v-if="editing" class="flex cursor-pointer select-none items-center gap-3 pt-1">
           <input type="checkbox" v-model="form.isActive" class="peer sr-only" />
           <span
-            class="relative w-11 h-6 rounded-full bg-slate-200 dark:bg-slate-700 transition-colors peer-checked:bg-success after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-5"
+            class="relative h-6 w-11 rounded-full bg-gray-200 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-success peer-checked:after:trangray-x-5 dark:bg-gray-700"
             @click="form.isActive = !form.isActive"
           ></span>
-          <span class="text-sm font-bold text-slate-700 dark:text-slate-300">Активен</span>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Активен</span>
         </label>
       </div>
       <template #footer>
-        <div class="flex justify-between items-center px-6 py-4 border-t border-slate-100 dark:border-slate-800">
-          <button class="text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300" @click="showModal = false">
-            Отмена
-          </button>
-          <UiButton :loading="saving" class="font-bold px-6 min-w-[140px]" @click="save">Сохранить</UiButton>
+        <div class="flex items-center justify-between border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+          <UiButton variant="ghost" size="sm" @click="showModal = false">Отмена</UiButton>
+          <UiButton :loading="saving" class="min-w-[140px]" @click="save">Сохранить</UiButton>
         </div>
       </template>
     </UiModal>
+
+    <!-- Подтверждение удаления участника комиссии (заменяет нативный confirm) -->
+    <UiConfirmModal
+      :is-open="!!pendingRemove"
+      title="Удалить из комиссии?"
+      :message="`Удалить ${pendingRemove?.fullName ?? ''} из комиссии?`"
+      @confirm="removeConfirmed"
+      @cancel="pendingRemove = null"
+    />
   </div>
 </template>
 
@@ -218,8 +198,17 @@ const save = async () => {
   }
 };
 
-const remove = async (m) => {
-  if (!confirm(`Удалить ${m.fullName} из комиссии?`)) return;
+// Безопасность UX: вместо нативного confirm() сначала запоминаем участника и открываем UiConfirmModal
+const pendingRemove = ref(null);
+const remove = (m) => {
+  pendingRemove.value = m;
+};
+
+// Прежняя логика удаления выполняется после подтверждения в модалке
+const removeConfirmed = async () => {
+  const m = pendingRemove.value;
+  if (!m) return;
+  pendingRemove.value = null;
   const res = await authFetch(`/api/attestation/commission-members/${m.id}`, { method: "DELETE" });
   if (res.success) {
     members.value = members.value.filter((x) => x.id !== m.id);

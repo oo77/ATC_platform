@@ -1,315 +1,164 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10 space-y-6">
-    <!-- Загрузка -->
-    <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
+  <!-- Внешний враппер без двойного отступа (отступ задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Загрузка: компактный спиннер -->
+    <div v-if="loading" class="flex min-h-[400px] items-center justify-center">
       <div class="text-center">
-        <div
-          class="inline-block h-10 w-10 animate-spin rounded-full border-3 border-solid border-primary border-r-transparent"
-        ></div>
-        <p class="mt-3 text-slate-600 dark:text-slate-400 font-medium text-sm">
-          Загрузка информации о группе...
-        </p>
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
+        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Загрузка информации о группе...</p>
       </div>
     </div>
 
-    <!-- Группа не найдена -->
-    <div v-else-if="!group" class="flex items-center justify-center min-h-[400px]">
-      <div class="text-center max-w-md">
-        <div class="bg-slate-100 dark:bg-slate-800 p-5 rounded-full inline-block mb-4">
-          <ShieldCheck class="w-10 h-10 text-slate-400" />
+    <!-- Группа не найдена: единственное действие — вернуться к списку -->
+    <div v-else-if="!group" class="flex min-h-[400px] items-center justify-center">
+      <div class="max-w-md text-center">
+        <div class="mb-4 inline-block rounded-full bg-gray-100 p-5 dark:bg-white/[0.06]">
+          <ShieldCheck class="h-10 w-10 text-gray-400" />
         </div>
-        <h3 class="text-xl font-bold text-slate-900 dark:text-white">Группа не найдена</h3>
-        <p class="mt-1 text-sm text-slate-500 dark:text-gray-400">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Группа не найдена</h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Возможно, группа была удалена или вы используете неверную ссылку.
         </p>
-        <UiButton class="mt-6 shadow-sm font-bold" @click="navigateTo('/attestation')">
-          Вернуться к списку групп
-        </UiButton>
+        <UiButton class="mt-6" @click="navigateTo('/attestation')">Вернуться к списку групп</UiButton>
       </div>
     </div>
 
     <template v-else>
-      <!-- Compact Header Section -->
-      <div class="space-y-3 animate-in fade-in slide-in-from-top-3 duration-500">
-        <!-- Breadcrumbs -->
-        <NuxtLink
-          to="/attestation"
-          class="group inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-primary transition-colors"
-        >
-          <div
-            class="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
-          >
-            <ArrowLeft class="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-          </div>
-          Назад к списку групп
-        </NuxtLink>
+      <!-- Единая шапка: крошки вместо ссылки «Назад», код группы + статус, мета-строка в одну линию -->
+      <UiPageHeader
+        :title="group.code"
+        :breadcrumbs="[{ label: 'Аттестация', to: '/attestation' }, { label: group.code }]"
+      >
+        <!-- Статус группы бейджем рядом с кодом (без CAPS и 10px) -->
+        <template #badge>
+          <span class="rounded-md border px-2 py-0.5 text-xs font-medium" :class="statusClass">{{ statusText }}</span>
+        </template>
 
-        <!-- Title Row & Actions -->
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div class="space-y-1.5 min-w-0">
-            <div class="flex flex-wrap items-center gap-2.5">
-              <span class="font-mono text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                {{ group.code }}
-              </span>
-              <span
-                class="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border"
-                :class="statusClass"
-              >
-                {{ statusText }}
-              </span>
-            </div>
+        <!-- Мета: название, даты экзамена, место, тест — вместо отдельного <h1> и трёх строк -->
+        <template #meta>
+          <span class="font-medium text-gray-700 dark:text-gray-300">{{ group.name }}</span>
+          <span v-if="group.examStart" class="inline-flex items-center gap-1.5">
+            <CalendarIcon class="h-3.5 w-3.5 shrink-0 text-gray-400" />
+            {{ formatDateTime(group.examStart) }} — {{ formatDateTime(group.examEnd) }}
+          </span>
+          <span v-if="group.location" class="inline-flex items-center gap-1.5">
+            <MapPin class="h-3.5 w-3.5 shrink-0 text-gray-400" />{{ group.location }}
+          </span>
+          <span v-if="group.templateName" class="inline-flex items-center gap-1.5">
+            <FileCheck class="h-3.5 w-3.5 shrink-0 text-gray-400" />
+            Тест: <b class="font-medium text-gray-700 dark:text-gray-300">{{ group.templateName }}</b> ({{ group.passingScore ?? "—" }}%)
+          </span>
+        </template>
 
-            <h1 class="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-200 truncate">
-              {{ group.name }}
-            </h1>
-
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <div v-if="group.examStart" class="flex items-center gap-1.5 font-medium">
-                <CalendarIcon class="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>{{ formatDateTime(group.examStart) }} — {{ formatDateTime(group.examEnd) }}</span>
-              </div>
-              <div v-if="group.location" class="flex items-center gap-1.5 font-medium">
-                <MapPin class="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>{{ group.location }}</span>
-              </div>
-              <div v-if="group.templateName" class="flex items-center gap-1.5 font-medium">
-                <FileCheck class="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>Тест: <b class="text-slate-700 dark:text-slate-300">{{ group.templateName }}</b> ({{ group.passingScore ?? "—" }}%)</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex flex-wrap items-center gap-2 shrink-0">
-            <UiButton
-              variant="outline"
-              size="sm"
-              class="h-9 px-3.5 gap-1.5 text-xs font-bold"
-              @click="activeTab = 'settings'"
-            >
-              <Settings class="w-3.5 h-3.5" />
-              Параметры
-            </UiButton>
-
-            <UiButton
-              variant="primary"
-              size="sm"
-              class="h-9 px-3.5 gap-1.5 text-xs font-bold shadow-xs"
-              :loading="generatingProtocol"
-              @click="generateProtocol"
-            >
-              <FileText class="w-3.5 h-3.5" />
-              {{ group.protocolFileId ? "Обновить протокол" : "Сформировать протокол" }}
-            </UiButton>
-          </div>
-        </div>
-      </div>
-
-      <!-- Compact 4-Metric Strip -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <!-- Инструкторы -->
-        <div
-          class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 flex items-center justify-between shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-all"
-        >
-          <div class="min-w-0">
-            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Инструкторов</p>
-            <div class="flex items-baseline gap-2 mt-0.5">
-              <span class="text-xl font-black text-slate-900 dark:text-white">{{ instructors.length }}</span>
-              <span class="text-[11px] text-slate-400 font-semibold truncate">в группе</span>
-            </div>
-          </div>
-          <div class="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Users class="w-4 h-4" />
-          </div>
-        </div>
-
-        <!-- Комиссия -->
-        <div
-          class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 flex items-center justify-between shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-all"
-        >
-          <div class="min-w-0 flex-1 pr-2">
-            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Комиссия ({{ commission.length }})</p>
-            <p class="text-xs font-bold text-slate-900 dark:text-white truncate mt-1">
-              {{ chairman ? chairman.fullName : "Председатель не назначен" }}
-            </p>
-          </div>
-          <div class="h-9 w-9 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-            <Gavel class="w-4 h-4" />
-          </div>
-        </div>
-
-        <!-- Сдали / Успеваемость -->
-        <div
-          class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-all flex flex-col justify-between"
-        >
-          <div class="flex items-center justify-between">
-            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Сдали экзамен</p>
-            <span class="text-xs font-black text-success">{{ passedCount }} / {{ results.length }}</span>
-          </div>
-          <div class="mt-2 flex items-center gap-2">
-            <div class="h-1.5 flex-1 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-              <div
-                class="h-full rounded-full bg-success transition-all duration-500"
-                :style="{ width: `${passedPercent}%` }"
-              ></div>
-            </div>
-            <span class="text-[10px] font-bold text-slate-500">{{ passedPercent }}%</span>
-          </div>
-        </div>
-
-        <!-- Шаблон сертификата -->
-        <div
-          class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 flex items-center justify-between shadow-2xs hover:border-slate-300 dark:hover:border-slate-700 transition-all"
-        >
-          <div class="min-w-0 flex-1 pr-2">
-            <p class="text-xs font-medium text-slate-500 dark:text-slate-400">Сертификаты</p>
-            <p class="text-xs font-bold text-slate-900 dark:text-white truncate mt-1">
-              {{ group.certTemplateName || "Не назначены" }}
-            </p>
-          </div>
-          <div class="h-9 w-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <Award class="w-4 h-4" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Navigation Tabs -->
-      <div class="border-b border-slate-200 dark:border-slate-800">
-        <nav class="flex gap-2" aria-label="Tabs">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            @click="activeTab = tab.id"
-            :class="[
-              'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold border-b-2 transition-all duration-200',
-              activeTab === tab.id
-                ? 'border-primary text-primary dark:text-white'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
-            ]"
-          >
-            <component :is="tab.icon" class="h-4 w-4" />
-            {{ tab.label }}
-            <span
-              v-if="tab.badge !== undefined"
-              class="px-1.5 py-0.2 rounded-full text-[10px] font-black"
-              :class="activeTab === tab.id ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'"
-            >
-              {{ tab.badge }}
-            </span>
-          </button>
-        </nav>
-      </div>
-
-      <!-- Tab 1: PARTICIPANTS & RESULTS -->
-      <div v-show="activeTab === 'participants'" class="space-y-4 animate-in fade-in duration-300">
-        <!-- Toolbar: Filters + Search + Add Button -->
-        <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-          <!-- Search & Filter Badges -->
-          <div class="flex flex-wrap items-center gap-2 flex-1">
-            <div class="relative min-w-[220px] max-w-sm flex-1">
-              <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-              <input
-                v-model="searchInstructor"
-                type="text"
-                placeholder="Поиск по имени или специальности..."
-                class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-1.5 pl-8 pr-7 text-xs outline-none focus:border-primary transition-all font-medium"
-              />
-              <button
-                v-if="searchInstructor"
-                type="button"
-                class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                @click="searchInstructor = ''"
-              >
-                <X class="w-3 h-3" />
-              </button>
-            </div>
-
-            <!-- Status filter pills -->
-            <div class="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 custom-scrollbar">
-              <button
-                v-for="filter in statusFilters"
-                :key="filter.id"
-                class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0"
-                :class="[
-                  statusFilter === filter.id
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xs'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700',
-                ]"
-                @click="statusFilter = filter.id"
-              >
-                {{ filter.label }} ({{ filter.count }})
-              </button>
-            </div>
-          </div>
-
-          <!-- Add Instructors Action -->
+        <!-- Главное действие — протокол; доступно только при праве canManageAttestation.
+             Кнопка «Параметры» убрана: это дубль вкладки «Параметры и расписание» -->
+        <template #actions>
           <UiButton
+            v-if="canManageAttestation"
             variant="primary"
-            size="sm"
-            class="h-9 px-3.5 gap-1.5 text-xs font-bold shrink-0 shadow-xs"
-            @click="showInstructorsModal = true"
+            :start-icon="FileText"
+            :loading="generatingProtocol"
+            @click="generateProtocol"
           >
-            <UserPlus class="w-3.5 h-3.5" />
-            Добавить инструкторов
+            {{ group.protocolFileId ? "Обновить протокол" : "Сформировать протокол" }}
           </UiButton>
-        </div>
+        </template>
+      </UiPageHeader>
 
-        <!-- Instructors Table -->
-        <div
-          class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden"
+      <!-- Полоса из 4 метрик через UiStat (плоские карточки, без shadow и hover-эффектов) -->
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <UiStat label="Инструкторов" :value="instructors.length" hint="в группе" :icon="Users" tone="primary" />
+        <UiStat
+          label="Комиссия"
+          :value="commission.length"
+          :hint="chairman ? chairman.fullName : 'Председатель не назначен'"
+          :icon="Gavel"
+          tone="warning"
+        />
+        <UiStat
+          label="Сдали экзамен"
+          :value="`${passedCount} / ${results.length}`"
+          :icon="CheckCircle2"
+          tone="success"
+          :progress="passedPercent"
+        />
+        <UiStat label="Сертификаты" :value="group.certTemplateName || 'Не назначены'" :icon="Award" tone="success" />
+      </div>
+
+      <!-- Вкладки через UiTabs; «Параметры» скрыты для тех, у кого нет права управления -->
+      <UiTabs v-model="activeTab" :tabs="tabItems" />
+
+      <!-- Вкладка 1: участники и результаты -->
+      <div v-show="activeTab === 'participants'" class="space-y-4">
+        <!-- Единый блок фильтров: поиск + сегменты статусов (счётчики внутри) + «Найдено N» -->
+        <UiFilterBar
+          v-model:search="searchInstructor"
+          search-placeholder="Поиск по имени или специальности..."
+          :debounce="0"
+          :segments="statusFilters.map((f) => ({ value: f.id, label: f.label, count: f.count }))"
+          :segment="statusFilter"
+          :total="filteredResults.length"
+          @update:segment="onSegment"
         >
-          <div v-if="instructors.length === 0" class="py-16 text-center px-4">
-            <div class="bg-slate-100 dark:bg-slate-800 p-4 rounded-full inline-block mb-3">
-              <Users class="w-8 h-8 text-slate-400" />
-            </div>
-            <h4 class="text-sm font-bold text-slate-900 dark:text-white">В группе пока нет инструкторов</h4>
-            <p class="text-xs text-slate-500 mt-1">Добавьте инструкторов с помощью модального окна мультиселекта.</p>
-            <UiButton size="sm" class="mt-4 gap-1.5 text-xs font-bold" @click="showInstructorsModal = true">
-              <UserPlus class="w-3.5 h-3.5" /> Выбрать инструкторов
+          <!-- Добавление инструкторов — управляющее действие, только при canManageAttestation -->
+          <template #actions>
+            <UiButton v-if="canManageAttestation" variant="primary" :start-icon="UserPlus" @click="showInstructorsModal = true">
+              Добавить инструкторов
+            </UiButton>
+          </template>
+        </UiFilterBar>
+
+        <!-- Таблица инструкторов -->
+        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+          <!-- Пустое состояние: нет инструкторов вообще -->
+          <div v-if="instructors.length === 0" class="px-4 py-12 text-center">
+            <UiEmptyState title="В группе пока нет инструкторов" description="Добавьте инструкторов с помощью окна выбора." :icon="Users" />
+            <UiButton v-if="canManageAttestation" class="mt-2" :start-icon="UserPlus" @click="showInstructorsModal = true">
+              Выбрать инструкторов
             </UiButton>
           </div>
 
-          <div v-else-if="filteredResults.length === 0" class="py-12 text-center text-xs text-slate-500 font-medium">
+          <!-- Пустое состояние: фильтр ничего не нашёл -->
+          <div v-else-if="filteredResults.length === 0" class="py-12 text-center text-sm text-gray-500">
             Нет участников, соответствующих критериям фильтра
           </div>
 
-          <div v-else class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr class="bg-slate-50/75 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800">
-                  <th class="px-4 py-3 font-bold text-slate-400 uppercase tracking-wider">Инструктор</th>
-                  <th class="px-4 py-3 font-bold text-slate-400 uppercase tracking-wider text-center">Балл теста</th>
-                  <th class="px-4 py-3 font-bold text-slate-400 uppercase tracking-wider text-center">Попыток</th>
-                  <th class="px-4 py-3 font-bold text-slate-400 uppercase tracking-wider">Решение комиссии</th>
-                  <th class="px-4 py-3 font-bold text-slate-400 uppercase tracking-wider text-right">Действия</th>
+          <!-- Контейнер со скроллом, чтобы шапка таблицы была липкой -->
+          <div v-else class="max-h-[65vh] overflow-auto">
+            <table class="w-full border-collapse text-left text-sm">
+              <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                  <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Инструктор</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Балл теста</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Попыток</th>
+                  <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Решение комиссии</th>
+                  <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Действия</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                 <tr
                   v-for="r in filteredResults"
                   :key="r.instructorId"
-                  class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors group"
+                  class="group transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                 >
-                  <!-- Instructor Column -->
+                  <!-- Инструктор -->
                   <td class="px-4 py-2.5">
                     <div class="flex items-center gap-2.5">
-                      <div
-                        class="h-8 w-8 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[11px] border border-primary/20"
-                      >
+                      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-xs font-semibold text-primary">
                         {{ getInitials(r.fullName) }}
                       </div>
                       <div class="min-w-0">
-                        <p class="font-bold text-slate-900 dark:text-white text-xs truncate">{{ r.fullName }}</p>
-                        <p class="text-[10px] text-slate-500 truncate">{{ r.specialty || r.positionSnapshot || "Инструктор" }}</p>
+                        <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ r.fullName }}</p>
+                        <p class="truncate text-xs text-gray-500">{{ r.specialty || r.positionSnapshot || "Инструктор" }}</p>
                       </div>
                     </div>
                   </td>
 
-                  <!-- Test Score Column -->
+                  <!-- Балл теста -->
                   <td class="px-4 py-2.5 text-center">
                     <span
                       v-if="r.scorePercent !== null"
-                      class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-black"
+                      class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
                       :class="[
                         group.passingScore && r.scorePercent >= group.passingScore
                           ? 'bg-success/10 text-success'
@@ -318,76 +167,42 @@
                     >
                       {{ Math.round(r.scorePercent) }}%
                     </span>
-                    <span v-else class="text-slate-300 dark:text-slate-600 font-semibold">—</span>
+                    <span v-else class="text-gray-300 dark:text-gray-600">—</span>
                   </td>
 
-                  <!-- Attempts Column -->
-                  <td class="px-4 py-2.5 text-center font-semibold text-slate-600 dark:text-slate-400">
+                  <!-- Попытки -->
+                  <td class="px-4 py-2.5 text-center text-gray-600 dark:text-gray-400">
                     <span v-if="r.attempts > 0">{{ r.attempts }}</span>
-                    <span v-else class="text-slate-300 dark:text-slate-600">0</span>
+                    <span v-else class="text-gray-300 dark:text-gray-600">0</span>
                   </td>
 
-                  <!-- Decision Badge Column -->
+                  <!-- Бейдж решения -->
                   <td class="px-4 py-2.5">
-                    <span
-                      :class="[
-                        'inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-black uppercase tracking-wider border',
-                        decisionBadgeClass(r),
-                      ]"
-                    >
+                    <span :class="['inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium', decisionBadgeClass(r)]">
                       {{ decisionLabel(r) }}
                     </span>
                   </td>
 
-                  <!-- Actions Column -->
+                  <!-- Действия строки: одно основное («Решение ▾» вместо двух одинаковых кнопок) + «⋯» -->
                   <td class="px-4 py-2.5">
                     <div class="flex items-center justify-end gap-1">
-                      <!-- Decision Passed -->
-                      <button
-                        class="inline-flex h-7 items-center gap-1 px-2 rounded-md text-[11px] font-bold text-success bg-success/10 hover:bg-success/20 transition-all"
-                        title="Утвердить: Сдал"
-                        @click="requestDecide(r, 'passed')"
-                      >
-                        <CheckCircle2 class="w-3.5 h-3.5" /> Сдал
-                      </button>
-
-                      <!-- Decision Failed -->
-                      <button
-                        class="inline-flex h-7 items-center gap-1 px-2 rounded-md text-[11px] font-bold text-danger bg-danger/10 hover:bg-danger/20 transition-all"
-                        title="Утвердить: Не сдал"
-                        @click="requestDecide(r, 'failed')"
-                      >
-                        <XCircle class="w-3.5 h-3.5" /> Не сдал
-                      </button>
-
-                      <!-- Evaluation Sheet -->
-                      <button
-                        class="inline-flex h-7 items-center gap-1 px-2 rounded-md text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
-                        title="Оценочный лист"
-                        @click="openEvaluationSheet(r)"
-                      >
-                        <FileText class="w-3.5 h-3.5" /> Лист
-                      </button>
-
-                      <!-- Certificate Download -->
-                      <a
-                        v-if="r.certificateId"
-                        :href="`/api/certificates/download/${r.certificateId}`"
-                        target="_blank"
-                        class="inline-flex h-7 items-center gap-1 px-2 rounded-md text-[11px] font-bold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 transition-all"
-                        title="Скачать сертификат"
-                      >
-                        <Award class="w-3.5 h-3.5" />
-                      </a>
-
-                      <!-- Remove from Group -->
-                      <button
-                        class="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 hover:text-danger hover:bg-danger/10 transition-all opacity-40 group-hover:opacity-100"
-                        title="Удалить из группы"
-                        @click="requestRemoveInstructor(r)"
-                      >
-                        <Trash2 class="w-3.5 h-3.5" />
-                      </button>
+                      <!-- Решение комиссии: Сдал / Не сдал в одном меню; обработчик прежний — requestDecide -->
+                      <UiDropdown
+                        label="Решение"
+                        variant="soft"
+                        size="sm"
+                        :groups="decisionGroups"
+                        @select="onDecisionSelect($event, r)"
+                      />
+                      <!-- «⋯»: оценочный лист, сертификат; удаление из группы — отдельной группой «Опасные» -->
+                      <UiDropdown
+                        icon-only
+                        variant="ghost"
+                        size="sm"
+                        aria-label="Другие действия"
+                        :groups="rowMenuGroups(r)"
+                        @select="onRowAction($event, r)"
+                      />
                     </div>
                   </td>
                 </tr>
@@ -397,237 +212,217 @@
         </div>
       </div>
 
-      <!-- Tab 2: COMMISSION -->
-      <div v-show="activeTab === 'commission'" class="space-y-4 animate-in fade-in duration-300">
-        <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <!-- Вкладка 2: комиссия -->
+      <div v-show="activeTab === 'commission'" class="space-y-4">
+        <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
           <div class="space-y-0.5">
-            <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Gavel class="w-4 h-4 text-amber-500" />
+            <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+              <Gavel class="h-4 w-4 text-gray-400" />
               Аттестационная комиссия группы
             </h3>
-            <p class="text-xs text-slate-500">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
               Комиссия принимает решения по результатам тестов и подписывает протокол аттестации.
             </p>
           </div>
 
-          <UiButton
-            variant="primary"
-            size="sm"
-            class="h-9 px-3.5 gap-1.5 text-xs font-bold shrink-0 shadow-xs"
-            @click="showCommissionModal = true"
-          >
-            <Settings class="w-3.5 h-3.5" />
+          <!-- Изменение состава комиссии — только при canManageAttestation -->
+          <UiButton v-if="canManageAttestation" variant="primary" class="shrink-0" :start-icon="Settings" @click="showCommissionModal = true">
             {{ commission.length ? "Изменить состав комиссии" : "Сформировать комиссию" }}
           </UiButton>
         </div>
 
-        <div v-if="commission.length === 0" class="py-16 text-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <div class="bg-amber-500/10 p-4 rounded-full inline-block mb-3 text-amber-600">
-            <Gavel class="w-8 h-8" />
-          </div>
-          <h4 class="text-sm font-bold text-slate-900 dark:text-white">Комиссия ещё не сформирована</h4>
-          <p class="text-xs text-slate-500 mt-1">Выберите членов комиссии и назначьте председателя.</p>
-          <UiButton size="sm" class="mt-4 gap-1.5 text-xs font-bold" @click="showCommissionModal = true">
-            <Plus class="w-3.5 h-3.5" /> Сформировать комиссию
-          </UiButton>
+        <div v-if="commission.length === 0" class="rounded-xl border border-gray-200 bg-white py-12 text-center dark:border-gray-800 dark:bg-white/[0.03]">
+          <UiEmptyState title="Комиссия ещё не сформирована" description="Выберите членов комиссии и назначьте председателя." :icon="Gavel" />
+          <UiButton v-if="canManageAttestation" class="mt-2" :start-icon="Plus" @click="showCommissionModal = true">Сформировать комиссию</UiButton>
         </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div v-else class="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           <div
             v-for="c in sortedCommission"
             :key="c.id"
-            class="rounded-xl border p-4 transition-all flex flex-col justify-between"
+            class="flex flex-col justify-between rounded-xl border p-4"
             :class="[
               c.role === 'chairman'
-                ? 'border-amber-500/40 bg-amber-500/5 dark:bg-amber-500/10 shadow-2xs'
-                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs',
+                ? 'border-warning/40 bg-warning/5'
+                : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]',
             ]"
           >
             <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-3 min-w-0">
+              <div class="flex min-w-0 items-center gap-3">
                 <div
-                  class="h-10 w-10 shrink-0 rounded-full flex items-center justify-center font-bold text-xs border"
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xs font-semibold"
                   :class="[
                     c.role === 'chairman'
-                      ? 'bg-amber-500 text-white border-amber-500'
-                      : 'bg-primary/10 text-primary border-primary/20',
+                      ? 'border-warning bg-warning text-white'
+                      : 'border-primary/20 bg-primary/10 text-primary',
                   ]"
                 >
-                  <Crown v-if="c.role === 'chairman'" class="w-4 h-4" />
+                  <Crown v-if="c.role === 'chairman'" class="h-4 w-4" />
                   <span v-else>{{ getInitials(c.fullName) }}</span>
                 </div>
                 <div class="min-w-0">
-                  <p class="text-xs font-bold text-slate-900 dark:text-white truncate">
-                    {{ c.fullName }}
-                  </p>
-                  <p class="text-[11px] text-slate-500 truncate mt-0.5">
-                    {{ c.position || c.organization || "Член комиссии" }}
-                  </p>
+                  <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ c.fullName }}</p>
+                  <p class="mt-0.5 truncate text-xs text-gray-500">{{ c.position || c.organization || "Член комиссии" }}</p>
                 </div>
               </div>
 
+              <!-- Роль в комиссии: цвета из токенов, без CAPS и 10px -->
               <span
-                class="shrink-0 text-[10px] font-black uppercase px-2 py-0.5 rounded-md border"
+                class="shrink-0 rounded-md border px-2 py-0.5 text-xs font-medium"
                 :class="[
                   c.role === 'chairman'
-                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30'
+                    ? 'border-warning/30 bg-warning/15 text-warning'
                     : c.role === 'responsible'
-                      ? 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20'
+                      ? 'border-success/20 bg-success/10 text-success'
                       : c.role === 'secretary'
-                        ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                        : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700',
+                        ? 'border-info/20 bg-info/10 text-info'
+                        : 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-white/[0.06] dark:text-gray-300',
                 ]"
               >
                 {{ roleLabel(c.role) }}
               </span>
             </div>
 
-            <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+            <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3 text-xs text-gray-400 dark:border-gray-800">
               <span class="truncate">{{ c.organization || "Организация не указана" }}</span>
+              <!-- Убрать из комиссии — управляющее действие (canManageAttestation); подтверждение — прежнее UiConfirmModal -->
               <button
-                class="text-slate-400 hover:text-danger p-1 transition-colors"
+                v-if="canManageAttestation"
+                type="button"
+                class="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-danger/10 hover:text-danger"
                 title="Убрать из комиссии"
+                aria-label="Убрать из комиссии"
                 @click="requestRemoveCommissionMember(c)"
               >
-                <Trash2 class="w-3.5 h-3.5" />
+                <Trash2 class="h-4 w-4" />
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Tab 3: SETTINGS & SCHEDULE -->
-      <div v-show="activeTab === 'settings'" class="space-y-4 animate-in fade-in duration-300">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <!-- Card 1: Расписание и тест -->
-          <div
-            class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden"
-          >
-            <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
-                <CalendarClock class="w-4 h-4 text-warning" />
+      <!-- Вкладка 3: параметры и расписание — целиком только для canManageAttestation -->
+      <div v-if="canManageAttestation" v-show="activeTab === 'settings'" class="space-y-4">
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <!-- Карточка 1: расписание и тест -->
+          <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+              <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                <CalendarClock class="h-4 w-4 text-gray-400" />
                 Расписание и шаблон теста
               </h3>
             </div>
-            <div class="p-4 space-y-3.5">
-              <div class="space-y-1">
-                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Шаблон теста</label>
+            <div class="space-y-3.5 p-4">
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Шаблон теста</label>
                 <div class="relative">
                   <select
                     v-model="scheduleForm.testTemplateId"
-                    class="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2 px-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800/50 dark:focus:bg-slate-900 appearance-none font-medium transition-all"
+                    class="h-9 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 pr-9 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                   >
                     <option value="">Не назначен</option>
                     <option v-for="t in testTemplates" :key="t.id" :value="t.id">{{ t.name }} (порог: {{ t.passingScore ?? 75 }}%)</option>
                   </select>
-                  <ChevronDown class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div class="space-y-1">
-                  <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Начало экзамена</label>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="space-y-1.5">
+                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Начало экзамена</label>
                   <input
                     v-model="scheduleForm.examStart"
                     type="datetime-local"
-                    class="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2 px-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800/50 font-medium transition-all"
+                    class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                   />
                 </div>
-                <div class="space-y-1">
-                  <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Окончание экзамена</label>
+                <div class="space-y-1.5">
+                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Окончание экзамена</label>
                   <input
                     v-model="scheduleForm.examEnd"
                     type="datetime-local"
-                    class="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2 px-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800/50 font-medium transition-all"
+                    class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                   />
                 </div>
               </div>
 
-              <div class="space-y-1">
-                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Место проведения</label>
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Место проведения</label>
                 <input
                   v-model="scheduleForm.location"
                   type="text"
                   placeholder="Аудитория 17, Главный учебный корпус"
-                  class="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2 px-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800/50 font-medium transition-all"
+                  class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                 />
               </div>
 
-              <div class="flex justify-end pt-2">
-                <UiButton size="sm" class="gap-1.5 text-xs font-bold" :loading="savingSchedule" @click="saveSchedule">
-                  <Save class="w-3.5 h-3.5" /> Сохранить расписание
-                </UiButton>
+              <div class="flex justify-end pt-1">
+                <UiButton :start-icon="Save" :loading="savingSchedule" @click="saveSchedule">Сохранить расписание</UiButton>
               </div>
             </div>
           </div>
 
-          <!-- Card 2: Шаблон сертификата -->
-          <div
-            class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden"
-          >
-            <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
-                <Award class="w-4 h-4 text-emerald-500" />
+          <!-- Карточка 2: автовыдача сертификатов -->
+          <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+              <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                <Award class="h-4 w-4 text-gray-400" />
                 Автовыдача сертификатов
               </h3>
             </div>
-            <div class="p-4 space-y-3.5">
-              <div class="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-2.5 flex items-start gap-2 text-xs text-blue-800 dark:text-blue-300">
-                <Info class="w-4 h-4 shrink-0 mt-0.5" />
+            <div class="space-y-3.5 p-4">
+              <div class="flex items-start gap-2 rounded-lg bg-info/10 p-3 text-sm text-info">
+                <Info class="mt-0.5 h-4 w-4 shrink-0" />
                 <p class="leading-relaxed">
                   При включенном шаблоне сертификат генерируется автоматически сразу после того, как инструктор отмечается со статусом «Сдал».
                 </p>
               </div>
 
-              <div class="space-y-1">
-                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Шаблон сертификата</label>
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Шаблон сертификата</label>
                 <div class="relative">
                   <select
                     v-model="certTemplateId"
-                    class="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2 px-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800/50 dark:focus:bg-slate-900 appearance-none font-medium transition-all"
+                    class="h-9 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 pr-9 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                   >
                     <option value="">Не назначен (автовыдача отключена)</option>
                     <option v-for="t in certificateTemplates" :key="t.id" :value="t.id">{{ t.name }}</option>
                   </select>
-                  <ChevronDown class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 </div>
               </div>
 
-              <div class="flex justify-end pt-2">
-                <UiButton size="sm" class="gap-1.5 text-xs font-bold" :loading="savingCertTemplate" @click="saveCertTemplate">
-                  <Save class="w-3.5 h-3.5" /> Сохранить шаблон
-                </UiButton>
+              <div class="flex justify-end pt-1">
+                <UiButton :start-icon="Save" :loading="savingCertTemplate" @click="saveCertTemplate">Сохранить шаблон</UiButton>
               </div>
             </div>
           </div>
 
-          <!-- Card 3: Основная информация о группе -->
-          <div
-            class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs overflow-hidden"
-          >
-            <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-              <h3 class="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 uppercase tracking-wider">
-                <ShieldCheck class="w-4 h-4 text-primary" />
+          <!-- Карточка 3: основные данные группы -->
+          <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+              <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                <ShieldCheck class="h-4 w-4 text-gray-400" />
                 Основные данные группы
               </h3>
             </div>
-            <div class="p-4 space-y-3.5">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div class="space-y-1">
-                  <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Код группы</label>
+            <div class="space-y-3.5 p-4">
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div class="space-y-1.5">
+                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Код группы</label>
                   <input
                     :value="group.code"
                     type="text"
                     disabled
-                    class="w-full rounded-lg border border-slate-200 bg-slate-100 py-2 px-3 text-xs outline-none dark:border-slate-700 dark:bg-slate-800 font-mono font-bold text-slate-500 cursor-not-allowed"
+                    class="h-9 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-100 px-3 font-mono text-sm text-gray-500 outline-none dark:border-gray-700 dark:bg-white/[0.04]"
                   />
                 </div>
-                <div class="space-y-1">
-                  <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Статус</label>
+                <div class="space-y-1.5">
+                  <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Статус</label>
                   <div class="relative">
                     <select
                       v-model="infoForm.status"
-                      class="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2 px-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800/50 appearance-none font-bold transition-all"
+                      class="h-9 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 pr-9 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                     >
                       <option value="draft">Черновик</option>
                       <option value="scheduled">Запланирована</option>
@@ -635,67 +430,56 @@
                       <option value="completed">Завершена</option>
                       <option value="cancelled">Отменена</option>
                     </select>
-                    <ChevronDown class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                    <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   </div>
                 </div>
               </div>
 
-              <div class="space-y-1">
-                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Название</label>
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Название</label>
                 <input
                   v-model="infoForm.name"
                   type="text"
-                  class="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2 px-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800/50 font-medium transition-all"
+                  class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                 />
               </div>
 
-              <div class="space-y-1">
-                <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Описание</label>
+              <div class="space-y-1.5">
+                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Описание</label>
                 <textarea
                   v-model="infoForm.description"
                   rows="2"
-                  class="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2 px-3 text-xs outline-none focus:border-primary focus:bg-white dark:border-slate-700 dark:bg-slate-800/50 font-medium resize-none transition-all"
+                  class="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                 ></textarea>
               </div>
 
-              <div class="flex justify-end pt-2">
-                <UiButton size="sm" class="gap-1.5 text-xs font-bold" :loading="savingInfo" @click="saveGroupInfo">
-                  <Save class="w-3.5 h-3.5" /> Сохранить данные
-                </UiButton>
+              <div class="flex justify-end pt-1">
+                <UiButton :start-icon="Save" :loading="savingInfo" @click="saveGroupInfo">Сохранить данные</UiButton>
               </div>
             </div>
           </div>
 
-          <!-- Card 4: Опасная зона -->
-          <div
-            class="rounded-xl border border-danger/20 bg-danger/5 p-4 flex flex-col justify-between space-y-4"
-          >
+          <!-- Карточка 4: опасная зона (отделена цветом; удаление подтверждается вводом кода группы) -->
+          <div class="flex flex-col justify-between space-y-4 rounded-xl border border-danger/20 bg-danger/5 p-4">
             <div>
-              <h4 class="text-xs font-bold text-danger flex items-center gap-1.5 uppercase tracking-wider">
-                <AlertTriangle class="w-4 h-4" />
+              <h4 class="flex items-center gap-2 text-sm font-semibold text-danger">
+                <AlertTriangle class="h-4 w-4" />
                 Опасная зона
               </h4>
-              <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">
+              <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
                 Удаление группы приведет к безвозвратному удалению всех связанных результатов и связей с инструкторами.
               </p>
             </div>
 
             <div class="flex justify-end">
-              <UiButton
-                variant="outline"
-                size="sm"
-                class="gap-1.5 text-xs font-bold text-danger border-danger/30 hover:bg-danger/10"
-                @click="showDeleteModal = true"
-              >
-                <Trash2 class="w-3.5 h-3.5" /> Удалить группу
-              </UiButton>
+              <UiButton variant="danger-ghost" :start-icon="Trash2" @click="showDeleteModal = true">Удалить группу</UiButton>
             </div>
           </div>
         </div>
       </div>
     </template>
 
-    <!-- Модалка выбора инструкторов (Мультиселект) -->
+    <!-- Модалка выбора инструкторов (мультиселект) -->
     <AttestationSelectInstructorsModal
       :is-open="showInstructorsModal"
       :group-id="groupId"
@@ -704,7 +488,7 @@
       @added="onInstructorsAdded"
     />
 
-    <!-- Модалка выбора членов комиссии (Мультиселект) -->
+    <!-- Модалка выбора членов комиссии (мультиселект) -->
     <AttestationSelectCommissionModal
       :is-open="showCommissionModal"
       :group-id="groupId"
@@ -713,7 +497,7 @@
       @saved="onCommissionSaved"
     />
 
-    <!-- Модалка подтверждения решения комиссии (Сдал / Не сдал) -->
+    <!-- Подтверждение решения комиссии (Сдал / Не сдал) -->
     <UiConfirmModal
       :is-open="!!decideTarget"
       :title="decideTarget?.decision === 'passed' ? 'Подтвердить сдачу экзамена' : 'Подтвердить несдачу экзамена'"
@@ -723,11 +507,12 @@
       cancel-text="Отмена"
       :variant="decideTarget?.decision === 'passed' ? 'warning' : 'danger'"
       :loading="deciding"
+      loading-text="Сохранение…"
       @confirm="confirmDecide"
       @cancel="decideTarget = null"
     />
 
-    <!-- Модалка удаления инструктора из группы -->
+    <!-- Удаление инструктора из группы -->
     <UiConfirmModal
       :is-open="!!instructorToRemove"
       title="Удаление инструктора"
@@ -736,11 +521,12 @@
       cancel-text="Отмена"
       variant="danger"
       :loading="removingInstructor"
+      loading-text="Удаление…"
       @confirm="confirmRemoveInstructor"
       @cancel="instructorToRemove = null"
     />
 
-    <!-- Модалка удаления члена комиссии -->
+    <!-- Удаление члена комиссии -->
     <UiConfirmModal
       :is-open="!!commissionMemberToRemove"
       title="Удаление члена комиссии"
@@ -749,11 +535,12 @@
       cancel-text="Отмена"
       variant="danger"
       :loading="removingCommissionMember"
+      loading-text="Удаление…"
       @confirm="confirmRemoveCommissionMember"
       @cancel="commissionMemberToRemove = null"
     />
 
-    <!-- Модалка удаления группы -->
+    <!-- Удаление группы: для необратимого действия требуем ввести код группы -->
     <UiConfirmModal
       :is-open="showDeleteModal"
       title="Удаление группы аттестации"
@@ -761,7 +548,9 @@
       confirm-text="Удалить навсегда"
       cancel-text="Отмена"
       variant="danger"
+      :require-text="group?.code"
       :loading="deletingGroup"
+      loading-text="Удаление…"
       @confirm="confirmDeleteGroup"
       @cancel="showDeleteModal = false"
     />
@@ -803,6 +592,9 @@ definePageMeta({ layout: "default" });
 const route = useRoute();
 const { authFetch } = useAuthFetch();
 const toast = useToast();
+// Право управления аттестацией: скрывает сохранение настроек, добавление/удаление инструкторов и комиссии,
+// «Опасную зону» и формирование протокола у пользователей без ATTESTATION_MANAGE (сервер проверяет права и так)
+const { canManageAttestation } = usePermissions();
 
 const groupId = route.params.id as string;
 
@@ -893,6 +685,55 @@ const tabs = computed<Array<{ id: TabId; label: string; icon: any; badge?: numbe
   { id: "settings", label: "Параметры и расписание", icon: Settings },
 ]);
 
+// Презентационное: вкладки для UiTabs. Счётчики берём из прежнего поля badge, а «Параметры» скрываем без права управления
+const tabItems = computed(() =>
+  tabs.value.map((t) => ({
+    id: t.id as string,
+    label: t.label,
+    icon: t.icon,
+    count: t.badge,
+    hidden: t.id === "settings" && !canManageAttestation.value,
+  })),
+);
+
+// Сегмент статуса из UiFilterBar пишет в прежний statusFilter (логика фильтрации не менялась)
+const onSegment = (v: string | number | boolean) => {
+  statusFilter.value = v as StatusFilterId;
+};
+
+// Меню «Решение»: два исхода комиссии собраны в одну кнопку, чтобы строка не содержала пары одинаковых кнопок
+const decisionGroups = [
+  {
+    items: [
+      { key: "passed", label: "Сдал", icon: CheckCircle2 },
+      { key: "failed", label: "Не сдал", icon: XCircle },
+    ],
+  },
+];
+const onDecisionSelect = (key: string, r: any) => {
+  // Тот же обработчик, что и раньше — откроет UiConfirmModal подтверждения
+  if (key === "passed" || key === "failed") requestDecide(r, key);
+};
+
+// Меню «⋯» строки: оценочный лист и сертификат (если есть); удаление из группы — отдельная группа «Опасные», только canManageAttestation
+const rowMenuGroups = (r: any) => [
+  {
+    items: [
+      { key: "sheet", label: "Оценочный лист", icon: FileText },
+      { key: "certificate", label: "Скачать сертификат", icon: Award, hidden: !r.certificateId },
+    ],
+  },
+  {
+    label: "Опасные",
+    items: [{ key: "remove", label: "Удалить из группы", icon: Trash2, danger: true, hidden: !canManageAttestation.value }],
+  },
+];
+const onRowAction = (key: string, r: any) => {
+  if (key === "sheet") openEvaluationSheet(r);
+  else if (key === "certificate") window.open(`/api/certificates/download/${r.certificateId}`, "_blank");
+  else if (key === "remove") requestRemoveInstructor(r);
+};
+
 const getInitials = (name: string) => {
   if (!name) return "?";
   return name
@@ -924,10 +765,11 @@ const toLocalInput = (iso: string | null) => {
 
 const statusClass = computed(() => {
   const map: Record<string, string> = {
-    draft: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700",
+    // Единая нейтральная палитра (gray) и токены warning/success вместо slate/amber/emerald
+    draft: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-white/[0.06] dark:text-gray-400 dark:border-gray-700",
     scheduled: "bg-primary/10 text-primary border-primary/20",
-    in_progress: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-    completed: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    in_progress: "bg-warning/10 text-warning border-warning/20",
+    completed: "bg-success/10 text-success border-success/20",
     cancelled: "bg-danger/10 text-danger border-danger/20",
   };
   return group.value ? map[group.value.status] || map.draft : "";
@@ -957,8 +799,8 @@ const decisionLabel = (r: any) => {
 const decisionBadgeClass = (r: any) => {
   if (r?.decision === "passed") return "bg-success/10 text-success border-success/20";
   if (r?.decision === "failed") return "bg-danger/10 text-danger border-danger/20";
-  if (r?.attempts > 0) return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
-  return "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700";
+  if (r?.attempts > 0) return "bg-warning/10 text-warning border-warning/20";
+  return "bg-gray-100 text-gray-500 border-gray-200 dark:bg-white/[0.06] dark:text-gray-400 dark:border-gray-700";
 };
 
 const load = async () => {

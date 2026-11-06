@@ -1,59 +1,31 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Заголовок -->
-    <div class="mb-6">
-      <h2 class="text-title-md2 font-bold text-black dark:text-white">
-        Мои сертификаты
-      </h2>
-      <p class="mt-1 text-gray-500 dark:text-gray-400">
-        Просмотр и скачивание полученных сертификатов
-      </p>
-    </div>
+  <!-- Обёртка без двойного отступа (отступы задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок вместо h2 text-title-md2 -->
+    <UiPageHeader title="Мои сертификаты" description="Просмотр и скачивание полученных сертификатов" />
 
     <!-- Загрузка -->
-    <div v-if="loading" class="flex justify-center items-center py-20">
-      <div
-        class="h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"
-      ></div>
+    <div v-if="loading" class="flex items-center justify-center py-20">
+      <div class="h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
     </div>
 
     <!-- Контент -->
     <template v-else>
-      <!-- Статистика сверху -->
-      <div
-        v-if="certificates.length > 0"
-        class="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4"
-      >
-        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Всего</p>
-          <p class="text-2xl font-bold text-gray-900 dark:text-white">
-            {{ certificates.length }}
-          </p>
-        </div>
-        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Действительных</p>
-          <p class="text-2xl font-bold text-success">{{ validCount }}</p>
-        </div>
-        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Истёк срок</p>
-          <p class="text-2xl font-bold text-warning">{{ expiredCount }}</p>
-        </div>
-        <div class="bg-white dark:bg-boxdark rounded-lg p-4 shadow-sm">
-          <p class="text-sm text-gray-500 dark:text-gray-400">Отозванных</p>
-          <p class="text-2xl font-bold text-danger">{{ revokedCount }}</p>
-        </div>
+      <!-- Метрики одной плоской строкой (UiStat вместо 4 самодельных карточек) -->
+      <div v-if="certificates.length > 0" class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <UiStat label="Всего" :value="certificates.length" />
+        <UiStat label="Действительных" :value="validCount" tone="success" />
+        <UiStat label="Истёк срок" :value="expiredCount" tone="warning" />
+        <UiStat label="Отозванных" :value="revokedCount" tone="danger" />
       </div>
 
-      <!-- Фильтры -->
-      <div class="mb-6 flex flex-wrap gap-4">
-        <!-- Фильтр по статусу -->
+      <!-- Фильтры: контролы h-9, единый стиль -->
+      <div class="flex flex-wrap items-center gap-3">
         <div class="flex items-center gap-2">
-          <label class="text-sm text-gray-600 dark:text-gray-400"
-            >Статус:</label
-          >
+          <label class="text-sm text-gray-600 dark:text-gray-400">Статус:</label>
           <select
             v-model="filterStatus"
-            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
           >
             <option value="">Все</option>
             <option value="issued">Выданные</option>
@@ -61,127 +33,59 @@
           </select>
         </div>
 
-        <!-- Фильтр по периоду -->
         <div class="flex items-center gap-2">
-          <label class="text-sm text-gray-600 dark:text-gray-400"
-            >Период:</label
-          >
+          <label class="text-sm text-gray-600 dark:text-gray-400">Период:</label>
           <select
             v-model="filterPeriod"
-            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
           >
             <option value="">Все</option>
-            <option
-              v-for="period in availablePeriods"
-              :key="period"
-              :value="period"
-            >
-              {{ period }}
-            </option>
+            <option v-for="period in availablePeriods" :key="period" :value="period">{{ period }}</option>
           </select>
         </div>
       </div>
 
-      <!-- Пустое состояние -->
+      <!-- Пустое состояние: общий компонент -->
       <div
         v-if="filteredCertificates.length === 0"
-        class="flex flex-col items-center justify-center py-20 rounded-xl bg-white dark:bg-boxdark shadow-md"
+        class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
       >
-        <svg
-          class="w-20 h-20 text-gray-300 dark:text-gray-600 mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="1.5"
-            d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-          />
-        </svg>
-        <h3 class="text-lg font-semibold text-gray-600 dark:text-gray-400">
-          {{
-            filterStatus || filterPeriod
-              ? "Сертификаты не найдены"
-              : "У вас пока нет сертификатов"
-          }}
-        </h3>
-        <p class="text-sm text-gray-500 dark:text-gray-500 mt-1">
-          {{
-            filterStatus || filterPeriod
-              ? "Попробуйте изменить фильтры"
-              : "После прохождения обучения здесь появятся ваши сертификаты"
-          }}
-        </p>
+        <UiEmptyState
+          :icon="BadgeCheck"
+          :title="filterStatus || filterPeriod ? 'Сертификаты не найдены' : 'У вас пока нет сертификатов'"
+          :description="filterStatus || filterPeriod ? 'Попробуйте изменить фильтры' : 'После прохождения обучения здесь появятся ваши сертификаты'"
+        />
       </div>
 
-      <!-- Сетка сертификатов -->
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <!-- Сетка сертификатов: плоские карточки без градиентов и масштабирования -->
+      <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div
           v-for="cert in filteredCertificates"
           :key="cert.id"
-          class="group rounded-xl bg-white dark:bg-boxdark shadow-md overflow-hidden hover:shadow-lg transition-all duration-300"
+          class="overflow-hidden rounded-xl border border-gray-200 bg-white transition-colors hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700"
         >
-          <!-- Превью сертификата -->
-          <div
-            class="relative aspect-[1.4/1] bg-linear-to-br from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 flex items-center justify-center overflow-hidden"
-          >
-            <!-- Иконка сертификата -->
-            <svg
-              class="w-24 h-24 text-primary/40 transform group-hover:scale-110 transition-transform duration-300"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1"
-                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-              />
-            </svg>
+          <!-- Превью сертификата: спокойная плашка вместо градиента -->
+          <div class="relative flex aspect-[2/1] items-center justify-center bg-primary/5 dark:bg-primary/10">
+            <BadgeCheck class="h-16 w-16 text-primary/40" />
 
-            <!-- Статус бейдж -->
-            <div
-              :class="[
-                'absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-medium',
-                cert.status === 'issued' && !isExpired(cert)
-                  ? 'bg-success/20 text-success'
-                  : cert.status === 'issued' && isExpired(cert)
-                  ? 'bg-warning/20 text-warning'
-                  : 'bg-danger/20 text-danger',
-              ]"
-            >
-              {{
-                cert.status === "issued"
-                  ? isExpired(cert)
-                    ? "Истёк срок"
-                    : "Действителен"
-                  : "Отозван"
-              }}
+            <!-- Статус через UiBadge -->
+            <div class="absolute right-3 top-3">
+              <UiBadge
+                size="sm"
+                :color="cert.status === 'issued' ? (isExpired(cert) ? 'warning' : 'success') : 'error'"
+              >
+                {{ cert.status === "issued" ? (isExpired(cert) ? "Истёк срок" : "Действителен") : "Отозван" }}
+              </UiBadge>
             </div>
           </div>
 
           <!-- Информация -->
           <div class="p-4">
-            <!-- Название курса -->
-            <h3
-              class="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2"
-            >
-              {{ cert.courseName }}
-            </h3>
+            <h3 class="mb-2 line-clamp-2 text-sm font-semibold text-gray-900 dark:text-white">{{ cert.courseName }}</h3>
 
-            <!-- Номер сертификата -->
-            <p
-              v-if="cert.certificateNumber"
-              class="text-xs text-primary dark:text-primary/80 font-medium mb-1"
-            >
-              № {{ cert.certificateNumber }}
-            </p>
+            <p v-if="cert.certificateNumber" class="mb-1 text-xs font-medium text-primary">№ {{ cert.certificateNumber }}</p>
 
-            <!-- Группа / Часы -->
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">
               <span v-if="cert.groupCode">Группа: {{ cert.groupCode }}</span>
               <span v-if="cert.groupCode && cert.courseHours"> · </span>
               <span v-if="cert.courseHours">{{ cert.courseHours }} ч.</span>
@@ -189,74 +93,31 @@
             </p>
 
             <!-- Даты -->
-            <div
-              class="flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500 dark:text-gray-400"
-            >
+            <div class="flex flex-wrap gap-x-4 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
               <div class="flex items-center gap-1">
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
+                <CalendarDays class="h-4 w-4" />
                 <span>Выдан: {{ formatDate(cert.issuedAt) }}</span>
               </div>
 
               <div v-if="cert.expiresAt" class="flex items-center gap-1">
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <span :class="{ 'text-warning': isExpired(cert) }">
-                  До: {{ formatDate(cert.expiresAt) }}
-                </span>
+                <Clock class="h-4 w-4" />
+                <span :class="{ 'text-warning': isExpired(cert) }">До: {{ formatDate(cert.expiresAt) }}</span>
               </div>
 
               <div v-else class="flex items-center gap-1">
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
+                <Check class="h-4 w-4" />
                 <span>Бессрочный</span>
               </div>
             </div>
 
-            <!-- Кнопка скачивания -->
+            <!-- Главное действие — скачать (primary), «Поделиться» — вторичное -->
             <a
               v-if="cert.status === 'issued' && cert.id"
               :href="`/api/certificates/download/${cert.id}`"
               target="_blank"
-              class="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors"
+              class="mt-4 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary/90"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              <Download class="h-4 w-4" />
               Скачать сертификат
             </a>
 
@@ -264,25 +125,20 @@
             <button
               v-if="cert.certificateNumber"
               @click="shareVerifyLink(cert.certificateNumber)"
-              class="mt-2 w-full inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              class="mt-2 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.04]"
               :id="`share-cert-${cert.id}`"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
+              <Share2 class="h-4 w-4" />
               {{ copiedId === cert.certificateNumber ? 'Ссылка скопирована!' : 'Поделиться ссылкой' }}
             </button>
 
-            <!-- Кнопка для отозванных -->
+            <!-- Исправление: блок «отозван» раньше был v-else-if к кнопке «Поделиться» и не показывался
+                 у отозванных сертификатов с номером; теперь это независимое условие -->
             <div
-              v-else-if="cert.status === 'revoked'"
-              class="mt-4 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+              v-if="cert.status === 'revoked'"
+              class="mt-2 inline-flex h-9 w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 text-sm text-gray-500 dark:bg-white/[0.06] dark:text-gray-400"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-              </svg>
+              <Ban class="h-4 w-4" />
               Сертификат отозван
             </div>
           </div>
@@ -293,6 +149,9 @@
 </template>
 
 <script setup lang="ts">
+// Иконки lucide вместо inline-SVG (единый набор; нужны для переработанного шаблона)
+import { BadgeCheck, CalendarDays, Clock, Check, Download, Share2, Ban } from "lucide-vue-next";
+
 definePageMeta({
   layout: "default",
 });

@@ -117,7 +117,7 @@
                   >
                     {{ alternative.matchScore }}%
                   </div>
-                  <div class="text-[10px] uppercase font-semibold tracking-wider text-slate-400 dark:text-slate-500 mt-0.5">
+                  <div class="text-[11px] uppercase font-semibold tracking-wider text-slate-400 dark:text-slate-500 mt-0.5">
                     совпадение
                   </div>
                 </div>
@@ -144,7 +144,7 @@
         <!-- Selected Indicator -->
         <div
           v-if="isSelected(alternative.student.id)"
-          class="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-xl text-[10px] font-bold uppercase tracking-wider"
+          class="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-xl text-[11px] font-bold uppercase tracking-wider"
         >
           Выбран
         </div>

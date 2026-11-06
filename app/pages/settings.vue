@@ -1,26 +1,21 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Заголовок страницы -->
-    <div class="mb-8">
-      <h2 class="text-2xl font-bold text-black dark:text-white">Настройки</h2>
-      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        Управление системой, профилем и конфигурацией платформы
-      </p>
-    </div>
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок страницы вместо самописного h2 -->
+    <UiPageHeader title="Настройки" description="Управление системой, профилем и конфигурацией платформы" />
 
     <!-- Основной layout: Сайдбар с карточками навигации + контент -->
-    <div class="flex gap-6 items-start">
+    <div class="flex flex-col lg:flex-row gap-6 items-start">
 
       <!-- ===== ЛЕВАЯ НАВИГАЦИЯ (карточки) ===== -->
-      <div class="w-72 shrink-0 space-y-2">
+      <div class="w-full lg:w-72 shrink-0 space-y-2">
         <button
           v-for="tab in tabs"
           :key="tab.id"
           @click="activeTab = tab.id"
           class="group w-full rounded-xl border p-4 text-left transition-all duration-200"
           :class="activeTab === tab.id
-            ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20 scale-[1.01]'
-            : 'border-gray-200 bg-white text-gray-700 hover:border-primary/30 hover:bg-gray-50 dark:border-gray-700 dark:bg-boxdark dark:text-gray-300 dark:hover:bg-gray-800'"
+            ? 'border-primary bg-primary text-white shadow-primary/20 scale-[1.01]'
+            : 'border-gray-200 bg-white text-gray-700 hover:border-primary/30 hover:bg-gray-50 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-gray-800'"
         >
           <div class="flex items-center gap-3">
             <div
@@ -54,16 +49,16 @@
 
         <!-- ПРОФИЛЬ / ОБЩИЕ -->
         <div v-if="activeTab === 'general'" class="space-y-6">
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30">
-              <h3 class="font-bold text-gray-900 dark:text-white">Общие настройки</h3>
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+              <h3 class="font-semibold text-gray-900 dark:text-white">Общие настройки</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">Язык и базовые параметры интерфейса</p>
             </div>
             <div class="p-6 space-y-4">
               <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50">
                 <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Язык интерфейса</label>
                 <select v-model="userForm.language"
-                  class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white">
+                  class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                   <option value="ru">Русский</option>
                   <option value="en">English</option>
                   <option value="uz">O'zbek</option>
@@ -72,24 +67,24 @@
 
               <div class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50 opacity-60">
                 <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Часовой пояс (недоступно)</label>
-                <select disabled class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white">
+                <select disabled class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                   <option value="Asia/Tashkent">Asia/Tashkent (UTC+5)</option>
                 </select>
               </div>
 
               <!-- APP_URL и APP_NAME -->
               <div class="border-t border-gray-100 dark:border-gray-700 pt-4">
-                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Параметры приложения</p>
+                <p class="text-xs font-semibold text-gray-400 mb-3">Параметры приложения</p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Название (APP_NAME)</label>
                     <input v-model="envForm.APP_NAME" type="text" placeholder="ATC Platform"
-                      class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
+                      class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                   </div>
                   <div>
                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">URL сервера (APP_URL)</label>
                     <input v-model="envForm.APP_URL" type="url" placeholder="https://..."
-                      class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
+                      class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                   </div>
                 </div>
               </div>
@@ -105,9 +100,9 @@
 
         <!-- УВЕДОМЛЕНИЯ -->
         <div v-if="activeTab === 'notifications'" class="space-y-6">
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30">
-              <h3 class="font-bold text-gray-900 dark:text-white">Настройки уведомлений</h3>
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+              <h3 class="font-semibold text-gray-900 dark:text-white">Настройки уведомлений</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">Каналы получения уведомлений</p>
             </div>
             <div class="p-6 space-y-3">
@@ -119,7 +114,7 @@
                 </div>
                 <label class="relative inline-flex cursor-pointer items-center">
                   <input type="checkbox" v-model="(userForm as any)[notif.key]" class="peer sr-only" />
-                  <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-700"></div>
+                  <div class="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:trangray-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-700"></div>
                 </label>
               </div>
               <div class="flex justify-end pt-2">
@@ -131,9 +126,9 @@
 
         <!-- ВНЕШНИЙ ВИД -->
         <div v-if="activeTab === 'appearance'" class="space-y-6">
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30">
-              <h3 class="font-bold text-gray-900 dark:text-white">Внешний вид</h3>
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+              <h3 class="font-semibold text-gray-900 dark:text-white">Внешний вид</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">Тема, шрифт и цветовая схема</p>
             </div>
             <div class="p-6 space-y-6">
@@ -175,9 +170,9 @@
 
         <!-- РАСПИСАНИЕ -->
         <div v-if="activeTab === 'schedule'">
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30">
-              <h3 class="font-bold text-gray-900 dark:text-white">Настройки расписания</h3>
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+              <h3 class="font-semibold text-gray-900 dark:text-white">Настройки расписания</h3>
             </div>
             <div class="p-6"><SettingsScheduleSettings /></div>
           </div>
@@ -185,9 +180,9 @@
 
         <!-- АУДИТОРИИ -->
         <div v-if="activeTab === 'classrooms'">
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30">
-              <h3 class="font-bold text-gray-900 dark:text-white">Аудитории</h3>
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+              <h3 class="font-semibold text-gray-900 dark:text-white">Аудитории</h3>
             </div>
             <div class="p-6"><SettingsClassroomSettings /></div>
           </div>
@@ -195,9 +190,9 @@
 
         <!-- AI НАСТРОЙКИ (логика не меняется) -->
         <div v-if="activeTab === 'ai'">
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30">
-              <h3 class="font-bold text-gray-900 dark:text-white">AI Настройки</h3>
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+              <h3 class="font-semibold text-gray-900 dark:text-white">AI Настройки</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">Управление API ключами и провайдерами</p>
             </div>
             <div class="p-6"><SettingsAISettings /></div>
@@ -207,10 +202,10 @@
         <!-- TELEGRAM -->
         <div v-if="activeTab === 'telegram'" class="space-y-6">
           <!-- .env токены для Telegram -->
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-between">
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5 flex items-center justify-between">
               <div>
-                <h3 class="font-bold text-gray-900 dark:text-white">Конфигурация бота</h3>
+                <h3 class="font-semibold text-gray-900 dark:text-white">Конфигурация бота</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Токены и секреты для Telegram Bot API</p>
               </div>
               <div v-if="envLoading" class="h-5 w-5 animate-spin rounded-full border-2 border-solid border-primary border-t-transparent"></div>
@@ -225,8 +220,8 @@
                     <input v-model="envForm.TELEGRAM_BOT_TOKEN"
                       :type="visibleSecrets.TELEGRAM_BOT_TOKEN ? 'text' : 'password'"
                       placeholder="Получить у @BotFather"
-                      class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
-                    <button type="button" @click="toggleSecret('TELEGRAM_BOT_TOKEN')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 pr-10 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    <button type="button" @click="toggleSecret('TELEGRAM_BOT_TOKEN')" class="absolute right-3 top-1/2 -trangray-y-1/2 text-gray-400 hover:text-gray-600">
                       <Eye v-if="!visibleSecrets.TELEGRAM_BOT_TOKEN" class="h-4 w-4" />
                       <EyeOff v-else class="h-4 w-4" />
                     </button>
@@ -241,8 +236,8 @@
                     <input v-model="envForm.TELEGRAM_WEBHOOK_SECRET"
                       :type="visibleSecrets.TELEGRAM_WEBHOOK_SECRET ? 'text' : 'password'"
                       placeholder="Придумайте секретную строку"
-                      class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
-                    <button type="button" @click="toggleSecret('TELEGRAM_WEBHOOK_SECRET')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 pr-10 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    <button type="button" @click="toggleSecret('TELEGRAM_WEBHOOK_SECRET')" class="absolute right-3 top-1/2 -trangray-y-1/2 text-gray-400 hover:text-gray-600">
                       <Eye v-if="!visibleSecrets.TELEGRAM_WEBHOOK_SECRET" class="h-4 w-4" />
                       <EyeOff v-else class="h-4 w-4" />
                     </button>
@@ -260,9 +255,9 @@
           </div>
 
           <!-- Управление ботом (компонент без изменений) -->
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30">
-              <h3 class="font-bold text-gray-900 dark:text-white">Управление ботом</h3>
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+              <h3 class="font-semibold text-gray-900 dark:text-white">Управление ботом</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">Webhook, статус и возможности бота</p>
             </div>
             <div class="p-6"><SettingsTelegramBotSettings /></div>
@@ -276,10 +271,10 @@
 
         <!-- БАЗА ДАННЫХ -->
         <div v-if="activeTab === 'database'" class="space-y-6">
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-between">
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5 flex items-center justify-between">
               <div>
-                <h3 class="font-bold text-gray-900 dark:text-white">База данных</h3>
+                <h3 class="font-semibold text-gray-900 dark:text-white">База данных</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Параметры подключения к MySQL</p>
               </div>
               <!-- Индикатор статуса -->
@@ -294,22 +289,22 @@
                 <div>
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Хост <span class="text-danger">*</span></label>
                   <input v-model="envForm.DATABASE_HOST" type="text" placeholder="localhost"
-                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
+                    class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                 </div>
                 <div>
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Порт</label>
                   <input v-model="envForm.DATABASE_PORT" type="text" placeholder="3306"
-                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
+                    class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                 </div>
                 <div>
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Имя БД <span class="text-danger">*</span></label>
                   <input v-model="envForm.DATABASE_NAME" type="text" placeholder="atc_platform"
-                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
+                    class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                 </div>
                 <div>
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Пользователь <span class="text-danger">*</span></label>
                   <input v-model="envForm.DATABASE_USER" type="text" placeholder="root"
-                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
+                    class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                 </div>
                 <div class="md:col-span-2">
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Пароль</label>
@@ -317,8 +312,8 @@
                     <input v-model="envForm.DATABASE_PASSWORD"
                       :type="visibleSecrets.DATABASE_PASSWORD ? 'text' : 'password'"
                       placeholder="Оставьте пустым чтобы не менять"
-                      class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
-                    <button type="button" @click="toggleSecret('DATABASE_PASSWORD')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 pr-10 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    <button type="button" @click="toggleSecret('DATABASE_PASSWORD')" class="absolute right-3 top-1/2 -trangray-y-1/2 text-gray-400 hover:text-gray-600">
                       <Eye v-if="!visibleSecrets.DATABASE_PASSWORD" class="h-4 w-4" />
                       <EyeOff v-else class="h-4 w-4" />
                     </button>
@@ -326,7 +321,13 @@
                 </div>
               </div>
 
-              <div class="flex gap-3 pt-2 border-t border-gray-100 dark:border-gray-700 mt-4">
+              <!-- Предупреждение (только текст): смена доступов к БД применяется после перезапуска сервера -->
+              <div class="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-gray-700 dark:text-gray-200" role="alert">
+                <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+                <span>Изменение параметров подключения может нарушить работу системы: потребуется перезапуск сервера, текущие сессии будут завершены. Сначала проверьте подключение.</span>
+              </div>
+
+              <div class="flex gap-3 pt-2 border-t border-gray-100 dark:border-gray-800 mt-4">
                 <UiButton variant="outline" :loading="testingDb" @click="testDbConnection">
                   Проверить подключение
                 </UiButton>
@@ -347,9 +348,9 @@
 
         <!-- БЕЗОПАСНОСТЬ -->
         <div v-if="activeTab === 'security'" class="space-y-6">
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30">
-              <h3 class="font-bold text-gray-900 dark:text-white">Безопасность и JWT</h3>
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5">
+              <h3 class="font-semibold text-gray-900 dark:text-white">Безопасность и JWT</h3>
               <p class="text-sm text-gray-500 dark:text-gray-400">Секреты токенов авторизации</p>
             </div>
             <div class="p-6 space-y-4">
@@ -362,17 +363,22 @@
                     <input v-model="envForm[field.key]"
                       :type="visibleSecrets[field.key] ? 'text' : 'password'"
                       :placeholder="field.placeholder"
-                      class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
-                    <button type="button" @click="toggleSecret(field.key)" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 pr-10 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                    <button type="button" @click="toggleSecret(field.key)" class="absolute right-3 top-1/2 -trangray-y-1/2 text-gray-400 hover:text-gray-600">
                       <Eye v-if="!visibleSecrets[field.key]" class="h-4 w-4" />
                       <EyeOff v-else class="h-4 w-4" />
                     </button>
                   </div>
                   <input v-else v-model="envForm[field.key]" type="text" :placeholder="field.placeholder"
-                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
+                    class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                 </div>
               </div>
-              <div class="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-700 mt-2">
+              <!-- Предупреждение (только текст): смена JWT-секретов обнуляет авторизацию всех пользователей -->
+              <div class="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-gray-700 dark:text-gray-200" role="alert">
+                <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+                <span>Изменение приведёт к завершению всех сессий и перезапуску сервера: все пользователи, включая вас, должны будут войти заново.</span>
+              </div>
+              <div class="flex justify-end pt-2 border-t border-gray-100 dark:border-gray-800 mt-2">
                 <UiButton variant="primary" :loading="saving" @click="saveEnvGroup(['JWT_SECRET','JWT_EXPIRES_IN','REFRESH_TOKEN_SECRET','REFRESH_TOKEN_EXPIRES_IN'])">
                   <Save class="mr-2 h-4 w-4" />
                   Сохранить настройки
@@ -384,10 +390,10 @@
 
         <!-- СЕРВЕР И СИСТЕМА -->
         <div v-if="activeTab === 'system'" class="space-y-6">
-          <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-boxdark overflow-hidden">
-            <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-between">
+          <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
+            <div class="border-b border-gray-100 dark:border-gray-800 px-5 py-3.5 flex items-center justify-between">
               <div>
-                <h3 class="font-bold text-gray-900 dark:text-white">Система (.env)</h3>
+                <h3 class="font-semibold text-gray-900 dark:text-white">Система (.env)</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400">NODE_ENV и параметры автозапуска</p>
               </div>
             </div>
@@ -396,7 +402,7 @@
                 <div>
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Режим NODE_ENV</label>
                   <select v-model="envForm.NODE_ENV"
-                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white">
+                    class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     <option value="production">production</option>
                     <option value="development">development</option>
                   </select>
@@ -404,7 +410,7 @@
                 <div>
                   <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Часовой пояс (APP_TIMEZONE)</label>
                   <select v-model="envForm.APP_TIMEZONE"
-                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-900 dark:text-white">
+                    class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     <option value="Asia/Tashkent">Asia/Tashkent (UTC+5)</option>
                     <option value="Asia/Almaty">Asia/Almaty (UTC+6)</option>
                     <option value="Europe/Moscow">Europe/Moscow (UTC+3)</option>
@@ -457,7 +463,9 @@ import { ref, reactive, computed, onMounted, watch } from 'vue';
 import {
   Settings, Bell, Palette, Calendar, DoorOpen, Bot,
   MessageSquareText, Database, ShieldCheck, Server, Share2,
-  ChevronRight, Eye, EyeOff, Save, Power, Sun, Moon, SunMoon
+  ChevronRight, Eye, EyeOff, Save, Power, Sun, Moon, SunMoon,
+  // AlertTriangle нужен для предупреждений перед сохранением секретов (только презентация)
+  AlertTriangle
 } from 'lucide-vue-next';
 import { useUserSettings } from '@/composables/useUserSettings';
 import { Permission, roleHasPermission } from '~/types/permissions';

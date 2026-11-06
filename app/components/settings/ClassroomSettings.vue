@@ -206,6 +206,15 @@
         </div>
       </form>
     </UiModal>
+
+    <!-- Подтверждение удаления аудитории (заменяет нативный confirm) -->
+    <UiConfirmModal
+      :is-open="!!classroomToDelete"
+      title="Удалить аудиторию?"
+      :message="`Вы уверены, что хотите удалить аудиторию «${classroomToDelete?.name ?? ''}»?`"
+      @confirm="deleteClassroomConfirmed"
+      @cancel="classroomToDelete = null"
+    />
   </div>
 </template>
 
@@ -357,10 +366,17 @@ const toggleClassroomStatus = async (classroom) => {
 };
 
 // Подтверждение удаления
-const confirmDelete = async (classroom) => {
-  if (!confirm(`Вы уверены, что хотите удалить аудиторию "${classroom.name}"?`)) {
-    return;
-  }
+// Безопасность UX: вместо нативного confirm() открываем UiConfirmModal, а удаление выполняем после подтверждения
+const classroomToDelete = ref(null);
+const confirmDelete = (classroom) => {
+  classroomToDelete.value = classroom;
+};
+
+// Прежняя логика удаления аудитории
+const deleteClassroomConfirmed = async () => {
+  const classroom = classroomToDelete.value;
+  if (!classroom) return;
+  classroomToDelete.value = null;
 
   try {
     const response = await authFetch(`/api/classrooms/${classroom.id}`, {

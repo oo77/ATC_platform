@@ -410,25 +410,25 @@
                   class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
                 >
                   <div class="rounded-xl bg-white dark:bg-slate-800 p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Всего</p>
+                    <p class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">Всего</p>
                     <p class="text-xl font-black text-slate-900 dark:text-white">
                       {{ requestStats.total }}
                     </p>
                   </div>
                   <div class="rounded-xl bg-success/5 p-4 border border-success/10 shadow-sm">
-                    <p class="text-[10px] font-black text-success/60 uppercase tracking-widest mb-1">Успешных</p>
+                    <p class="text-[11px] font-black text-success/60 uppercase tracking-widest mb-1">Успешных</p>
                     <p class="text-xl font-black text-success">
                       {{ requestStats.success }}
                     </p>
                   </div>
                   <div class="rounded-xl bg-danger/5 p-4 border border-danger/10 shadow-sm">
-                    <p class="text-[10px] font-black text-danger/60 uppercase tracking-widest mb-1">Ошибок</p>
+                    <p class="text-[11px] font-black text-danger/60 uppercase tracking-widest mb-1">Ошибок</p>
                     <p class="text-xl font-black text-danger">
                       {{ requestStats.error }}
                     </p>
                   </div>
                   <div class="rounded-xl bg-warning/5 p-4 border border-warning/10 shadow-sm">
-                    <p class="text-[10px] font-black text-warning/60 uppercase tracking-widest mb-1">Отказано</p>
+                    <p class="text-[11px] font-black text-warning/60 uppercase tracking-widest mb-1">Отказано</p>
                     <p class="text-xl font-black text-warning">
                       {{ requestStats.denied }}
                     </p>
@@ -472,7 +472,7 @@
                           </span>
                           <span
                             :class="[
-                              'text-[10px] px-2 py-0.5 rounded-lg font-black uppercase tracking-widest border',
+                              'text-[11px] px-2 py-0.5 rounded-lg font-black uppercase tracking-widest border',
                               request.requestType === 'command' &&
                                 'bg-primary/5 text-primary border-primary/10',
                               request.requestType === 'callback' &&
@@ -484,7 +484,7 @@
                             {{ request.requestType }}
                           </span>
                         </div>
-                        <div class="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <div class="flex items-center gap-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                           <span>{{ formatDate(request.createdAt) }}</span>
                           <span v-if="request.responseTimeMs" class="flex items-center gap-1">
                             <span class="w-1 h-1 rounded-full bg-slate-300"></span>

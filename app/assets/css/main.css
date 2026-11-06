@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100..900&display=swap')
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300..800&display=swap')
 layer(base);
 
 @import 'tailwindcss';
@@ -7,7 +7,12 @@ layer(base);
 
 @theme {
   --font-*: initial;
-  --font-outfit: Montserrat, sans-serif;
+  /* Redesign 2026-11: Inter — спокойнее и плотнее Montserrat для таблиц и форм */
+  --font-outfit: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Смягчаем «кричащие» веса глобально (329 мест font-black) */
+  --font-weight-black: 700;
+  --font-weight-extrabold: 650;
 
   --breakpoint-*: initial;
   --breakpoint-2xsm: 375px;
@@ -173,6 +178,17 @@ layer(base);
   
   /* Warning - используется для предупреждений (желтый) */
   --color-warning: var(--color-warning-600);
+
+  /* Info - информационные состояния (раньше bg-info/text-info не были определены) */
+  --color-info-50: var(--color-blue-light-50);
+  --color-info-100: var(--color-blue-light-100);
+  --color-info-200: var(--color-blue-light-200);
+  --color-info-300: var(--color-blue-light-300);
+  --color-info-400: var(--color-blue-light-400);
+  --color-info-500: var(--color-blue-light-500);
+  --color-info-600: var(--color-blue-light-600);
+  --color-info-700: var(--color-blue-light-700);
+  --color-info: var(--color-blue-light-600);
   
   /* Secondary/Stroke - используется для второстепенных элементов (серый) */
   --color-stroke: var(--color-gray-200);
@@ -239,7 +255,17 @@ layer(base);
     cursor: pointer;
   }
   body {
-    @apply relative font-normal font-outfit z-1 bg-gray-50;
+    @apply relative font-normal font-outfit z-1 bg-gray-50 text-gray-800 antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  /* Видимый фокус для клавиатуры (доступность), мышью не мешает */
+  a:focus-visible,
+  button:focus-visible,
+  [role='button']:focus-visible,
+  [role='tab']:focus-visible,
+  [role='menuitem']:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
   }
 }
 
@@ -302,6 +328,50 @@ layer(base);
 @utility menu-dropdown-badge-inactive {
   @apply bg-brand-50 group-hover:bg-brand-100 dark:bg-brand-500/15 dark:group-hover:bg-brand-500/20;
 }
+
+/* ------------------------------------------------------------------
+   Анимации входа (подмножество tw-animate-css, которое используется
+   в шаблонах: animate-in fade-in slide-in-from-* zoom-in-*).
+   Раньше классы были «пустыми», т.к. плагин не установлен.
+------------------------------------------------------------------- */
+@keyframes ui-enter {
+  from {
+    opacity: var(--ui-enter-opacity, 1);
+    transform: translate3d(var(--ui-enter-x, 0), var(--ui-enter-y, 0), 0) scale(var(--ui-enter-scale, 1));
+  }
+}
+@utility animate-in {
+  animation: ui-enter 0.18s cubic-bezier(0.2, 0, 0, 1) both;
+}
+@utility fade-in {
+  --ui-enter-opacity: 0;
+}
+@utility zoom-in {
+  --ui-enter-scale: 0;
+}
+@utility zoom-in-95 {
+  --ui-enter-scale: 0.95;
+}
+@utility slide-in-from-top-2 {
+  --ui-enter-y: -0.5rem;
+}
+@utility slide-in-from-top-3 {
+  --ui-enter-y: -0.75rem;
+}
+@utility slide-in-from-top-4 {
+  --ui-enter-y: -1rem;
+}
+@utility slide-in-from-bottom-4 {
+  --ui-enter-y: 1rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-in, .animate-content-in {
+    animation: none !important;
+  }
+}
+
+/* Таблицы с числами — ровные колонки */
+.tabular-nums-all td { font-variant-numeric: tabular-nums; }
 
 @utility no-scrollbar {
   /* Chrome, Safari and Opera */
@@ -402,7 +472,7 @@ layer(base);
   @apply !p-0;
 }
 .apexcharts-tooltip-title {
-  @apply !mb-0 !border-b-0 !bg-transparent !p-0 !text-[10px] !leading-4 !text-gray-800 dark:!text-white/90;
+  @apply !mb-0 !border-b-0 !bg-transparent !p-0 !text-[11px] !leading-4 !text-gray-800 dark:!text-white/90;
 }
 .apexcharts-tooltip-text {
   @apply !text-theme-xs !text-gray-700 dark:!text-white/90;

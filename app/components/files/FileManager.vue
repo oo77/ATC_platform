@@ -7,7 +7,7 @@
     <!-- Split View Layout -->
     <div class="flex h-full">
       <!-- Sidebar: Folder Tree -->
-      <aside class="w-56 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 overflow-y-auto shrink-0">
+      <aside class="w-56 shrink-0 overflow-y-auto border-r border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-white/[0.02]">
         <FolderTree
           :folders="folders"
           :current-folder-id="currentFolderId"
@@ -30,6 +30,7 @@
           @delete-selected="handleDeleteSelected"
           @set-view="setViewMode"
           @sync="syncFiles"
+          @update:search="searchQuery = $event"
           @create-folder="showCreateFolderModal = true"
           @upload="showUploadModal = true"
         />
@@ -232,15 +233,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Фон задаёт карточка страницы (светлая/тёмная тема), поэтому здесь только раскладка */
 .file-manager {
    height: 100%;
    display: flex;
    flex-direction: column;
-   background-color: var(--color-white);
    outline: none;
-}
-
-.file-manager:deep(.dark) {
-   background-color: var(--color-boxdark);
 }
 </style>

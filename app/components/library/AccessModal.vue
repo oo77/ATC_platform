@@ -251,6 +251,16 @@
         </div>
       </div>
     </div>
+
+    <!-- Подтверждение отзыва доступа (телепортируется в body поверх основной модалки) -->
+    <UiConfirmModal
+      :is-open="!!accessToRevoke"
+      title="Отозвать доступ?"
+      message="Пользователь или группа потеряет доступ к этой книге."
+      confirm-text="Отозвать"
+      @confirm="revokeAccessConfirmed"
+      @cancel="accessToRevoke = null"
+    />
   </UiModal>
 </template>
 
@@ -377,8 +387,17 @@ const grantAccess = async () => {
   }
 };
 
-const revokeAccess = async (access: Access) => {
-  if (!props.book) return;
+// Безопасность UX: отзыв доступа необратим — сначала запрашиваем подтверждение через UiConfirmModal
+const accessToRevoke = ref<Access | null>(null);
+const revokeAccess = (access: Access) => {
+  accessToRevoke.value = access;
+};
+
+// Прежняя логика отзыва доступа — после подтверждения
+const revokeAccessConfirmed = async () => {
+  const access = accessToRevoke.value;
+  accessToRevoke.value = null;
+  if (!props.book || !access) return;
 
   try {
     await $fetch(`/api/library/admin/books/${props.book.id}/access`, {

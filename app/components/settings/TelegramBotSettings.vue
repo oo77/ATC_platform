@@ -139,7 +139,7 @@
             <p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2" :title="webhookInfo.lastErrorMessage">
               {{ webhookInfo.lastErrorMessage }}
             </p>
-            <p class="mt-1 text-[10px] text-gray-500">{{ formatDate(webhookInfo.lastErrorDate) }}</p>
+            <p class="mt-1 text-[11px] text-gray-500">{{ formatDate(webhookInfo.lastErrorDate) }}</p>
           </div>
           <div v-else class="flex items-center gap-2 rounded-lg border border-success/20 bg-success/5 p-3">
             <CheckCircle2 class="h-4 w-4 text-success" />
@@ -175,6 +175,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Подтверждение удаления Webhook (заменяет нативный confirm) -->
+    <UiConfirmModal
+      :is-open="showDeleteWebhookConfirm"
+      title="Удалить Webhook?"
+      message="Бот перестанет получать обновления в реальном времени."
+      @confirm="deleteWebhookConfirmed"
+      @cancel="showDeleteWebhookConfirm = false"
+    />
   </div>
 </template>
 
@@ -303,8 +312,15 @@ const setupWebhook = async () => {
   }
 };
 
-const deleteWebhook = async () => {
-  if (!confirm('Удалить Webhook? Бот перестанет получать обновления в реальном времени.')) return;
+// Безопасность UX: кнопка «Удалить Webhook» теперь только открывает модалку подтверждения вместо нативного confirm
+const showDeleteWebhookConfirm = ref(false);
+const deleteWebhook = () => {
+  showDeleteWebhookConfirm.value = true;
+};
+
+// Прежняя логика удаления — выполняется после подтверждения
+const deleteWebhookConfirmed = async () => {
+  showDeleteWebhookConfirm.value = false;
   deletingWebhook.value = true;
   try {
     await $fetch('/api/telegram/webhook', { method: 'DELETE' });

@@ -1,204 +1,150 @@
 <template>
-  <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-4 border-t border-stroke dark:border-strokedark">
-    <!-- Информация о записях -->
-    <div class="text-sm text-gray-600 dark:text-gray-400">
-      Показано <span class="font-medium text-black dark:text-white">{{ from }}</span>
-      — <span class="font-medium text-black dark:text-white">{{ to }}</span>
-      из <span class="font-medium text-black dark:text-white">{{ total }}</span> записей
-    </div>
+  <!--
+    UiPagination v2 — одна компактная пагинация для всех таблиц.
+    Контракт (props/emits) прежний: currentPage, totalPages, total, limit, loading, limitOptions;
+    update:page, update:limit — поэтому все существующие места работают без правок.
+    Новое: hideLimit, compact (авто на мобильных), scrollTarget, лимит всегда есть в списке опций.
+    Размещать внутри карточки таблицы как футер.
+  -->
+  <nav
+    v-if="total > 0"
+    aria-label="Постраничная навигация"
+    class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-gray-100 px-4 py-3 dark:border-gray-800"
+  >
+    <!-- Слева: диапазон «1–20 из 437» -->
+    <p class="text-sm text-gray-500 dark:text-gray-400">
+      <span class="font-medium tabular-nums text-gray-800 dark:text-gray-100">{{ from }}–{{ to }}</span>
+      из <span class="tabular-nums">{{ total }}</span>
+    </p>
 
-    <!-- Навигация по страницам -->
-    <div class="flex items-center gap-2">
-      <!-- Кнопка "Первая страница" -->
-      <button
-        :disabled="currentPage === 1 || loading"
-        @click="goToPage(1)"
-        class="p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        :class="[
-          currentPage === 1
-            ? 'text-gray-400 dark:text-gray-600'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-meta-4',
-        ]"
-        title="Первая страница"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-        </svg>
+    <!-- По центру: страницы (на узком экране — «3 / 12») -->
+    <div v-if="totalPages > 1" class="flex items-center gap-1">
+      <button type="button" class="pg-btn" :disabled="currentPage === 1 || loading" title="Предыдущая" aria-label="Предыдущая страница" @click="goToPage(currentPage - 1)">
+        <ChevronLeft class="h-4 w-4" />
       </button>
 
-      <!-- Кнопка "Предыдущая страница" -->
-      <button
-        :disabled="currentPage === 1 || loading"
-        @click="goToPage(currentPage - 1)"
-        class="p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        :class="[
-          currentPage === 1
-            ? 'text-gray-400 dark:text-gray-600'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-meta-4',
-        ]"
-        title="Предыдущая страница"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
+      <!-- Мобильная версия -->
+      <span class="px-2 text-sm tabular-nums text-gray-600 sm:hidden dark:text-gray-300">{{ currentPage }} / {{ totalPages }}</span>
 
-      <!-- Номера страниц -->
-      <div class="flex items-center gap-1">
-        <template v-for="page in visiblePages" :key="page">
-          <button
-            v-if="page !== '...'"
-            :disabled="loading"
-            @click="goToPage(page as number)"
-            class="min-w-[40px] h-10 px-3 rounded-lg text-sm font-medium transition-all duration-200"
-            :class="[
-              currentPage === page
-                ? 'bg-primary text-white shadow-md'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-meta-4',
-            ]"
-          >
-            {{ page }}
-          </button>
-          <span
-            v-else
-            class="min-w-[40px] h-10 px-3 flex items-center justify-center text-gray-400 dark:text-gray-600"
-          >
-            ⋯
-          </span>
-        </template>
-      </div>
+      <!-- Десктопная версия: номера с многоточием -->
+      <template v-for="(page, i) in visiblePages" :key="`${page}-${i}`">
+        <button
+          v-if="page !== '...'"
+          type="button"
+          :disabled="loading"
+          :aria-current="currentPage === page ? 'page' : undefined"
+          :class="['pg-btn hidden min-w-8 px-2 text-sm font-medium tabular-nums sm:inline-flex', currentPage === page ? '!bg-primary !text-white hover:!bg-primary' : '']"
+          @click="goToPage(page as number)"
+        >{{ page }}</button>
+        <span v-else class="hidden w-6 text-center text-gray-400 sm:inline">…</span>
+      </template>
 
-      <!-- Кнопка "Следующая страница" -->
-      <button
-        :disabled="currentPage === totalPages || loading"
-        @click="goToPage(currentPage + 1)"
-        class="p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        :class="[
-          currentPage === totalPages
-            ? 'text-gray-400 dark:text-gray-600'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-meta-4',
-        ]"
-        title="Следующая страница"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-
-      <!-- Кнопка "Последняя страница" -->
-      <button
-        :disabled="currentPage === totalPages || loading"
-        @click="goToPage(totalPages)"
-        class="p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        :class="[
-          currentPage === totalPages
-            ? 'text-gray-400 dark:text-gray-600'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-meta-4',
-        ]"
-        title="Последняя страница"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-        </svg>
+      <button type="button" class="pg-btn" :disabled="currentPage === totalPages || loading" title="Следующая" aria-label="Следующая страница" @click="goToPage(currentPage + 1)">
+        <ChevronRight class="h-4 w-4" />
       </button>
     </div>
 
-    <!-- Выбор количества записей на странице -->
-    <div class="flex items-center gap-2">
-      <label class="text-sm text-gray-600 dark:text-gray-400">
-        На странице:
-      </label>
+    <!-- Справа: размер страницы -->
+    <label v-if="!hideLimit" class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+      По
       <select
         :value="limit"
         :disabled="loading"
+        class="h-8 rounded-lg border border-gray-300 bg-transparent px-2 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
         @change="handleLimitChange"
-        class="rounded-lg border border-stroke bg-transparent py-2 px-3 text-sm outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary"
       >
-        <option v-for="option in limitOptions" :key="option" :value="option">
-          {{ option }}
-        </option>
+        <option v-for="o in options" :key="o" :value="o">{{ o }}</option>
       </select>
-    </div>
-  </div>
+    </label>
+  </nav>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed } from 'vue'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 
 interface Props {
-  currentPage: number;
-  totalPages: number;
-  total: number;
-  limit: number;
-  loading?: boolean;
-  limitOptions?: number[];
+  currentPage: number
+  totalPages: number
+  total: number
+  limit: number
+  loading?: boolean
+  limitOptions?: number[]
+  /** Скрыть выбор размера страницы (там, где страница не умеет менять limit) */
+  hideLimit?: boolean
+  /** CSS-селектор/элемент, к которому прокрутить после смены страницы (шапка таблицы) */
+  scrollTarget?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
   limitOptions: () => [10, 25, 50, 100],
-});
+  hideLimit: false,
+})
 
 const emit = defineEmits<{
-  'update:page': [page: number];
-  'update:limit': [limit: number];
-}>();
+  'update:page': [page: number]
+  'update:limit': [limit: number]
+}>()
 
-// Начальная и конечная запись на текущей странице
-const from = computed(() => {
-  if (props.total === 0) return 0;
-  return (props.currentPage - 1) * props.limit + 1;
-});
+// Если страница использует нестандартный limit (12, 20) — добавляем его в список,
+// иначе select показывал бы неверное значение
+const options = computed(() => Array.from(new Set([...props.limitOptions, props.limit])).sort((a, b) => a - b))
 
-const to = computed(() => {
-  return Math.min(props.currentPage * props.limit, props.total);
-});
+const from = computed(() => (props.total === 0 ? 0 : (props.currentPage - 1) * props.limit + 1))
+const to = computed(() => Math.min(props.currentPage * props.limit, props.total))
 
-// Вычисление видимых страниц
+// Окно страниц: первая, последняя и ±2 вокруг текущей
 const visiblePages = computed(() => {
-  const pages: (number | string)[] = [];
-  const total = props.totalPages;
-  const current = props.currentPage;
-  const delta = 2; // Количество страниц до и после текущей
-
-  if (total <= 7) {
-    // Показываем все страницы если их мало
-    for (let i = 1; i <= total; i++) {
-      pages.push(i);
-    }
-  } else {
-    // Всегда показываем первую страницу
-    pages.push(1);
-
-    if (current > delta + 2) {
-      pages.push('...');
-    }
-
-    // Страницы вокруг текущей
-    for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
-      pages.push(i);
-    }
-
-    if (current < total - delta - 1) {
-      pages.push('...');
-    }
-
-    // Всегда показываем последнюю страницу
-    pages.push(total);
-  }
-
-  return pages;
-});
+  const total = props.totalPages
+  const cur = props.currentPage
+  const delta = 2
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | string)[] = [1]
+  if (cur > delta + 2) pages.push('...')
+  for (let i = Math.max(2, cur - delta); i <= Math.min(total - 1, cur + delta); i++) pages.push(i)
+  if (cur < total - delta - 1) pages.push('...')
+  pages.push(total)
+  return pages
+})
 
 const goToPage = (page: number) => {
-  if (page >= 1 && page <= props.totalPages && page !== props.currentPage) {
-    emit('update:page', page);
+  if (page < 1 || page > props.totalPages || page === props.currentPage) return
+  emit('update:page', page)
+  // После смены страницы возвращаем взгляд к началу таблицы, чтобы не «терять» список
+  if (props.scrollTarget && typeof document !== 'undefined') {
+    document.querySelector(props.scrollTarget)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
   }
-};
+}
 
-const handleLimitChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement;
-  const newLimit = parseInt(target.value, 10);
-  emit('update:limit', newLimit);
-};
+const handleLimitChange = (e: Event) => {
+  emit('update:limit', parseInt((e.target as HTMLSelectElement).value, 10))
+}
 </script>
+
+<style scoped>
+/* Единый вид кнопок пагинации */
+.pg-btn {
+  display: inline-flex;
+  height: 2rem;
+  min-width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  color: var(--color-gray-600);
+  transition: background-color 0.15s;
+}
+.pg-btn:hover:not(:disabled) {
+  background-color: var(--color-gray-100);
+}
+.pg-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+:global(.dark) .pg-btn {
+  color: var(--color-gray-300);
+}
+:global(.dark) .pg-btn:hover:not(:disabled) {
+  background-color: rgb(255 255 255 / 0.08);
+}
+</style>

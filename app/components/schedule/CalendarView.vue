@@ -332,7 +332,7 @@
           <span
             >💡
             <kbd
-              class="px-1 py-0.5 bg-gray-100 dark:bg-meta-4 rounded text-[10px]"
+              class="px-1 py-0.5 bg-gray-100 dark:bg-meta-4 rounded text-[11px]"
               >CTRL</kbd
             >
             + перетаскивание = копирование занятия</span
@@ -623,6 +623,8 @@ import {
   getSlotLaneClasses,
   applyGroupCssVars,
   getEventGroupTokens,
+  // Безопасность: экранирование значений перед вставкой в tooltip.innerHTML (защита от XSS)
+  escapeHtml,
 } from "~/utils/scheduleCalendar";
 
 interface Group {
@@ -1193,12 +1195,12 @@ const onEventDidMount = (arg: EventMountArg) => {
     (el as any)._bulkCheckbox = checkbox;
   }
 
-  // Формируем содержимое tooltip
+  // Формируем содержимое tooltip (все пользовательские значения экранируются escapeHtml — защита от XSS)
   const parts: string[] = [];
 
   // Название (заголовок) — полное название дисциплины
   parts.push(
-    `<div class="event-tooltip-title">${extendedProps.rawTitle || event.title}</div>`,
+    `<div class="event-tooltip-title">${escapeHtml(extendedProps.rawTitle || event.title)}</div>`,
   );
 
   // Время
@@ -1207,8 +1209,8 @@ const onEventDidMount = (arg: EventMountArg) => {
     const endTime = event.end ? formatTimeOnly(event.end) : "";
     parts.push(`<div class="event-tooltip-row">
       <span class="event-tooltip-icon">🕐</span>
-      <span class="event-tooltip-text">${startTime}${
-        endTime ? " – " + endTime : ""
+      <span class="event-tooltip-text">${escapeHtml(startTime)}${
+        endTime ? " – " + escapeHtml(endTime) : ""
       }</span>
     </div>`);
   }
@@ -1217,7 +1219,7 @@ const onEventDidMount = (arg: EventMountArg) => {
   if (extendedProps.groupCode) {
     parts.push(`<div class="event-tooltip-row">
       <span class="event-tooltip-icon">👥</span>
-      <span class="event-tooltip-text">${extendedProps.groupCode}</span>
+      <span class="event-tooltip-text">${escapeHtml(extendedProps.groupCode)}</span>
     </div>`);
   }
 
@@ -1225,7 +1227,7 @@ const onEventDidMount = (arg: EventMountArg) => {
   if (extendedProps.instructorName) {
     parts.push(`<div class="event-tooltip-row">
       <span class="event-tooltip-icon">👨‍🏫</span>
-      <span class="event-tooltip-text">${extendedProps.instructorName}</span>
+      <span class="event-tooltip-text">${escapeHtml(extendedProps.instructorName)}</span>
     </div>`);
   }
 
@@ -1233,7 +1235,7 @@ const onEventDidMount = (arg: EventMountArg) => {
   if (extendedProps.classroomName) {
     parts.push(`<div class="event-tooltip-row">
       <span class="event-tooltip-icon">🚪</span>
-      <span class="event-tooltip-text">${extendedProps.classroomName}</span>
+      <span class="event-tooltip-text">${escapeHtml(extendedProps.classroomName)}</span>
     </div>`);
   }
 
@@ -1241,8 +1243,8 @@ const onEventDidMount = (arg: EventMountArg) => {
   if (extendedProps.eventType) {
     parts.push(`<div class="event-tooltip-row">
       <span class="event-tooltip-icon">📋</span>
-      <span class="event-tooltip-text">${getEventTypeLabel(
-        extendedProps.eventType,
+      <span class="event-tooltip-text">${escapeHtml(
+        getEventTypeLabel(extendedProps.eventType),
       )}</span>
     </div>`);
   }
@@ -1262,7 +1264,7 @@ const onEventDidMount = (arg: EventMountArg) => {
         ? extendedProps.description.substring(0, 100) + "..."
         : extendedProps.description;
     parts.push(`<div class="event-tooltip-row event-tooltip-description">
-      <span class="event-tooltip-text">${desc}</span>
+      <span class="event-tooltip-text">${escapeHtml(desc)}</span>
     </div>`);
   }
 

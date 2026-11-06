@@ -371,7 +371,7 @@
               />
               <div>
                 <div class="text-xs font-medium">{{ pair.number }} а-ч</div>
-                <div class="text-[10px] text-gray-500">
+                <div class="text-[11px] text-gray-500">
                   {{ pair.startTime }}-{{ pair.endTime }}
                 </div>
               </div>

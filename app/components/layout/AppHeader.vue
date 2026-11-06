@@ -9,7 +9,7 @@
       :class="[
         'flex items-center justify-between px-4 lg:px-6 h-18 pointer-events-auto',
         'bg-white/80 dark:bg-gray-900/80 backdrop-blur-md',
-        'border border-white/20 dark:border-gray-800/20 shadow-xl rounded-2xl transition-all duration-300'
+        'border border-gray-200/70 dark:border-gray-800 shadow-theme-sm rounded-xl transition-all duration-300'
       ]"
     >
       <!-- Левая часть: Переключатель сайдбара и Поиск -->

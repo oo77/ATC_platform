@@ -132,7 +132,7 @@
                 </p>
                 <span
                   v-if="isMemberSelected(m.id) && getRole(m.id) === 'chairman'"
-                  class="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                  class="inline-flex items-center gap-1 text-[11px] font-black uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-400"
                 >
                   Председатель
                 </span>

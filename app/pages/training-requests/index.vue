@@ -4,6 +4,12 @@
  */
 definePageMeta({ layout: "default" });
 
+// Иконки для нового интерфейса: кнопки шапки, KPI-полоса, меню строки
+import {
+  RefreshCw, FileDown, ClipboardList, Hourglass, CheckCircle2, Loader, XCircle,
+  X, FileText, Pencil, Eye,
+} from "lucide-vue-next";
+
 const { authFetch } = useAuthFetch();
 const { success: notifySuccess, error: notifyError } = useNotification();
 const token = useCookie("auth_token");
@@ -259,6 +265,12 @@ const hasActiveFilters = computed(() =>
   !!(filterStatus.value || filterMonth.value || filterOrg.value || filterCourseId.value)
 );
 
+// Вкладки для UiTabs: счётчик на «Списке заявок» показывает объём, не заставляя открывать раздел
+const requestTabs = computed(() => [
+  { id: "list", label: "Список заявок", count: totalItems.value > 0 ? totalItems.value : undefined },
+  { id: "analytics", label: "Аналитика" },
+]);
+
 // Макс по курсам для прогресс-баров
 const maxCourseRequests = computed(() =>
   Math.max(...(stats.value?.byCourse.map((c) => c.totalRequests) || [1]), 1)
@@ -270,137 +282,58 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-6">
+  <!-- Внешний враппер без двойного отступа: отступы даёт layout -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
 
-    <!-- ═══ ЗАГОЛОВОК + КНОПКИ ═══ -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Заявки на обучение</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-0.5 text-sm">
-          Управление заявками от представителей организаций
-        </p>
-      </div>
-      <div class="flex items-center gap-2 self-start sm:self-auto">
-        <!-- Обновить -->
-        <button @click="loadData" :disabled="loading"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800
-                 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium
-                 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50">
-          <svg class="w-4 h-4" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Обновить
-        </button>
-
-        <!-- Excel-экспорт -->
-        <button @click="exportToExcel" :disabled="exporting"
+    <!-- ═══ ЗАГОЛОВОК + ДЕЙСТВИЯ: единый PageHeader; «Обновить» — тихая иконка, «Excel» — вторичная кнопка ═══ -->
+    <UiPageHeader title="Заявки на обучение" description="Управление заявками от представителей организаций">
+      <template #actions>
+        <!-- Обновить данные -->
+        <UiButton variant="ghost" icon title="Обновить" aria-label="Обновить" :disabled="loading" @click="loadData">
+          <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
+        </UiButton>
+        <!-- Excel-экспорт по текущим фильтрам -->
+        <UiButton
+          variant="outline"
+          :start-icon="FileDown"
+          :loading="exporting"
           :title="hasActiveFilters ? 'Выгрузить по текущим фильтрам' : 'Выгрузить все заявки'"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60
-                 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
-          <!-- Спиннер во время генерации -->
-          <svg v-if="exporting" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-          </svg>
-          <!-- Иконка Excel -->
-          <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          {{ exporting ? 'Формирование...' : 'Excel' }}
-          <!-- Бейдж "фильтр активен" -->
-          <span v-if="hasActiveFilters && !exporting"
-            class="ml-0.5 bg-emerald-500 text-white text-xs px-1.5 py-0.5 rounded-full font-semibold leading-none">
-            ≈
-          </span>
-        </button>
-      </div>
+          @click="exportToExcel"
+        >
+          {{ exporting ? 'Формирование...' : hasActiveFilters ? 'Excel (по фильтрам)' : 'Excel' }}
+        </UiButton>
+      </template>
+    </UiPageHeader>
+
+    <!-- ═══ KPI-фильтры одной строкой: клик по статусу = фильтр списка (прежняя логика, повторный клик снимает) ═══ -->
+    <div v-if="stats" class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <UiStat label="Всего заявок" :value="stats.totals.total" :icon="ClipboardList" tone="primary" clickable :active="!filterStatus" @click="filterStatus = ''; activeTab = 'list'" />
+      <UiStat label="На рассмотрении" :value="stats.totals.pending" :icon="Hourglass" tone="warning" clickable :active="filterStatus === 'pending'" @click="filterStatus = filterStatus === 'pending' ? '' : 'pending'; activeTab = 'list'" />
+      <UiStat label="Одобрено" :value="stats.totals.approved" :icon="CheckCircle2" tone="success" clickable :active="filterStatus === 'approved'" @click="filterStatus = filterStatus === 'approved' ? '' : 'approved'; activeTab = 'list'" />
+      <UiStat label="В процессе" :value="stats.totals.in_progress" :icon="Loader" tone="info" clickable :active="filterStatus === 'in_progress'" @click="filterStatus = filterStatus === 'in_progress' ? '' : 'in_progress'; activeTab = 'list'" />
+      <UiStat label="Отклонено" :value="stats.totals.rejected" :icon="XCircle" tone="danger" clickable :active="filterStatus === 'rejected'" @click="filterStatus = filterStatus === 'rejected' ? '' : 'rejected'; activeTab = 'list'" />
     </div>
 
-    <!-- ═══ ДАШБОРД: СТАТИСТИКА ═══ -->
-
-    <div v-if="stats" class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-      <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.totals.total }}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Всего заявок</p>
-      </div>
-      <div
-        class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-yellow-200 dark:border-yellow-800 cursor-pointer transition-transform hover:scale-[1.02]"
-        @click="filterStatus = filterStatus === 'pending' ? '' : 'pending'; activeTab = 'list'">
-        <p class="text-2xl font-bold text-yellow-500">{{ stats.totals.pending }}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">На рассмотрении</p>
-      </div>
-      <div
-        class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-green-200 dark:border-green-800 cursor-pointer transition-transform hover:scale-[1.02]"
-        @click="filterStatus = filterStatus === 'approved' ? '' : 'approved'; activeTab = 'list'">
-        <p class="text-2xl font-bold text-green-500">{{ stats.totals.approved }}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Одобрено</p>
-      </div>
-      <div
-        class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-blue-200 dark:border-blue-800 cursor-pointer transition-transform hover:scale-[1.02]"
-        @click="filterStatus = filterStatus === 'in_progress' ? '' : 'in_progress'; activeTab = 'list'">
-        <p class="text-2xl font-bold text-blue-500">{{ stats.totals.in_progress }}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">В процессе</p>
-      </div>
-      <div
-        class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-red-200 dark:border-red-800 cursor-pointer transition-transform hover:scale-[1.02]"
-        @click="filterStatus = filterStatus === 'rejected' ? '' : 'rejected'; activeTab = 'list'">
-        <p class="text-2xl font-bold text-red-500">{{ stats.totals.rejected }}</p>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Отклонено</p>
-      </div>
-    </div>
-
-    <!-- ═══ ТАБЫ ═══ -->
-    <div class="border-b border-gray-200 dark:border-gray-700 mb-5">
-      <nav class="flex gap-1">
-        <button
-          @click="activeTab = 'list'"
-          :class="[activeTab === 'list'
-            ? 'border-b-2 border-primary-600 text-primary-600 dark:text-primary-400 font-semibold'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
-            'px-5 py-3 text-sm transition-colors flex items-center gap-2']">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-          </svg>
-          Список заявок
-          <span v-if="totalItems > 0" class="bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 text-xs px-2 py-0.5 rounded-full font-semibold">
-            {{ totalItems }}
-          </span>
-        </button>
-        <button
-          @click="activeTab = 'analytics'"
-          :class="[activeTab === 'analytics'
-            ? 'border-b-2 border-primary-600 text-primary-600 dark:text-primary-400 font-semibold'
-            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
-            'px-5 py-3 text-sm transition-colors flex items-center gap-2']">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-          Аналитика
-        </button>
-      </nav>
-    </div>
+    <!-- ═══ ТАБЫ: единый UiTabs со счётчиком вместо самописных кнопок ═══ -->
+    <UiTabs v-model="activeTab" :tabs="requestTabs" />
 
     <!-- ════════════════════════════════════════ -->
     <!-- ТАБ: СПИСОК ЗАЯВОК                       -->
     <!-- ════════════════════════════════════════ -->
     <template v-if="activeTab === 'list'">
 
-      <!-- ─── Фильтры ─── -->
-      <div class="flex flex-wrap gap-2 mb-4">
+      <!-- ─── Фильтры одной строкой (у списка нет текстового поиска на сервере, поэтому UiFilterBar с обязательным полем поиска не подходит) ─── -->
+      <div class="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-2.5 dark:border-gray-800 dark:bg-white/[0.03]">
         <!-- Статус -->
         <select v-model="filterStatus" @change="currentPage = 1"
-          class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600
-                 rounded-lg text-sm text-gray-700 dark:text-gray-300 min-w-[150px]">
+          class="h-9 min-w-[150px] rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
           <option value="">Все статусы</option>
           <option v-for="(label, key) in STATUS_LABELS" :key="key" :value="key">{{ label }}</option>
         </select>
 
         <!-- Месяц -->
         <select v-model="filterMonth" @change="currentPage = 1"
-          class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600
-                 rounded-lg text-sm text-gray-700 dark:text-gray-300 min-w-[150px]">
+          class="h-9 min-w-[150px] rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
           <option value="">Все месяцы</option>
           <option v-for="row in (stats?.byMonth || [])" :key="row.month" :value="row.month">
             {{ formatMonth(row.month) }}
@@ -409,133 +342,120 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
 
         <!-- Организация -->
         <select v-model="filterOrg" @change="currentPage = 1"
-          class="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600
-                 rounded-lg text-sm text-gray-700 dark:text-gray-300 min-w-[150px] max-w-[220px]">
+          class="h-9 min-w-[150px] max-w-[220px] rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
           <option value="">Все организации</option>
           <option v-for="org in orgList" :key="org.id" :value="org.id">{{ org.name }}</option>
         </select>
 
-        <!-- Курс (если выбрали в аналитике) -->
-        <div v-if="filterCourseId"
-          class="inline-flex items-center gap-1.5 px-3 py-2 bg-primary-50 dark:bg-primary-900/20
-                 text-primary-700 dark:text-primary-400 border border-primary-200 dark:border-primary-800
-                 rounded-lg text-sm font-medium">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
-          </svg>
-          Курс: активен
-          <button @click="filterCourseId = ''" class="ml-1 hover:text-primary-900">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+        <!-- Чип курса (появляется при выборе курса в аналитике) -->
+        <span v-if="filterCourseId"
+          class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary-50 px-3 text-sm font-medium text-primary-700 dark:bg-primary-500/15 dark:text-primary-300">
+          Курс: выбран
+          <button type="button" aria-label="Убрать фильтр по курсу" @click="filterCourseId = ''" class="rounded p-0.5 hover:bg-primary-100 dark:hover:bg-primary-500/30">
+            <X class="h-3.5 w-3.5" />
           </button>
-        </div>
+        </span>
 
-        <!-- Сброс -->
-        <button v-if="hasActiveFilters" @click="resetFilters"
-          class="px-3 py-2 text-sm text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 transition-colors">
-          Сбросить фильтры
+        <!-- Сброс виден только когда есть что сбрасывать -->
+        <button v-if="hasActiveFilters" type="button" @click="resetFilters"
+          class="px-2 text-sm font-medium text-gray-500 underline-offset-2 hover:text-gray-800 hover:underline dark:text-gray-400 dark:hover:text-gray-200">
+          Сбросить всё
         </button>
 
-        <span class="ml-auto self-center text-sm text-gray-500 dark:text-gray-400">
-          Найдено: {{ totalItems }}
+        <span class="ml-auto text-sm text-gray-500 dark:text-gray-400" aria-live="polite">
+          Найдено <span class="font-semibold tabular-nums text-gray-800 dark:text-gray-100">{{ totalItems }}</span>
         </span>
       </div>
 
       <!-- ─── Спиннер ─── -->
       <div v-if="loading" class="flex justify-center py-20">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
+        <div class="h-10 w-10 animate-spin rounded-full border-b-2 border-primary-600"></div>
       </div>
 
       <!-- ─── Пусто ─── -->
-      <div v-else-if="requests.length === 0"
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-16 text-center">
-        <svg class="w-14 h-14 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <p class="text-base font-semibold text-gray-700 dark:text-white mb-1">Заявок не найдено</p>
-        <p class="text-sm text-gray-500">
-          {{ hasActiveFilters ? "Попробуйте изменить фильтры" : "Пока ни одной заявки не поступало" }}
-        </p>
+      <div v-else-if="requests.length === 0" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <UiEmptyState
+          :icon="FileText"
+          title="Заявок не найдено"
+          :description="hasActiveFilters ? 'Попробуйте изменить фильтры' : 'Пока ни одной заявки не поступало'"
+        >
+          <template v-if="hasActiveFilters" #actions>
+            <UiButton variant="outline" size="sm" @click="resetFilters">Сбросить фильтры</UiButton>
+          </template>
+        </UiEmptyState>
       </div>
 
-      <!-- ─── Таблица ─── -->
-      <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-4">
-        <div class="overflow-x-auto">
-          <table class="min-w-full text-sm text-left align-middle">
-            <thead class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/70 border-b border-gray-100 dark:border-gray-700 uppercase tracking-wide">
-              <tr>
-                <th class="px-5 py-3.5 font-semibold">Организация / Представитель</th>
-                <th class="px-5 py-3.5 font-semibold max-w-[220px]">Курсы</th>
-                <th class="px-5 py-3.5 font-semibold text-center">Объёмы</th>
-                <th class="px-5 py-3.5 font-semibold">Статус</th>
-                <th class="px-5 py-3.5 font-semibold pl-4">Контракт / Оплата</th>
-                <th class="px-5 py-3.5 font-semibold text-right pr-5">Действия</th>
+      <!-- ─── Таблица: карточка со sticky-шапкой и пагинацией-футером ─── -->
+      <div v-else id="requests-table" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="max-h-[70vh] overflow-auto">
+          <table class="min-w-full text-left align-middle text-sm">
+            <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+              <tr class="border-b border-gray-200 text-xs text-gray-500 dark:border-gray-800 dark:text-gray-400">
+                <th class="px-4 py-3 font-medium">Организация / Представитель</th>
+                <th class="max-w-[220px] px-4 py-3 font-medium">Курсы</th>
+                <th class="px-4 py-3 text-center font-medium">Объёмы</th>
+                <th class="px-4 py-3 font-medium">Статус</th>
+                <th class="px-4 py-3 font-medium">Договор / Оплата</th>
+                <th class="px-4 py-3 text-right font-medium">Действия</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 dark:divide-gray-700/60">
-              <tr v-for="req in requests" :key="req.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+              <!-- Строка кликабельна: открывает детали заявки -->
+              <tr v-for="req in requests" :key="req.id" class="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]" @click="openDetail(req)">
                 <!-- Организация -->
-                <td class="px-5 py-3.5 min-w-[180px]">
-                  <div class="font-semibold text-gray-900 dark:text-white leading-tight">{{ req.organizationName }}</div>
-                  <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">👤 {{ req.representativeName }}</div>
-                  <div class="text-xs text-gray-400 mt-0.5">📅 {{ formatDate(req.createdAt) }}</div>
+                <td class="min-w-[180px] px-4 py-3">
+                  <div class="font-semibold leading-tight text-gray-900 dark:text-white">{{ req.organizationName }}</div>
+                  <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ req.representativeName }} · {{ formatDate(req.createdAt) }}</div>
                 </td>
                 <!-- Курсы (сокращённые) -->
-                <td class="px-5 py-3.5 max-w-[240px]">
+                <td class="max-w-[240px] px-4 py-3">
                   <div class="flex flex-wrap gap-1">
                     <span v-for="name in uniqueCourseNames(req.items)" :key="name"
-                      class="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded text-xs font-medium"
+                      class="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-white/[0.06] dark:text-gray-300"
                       :title="name">
                       {{ shortName(name) }}
                     </span>
                   </div>
                 </td>
                 <!-- Объёмы -->
-                <td class="px-5 py-3.5 text-center">
-                  <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ req.totalStudentsCount }}</div>
+                <td class="px-4 py-3 text-center">
+                  <div class="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ req.totalStudentsCount }}</div>
                   <div class="text-xs text-gray-400">чел. / {{ req.totalItemsCount }} поз.</div>
                 </td>
                 <!-- Статус -->
-                <td class="px-5 py-3.5">
-                  <span :class="[STATUS_COLORS[req.status], 'px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap']">
+                <td class="px-4 py-3">
+                  <span :class="[STATUS_COLORS[req.status], 'whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium']">
                     {{ STATUS_LABELS[req.status] }}
                   </span>
-                  <div v-if="req.adminComment" class="mt-1.5 text-xs text-gray-500 truncate max-w-[160px]" :title="req.adminComment">
-                    💬 {{ req.adminComment }}
+                  <div v-if="req.adminComment" class="mt-1.5 max-w-[160px] truncate text-xs text-gray-500" :title="req.adminComment">
+                    {{ req.adminComment }}
                   </div>
                 </td>
-                <!-- Контракт / оплата -->
-                <td class="px-5 py-3.5 pl-4">
+                <!-- Договор / оплата -->
+                <td class="px-4 py-3">
                   <div class="flex flex-col gap-1 text-xs font-medium">
-                    <span :class="req.contractStatus === 'signed' ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'">
-                      {{ req.contractStatus === 'signed' ? '✓ Договор' : '⏳ Договор' }}
+                    <span :class="req.contractStatus === 'signed' ? 'text-success-600 dark:text-success-400' : 'text-gray-400 dark:text-gray-500'">
+                      {{ req.contractStatus === 'signed' ? '✓ Договор' : '○ Договор' }}
                     </span>
-                    <span :class="req.paymentStatus === 'paid' ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'">
-                      {{ req.paymentStatus === 'paid' ? '✓ Оплачено' : '⏳ Оплата' }}
+                    <span :class="req.paymentStatus === 'paid' ? 'text-success-600 dark:text-success-400' : 'text-gray-400 dark:text-gray-500'">
+                      {{ req.paymentStatus === 'paid' ? '✓ Оплачено' : '○ Оплата' }}
                     </span>
                   </div>
                 </td>
-                <!-- Действия -->
-                <td class="px-5 py-3.5 text-right pr-5">
-                  <div class="flex justify-end items-center gap-1">
-                    <!-- Просмотр деталей -->
-                    <button @click="openDetail(req)" title="Просмотр"
-                      class="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
-                      <svg class="w-4.5 h-4.5 w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    </button>
-                    <!-- Редактировать -->
-                    <button @click="openActionModal(req)" title="Изменить статусы"
-                      class="p-2 text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors">
-                      <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                        <circle cx="12" cy="12" r="3" stroke-width="2" />
-                      </svg>
-                    </button>
+                <!-- Действия: 1 иконка (изменить статусы) + «⋯» (просмотр); клик не открывает детали дважды -->
+                <td class="px-4 py-3 text-right" @click.stop>
+                  <div class="flex items-center justify-end gap-1">
+                    <UiButton variant="ghost" size="sm" icon title="Изменить статусы" aria-label="Изменить статусы" @click="openActionModal(req)">
+                      <Pencil class="h-4 w-4" />
+                    </UiButton>
+                    <UiDropdown
+                      icon-only
+                      variant="ghost"
+                      size="sm"
+                      aria-label="Другие действия"
+                      :groups="[{ items: [{ key: 'view', label: 'Просмотр деталей', icon: Eye }] }]"
+                      @select="(key) => key === 'view' && openDetail(req)"
+                    />
                   </div>
                 </td>
               </tr>
@@ -543,30 +463,17 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
           </table>
         </div>
 
-        <!-- ─── Пагинация ─── -->
-        <div v-if="totalPages() > 1" class="flex items-center justify-between px-5 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-          <p class="text-xs text-gray-500 dark:text-gray-400">Страница {{ currentPage }} из {{ totalPages() }} (всего {{ totalItems }})</p>
-          <div class="flex items-center gap-1.5">
-            <button :disabled="currentPage <= 1" @click="currentPage--"
-              class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-xs font-medium bg-white dark:bg-gray-800
-                     disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              ← Пред.
-            </button>
-            <button v-for="p in Math.min(totalPages(), 7)" :key="p"
-              @click="currentPage = p"
-              :class="[currentPage === p
-                ? 'bg-primary-600 text-white border-primary-600'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50',
-                'w-8 h-8 rounded-md border text-xs font-medium transition-colors']">
-              {{ p }}
-            </button>
-            <button :disabled="currentPage >= totalPages()" @click="currentPage++"
-              class="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-xs font-medium bg-white dark:bg-gray-800
-                     disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              След. →
-            </button>
-          </div>
-        </div>
+        <!-- ─── Единая пагинация (раньше — самописная, показывала только страницы 1..7); размер страницы фиксирован ─── -->
+        <UiPagination
+          :current-page="currentPage"
+          :total-pages="totalPages()"
+          :total="totalItems"
+          :limit="PAGE_SIZE"
+          :loading="loading"
+          hide-limit
+          scroll-target="#requests-table"
+          @update:page="(p: number) => (currentPage = p)"
+        />
       </div>
     </template>
 
@@ -580,12 +487,13 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
         <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-600"></div>
       </div>
 
-      <div v-else class="space-y-6">
+      <!-- Блоки аналитики: единый вертикальный ритм -->
+      <div v-else class="space-y-4">
 
         <!-- ─── По месяцам ─── -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <h2 class="font-semibold text-gray-900 dark:text-white text-sm">📅 По месяцам</h2>
+        <div class="bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-white text-sm">По месяцам</h2>
             <span class="text-xs text-gray-400">Нажмите на строку — фильтрует заявки</span>
           </div>
           <div class="overflow-x-auto">
@@ -615,9 +523,9 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
         </div>
 
         <!-- ─── По курсам (интерактивный блок) ─── -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <h2 class="font-semibold text-gray-900 dark:text-white text-sm">📚 По курсам</h2>
+        <div class="bg-white dark:bg-white/[0.03] rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+            <h2 class="font-semibold text-gray-900 dark:text-white text-sm">По курсам</h2>
             <span class="text-xs text-gray-400">Нажмите на курс — фильтрует список заявок</span>
           </div>
           <div class="p-5 space-y-3">
@@ -675,11 +583,11 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
     <div v-if="showDetailModal && selectedRequest"
       class="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto"
       @click.self="showDetailModal = false">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl my-8">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-theme-lg w-full max-w-2xl my-8">
         <!-- Шапка -->
         <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700">
           <div>
-            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Детали заявки</h2>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Детали заявки</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400">
               {{ selectedRequest.organizationName }} · {{ formatDate(selectedRequest.createdAt) }}
             </p>
@@ -706,7 +614,7 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
               ? 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400'
               : 'text-gray-500 bg-gray-50 dark:bg-gray-700 dark:text-gray-400'"
               class="px-2.5 py-1 rounded-full text-xs font-semibold">
-              {{ selectedRequest.contractStatus === 'signed' ? '✓ Подписан' : '⏳ Не подписан' }}
+              {{ selectedRequest.contractStatus === 'signed' ? '✓ Подписан' : '○ Не подписан' }}
             </span>
           </div>
           <div class="text-center">
@@ -715,7 +623,7 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
               ? 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400'
               : 'text-gray-500 bg-gray-50 dark:bg-gray-700 dark:text-gray-400'"
               class="px-2.5 py-1 rounded-full text-xs font-semibold">
-              {{ selectedRequest.paymentStatus === 'paid' ? '✓ Оплачено' : '⏳ Не оплачено' }}
+              {{ selectedRequest.paymentStatus === 'paid' ? '✓ Оплачено' : '○ Не оплачено' }}
             </span>
           </div>
         </div>
@@ -737,8 +645,8 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
                   <div>
                     <p class="font-semibold text-gray-900 dark:text-white leading-tight mb-1">{{ item.courseName }}</p>
                     <div class="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap gap-x-3 gap-y-1">
-                      <span>📅 {{ formatMonth(item.trainingMonth) }}</span>
-                      <span>👥 {{ item.studentsCount }} чел.</span>
+                      <span>{{ formatMonth(item.trainingMonth) }}</span>
+                      <span>{{ item.studentsCount }} чел.</span>
                     </div>
                     <div v-if="item.groupLabel" class="mt-1 text-xs text-primary-600 font-medium">Группа: {{ item.groupLabel }}</div>
                   </div>
@@ -804,11 +712,11 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
     <div v-if="actionModalOpen && activeActionRequest"
       class="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4"
       @click.self="closeActionModal">
-      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md p-5">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-theme-lg w-full max-w-md p-5">
         <!-- Шапка -->
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h2 class="text-base font-bold text-gray-900 dark:text-white">Изменить статусы</h2>
+            <h2 class="text-base font-semibold text-gray-900 dark:text-white">Изменить статусы</h2>
             <p class="text-xs text-gray-500 mt-0.5">{{ activeActionRequest.organizationName }}</p>
           </div>
           <button @click="closeActionModal" class="text-gray-400 hover:text-gray-600 transition-colors p-1">
@@ -821,33 +729,33 @@ watch([filterStatus, filterMonth, filterOrg, filterCourseId, currentPage], loadD
         <div class="space-y-3.5">
           <!-- Статус -->
           <div>
-            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Статус заявки</label>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Статус заявки</label>
             <select v-model="activeActionRequest.status"
-              class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+              class="w-full h-9 px-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
               <option v-for="(label, key) in STATUS_LABELS" :key="key" :value="key">{{ label }}</option>
             </select>
           </div>
           <!-- Договор -->
           <div>
-            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Договор</label>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Договор</label>
             <select v-model="activeActionRequest.contractStatus"
-              class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+              class="w-full h-9 px-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
               <option value="not_signed">Не подписан</option>
               <option value="signed">Подписан ✓</option>
             </select>
           </div>
           <!-- Оплата -->
           <div>
-            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Оплата</label>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Оплата</label>
             <select v-model="activeActionRequest.paymentStatus"
-              class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+              class="w-full h-9 px-3 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent">
               <option value="not_paid">Не оплачено</option>
               <option value="paid">Оплачено ✓</option>
             </select>
           </div>
           <!-- Комментарий -->
           <div>
-            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wide">Комментарий</label>
+            <label class="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Комментарий</label>
             <textarea v-model="activeActionRequest.adminComment" rows="2"
               class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white resize-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               placeholder="Добавьте комментарий..."></textarea>

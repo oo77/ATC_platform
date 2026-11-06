@@ -37,7 +37,7 @@
               <div class="min-w-0">
                 <div class="flex items-center gap-1.5">
                   <h3 class="text-sm font-bold text-gray-900 dark:text-white">AI Ассистент</h3>
-                  <span class="px-1.5 py-px rounded-md text-[9px] font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900">SQL</span>
+                  <span class="px-1.5 py-px rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-900">SQL</span>
                 </div>
                 <p class="text-[11px] font-medium" :class="dbOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'">
                   {{ isGenerating ? statusText : dbOnline ? 'База данных подключена' : 'Нет связи с сервером' }}
@@ -90,7 +90,7 @@
                   <div class="flex items-center gap-2">
                     <Loader2 class="w-3.5 h-3.5 animate-spin text-indigo-600" />
                     <span>{{ statusText }}</span>
-                    <span class="ml-auto tabular-nums text-[10px] text-gray-400">{{ elapsed }} с</span>
+                    <span class="ml-auto tabular-nums text-[11px] text-gray-400">{{ elapsed }} с</span>
                   </div>
                   <div v-for="s in liveSteps" :key="s.step" class="flex items-center gap-1.5 text-[11px] pl-5">
                     <Check class="w-3 h-3 text-emerald-500" />
@@ -109,7 +109,7 @@
                   </button>
                   <div class="min-w-0 flex-1">
                     <div class="text-xs font-bold text-gray-900 dark:text-white truncate">{{ artifact.title }}</div>
-                    <div class="text-[10px] text-gray-400">{{ artifact.rows.length }} записей</div>
+                    <div class="text-[11px] text-gray-400">{{ artifact.rows.length }} записей</div>
                   </div>
                   <div class="flex items-center bg-gray-100 dark:bg-gray-800 p-0.5 rounded-lg text-[11px]">
                     <button

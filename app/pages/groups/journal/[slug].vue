@@ -1,279 +1,184 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+  <!-- Внешний враппер без двойного отступа: отступы задаёт layout -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
     <!-- Загрузка -->
     <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
       <div class="text-center">
         <div
           class="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
         ></div>
-        <p class="mt-4 text-gray-600 dark:text-gray-400">Загрузка журнала...</p>
+        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">Загрузка журнала...</p>
       </div>
     </div>
 
-    <!-- Ошибка -->
-    <div
-      v-else-if="error"
-      class="flex items-center justify-center min-h-[400px]"
-    >
-      <div class="text-center">
-        <svg
-          class="mx-auto h-16 w-16 text-danger"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <h3 class="mt-4 text-lg font-medium text-gray-900 dark:text-white">
-          Ошибка загрузки
-        </h3>
-        <p class="mt-2 text-gray-500 dark:text-gray-400">{{ error }}</p>
-        <UiButton class="mt-6" @click="loadJournal">
-          Попробовать снова
-        </UiButton>
-      </div>
+    <!-- Ошибка: единый UiEmptyState с кнопкой повтора вместо самописного блока -->
+    <div v-else-if="error" class="flex min-h-[400px] items-center justify-center">
+      <UiEmptyState :icon="AlertTriangle" title="Ошибка загрузки" :description="error">
+        <template #actions>
+          <UiButton @click="loadJournal">Попробовать снова</UiButton>
+        </template>
+      </UiEmptyState>
     </div>
 
     <!-- Содержимое -->
     <template v-else>
-      <!-- Заголовок и навигация -->
-      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-        <!-- Breadcrumbs -->
-        <div class="mb-6">
-          <div class="inline-flex items-center gap-2 text-sm font-bold text-slate-500">
-            <NuxtLink to="/groups" class="hover:text-primary transition-colors">Учебные группы</NuxtLink>
-            <ChevronRight class="w-4 h-4 text-slate-300" />
-            <NuxtLink :to="`/groups/${groupId}`" class="hover:text-primary transition-colors">{{ groupCode }}</NuxtLink>
-            <ChevronRight class="w-4 h-4 text-slate-300" />
-            <span class="text-slate-900 dark:text-white">Журнал</span>
-          </div>
-        </div>
+      <!-- Компактная шапка (вместо блока высотой 60px): крошки, название дисциплины, мета-строка с метриками; справа одно меню «Ведомость» -->
+      <UiPageHeader
+        :title="disciplineName || 'Журнал'"
+        :breadcrumbs="[
+          { label: 'Учебные группы', to: '/groups' },
+          { label: groupCode, to: `/groups/${groupId}` },
+          { label: 'Журнал' },
+        ]"
+      >
+        <template #meta>
+          <span v-if="instructorName" class="text-gray-700 dark:text-gray-300">{{ instructorName }}</span>
+          <span>Студентов: <span class="font-semibold tabular-nums text-gray-900 dark:text-white">{{ summary?.totalStudents || 0 }}</span></span>
+          <span>Занятий: <span class="font-semibold tabular-nums text-gray-900 dark:text-white">{{ summary?.totalEvents || 0 }}</span></span>
+          <span>Ср. посещ.: <span class="rounded px-1.5 font-semibold tabular-nums" :class="getAttendanceColor(summary?.averageAttendance || 0)">{{ (summary?.averageAttendance || 0).toFixed(1) }}%</span></span>
+        </template>
+        <template #actions>
+          <!-- Ведомость: UiDropdown вместо самописного меню; пока идёт генерация пункты заблокированы -->
+          <UiDropdown
+            v-if="columns.length > 0"
+            :label="generatingPdf ? 'Генерация...' : 'Ведомость'"
+            variant="outline"
+            :trigger-icon="Download"
+            :groups="reportMenuGroups"
+            @select="downloadReport($event as 'pdf' | 'docx')"
+          />
+        </template>
+      </UiPageHeader>
 
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div class="flex flex-wrap items-center gap-4">
-            <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-info/10 text-info shadow-inner border border-info/10">
-              <BookOpen class="w-8 h-8" />
-            </div>
-            <div>
-              <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                {{ disciplineName || "Журнал" }}
-              </h1>
-              <p class="text-slate-500 dark:text-slate-400 font-medium mt-1">
-                <span v-if="instructorName" class="text-slate-700 dark:text-slate-300">{{ instructorName }} • </span>
-                Журнал посещаемости и оценок
-              </p>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-4">
-            <!-- Статистика Bento -->
-            <div class="hidden md:flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-2 gap-2">
-              <div class="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex flex-col justify-center">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Студентов</p>
-                <p class="text-lg font-black text-slate-900 dark:text-white">{{ summary?.totalStudents || 0 }}</p>
-              </div>
-              <div class="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex flex-col justify-center">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Занятий</p>
-                <p class="text-lg font-black text-slate-900 dark:text-white">{{ summary?.totalEvents || 0 }}</p>
-              </div>
-              <div class="px-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex flex-col justify-center">
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ср. посещ.</p>
-                <p class="text-lg font-black" :class="getAttendanceColor(summary?.averageAttendance || 0)">
-                  {{ (summary?.averageAttendance || 0).toFixed(1) }}%
-                </p>
-              </div>
-            </div>
-
-            <!-- Download button -->
-            <div v-if="columns.length > 0" class="relative">
-              <UiButton
-                @click="toggleReportDropdown"
-                :disabled="generatingPdf"
-                variant="primary"
-                class="shadow-md shadow-primary/20 h-[60px] px-6 rounded-2xl text-base"
-              >
-                <Loader2 v-if="generatingPdf" class="w-5 h-5 mr-2 animate-spin" />
-                <Download v-else class="w-5 h-5 mr-2" />
-                <span class="hidden xl:inline">{{ generatingPdf ? "Генерация..." : "Ведомость" }}</span>
-                <ChevronDown class="w-5 h-5 ml-2 opacity-70" />
-              </UiButton>
-
-              <div
-                v-if="showReportDropdown"
-                class="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 z-50 overflow-hidden animate-in zoom-in-95 duration-200"
-              >
-                <button
-                  @click="downloadReport('pdf')"
-                  class="w-full px-4 py-3 text-left text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-800"
-                >
-                  <FileText class="w-5 h-5 text-danger" />
-                  <span>Скачать PDF</span>
-                </button>
-                <button
-                  @click="downloadReport('docx')"
-                  class="w-full px-4 py-3 text-left text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center gap-3 text-slate-700 dark:text-slate-300"
-                >
-                  <FileText class="w-5 h-5 text-primary" />
-                  <span>Скачать Word</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Пустое состояние - нет занятий -->
+      <!-- Пустое состояние - нет занятий: UiEmptyState + одно действие «Перейти к расписанию» -->
       <div
         v-if="columns.length === 0"
-        class="rounded-3xl bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 p-16 text-center animate-in fade-in zoom-in-95 duration-500"
+        class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
       >
-        <div class="bg-slate-50 dark:bg-slate-800/50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Calendar class="w-10 h-10 text-slate-400" />
-        </div>
-        <h3 class="text-2xl font-black text-slate-900 dark:text-white">
-          Занятия не найдены
-        </h3>
-        <p class="mt-2 text-slate-500 dark:text-gray-400 max-w-sm mx-auto font-medium">
-          Для этой дисциплины ещё нет запланированных занятий. Добавьте занятия в расписание, чтобы вести журнал.
-        </p>
-        <NuxtLink
-          :to="`/schedule?groupId=${groupId}`"
+        <UiEmptyState
+          :icon="Calendar"
+          title="Занятия не найдены"
+          description="Для этой дисциплины ещё нет запланированных занятий. Добавьте занятия в расписание, чтобы вести журнал."
         >
-          <UiButton variant="primary" class="mt-8 shadow-md rounded-xl h-[46px] px-6">
-            <CalendarPlus class="w-5 h-5 mr-2" />
-            Перейти к расписанию
-          </UiButton>
-        </NuxtLink>
+          <template #actions>
+            <UiButton :to="`/schedule?groupId=${groupId}`" variant="primary" :start-icon="CalendarPlus">
+              Перейти к расписанию
+            </UiButton>
+          </template>
+        </UiEmptyState>
       </div>
 
-      <!-- Панель массовых операций (Bento Box) -->
+      <!-- Панель массовых операций: ОДНА компактная строка (выбор занятия, статус доступа, действия) вместо двухколоночной карточки с подзаголовком -->
       <div
         v-if="columns.length > 0 && !isArchived"
-        class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5 mb-6 flex flex-col md:flex-row md:items-center gap-4 sm:gap-5 animate-in fade-in slide-in-from-bottom-4 duration-700"
+        class="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-white/[0.03]"
       >
-        <div class="flex-1">
-          <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Settings2 class="w-4 h-4 text-slate-400" />
-            Управление занятием
-          </h3>
-          <p class="text-[11px] uppercase tracking-wider font-bold text-slate-400 mt-1">
-            Выберите занятие для массовой отметки посещаемости или оценки
-          </p>
+        <Settings2 class="hidden h-4 w-4 shrink-0 text-gray-400 sm:block" />
+
+        <!-- Выбор занятия -->
+        <div class="relative w-full shrink-0 md:w-72">
+          <select
+            v-model="selectedEventId"
+            title="Выберите занятие для массовой отметки посещаемости или оценки"
+            class="h-9 w-full cursor-pointer appearance-none truncate rounded-lg border border-gray-300 bg-white pl-3 pr-9 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+          >
+            <option value="">— Выберите занятие —</option>
+            <option v-for="col in columns" :key="col.scheduleEvent.id" :value="col.scheduleEvent.id">
+              {{ formatColumnDate(col.scheduleEvent.date) }} {{ formatTimeRange(col.scheduleEvent.startTime, col.scheduleEvent.endTime) }} {{ col.hasGrade ? "(с оценкой)" : "" }}
+            </option>
+          </select>
+          <ChevronDown class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         </div>
 
-        <div class="flex flex-wrap items-center gap-4">
-          <!-- Выбор занятия -->
-          <div class="relative w-full md:w-64 shrink-0">
-            <select
-              v-model="selectedEventId"
-              class="w-full appearance-none rounded-xl border-1.5 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer truncate pr-10"
-            >
-              <option value="">— Выберите занятие —</option>
-              <option v-for="col in columns" :key="col.scheduleEvent.id" :value="col.scheduleEvent.id">
-                {{ formatColumnDate(col.scheduleEvent.date) }} {{ formatTimeRange(col.scheduleEvent.startTime, col.scheduleEvent.endTime) }} {{ col.hasGrade ? "(с оценкой)" : "" }}
-              </option>
-            </select>
-            <ChevronDown class="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <!-- Значок статуса доступа -->
+        <div v-if="selectedEventId && markingAccess" class="flex shrink-0 items-center">
+          <Loader2 v-if="accessLoading" class="h-5 w-5 animate-spin text-gray-400" />
+          <div
+            v-else-if="markingAccess.status === 'allowed'"
+            class="inline-flex h-9 items-center rounded-lg bg-success/10 px-3 text-xs font-medium text-success"
+          >
+            <CheckCircle2 class="mr-1.5 h-4 w-4" />
+            Доступно
           </div>
-
-          <!-- Значок статуса доступа -->
-          <div v-if="selectedEventId && markingAccess" class="shrink-0 flex items-center justify-center">
-            <Loader2 v-if="accessLoading" class="animate-spin h-5 w-5 text-slate-400" />
-            <div
-              v-else-if="markingAccess.status === 'allowed'"
-              class="inline-flex items-center justify-center h-10 px-3 text-xs font-bold rounded-xl bg-success/10 text-success"
-            >
-              <CheckCircle2 class="w-4 h-4 mr-1.5" />
-              Доступно
-            </div>
-            <div
-              v-else-if="markingAccess.status === 'late'"
-              class="inline-flex items-center justify-center h-10 px-3 text-xs font-bold rounded-xl bg-warning/10 text-warning"
-            >
-              <AlertTriangle class="w-4 h-4 mr-1.5" />
-              Опоздание
-            </div>
-            <div
-              v-else-if="markingAccess.status === 'requires_approval'"
-              class="inline-flex items-center justify-center h-10 px-3 text-xs font-bold rounded-xl bg-danger/10 text-danger"
-            >
-              <HelpCircle class="w-4 h-4 mr-1.5" />
-              Требует одобрения
-            </div>
-            <div
-              v-else-if="markingAccess.status === 'denied'"
-              class="inline-flex items-center justify-center h-10 px-3 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500"
-            >
-              <XCircle class="w-4 h-4 mr-1.5" />
-              Недоступно
-            </div>
+          <div
+            v-else-if="markingAccess.status === 'late'"
+            class="inline-flex h-9 items-center rounded-lg bg-warning/10 px-3 text-xs font-medium text-warning"
+          >
+            <AlertTriangle class="mr-1.5 h-4 w-4" />
+            Опоздание
           </div>
-
-          <!-- Кнопки действий -->
-          <div class="flex flex-wrap gap-2 shrink-0">
-            <UiButton
-              variant="secondary"
-              class="h-[46px] rounded-xl px-4"
-              :disabled="!selectedEventId || markingAccess?.status === 'denied'"
-              @click="openBulkAttendanceModal"
-            >
-              <CheckSquare class="w-4 h-4 sm:mr-2" />
-              <span class="hidden sm:inline">Отметить всех</span>
-            </UiButton>
-
-            <UiButton
-              v-if="selectedEvent?.hasGrade"
-              variant="outline"
-              class="h-[46px] rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 px-4"
-              :disabled="!selectedEventId"
-              @click="openBulkGradeModal"
-            >
-              <Award class="w-4 h-4 text-warning sm:mr-2" />
-              <span class="hidden sm:inline">Оценка всем</span>
-            </UiButton>
-
-            <!-- Кнопка массовых итоговых оценок -->
-            <UiButton
-              variant="outline"
-              class="h-[46px] rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 px-4 ml-auto"
-              :disabled="rows.length === 0"
-              @click="openBulkFinalGradeModal"
-            >
-              <GraduationCap class="w-4 h-4 text-success sm:mr-2" />
-              <span class="hidden sm:inline">Итог. оценки</span>
-            </UiButton>
+          <div
+            v-else-if="markingAccess.status === 'requires_approval'"
+            class="inline-flex h-9 items-center rounded-lg bg-danger/10 px-3 text-xs font-medium text-danger"
+          >
+            <HelpCircle class="mr-1.5 h-4 w-4" />
+            Требует одобрения
           </div>
+          <div
+            v-else-if="markingAccess.status === 'denied'"
+            class="inline-flex h-9 items-center rounded-lg bg-gray-100 px-3 text-xs font-medium text-gray-500 dark:bg-white/[0.06] dark:text-gray-400"
+          >
+            <XCircle class="mr-1.5 h-4 w-4" />
+            Недоступно
+          </div>
+        </div>
+
+        <!-- Кнопки действий: главное — «Отметить всех», остальные вторичные; итоговые оценки прижаты вправо -->
+        <div class="flex flex-wrap items-center gap-2 md:ml-auto">
+          <UiButton
+            variant="primary"
+            :start-icon="CheckSquare"
+            :disabled="!selectedEventId || markingAccess?.status === 'denied'"
+            @click="openBulkAttendanceModal"
+          >
+            Отметить всех
+          </UiButton>
+
+          <UiButton
+            v-if="selectedEvent?.hasGrade"
+            variant="outline"
+            :start-icon="Award"
+            :disabled="!selectedEventId"
+            @click="openBulkGradeModal"
+          >
+            Оценка всем
+          </UiButton>
+
+          <!-- Кнопка массовых итоговых оценок -->
+          <UiButton
+            variant="outline"
+            :start-icon="GraduationCap"
+            :disabled="rows.length === 0"
+            @click="openBulkFinalGradeModal"
+          >
+            Итоговые оценки
+          </UiButton>
         </div>
       </div>
 
-      <!-- Таблица журнала -->
+      <!-- Таблица журнала: карточка единого стиля; sticky-шапка и sticky-колонка слушателя внутри прокручиваемого контейнера -->
       <div
         v-if="columns.length > 0"
-        class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700"
+        class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
       >
-        <div class="overflow-x-auto custom-scrollbar">
-          <table class="w-full min-w-max text-left border-collapse">
-            <thead>
-              <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+        <div class="custom-scrollbar max-h-[calc(100vh-18rem)] min-h-[240px] overflow-auto">
+          <table class="w-full min-w-max border-collapse text-left">
+            <thead class="sticky top-0 z-30 bg-white dark:bg-gray-900">
+              <tr class="border-b border-gray-200 dark:border-gray-800">
                 <!-- Заголовок студента -->
-                <th class="sticky left-0 z-10 bg-slate-50 dark:bg-slate-800/90 backdrop-blur-sm px-4 py-3 text-xs font-bold text-slate-400 uppercase tracking-widest min-w-[200px] border-r border-slate-200 dark:border-slate-800/50">
+                <th class="sticky left-0 z-20 min-w-[200px] border-r border-gray-200 bg-white px-4 py-3 text-xs font-medium text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
                   Слушатель
                 </th>
                 <!-- Заголовки занятий -->
                 <th
                   v-for="column in columns"
                   :key="column.scheduleEvent.id"
-                  class="px-2 py-3 text-center text-[11px] font-bold text-slate-400 uppercase tracking-widest min-w-[80px]"
+                  class="min-w-[80px] px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400"
                 >
-                  <div class="flex flex-col items-center gap-1.5">
+                  <div class="flex flex-col items-center gap-1">
                     <div class="flex items-center gap-1.5">
                       <span
-                        class="inline-block w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-slate-900 shadow-sm"
+                        class="inline-block h-2.5 w-2.5 rounded-full"
                         :class="{
                           'bg-purple-500': column.scheduleEvent.isRetake,
                           'bg-blue-500':
@@ -285,53 +190,53 @@
                           'bg-orange-500':
                             !column.scheduleEvent.isRetake &&
                             column.scheduleEvent.eventType === 'assessment',
-                          'bg-slate-400':
+                          'bg-gray-400':
                             !column.scheduleEvent.isRetake &&
                             column.scheduleEvent.eventType === 'other',
                         }"
                       ></span>
                       <span
                         v-if="column.scheduleEvent.isRetake"
-                        class="inline-flex items-center justify-center w-4 h-4 text-[9px] font-black bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-sm"
+                        class="inline-flex h-4 w-4 items-center justify-center rounded-sm bg-purple-100 text-[11px] font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
                         title="Режим пересдачи"
                       >
                         П
                       </span>
                     </div>
-                    <span class="text-slate-700 dark:text-slate-300">{{ formatColumnDate(column.scheduleEvent.date) }}</span>
-                    <span class="text-[9px] text-slate-400/80">{{ formatTimeRange(column.scheduleEvent.startTime, column.scheduleEvent.endTime) }}</span>
+                    <span class="text-gray-700 dark:text-gray-300">{{ formatColumnDate(column.scheduleEvent.date) }}</span>
+                    <span class="text-[11px] text-gray-400">{{ formatTimeRange(column.scheduleEvent.startTime, column.scheduleEvent.endTime) }}</span>
                   </div>
                 </th>
                 <!-- Итоги -->
-                <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest min-w-[80px] bg-slate-100/50 dark:bg-slate-800/80 border-l border-slate-200/60 dark:border-slate-800/60">
+                <th class="min-w-[80px] border-l border-gray-200 bg-gray-50 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400">
                   Посещ. %
                 </th>
-                <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest min-w-[80px] bg-slate-100/50 dark:bg-slate-800/80">
+                <th class="min-w-[80px] bg-gray-50 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                   Ср. оценка
                 </th>
-                <th class="px-4 py-3 text-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest min-w-[100px] bg-slate-100/50 dark:bg-slate-800/80">
+                <th class="min-w-[100px] bg-gray-50 px-4 py-3 text-center text-xs font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                   Итог
                 </th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
               <tr
                 v-for="row in rows"
                 :key="row.student.id"
-                class="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors"
+                class="group transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]"
               >
                 <!-- Имя студента -->
                 <td
-                  class="sticky left-0 z-10 bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800/30 px-4 py-3 border-r border-slate-200 dark:border-slate-800/50 transition-colors"
+                  class="sticky left-0 z-10 border-r border-gray-200 bg-white px-4 py-2.5 transition-colors group-hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:group-hover:bg-gray-800"
                 >
                   <div class="flex items-center gap-3">
                     <div
-                      class="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/10 text-sm font-bold shadow-inner"
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-primary/10 text-sm font-semibold text-primary"
                     >
                       {{ getInitials(row.student.fullName) }}
                     </div>
                     <span
-                      class="font-bold text-slate-900 dark:text-white text-sm"
+                      class="text-sm font-medium text-gray-900 dark:text-white"
                       :title="row.student.fullName"
                     >
                       {{ row.student.fullName }}
@@ -342,7 +247,7 @@
                 <td
                   v-for="(cell, cellIndex) in row.cells"
                   :key="cell.scheduleEventId"
-                  class="px-2 py-3 text-center"
+                  class="px-2 py-2.5 text-center"
                 >
                   <AttendanceCell
                     v-if="columns[cellIndex]"
@@ -367,32 +272,26 @@
                   />
                 </td>
                 <!-- Процент посещаемости -->
-                <td
-                  class="px-4 py-3 text-center bg-slate-50/50 dark:bg-slate-800/30 border-l border-slate-200/60 dark:border-slate-800/60"
-                >
+                <td class="border-l border-gray-200 bg-gray-50/60 px-4 py-2.5 text-center dark:border-gray-800 dark:bg-white/[0.02]">
                   <span
-                    class="inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold ring-1 ring-inset"
+                    class="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset"
                     :class="[getAttendanceColor(row.attendancePercent).replace('text-', 'ring-').split(' ')[0], getAttendanceColor(row.attendancePercent)]"
                   >
                     {{ row.attendancePercent.toFixed(1) }}%
                   </span>
                 </td>
                 <!-- Средняя оценка -->
-                <td
-                  class="px-4 py-3 text-center bg-slate-50/50 dark:bg-slate-800/30"
-                >
+                <td class="bg-gray-50/60 px-4 py-2.5 text-center dark:bg-white/[0.02]">
                   <span
                     v-if="row.averageGrade !== undefined"
-                    class="text-sm font-black text-slate-900 dark:text-white"
+                    class="text-sm font-semibold tabular-nums text-gray-900 dark:text-white"
                   >
                     {{ row.averageGrade.toFixed(0) }}
                   </span>
-                  <span v-else class="text-slate-400 font-bold">—</span>
+                  <span v-else class="text-gray-400">—</span>
                 </td>
                 <!-- Итоговая оценка -->
-                <td
-                  class="px-4 py-3 text-center bg-slate-50/50 dark:bg-slate-800/30"
-                >
+                <td class="bg-gray-50/60 px-4 py-2.5 text-center dark:bg-white/[0.02]">
                   <FinalGradeCell
                     :final-grade="row.finalGrade"
                     :student-id="row.student.id"
@@ -408,45 +307,45 @@
           </table>
         </div>
 
-        <!-- Легенда -->
-        <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400 bg-slate-50/30 dark:bg-slate-800/30">
-          <span class="font-bold uppercase tracking-wider text-[11px] text-slate-400">Типы занятий:</span>
-          <span class="flex items-center gap-2 font-medium">
-            <span class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm"></span>
+        <!-- Легенда: подписи не мельче 11px, без CAPS -->
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-gray-200 bg-gray-50/60 px-4 py-3 text-xs text-gray-500 dark:border-gray-800 dark:bg-white/[0.02] dark:text-gray-400">
+          <span class="font-medium text-gray-400">Типы занятий:</span>
+          <span class="flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span>
             Теория
           </span>
-          <span class="flex items-center gap-2 font-medium">
-            <span class="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm"></span>
+          <span class="flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full bg-green-500"></span>
             Практика (с оценкой)
           </span>
-          <span class="flex items-center gap-2 font-medium">
-            <span class="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm"></span>
+          <span class="flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full bg-orange-500"></span>
             Проверка знаний (с оценкой)
           </span>
-          <span class="flex items-center gap-2 font-medium">
-            <span class="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-sm"></span>
+          <span class="flex items-center gap-2">
+            <span class="h-2.5 w-2.5 rounded-full bg-purple-500"></span>
             Пересдача
           </span>
 
-          <span class="mx-2 text-slate-300 dark:text-slate-700">|</span>
+          <span class="mx-1 text-gray-300 dark:text-gray-700">|</span>
 
-          <span class="font-bold uppercase tracking-wider text-[11px] text-slate-400">Оценки:</span>
-          <span class="flex items-center gap-2 font-medium" title="Автоматическая оценка из теста">
-            <span class="relative w-6 h-6 rounded-md bg-success/10 flex items-center justify-center text-xs font-bold text-success border border-success/20">
-              <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-white dark:ring-slate-900"></span>
+          <span class="font-medium text-gray-400">Оценки:</span>
+          <span class="flex items-center gap-2" title="Автоматическая оценка из теста">
+            <span class="relative flex h-6 w-6 items-center justify-center rounded-md border border-success/20 bg-success/10 text-xs font-medium text-success">
+              <span class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-white dark:ring-gray-900"></span>
               85
             </span>
             Из теста
           </span>
-          <span class="flex items-center gap-2 font-medium" title="Ручная оценка за практику">
-            <span class="relative w-6 h-6 rounded-md bg-success/10 flex items-center justify-center text-xs font-bold text-success border border-success/20">
+          <span class="flex items-center gap-2" title="Ручная оценка за практику">
+            <span class="relative flex h-6 w-6 items-center justify-center rounded-md border border-success/20 bg-success/10 text-xs font-medium text-success">
               90
             </span>
             Ручная
           </span>
-          <span class="flex items-center gap-2 font-medium" title="Изменённая оценка">
-            <span class="relative w-6 h-6 rounded-md bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-xs font-bold text-purple-700 dark:text-purple-300 ring-2 ring-purple-400 ring-offset-1 dark:ring-offset-slate-900">
-              <span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-purple-500 ring-2 ring-white dark:ring-slate-900"></span>
+          <span class="flex items-center gap-2" title="Изменённая оценка">
+            <span class="relative flex h-6 w-6 items-center justify-center rounded-md bg-purple-100 text-xs font-medium text-purple-700 ring-2 ring-purple-400 ring-offset-1 dark:bg-purple-900/40 dark:text-purple-300 dark:ring-offset-gray-900">
+              <span class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-purple-500 ring-2 ring-white dark:ring-gray-900"></span>
               78
             </span>
             Изменена
@@ -1228,6 +1127,16 @@ const handleRequireApproval = (data: {
 const handleFinalGradeUpdate = async () => {
   await loadJournal();
 };
+
+// Пункты меню «Ведомость» для UiDropdown: те же downloadReport; блокируем, пока идёт генерация
+const reportMenuGroups = computed(() => [
+  {
+    items: [
+      { key: "pdf", label: "Скачать PDF", icon: FileText, disabled: generatingPdf.value, loading: generatingPdf.value },
+      { key: "docx", label: "Скачать Word", icon: FileText, disabled: generatingPdf.value },
+    ],
+  },
+]);
 
 // Функция переключения выпадающего меню формата ведомости
 const toggleReportDropdown = () => {

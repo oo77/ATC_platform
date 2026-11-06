@@ -20,7 +20,7 @@
 
       <div class="flex flex-col gap-2">
         <h1
-          class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase"
+          class="text-2xl font-semibold text-gray-900 dark:text-white tracking-tight"
         >
           Создание программы
         </h1>
@@ -116,7 +116,7 @@
                       formData.shortName = formData.shortName.toUpperCase()
                     "
                   />
-                  <p class="text-[10px] uppercase font-bold text-slate-400">
+                  <p class="text-[11px] uppercase font-bold text-slate-400">
                     4-10 заглавных букв
                   </p>
                   <p
@@ -278,7 +278,7 @@
                     class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
                   />
                 </div>
-                <p class="text-[10px] uppercase font-bold text-slate-400">
+                <p class="text-[11px] uppercase font-bold text-slate-400">
                   Пусто для бессрочного
                 </p>
               </div>

@@ -59,7 +59,7 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <!-- Теория -->
           <div class="space-y-2">
-            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-800 text-center py-1 rounded border border-slate-100 dark:border-slate-700">
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-800 text-center py-1 rounded border border-slate-100 dark:border-slate-700">
               Теория <span class="text-danger">*</span>
             </label>
             <div class="relative">
@@ -79,7 +79,7 @@
 
           <!-- Практика -->
           <div class="space-y-2">
-            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-800 text-center py-1 rounded border border-slate-100 dark:border-slate-700">
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-800 text-center py-1 rounded border border-slate-100 dark:border-slate-700">
               Практика <span class="text-danger">*</span>
             </label>
             <div class="relative">
@@ -99,7 +99,7 @@
 
           <!-- Проверка знаний -->
           <div class="space-y-2">
-            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-800 text-center py-1 rounded border border-slate-100 dark:border-slate-700">
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-white dark:bg-slate-800 text-center py-1 rounded border border-slate-100 dark:border-slate-700">
               Проверка <span class="text-danger">*</span>
             </label>
             <div class="relative">

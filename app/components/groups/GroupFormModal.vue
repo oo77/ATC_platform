@@ -218,7 +218,7 @@
               >
                 <Sparkles class="w-3.5 h-3.5 text-amber-500" />
                 <span>Слушатели</span>
-                <span v-if="selectedStudentIds.length" class="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-mono">
+                <span v-if="selectedStudentIds.length" class="px-1.5 py-0.5 rounded-full bg-primary text-white text-[11px] font-mono">
                   {{ selectedStudentIds.length }}
                 </span>
               </button>
@@ -325,7 +325,7 @@
                     <div
                       class="h-8 w-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center shrink-0"
                     >
-                      <span class="text-[10px] font-bold">PDF</span>
+                      <span class="text-[11px] font-bold">PDF</span>
                     </div>
                     <div class="min-w-0">
                       <p
@@ -364,7 +364,7 @@
               </div>
 
               <div
-                class="mt-3 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center border-t border-slate-200 dark:border-slate-700 pt-2"
+                class="mt-3 text-[11px] text-slate-400 font-bold uppercase tracking-widest text-center border-t border-slate-200 dark:border-slate-700 pt-2"
               >
                 Управление документами на странице группы
               </div>

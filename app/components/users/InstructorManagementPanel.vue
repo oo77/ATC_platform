@@ -1,65 +1,30 @@
 <template>
-  <div class="flex flex-col gap-6">
-    <!-- Header & Actions -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
-      <div>
-        <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          Инструкторы
-        </h3>
-        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
-          Управление инструкторами учебного центра
-        </p>
-      </div>
-      <button 
-        @click="openCreateModal"
-        class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-md shadow-primary/20 hover:bg-primary/90 hover:shadow-lg transition-all whitespace-nowrap"
-      >
-        <Plus class="w-4 h-4" />
-        Добавить инструктора
-      </button>
-    </div>
+  <div class="space-y-4">
+    <!-- Единый блок фильтров: поиск (debounce уже внутри debouncedFetch → 0) + сегмент статуса + главное действие -->
+    <UiFilterBar
+      v-model:search="searchQuery"
+      search-placeholder="Поиск по ФИО, email, телефону..."
+      :debounce="0"
+      :segments="statusSegments"
+      :segment="statusFilter"
+      :total="pagination.total"
+      @search="debouncedFetch"
+      @update:segment="onSegmentChange"
+    >
+      <template #actions>
+        <UiButton variant="primary" size="md" :start-icon="Plus" @click="openCreateModal">
+          Добавить инструктора
+        </UiButton>
+      </template>
+    </UiFilterBar>
 
-    <!-- Filters Section -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-4">
-      <div class="flex flex-col sm:flex-row gap-4">
-        <!-- Search -->
-        <div class="relative flex-1">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Поиск по ФИО, email, телефону..."
-            class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
-            @input="debouncedFetch"
-          />
-          <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        </div>
-        
-        <!-- Status Filter -->
-        <div class="sm:w-56">
-          <div class="relative">
-            <select
-              v-model="statusFilter"
-              class="w-full appearance-none rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm text-slate-700 dark:text-slate-300"
-              @change="handleFilterChange"
-            >
-              <option value="all">Все статусы</option>
-              <option value="active">Активные</option>
-              <option value="inactive">Неактивные</option>
-            </select>
-            <Filter class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Таблица инструкторов -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+    <!-- Таблица инструкторов; пагинация — футер внутри карточки -->
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <UsersInstructorTable
         :instructors="instructors"
         :loading="loading"
         @edit="handleEdit"
       />
-      <!-- Пагинация -->
       <UiPagination
         v-if="pagination.totalPages > 0"
         :current-page="pagination.page"
@@ -85,7 +50,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import type { Instructor } from '~/types/instructor';
-import { Search, Plus, Filter } from "lucide-vue-next";
+// Search/Filter убраны — поиск и сегмент рисует UiFilterBar
+import { Plus } from "lucide-vue-next";
 
 const { authFetch } = useAuthFetch();
 
@@ -116,6 +82,19 @@ const pagination = ref({
 });
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Сегменты статуса для UiFilterBar (значения те же, что были в селекте: all/active/inactive)
+const statusSegments = [
+  { value: 'all', label: 'Все' },
+  { value: 'active', label: 'Активные' },
+  { value: 'inactive', label: 'Неактивные' },
+];
+
+// UiFilterBar отдаёт новое значение сегмента — записываем в прежний statusFilter и вызываем прежний обработчик
+const onSegmentChange = (value: string | number | boolean) => {
+  statusFilter.value = String(value);
+  handleFilterChange();
+};
 
 // Методы
 const fetchInstructors = async () => {

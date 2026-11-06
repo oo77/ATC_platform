@@ -1,168 +1,81 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Header Section -->
-    <div class="mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
-      <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div class="space-y-2">
-          <h1 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-            Шаблоны сертификатов
-          </h1>
-          <p class="text-slate-500 font-medium text-sm md:text-base">
-            Управление шаблонами для автоматической генерации и выгрузки сертификатов
-          </p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <UiButton v-if="canCreateTemplates" variant="primary" size="sm" class="h-10 px-4 gap-2 font-bold shadow-sm" @click="showCreateModal = true">
-            <Plus class="w-4 h-4" />
-            Создать шаблон
-          </UiButton>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bento Box Metrics -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Всего шаблонов</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.total }}</h3>
-          </div>
-          <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
-            <LayoutTemplate class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Активных шаблонов</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.active }}</h3>
-          </div>
-          <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
-            <CheckCircle2 class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Выдано сертификатов</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.issued }}</h3>
-          </div>
-          <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
-            <FileCheck class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Фильтры и поиск -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-4 md:p-6 mb-6">
-      <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        <!-- Поиск -->
-        <div class="relative flex-1 max-w-md">
-          <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Поиск по названию или формату..."
-            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary transition-colors"
-          />
-        </div>
-
-        <!-- Переключатели статусов -->
-        <div class="flex items-center gap-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 p-1">
-          <button
-            @click="statusFilter = 'all'"
-            :class="[
-              'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all',
-              statusFilter === 'all'
-                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            ]"
-          >
-            Все ({{ templates.length }})
-          </button>
-          <button
-            @click="statusFilter = 'active'"
-            :class="[
-              'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all',
-              statusFilter === 'active'
-                ? 'bg-white dark:bg-slate-700 text-success shadow-xs'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            ]"
-          >
-            Активные ({{ stats.active }})
-          </button>
-          <button
-            @click="statusFilter = 'inactive'"
-            :class="[
-              'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all',
-              statusFilter === 'inactive'
-                ? 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 shadow-xs'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            ]"
-          >
-            Неактивные ({{ templates.length - stats.active }})
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Таблица шаблонов -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-      <!-- Loading State -->
-      <div v-if="loading" class="p-12 text-center">
-        <div class="mx-auto inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        <p class="mt-4 font-bold text-slate-900 dark:text-white">
-          Загрузка шаблонов...
-        </p>
-      </div>
-
-      <!-- Empty State -->
-      <div v-else-if="filteredTemplates.length === 0" class="p-16 text-center">
-        <div class="bg-slate-50 dark:bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-          <LayoutTemplate class="w-8 h-8 text-slate-300" />
-        </div>
-        <p class="text-lg font-bold text-slate-900 dark:text-white">Шаблоны не найдены</p>
-        <p class="mt-2 text-slate-500 font-medium max-w-sm mx-auto">
-          {{ searchQuery ? 'Попробуйте изменить параметры поиска' : 'Создайте первый шаблон сертификата для начала работы' }}
-        </p>
-        <UiButton v-if="canCreateTemplates && !searchQuery" class="mt-4" @click="showCreateModal = true">
-          <Plus class="w-4 h-4 mr-2" />
+  <!-- Внешний враппер без собственных отступов (убран двойной padding) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок; главное действие страницы — «Создать шаблон»; сводка (всего/выдано) — одной строкой вместо трёх KPI-карточек -->
+    <UiPageHeader
+      title="Шаблоны сертификатов"
+      description="Шаблоны для автоматической генерации и выгрузки сертификатов"
+    >
+      <template #meta>
+        <span>Всего шаблонов: <span class="font-medium tabular-nums text-gray-800 dark:text-gray-100">{{ stats.total }}</span></span>
+        <span>Выдано сертификатов: <span class="font-medium tabular-nums text-gray-800 dark:text-gray-100">{{ stats.issued }}</span></span>
+      </template>
+      <template #actions>
+        <UiButton v-if="canCreateTemplates" variant="primary" size="md" :start-icon="Plus" @click="showCreateModal = true">
           Создать шаблон
         </UiButton>
+      </template>
+    </UiPageHeader>
+
+    <!-- Единый блок фильтров: поиск (фильтрация на клиенте, без debounce) + сегмент статуса со счётчиками -->
+    <UiFilterBar
+      v-model:search="searchQuery"
+      search-placeholder="Поиск по названию или формату..."
+      :debounce="0"
+      :segments="statusSegments"
+      :segment="statusFilter"
+      :total="filteredTemplates.length"
+      @update:segment="onStatusSegment"
+    />
+
+    <!-- Таблица шаблонов в стандартной карточке -->
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <!-- Загрузка -->
+      <div v-if="loading" class="p-12 text-center">
+        <div class="mx-auto inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
+        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Загрузка шаблонов...</p>
       </div>
 
-      <!-- List Table -->
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Шаблон</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Формат номера</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Переменные</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Выдано</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Статус</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Действия</th>
+      <!-- Пусто: единое состояние со следующим шагом -->
+      <UiEmptyState
+        v-else-if="filteredTemplates.length === 0"
+        title="Шаблоны не найдены"
+        :description="searchQuery ? 'Попробуйте изменить параметры поиска' : 'Создайте первый шаблон сертификата для начала работы'"
+        :icon="LayoutTemplate"
+      >
+        <template #actions>
+          <UiButton v-if="canCreateTemplates && !searchQuery" variant="primary" size="md" :start-icon="Plus" @click="showCreateModal = true">
+            Создать шаблон
+          </UiButton>
+        </template>
+      </UiEmptyState>
+
+      <!-- Таблица: контейнер со скроллом, чтобы шапка была sticky -->
+      <div v-else class="max-h-[calc(100vh-16rem)] min-h-[200px] overflow-auto">
+        <table class="w-full border-collapse text-left text-sm">
+          <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+            <tr class="border-b border-gray-200 dark:border-gray-800">
+              <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Шаблон</th>
+              <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Формат номера</th>
+              <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Переменные</th>
+              <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Выдано</th>
+              <th class="px-4 py-2.5 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Статус</th>
+              <th class="w-28 px-4 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Действия</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <!-- Строка кликабельна (как было): открывает настройки шаблона -->
             <tr
               v-for="template in filteredTemplates"
               :key="template.id"
-              class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+              class="group cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
               @click="navigateTo(`/certificates/templates/${template.id}`)"
             >
               <!-- Шаблон (Превью + Название + Описание) -->
               <td class="px-6 py-4">
                 <div class="flex items-center gap-4">
                   <!-- Mini Thumbnail Preview -->
-                  <div class="relative w-16 h-11 shrink-0 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <div class="relative w-16 h-11 shrink-0 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                     <div v-if="template.templateData" class="absolute inset-0 overflow-hidden flex items-center justify-center">
                       <div
                         class="relative bg-white shadow-xs overflow-hidden shrink-0"
@@ -181,7 +94,7 @@
                           class="pointer-events-none"
                         >
                           <div v-if="element.type === 'text'" :style="getTextStyle(element)">{{ element.content }}</div>
-                          <div v-else-if="element.type === 'variable'" :style="getTextStyle(element)" class="text-primary font-bold opacity-70">[{{ element.variableKey }}]</div>
+                          <div v-else-if="element.type === 'variable'" :style="getTextStyle(element)" class="text-primary font-medium opacity-70">[{{ element.variableKey }}]</div>
                           <img v-else-if="element.type === 'image'" :src="element.src" class="w-full h-full object-contain" />
                           <div v-else-if="element.type === 'qr'" class="w-full h-full bg-black/10 flex items-center justify-center">
                             <svg class="w-1/2 h-1/2 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M3 3h6v6H3V3zm2 2v2h2V5H5zm8-2h6v6h-6V3zm2 2v2h2V5h-2zM3 11h6v6H3v-6zm2 2v2h2v-2H5zm13-2h-3v3h3v-3zm0 3h-3v3h3v-3z"/></svg>
@@ -195,27 +108,27 @@
                     </div>
                     <div v-else-if="template.originalFileUrl" class="flex flex-col items-center justify-center">
                       <FileText class="w-5 h-5 text-primary" />
-                      <span class="text-[9px] font-bold text-slate-500">.docx</span>
+                      <span class="text-[11px] font-medium text-gray-500">.docx</span>
                     </div>
-                    <div v-else class="flex items-center justify-center text-slate-400">
-                      <LayoutTemplate class="w-5 h-5 text-slate-400" />
+                    <div v-else class="flex items-center justify-center text-gray-400">
+                      <LayoutTemplate class="w-5 h-5 text-gray-400" />
                     </div>
                   </div>
 
                   <!-- Text details -->
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
-                      <p class="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate">
+                      <p class="font-medium text-gray-900 dark:text-white group-hover:text-primary transition-colors truncate">
                         {{ template.name }}
                       </p>
                       <span
                         v-if="template.originalFileUrl"
-                        class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800"
+                        class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-info-50 text-info-600 dark:bg-info-500/15 dark:text-info-400"
                       >
                         Word
                       </span>
                     </div>
-                    <p v-if="template.description" class="text-xs font-medium text-slate-400 mt-0.5 truncate max-w-md">
+                    <p v-if="template.description" class="text-xs font-medium text-gray-400 mt-0.5 truncate max-w-md">
                       {{ template.description }}
                     </p>
                   </div>
@@ -223,81 +136,55 @@
               </td>
 
               <!-- Формат номера -->
-              <td class="px-6 py-4">
-                <code class="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-mono font-bold text-slate-700 dark:text-slate-300">
+              <td class="px-4 py-3">
+                <code class="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-700 dark:bg-white/[0.06] dark:text-gray-300">
                   {{ template.numberFormat || '—' }}
                 </code>
               </td>
 
-              <!-- Переменные -->
-              <td class="px-6 py-4">
+              <!-- Переменные: счётчик + готовность единым UiBadge -->
+              <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
-                  <span class="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {{ template.variables?.length || 0 }} пер.
-                  </span>
-                  <span
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold"
-                    :class="template.variables && template.variables.length > 0 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'"
+                  <span class="text-xs text-gray-700 dark:text-gray-300">{{ template.variables?.length || 0 }} пер.</span>
+                  <UiBadge
+                    size="sm"
+                    :color="template.variables && template.variables.length > 0 ? 'success' : 'warning'"
+                    :start-icon="template.variables && template.variables.length > 0 ? CheckCircle2 : AlertCircle"
                   >
-                    <CheckCircle2 v-if="template.variables && template.variables.length > 0" class="w-3 h-3" />
-                    <AlertCircle v-else class="w-3 h-3" />
                     {{ template.variables && template.variables.length > 0 ? 'Готов' : 'Настройте' }}
-                  </span>
+                  </UiBadge>
                 </div>
               </td>
 
               <!-- Выдано -->
-              <td class="px-6 py-4 text-center">
-                <span class="inline-flex items-center justify-center min-w-10 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                  {{ template.lastNumber || 0 }}
-                </span>
+              <td class="px-4 py-3 text-center tabular-nums text-gray-700 dark:text-gray-300">{{ template.lastNumber || 0 }}</td>
+
+              <!-- Статус: единый UiBadge -->
+              <td class="px-4 py-3 text-center">
+                <UiBadge :color="template.isActive ? 'success' : 'light'">{{ template.isActive ? 'Активен' : 'Неактивен' }}</UiBadge>
               </td>
 
-              <!-- Статус -->
-              <td class="px-6 py-4 text-center">
-                <span
-                  class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-black uppercase tracking-widest border"
-                  :class="template.isActive
-                    ? 'bg-success/5 text-success border-success/20'
-                    : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full" :class="template.isActive ? 'bg-success' : 'bg-slate-400'"></span>
-                  {{ template.isActive ? 'Активен' : 'Неактивен' }}
-                </span>
-              </td>
-
-              <!-- Действия -->
-              <td class="px-6 py-4" @click.stop>
-                <div class="flex items-center justify-center gap-1">
-                  <NuxtLink
+              <!-- Действия: одна главная иконка (редактор) + «⋯» (настройки, дублировать, удалить внизу красным); клик не открывает строку -->
+              <td class="px-4 py-3" @click.stop>
+                <div class="flex items-center justify-end gap-1">
+                  <UiButton
                     :to="`/certificates/templates/${template.id}/editor`"
-                    class="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors"
+                    variant="ghost"
+                    size="sm"
+                    icon
                     title="Открыть редактор"
+                    aria-label="Открыть редактор"
                   >
-                    <Edit3 class="w-4 h-4" />
-                  </NuxtLink>
-                  <NuxtLink
-                    :to="`/certificates/templates/${template.id}`"
-                    class="p-2 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    title="Настройки шаблона"
-                  >
-                    <Settings class="w-4 h-4" />
-                  </NuxtLink>
-                  <button
-                    @click="handleDuplicate(template)"
-                    class="p-2 rounded-lg text-slate-400 hover:text-success hover:bg-success/10 transition-colors"
-                    title="Дублировать"
-                  >
-                    <Copy class="w-4 h-4" />
-                  </button>
-                  <button
-                    v-if="canDeleteTemplates"
-                    @click="confirmDelete(template)"
-                    class="p-2 rounded-lg text-slate-400 hover:text-danger hover:bg-danger/10 transition-colors"
-                    title="Удалить"
-                  >
-                    <Trash2 class="w-4 h-4" />
-                  </button>
+                    <Edit3 class="h-4 w-4" />
+                  </UiButton>
+                  <UiDropdown
+                    :groups="rowMenu(template)"
+                    icon-only
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Ещё действия"
+                    @select="(key) => onRowAction(key, template)"
+                  />
                 </div>
               </td>
             </tr>
@@ -330,13 +217,12 @@
 <script setup lang="ts">
 import type { CSSProperties } from "vue";
 import type { CertificateTemplate } from "~/types/certificate";
+// Убраны Search и FileCheck (поиск рисует UiFilterBar, KPI-карточек больше нет)
 import {
   Plus,
-  Search,
   LayoutTemplate,
   CheckCircle2,
   AlertCircle,
-  FileCheck,
   FileText,
   Edit3,
   Settings,
@@ -394,6 +280,37 @@ const filteredTemplates = computed(() => {
     return matchesSearch && matchesStatus;
   });
 });
+
+// ---- Презентационная обвязка для UiFilterBar и меню «⋯» (вызывает прежние handleDuplicate / confirmDelete) ----
+
+// Сегмент статуса со счётчиками — значения те же, что принимал statusFilter
+const statusSegments = computed(() => [
+  { value: "all", label: "Все", count: templates.value.length },
+  { value: "active", label: "Активные", count: stats.value.active },
+  { value: "inactive", label: "Неактивные", count: templates.value.length - stats.value.active },
+]);
+
+const onStatusSegment = (value: string | number | boolean) => {
+  statusFilter.value = value as "all" | "active" | "inactive";
+};
+
+// Меню «⋯» строки: настройки (ссылка), дублирование, а удаление — отдельной группой внизу и только при праве canDeleteTemplates
+const rowMenu = (template: CertificateTemplate) => [
+  {
+    items: [
+      { key: "settings", label: "Настройки шаблона", icon: Settings, to: `/certificates/templates/${template.id}` },
+      { key: "duplicate", label: "Дублировать", icon: Copy },
+    ],
+  },
+  {
+    items: [{ key: "delete", label: "Удалить", icon: Trash2, danger: true, hidden: !canDeleteTemplates.value }],
+  },
+];
+
+const onRowAction = (key: string, template: CertificateTemplate) => {
+  if (key === "duplicate") handleDuplicate(template);
+  else if (key === "delete") confirmDelete(template);
+};
 
 // Загрузка списка
 const loadTemplates = async () => {

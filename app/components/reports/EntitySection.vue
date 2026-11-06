@@ -92,12 +92,12 @@
                 <!-- Агрегация -->
                 <div class="flex items-center gap-1">
                   <span
-                    class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-bold"
+                    class="text-[11px] text-gray-400 dark:text-gray-500 uppercase font-bold"
                     >Σ</span
                   >
                   <select
                     :value="getColumn(field.key)?.aggregation"
-                    class="text-[10px] font-bold border-none bg-white dark:bg-gray-700 text-primary px-1 py-0.5 outline-none cursor-pointer rounded"
+                    class="text-[11px] font-bold border-none bg-white dark:bg-gray-700 text-primary px-1 py-0.5 outline-none cursor-pointer rounded"
                     @change="
                       onAggregationChange(
                         field.key,
@@ -128,7 +128,7 @@
                       })
                     "
                   />
-                  <span class="text-[10px] text-gray-500 font-bold uppercase"
+                  <span class="text-[11px] text-gray-500 font-bold uppercase"
                     >Σ Итог</span
                   >
                 </label>

@@ -1,327 +1,136 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Header Section -->
-    <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-      <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div class="space-y-2">
-          <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-            Банк тестов
-          </h1>
-          <p class="text-slate-500 font-medium">
-            Управление банками вопросов и шаблонами тестов
-          </p>
-        </div>
+  <!-- Внешний враппер без двойного отступа: отступы даёт layout -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок страницы; единственное главное действие «Создать банк» справа -->
+    <UiPageHeader
+      title="Банк тестов"
+      description="Банки вопросов используются для создания шаблонов тестов; каждый банк может содержать вопросы на разных языках"
+    >
+      <template #actions>
+        <UiButton v-if="canManageTestBanks" variant="primary" :start-icon="Plus" @click="openCreateModal">
+          Создать банк
+        </UiButton>
+      </template>
+    </UiPageHeader>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <UiButton
-            v-if="canManageTestBanks"
-            variant="primary"
-            size="sm"
-            class="h-10 px-4 gap-2 font-bold shadow-sm"
-            @click="openCreateModal"
+    <!-- Метрики одной строкой вместо 4 крупных карточек: таблица оказывается выше сгиба -->
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <UiStat label="Всего банков" :value="stats.totalBanks" :icon="Library" tone="primary" />
+      <UiStat label="Активных (на странице)" :value="stats.activeBanks" :icon="CheckCircle" tone="success" />
+      <UiStat label="Вопросов (на странице)" :value="stats.totalQuestions" :icon="HelpCircle" tone="warning" />
+      <UiStat label="Категорий" :value="stats.totalCategories" :icon="Tags" tone="info" />
+    </div>
+
+    <!-- Единый блок фильтров. Категория — один контрол (в панели «Фильтры»); боковой список категорий убран с экрана, чтобы не дублировать -->
+    <UiFilterBar
+      v-model:search="filters.search"
+      search-placeholder="Поиск по названию, коду…"
+      :segments="bankSegments"
+      :segment="bankSegment"
+      :chips="filterChips"
+      :active-count="filterChips.length"
+      :total="pagination.total"
+      persist-key="test-bank"
+      @search="handleFilterChange"
+      @update:segment="setBankSegment"
+      @remove="removeFilterChip"
+      @reset="resetFilters"
+    >
+      <template #filters>
+        <!-- Категория: единственный контрол выбора категории -->
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Категория</span>
+          <select
+            v-model="filters.category"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            @change="handleFilterChange"
           >
-            <Plus class="w-4 h-4" />
-            Создать банк
-          </UiButton>
-        </div>
-      </div>
-    </div>
+            <option value="">Все категории</option>
+            <!-- Исправлено: категории приходят объектами {category, count}, раньше в option выводился [object Object] -->
+            <option v-for="cat in categories" :key="cat.category" :value="cat.category">{{ cat.category }} ({{ cat.count }})</option>
+          </select>
+        </label>
+      </template>
+    </UiFilterBar>
 
-    <!-- Bento Box Metrics -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-      <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div class="min-w-0">
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Всего банков</p>
-            <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">{{ stats.totalBanks }}</h3>
-          </div>
-          <div class="rounded-lg bg-primary/10 p-2 text-primary ml-2 shrink-0">
-            <Library class="w-4 h-4" />
-          </div>
-        </div>
+    <!-- Карточка со списком банков; пагинация — футер внутри карточки -->
+    <div id="banks-list" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <!-- Загрузка -->
+      <div v-if="loading" class="p-12 text-center">
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
       </div>
 
-      <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div class="min-w-0">
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Активных</p>
-            <h3 class="mt-0.5 text-lg font-bold text-success">{{ stats.activeBanks }}</h3>
-          </div>
-          <div class="rounded-lg bg-success/10 p-2 text-success ml-2 shrink-0">
-            <CheckCircle class="w-4 h-4" />
-          </div>
-        </div>
-      </div>
+      <!-- Пусто: объясняем причину и даём следующий шаг -->
+      <UiEmptyState
+        v-else-if="banks.length === 0"
+        :icon="Library"
+        title="Банки вопросов не найдены"
+        description="Измените условия поиска или сбросьте фильтры"
+      >
+        <template #actions>
+          <UiButton variant="outline" size="sm" @click="resetFilters">Сбросить фильтры</UiButton>
+        </template>
+      </UiEmptyState>
 
-      <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div class="min-w-0">
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Вопросов</p>
-            <h3 class="mt-0.5 text-lg font-bold text-warning">{{ stats.totalQuestions }}</h3>
-          </div>
-          <div class="rounded-lg bg-warning/10 p-2 text-warning ml-2 shrink-0">
-            <HelpCircle class="w-4 h-4" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div class="min-w-0">
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Категорий</p>
-            <h3 class="mt-0.5 text-lg font-bold text-info">{{ stats.totalCategories }}</h3>
-          </div>
-          <div class="rounded-lg bg-info/10 p-2 text-info ml-2 shrink-0">
-            <Tags class="w-4 h-4" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tabs Navigation -->
-    <div class="mb-5 overflow-x-auto custom-scrollbar pb-1">
-      <div class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
-        <nav class="flex gap-0.5">
-          <button
-            v-for="tab in availableTabs"
-            :key="tab.id"
-            @click="activeTab = tab.id"
-            :class="[
-              'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-300 whitespace-nowrap',
-              activeTab === tab.id
-                ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
-            ]"
-          >
-            <component :is="tab.icon" class="h-3.5 w-3.5" />
-            {{ tab.label }}
-          </button>
-        </nav>
-      </div>
-    </div>
-
-    <!-- Tab Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- Main Content Area (8 cols) -->
-      <div class="lg:col-span-8 space-y-4">
-        <!-- BANKS TAB -->
+      <!-- Список: строка кликабельна (открывает банк), справа 1 иконка + «⋯» -->
+      <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
         <div
-          v-show="activeTab === 'banks'"
-          class="space-y-4 animate-in fade-in duration-500"
+          v-for="bank in banks"
+          :key="bank.id"
+          class="group flex cursor-pointer items-center gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+          @click="viewBank(bank)"
         >
-          <!-- Filters -->
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <Search class="w-4 h-4 text-info" />
-              <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Поиск</h3>
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary dark:bg-primary-500/15">
+            <Library class="h-5 w-5" />
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="mb-0.5 flex items-center gap-2">
+              <h4 class="truncate text-sm font-semibold text-gray-900 transition-colors group-hover:text-primary dark:text-gray-100">
+                {{ bank.name }}
+              </h4>
+              <UiBadge :color="bank.is_active ? 'success' : 'light'" size="sm">{{ bank.is_active ? 'Активен' : 'Неактивен' }}</UiBadge>
             </div>
-            <div class="p-4">
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="md:col-span-2">
-                  <div class="relative">
-                    <input
-                      v-model="filters.search"
-                      type="text"
-                      placeholder="Поиск по названию, коду..."
-                      class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 pl-10 pr-4 outline-none focus:border-primary text-sm"
-                      @input="handleFilterChange"
-                    />
-                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  </div>
-                </div>
-                <div>
-                  <div class="relative">
-                    <select
-                      v-model="filters.category"
-                      class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 pl-4 pr-10 outline-none focus:border-primary text-sm appearance-none"
-                      @change="handleFilterChange"
-                    >
-                      <option value="">Все категории</option>
-                      <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-                    </select>
-                    <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                  </div>
-                </div>
-              </div>
-              <div class="flex flex-wrap gap-2 mt-3">
-                <button
-                  @click="filters.isActive = undefined; handleFilterChange()"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                  :class="filters.isActive === undefined ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
-                >
-                  Все
-                </button>
-                <button
-                  @click="filters.isActive = true; handleFilterChange()"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                  :class="filters.isActive === true ? 'bg-success text-white' : 'bg-success/10 text-success hover:bg-success/20'"
-                >
-                  Активные
-                </button>
-                <button
-                  @click="filters.isActive = false; handleFilterChange()"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                  :class="filters.isActive === false ? 'bg-slate-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
-                >
-                  Неактивные
-                </button>
-              </div>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+              <span class="rounded bg-gray-100 px-1.5 py-0.5 font-mono dark:bg-white/[0.06]">{{ bank.code }}</span>
+              <span v-if="bank.category" class="flex items-center gap-1"><Tags class="h-3 w-3" /> {{ bank.category }}</span>
+              <span>{{ bank.questions_count || 0 }} вопросов</span>
+              <span>{{ bank.templates_count || 0 }} шаблонов</span>
             </div>
           </div>
 
-          <!-- Banks List -->
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div v-if="loading" class="p-12 text-center">
-              <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-            </div>
-            <div v-else-if="banks.length === 0" class="py-16 text-center">
-              <Library class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-              <p class="text-slate-500">Банки вопросов не найдены</p>
-            </div>
-            <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
-              <div
-                v-for="bank in banks"
-                :key="bank.id"
-                class="flex items-center gap-4 px-4 py-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
-              >
-                <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                  <Library class="w-5 h-5" />
-                </div>
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-1">
-                    <h4 class="font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors truncate">
-                      {{ bank.name }}
-                    </h4>
-                    <span
-                      :class="['px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider',
-                        bank.is_active ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-400']"
-                    >
-                      {{ bank.is_active ? 'Активен' : 'Неактивен' }}
-                    </span>
-                  </div>
-                  <div class="flex items-center gap-3 text-xs text-slate-500">
-                    <span class="font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{{ bank.code }}</span>
-                    <span v-if="bank.category" class="flex items-center gap-1">
-                      <Tags class="w-3 h-3" /> {{ bank.category }}
-                    </span>
-                    <span>{{ bank.questions_count || 0 }} вопросов</span>
-                    <span>{{ bank.templates_count || 0 }} шаблонов</span>
-                  </div>
-                </div>
-                <div class="flex items-center gap-1 shrink-0">
-                  <button @click="viewBank(bank)" class="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all" title="Открыть">
-                    <ExternalLink class="w-4 h-4" />
-                  </button>
-                  <button
-                    v-if="canManageTestBanks"
-                    @click="openEditModal(bank)"
-                    class="p-2 text-slate-400 hover:text-warning hover:bg-warning/10 rounded-lg transition-all"
-                    title="Редактировать"
-                  >
-                    <Pencil class="w-4 h-4" />
-                  </button>
-                  <button
-                    v-if="canManageTestBanks"
-                    @click="confirmDelete(bank)"
-                    class="p-2 text-slate-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-all"
-                    title="Удалить"
-                  >
-                    <Trash2 class="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Pagination -->
-            <div v-if="pagination.totalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-800">
-              <p class="text-xs text-slate-500">
-                Страница {{ pagination.page }} из {{ pagination.totalPages }}
-              </p>
-              <div class="flex gap-1">
-                <button
-                  @click="changePage(pagination.page - 1)"
-                  :disabled="pagination.page === 1"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-                >
-                  ←
-                </button>
-                <button
-                  v-for="p in paginationRange"
-                  :key="p"
-                  @click="typeof p === 'number' && changePage(p)"
-                  :class="['w-8 h-8 rounded-lg text-xs font-bold transition-all', typeof p !== 'number' ? 'text-slate-400 cursor-default' : pagination.page === p ? 'bg-primary text-white' : 'border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800']"
-                >
-                  {{ p }}
-                </button>
-                <button
-                  @click="changePage(pagination.page + 1)"
-                  :disabled="pagination.page >= pagination.totalPages"
-                  class="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 disabled:opacity-50 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-                >
-                  →
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Sidebar (4 cols) -->
-      <div class="lg:col-span-4 space-y-4">
-        <!-- Quick Create -->
-        <div v-if="canManageTestBanks" class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-          <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-            <Plus class="w-4 h-4 text-primary" />
-            <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Быстрое действие</h4>
-          </div>
-          <div class="p-4">
-            <UiButton class="w-full h-10 gap-2 font-bold" @click="openCreateModal">
-              <Plus class="w-4 h-4" />
-              Создать банк
+          <!-- Действия строки: всегда видны (в т.ч. на touch); клик не должен открывать банк -->
+          <div class="flex shrink-0 items-center gap-1" @click.stop>
+            <UiButton variant="ghost" size="sm" icon title="Открыть" aria-label="Открыть" @click="viewBank(bank)">
+              <ExternalLink class="h-4 w-4" />
             </UiButton>
-          </div>
-        </div>
-
-        <!-- Categories -->
-        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-          <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-            <Tags class="w-4 h-4 text-warning" />
-            <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Категории</h4>
-          </div>
-          <div v-if="categories.length === 0" class="p-4 text-center text-xs text-slate-400">
-            Нет категорий
-          </div>
-          <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
-            <button
-              v-for="cat in categories"
-              :key="cat.category"
-              @click="filters.category = cat.category; handleFilterChange()"
-              :class="['w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors text-left', filters.category === cat.category ? 'bg-primary/5' : '']"
-            >
-              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ cat.category }}</span>
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{{ cat.count }}</span>
-                <ArrowRight class="w-3 h-3 text-slate-400" />
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- Info Card -->
-        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-          <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-            <Info class="w-4 h-4 text-info" />
-            <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Информация</h4>
-          </div>
-          <div class="p-4 text-xs text-slate-500 space-y-2">
-            <p>Банки вопросов используются для создания шаблонов тестов.</p>
-            <p>Каждый банк может содержать вопросы на разных языках.</p>
+            <!-- Редактирование и удаление — в меню; удаление последним и красным -->
+            <UiDropdown
+              v-if="canManageTestBanks"
+              icon-only
+              variant="ghost"
+              size="sm"
+              aria-label="Действия с банком"
+              :groups="bankMenuGroups"
+              @select="(key) => onBankAction(key, bank)"
+            />
           </div>
         </div>
       </div>
+
+      <!-- Единая пагинация (limit у страницы фиксирован — выбор размера скрыт) -->
+      <UiPagination
+        :current-page="pagination.page"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        :loading="loading"
+        hide-limit
+        scroll-target="#banks-list"
+        @update:page="changePage"
+      />
     </div>
 
-    <!-- Create/Edit Modal -->
+    <!-- Модалка создания/редактирования -->
     <UiModal
       :is-open="modalOpen"
       :title="editingBank ? 'Редактировать банк' : 'Создать банк'"
@@ -330,67 +139,64 @@
     >
       <form @submit.prevent="saveBank" class="space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-            Название <span class="text-danger">*</span>
+          <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Название <span class="text-error-500">*</span>
           </label>
           <input
             v-model="form.name"
             type="text"
             placeholder="Охрана труда - Базовый"
-            class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary text-sm"
-            :class="{ 'border-danger ring-2 ring-danger/10': formErrors.name }"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
+            :class="{ 'border-error-500 ring-2 ring-error-500/10': formErrors.name }"
           />
-          <p v-if="formErrors.name" class="mt-1 text-xs text-danger">{{ formErrors.name }}</p>
+          <p v-if="formErrors.name" class="mt-1 text-xs text-error-600">{{ formErrors.name }}</p>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-            Код <span class="text-danger">*</span>
+          <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Код <span class="text-error-500">*</span>
           </label>
           <input
             v-model="form.code"
             type="text"
             placeholder="OT-BASE"
-            class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary text-sm uppercase"
-            :class="{ 'border-danger ring-2 ring-danger/10': formErrors.code }"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm uppercase text-gray-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
+            :class="{ 'border-error-500 ring-2 ring-error-500/10': formErrors.code }"
           />
-          <p v-if="formErrors.code" class="mt-1 text-xs text-danger">{{ formErrors.code }}</p>
+          <p v-if="formErrors.code" class="mt-1 text-xs text-error-600">{{ formErrors.code }}</p>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-            Категория
-          </label>
+          <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Категория</label>
           <input
             v-model="form.category"
             type="text"
             placeholder="Охрана труда"
             list="categories-list"
-            class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary text-sm"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
           />
+          <!-- Подсказки категорий: берём строковое поле category (раньше подставлялся объект) -->
           <datalist id="categories-list">
-            <option v-for="cat in categories" :key="cat" :value="cat" />
+            <option v-for="cat in categories" :key="cat.category" :value="cat.category" />
           </datalist>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-            Описание
-          </label>
+          <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Описание</label>
           <textarea
             v-model="form.description"
             rows="2"
             placeholder="Описание банка..."
-            class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary text-sm resize-none"
+            class="w-full resize-none rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
           ></textarea>
         </div>
 
-        <div class="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-          <label class="relative inline-flex items-center cursor-pointer">
-            <input v-model="form.is_active" type="checkbox" class="sr-only peer" />
-            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+        <div class="flex items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-white/[0.04]">
+          <label class="relative inline-flex cursor-pointer items-center">
+            <input v-model="form.is_active" type="checkbox" class="peer sr-only" />
+            <div class="h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 dark:bg-gray-700"></div>
           </label>
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Активен</span>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Активен</span>
         </div>
       </form>
 
@@ -404,7 +210,7 @@
       </template>
     </UiModal>
 
-    <!-- Delete Confirmation -->
+    <!-- Подтверждение удаления (прежний обработчик deleteBank) -->
     <UiConfirmModal
       :is-open="deleteModalOpen"
       title="Удалить банк?"
@@ -415,7 +221,7 @@
       @cancel="deleteModalOpen = false"
     />
 
-    <!-- Notifications -->
+    <!-- Уведомления -->
     <UiNotification
       v-if="notification.show"
       :type="notification.type"
@@ -459,6 +265,37 @@ const stats = computed(() => ({
   totalQuestions: banks.value.reduce((s, b) => s + (b.questions_count || 0), 0),
   totalCategories: categories.value.length,
 }));
+
+// Быстрый сегмент статуса для UiFilterBar: связывает трёхпозиционный filters.isActive (не меняя его) с сегментами
+const bankSegments = [
+  { value: "all", label: "Все" },
+  { value: "active", label: "Активные" },
+  { value: "inactive", label: "Неактивные" },
+];
+const bankSegment = computed(() => (filters.value.isActive === undefined ? "all" : filters.value.isActive ? "active" : "inactive"));
+const setBankSegment = (v) => {
+  filters.value.isActive = v === "all" ? undefined : v === "active";
+  handleFilterChange();
+};
+
+// Чипы применённых фильтров (категория и статус) — состояние видно без открытия панели
+const filterChips = computed(() => {
+  const chips = [];
+  if (filters.value.category) chips.push({ key: "category", label: `Категория: ${filters.value.category}` });
+  if (filters.value.isActive !== undefined) chips.push({ key: "status", label: filters.value.isActive ? "Только активные" : "Только неактивные" });
+  return chips;
+});
+
+// Меню «⋯» строки: удаление — последним пунктом и красным
+const bankMenuGroups = [
+  { items: [{ key: "edit", label: "Редактировать", icon: Pencil }] },
+  { items: [{ key: "delete", label: "Удалить", icon: Trash2, danger: true }] },
+];
+// Диспетчер меню вызывает прежние обработчики openEditModal / confirmDelete
+const onBankAction = (key, bank) => {
+  if (key === "edit") openEditModal(bank);
+  else if (key === "delete") confirmDelete(bank);
+};
 
 const paginationRange = computed(() => {
   const total = pagination.value.totalPages;
@@ -512,6 +349,17 @@ const loadCategories = async () => {
 
 const handleFilterChange = () => { pagination.value.page = 1; loadBanks(); };
 const changePage = (p) => { if (p >= 1 && p <= pagination.value.totalPages) { pagination.value.page = p; loadBanks(); } };
+// Сброс всех фильтров одним действием (всегда доступен через UiFilterBar)
+const resetFilters = () => {
+  filters.value = { search: "", category: "", isActive: undefined };
+  handleFilterChange();
+};
+// Снятие отдельного чипа фильтра
+const removeFilterChip = (key) => {
+  if (key === "category") filters.value.category = "";
+  if (key === "status") filters.value.isActive = undefined;
+  handleFilterChange();
+};
 const viewBank = (b) => navigateTo(`/test-bank/${b.id}`);
 
 const openCreateModal = () => {
@@ -577,9 +425,3 @@ const showNotification = (type: string, title: string, message: string) => {
 
 onMounted(() => { loadBanks(); loadCategories(); });
 </script>
-
-<style scoped>
-.custom-scrollbar::-webkit-scrollbar { height: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-</style>

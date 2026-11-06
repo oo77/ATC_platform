@@ -289,7 +289,7 @@
                     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                       <!-- Уровень образования -->
                       <div>
-                        <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <label class="mb-2 block text-[11px] font-black uppercase tracking-widest text-slate-500">
                           Уровень образования
                         </label>
                         <select
@@ -306,7 +306,7 @@
 
                       <!-- ВУЗ -->
                       <div>
-                        <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <label class="mb-2 block text-[11px] font-black uppercase tracking-widest text-slate-500">
                           Учебное заведение
                         </label>
                         <input
@@ -319,7 +319,7 @@
 
                       <!-- Специальность -->
                       <div class="sm:col-span-2">
-                        <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <label class="mb-2 block text-[11px] font-black uppercase tracking-widest text-slate-500">
                           Специальность
                         </label>
                         <input
@@ -333,7 +333,7 @@
                       <!-- Серия и Номер диплома -->
                       <div class="grid grid-cols-2 gap-4 sm:col-span-2">
                         <div>
-                          <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          <label class="mb-2 block text-[11px] font-black uppercase tracking-widest text-slate-500">
                             Серия диплома
                           </label>
                           <input
@@ -344,7 +344,7 @@
                           />
                         </div>
                         <div>
-                          <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          <label class="mb-2 block text-[11px] font-black uppercase tracking-widest text-slate-500">
                             Номер диплома
                           </label>
                           <input
@@ -359,7 +359,7 @@
                       <!-- Годы обучения -->
                       <div class="grid grid-cols-2 gap-4 sm:col-span-2">
                         <div>
-                          <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          <label class="mb-2 block text-[11px] font-black uppercase tracking-widest text-slate-500">
                             Год начала
                           </label>
                           <input
@@ -372,7 +372,7 @@
                           />
                         </div>
                         <div>
-                          <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          <label class="mb-2 block text-[11px] font-black uppercase tracking-widest text-slate-500">
                             Год окончания
                           </label>
                           <input
@@ -388,7 +388,7 @@
 
                       <!-- Диплом (Файлы) -->
                       <div class="sm:col-span-2">
-                        <label class="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <label class="mb-2 block text-[11px] font-black uppercase tracking-widest text-slate-500">
                           Сканы диплома
                         </label>
                         <FileUploader

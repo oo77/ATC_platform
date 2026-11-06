@@ -1,299 +1,145 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Header Section -->
-    <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-      <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div class="space-y-2">
-          <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-            Учебные программы
-          </h1>
-          <p class="text-slate-500 font-medium">
-            Управление курсами, дисциплинами и планами обучения
-          </p>
-        </div>
+  <!-- Внешний враппер без собственных отступов (убран двойной padding) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок; единственное главное действие страницы — «Создать» (виден только при правах) -->
+    <UiPageHeader
+      title="Учебные программы"
+      description="Курсы, дисциплины и планы обучения. КПП — первоначальная подготовка, КПК — повышение квалификации"
+    >
+      <template #actions>
+        <UiButton v-if="canCreateCourses" variant="primary" size="md" :start-icon="Plus" @click="navigateTo('/programs/create')">
+          Создать программу
+        </UiButton>
+      </template>
+    </UiPageHeader>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <UiButton v-if="canCreateCourses" variant="primary" size="sm" class="h-10 px-4 gap-2 font-bold shadow-sm" @click="navigateTo('/programs/create')">
-            <Plus class="w-4 h-4" />
-            Создать учебную программу
-          </UiButton>
-        </div>
-      </div>
-    </div>
+    <!-- KPI-карточки удалены: «всего» теперь в счётчике «Найдено N», а «активных на странице» и «часы на странице» вводили в заблуждение (считались только по текущей странице) -->
 
-    <!-- Bento Box Metrics -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Всего программ</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.totalCourses }}</h3>
-          </div>
-          <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
-            <BookOpen class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
+    <!-- Вкладки «Активные / Архив» вместо самописных таблеток; логика переключения прежняя (isArchived + loadCourses) -->
+    <UiTabs
+      :model-value="filters.isArchived ? 'archive' : 'active'"
+      :tabs="programTabs"
+      @update:model-value="onTabChange"
+    />
 
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Активных программ</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.activeCourses }}</h3>
-          </div>
-          <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
-            <CheckCircle class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Всего часов</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.totalHours }}</h3>
-          </div>
-          <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
-            <Clock class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Navigation Tabs -->
-    <div class="mb-8 overflow-x-auto custom-scrollbar pb-2">
-      <div class="inline-flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800">
-        <nav class="flex gap-1" aria-label="Tabs">
-          <button
-            @click="filters.isArchived = false; loadCourses()"
-            :class="['flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap', !filters.isArchived ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200']"
+    <!-- Единый блок фильтров: поиск + сегмент типа программы; статус — в сворачиваемой панели -->
+    <UiFilterBar
+      v-model:search="filters.search"
+      search-placeholder="Поиск по названию или коду программы..."
+      :segments="typeSegments"
+      :segment="filters.courseType ?? 'all'"
+      :chips="filterChips"
+      :active-count="filterChips.length"
+      :total="pagination.total"
+      persist-key="programs"
+      @search="handleFilterChange"
+      @update:segment="onTypeChange"
+      @remove="onChipRemove"
+      @reset="resetFilters"
+    >
+      <!-- Второстепенный фильтр: статус (в архиве не применяется — как и раньше) -->
+      <template #filters>
+        <div v-if="!filters.isArchived">
+          <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Статус</label>
+          <select
+            :value="statusValue"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            @change="onStatusChange"
           >
-            <BookOpen class="h-4 w-4" />
-            Активные программы
-          </button>
-          <button
-            @click="filters.isArchived = true; loadCourses()"
-            :class="['flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap', filters.isArchived ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200']"
-          >
-            <Archive class="h-4 w-4" />
-            Архив программ
-          </button>
-        </nav>
-      </div>
-    </div>
-
-    <!-- Фильтры и поиск -->
-    <!-- Фильтры и поиск -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6 mb-6">
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-3">
-          <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <Filter class="w-5 h-5" />
-          </div>
-          <h4 class="text-lg font-bold text-slate-900 dark:text-white">
-            Фильтры
-          </h4>
+            <option value="all">Все</option>
+            <option value="active">Активные</option>
+            <option value="inactive">Неактивные</option>
+          </select>
         </div>
-        <button
-          v-if="hasActiveFilters"
-          @click="resetFilters"
-          class="text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10"
-        >
-          <RotateCcw class="w-4 h-4" />
-          Сбросить фильтры
-        </button>
-      </div>
+        <p v-else class="text-sm text-gray-500 dark:text-gray-400">Для архива дополнительных фильтров нет</p>
+      </template>
+    </UiFilterBar>
 
-      <div class="flex flex-col gap-6">
-        <!-- Поиск -->
-        <div class="relative max-w-xl">
-          <input
-            v-model="filters.search"
-            type="text"
-            placeholder="Поиск по названию или коду программы..."
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium"
-            @input="handleFilterChange"
-          />
-          <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-        </div>
-
-        <div class="flex flex-wrap gap-x-12 gap-y-6">
-          <!-- Тип программы (Interactive Chips) -->
-          <div class="space-y-3">
-            <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-              <BookOpen class="w-3.5 h-3.5" />
-              Тип программы
-            </label>
-            <div class="flex flex-wrap gap-2">
-              <button
-                @click="filters.courseType = undefined; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                :class="filters.courseType === undefined ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
-              >
-                Все
-              </button>
-              <button
-                @click="filters.courseType = 'КПП'; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                :class="filters.courseType === 'КПП' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
-              >
-                КПП (Первоначальная подготовка)
-              </button>
-              <button
-                @click="filters.courseType = 'КПК'; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                :class="filters.courseType === 'КПК' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
-              >
-                КПК (Повышение квалификации)
-              </button>
-            </div>
-          </div>
-
-          <!-- Статус -->
-          <div v-if="!filters.isArchived" class="space-y-3">
-            <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-              <Activity class="w-3.5 h-3.5" />
-              Статус
-            </label>
-            <div class="flex flex-wrap gap-2">
-              <button
-                @click="filters.isActive = undefined; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                :class="filters.isActive === undefined ? 'bg-slate-800 text-white shadow-md dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
-              >
-                Все
-              </button>
-              <button
-                @click="filters.isActive = true; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5"
-                :class="filters.isActive === true ? 'bg-success text-white shadow-md shadow-success/20' : 'bg-success/5 text-success hover:bg-success/10 border border-success/20'"
-              >
-                <span v-if="filters.isActive === true" class="w-1.5 h-1.5 rounded-full bg-white"></span>
-                Активные
-              </button>
-              <button
-                @click="filters.isActive = false; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5"
-                :class="filters.isActive === false ? 'bg-slate-500 text-white shadow-md dark:bg-slate-400 dark:text-slate-900' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'"
-              >
-                Неактивные
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Список курсов -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+    <!-- Список программ: одна карточка = таблица + пагинация-футер -->
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <!-- Загрузка -->
       <div v-if="loading" class="p-12 text-center">
-        <div class="mx-auto inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        <p class="mt-4 font-bold text-slate-900 dark:text-white">
-          Загрузка учебных программ...
-        </p>
+        <div class="mx-auto inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
+        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Загрузка учебных программ...</p>
       </div>
 
-      <div v-else-if="courses.length === 0" class="p-16 text-center">
-        <div class="bg-slate-50 dark:bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-          <BookOpen class="w-8 h-8 text-slate-300" />
-        </div>
-        <p class="text-lg font-bold text-slate-900 dark:text-white">Учебные программы не найдены</p>
-        <p class="mt-2 text-slate-500 font-medium max-w-sm mx-auto">
-          Создайте первую учебную программу, нажав кнопку "Создать учебную программу"
-        </p>
-      </div>
+      <!-- Пусто: единое пустое состояние со следующим шагом (создать или сбросить фильтры) -->
+      <UiEmptyState
+        v-else-if="courses.length === 0"
+        title="Учебные программы не найдены"
+        :description="hasActiveFilters ? 'Попробуйте изменить или сбросить фильтры' : 'Создайте первую учебную программу'"
+        :icon="BookOpen"
+      >
+        <template #actions>
+          <UiButton v-if="hasActiveFilters" variant="outline" size="md" @click="resetFilters">Сбросить фильтры</UiButton>
+          <UiButton v-else-if="canCreateCourses" variant="primary" size="md" :start-icon="Plus" @click="navigateTo('/programs/create')">
+            Создать программу
+          </UiButton>
+        </template>
+      </UiEmptyState>
 
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Учебная программа</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Код</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Дисциплины</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Часы</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Статус</th>
-              <th v-if="canCreateCourses" class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Действия</th>
+      <!-- Таблица: контейнер со скроллом, чтобы шапка была sticky -->
+      <div v-else class="max-h-[calc(100vh-20rem)] min-h-[200px] overflow-auto">
+        <table class="w-full border-collapse text-left text-sm">
+          <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+            <tr class="border-b border-gray-200 dark:border-gray-800">
+              <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Учебная программа</th>
+              <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Код</th>
+              <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Дисциплины</th>
+              <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Часы</th>
+              <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Статус</th>
+              <th class="w-16 px-4 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400">
+                <span class="sr-only">Действия</span>
+              </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <!-- Строка кликабельна (как было): открывает программу -->
             <tr
               v-for="course in courses"
               :key="course.id"
+              class="group cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
               @click="viewCourse(course)"
-              class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
             >
-              <td class="px-6 py-4">
-                <div>
-                  <div class="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
-                    {{ course.name }}
-                  </div>
-                  <div class="text-xs font-bold text-slate-500 mt-1">
-                    {{ course.shortName }}
-                  </div>
-                </div>
+              <td class="px-4 py-3">
+                <div class="font-medium text-gray-900 transition-colors group-hover:text-primary dark:text-white">{{ course.name }}</div>
+                <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ course.shortName }}</div>
               </td>
-              <td class="px-6 py-4">
-                <span class="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 font-mono">
-                  {{ course.code }}
-                </span>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-700 dark:bg-white/[0.06] dark:text-gray-300">{{ course.code }}</span>
               </td>
-              <td class="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">
-                {{ course.disciplineCount || 0 }}
+              <td class="px-4 py-3 tabular-nums text-gray-700 dark:text-gray-300">{{ course.disciplineCount || 0 }}</td>
+              <td class="px-4 py-3 tabular-nums text-gray-700 dark:text-gray-300">{{ course.totalHours }} ч.</td>
+              <!-- Статус: единый UiBadge вместо плашки uppercase -->
+              <td class="px-4 py-3">
+                <UiBadge :color="course.isActive ? 'success' : 'light'">{{ course.isActive ? "Активна" : "Неактивна" }}</UiBadge>
               </td>
-              <td class="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">
-                {{ course.totalHours }} ч.
-              </td>
-              <td class="px-6 py-4">
-                <span
-                  class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-black uppercase tracking-widest border"
-                  :class="course.isActive ? 'bg-success/5 text-success border-success/20' : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'"
-                >
-                  {{ course.isActive ? "Активна" : "Неактивна" }}
-                </span>
-              </td>
-              <td v-if="canCreateCourses" class="px-6 py-4 text-right">
-                <button
-                  type="button"
-                  title="Создать копию программы"
-                  :disabled="duplicatingId !== null"
-                  class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 hover:border-primary hover:text-primary disabled:opacity-50 transition-colors"
-                  @click.stop="duplicateCourse(course)"
-                >
-                  <Copy class="w-3.5 h-3.5" />
-                  {{ duplicatingId === course.id ? "Копирование..." : "Дублировать" }}
-                </button>
+              <!-- Действия: «⋯» (всегда виден, в том числе на touch); клик не открывает строку -->
+              <td class="px-4 py-3 text-right" @click.stop>
+                <UiDropdown
+                  :groups="rowMenu(course)"
+                  icon-only
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Действия с программой"
+                  @select="(key) => onRowAction(key, course)"
+                />
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Compact Pagination -->
-      <div v-if="pagination.totalPages > 1" class="px-6 py-4 bg-slate-50/30 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">
-          Показано {{ (pagination.page - 1) * pagination.limit + 1 }} - {{ Math.min(pagination.page * pagination.limit, pagination.total) }} из {{ pagination.total }}
-        </span>
-        <div class="flex gap-2">
-          <UiButton
-            variant="outline"
-            size="sm"
-            class="h-8 px-3"
-            :disabled="pagination.page === 1"
-            @click="changePage(pagination.page - 1)"
-          >
-            Назад
-          </UiButton>
-          <UiButton
-            variant="outline"
-            size="sm"
-            class="h-8 px-3"
-            :disabled="pagination.page >= pagination.totalPages"
-            @click="changePage(pagination.page + 1)"
-          >
-            Вперед
-          </UiButton>
-        </div>
-      </div>
+      <!-- Единая пагинация вместо «Назад/Вперёд»; страница не умеет менять limit → hideLimit -->
+      <UiPagination
+        :current-page="pagination.page"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        :loading="loading"
+        hide-limit
+        @update:page="changePage"
+      />
     </div>
   </div>
 </template>
@@ -301,7 +147,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { definePageMeta, useAuthFetch, useNotification, usePermissions, navigateTo } from "#imports";
-import { Plus, BookOpen, CheckCircle, Clock, Archive, Filter, RotateCcw, Search, Activity, ChevronDown, Copy } from "lucide-vue-next";
+// Убраны иконки KPI-карточек и самописных фильтров; добавлен Eye для пункта «Открыть» в меню строки
+import { Plus, BookOpen, Archive, Copy, Eye } from "lucide-vue-next";
 import type { Course, CourseType } from "~/types/course";
 
 // Определяем мета-данные страницы
@@ -345,6 +192,81 @@ const stats = computed(() => {
     totalHours: courses.value.reduce((sum, c) => sum + c.totalHours, 0),
   };
 });
+
+// ---- Презентационная обвязка для UiTabs / UiFilterBar (вызывает прежние loadCourses / handleFilterChange / resetFilters) ----
+
+// Вкладки «Активные / Архив»
+const programTabs = [
+  { id: "active", label: "Активные программы", icon: BookOpen },
+  { id: "archive", label: "Архив программ", icon: Archive },
+];
+
+// Переключение вкладки: ставим прежний флаг isArchived; страницу сбрасываем на 1-ю, чтобы не остаться за пределами списка
+const onTabChange = (id: string) => {
+  filters.value.isArchived = id === "archive";
+  pagination.value.page = 1;
+  loadCourses();
+};
+
+// Сегмент типа программы (значение «all» = без фильтра, то есть courseType = undefined)
+const typeSegments = [
+  { value: "all", label: "Все" },
+  { value: "КПП", label: "КПП" },
+  { value: "КПК", label: "КПК" },
+];
+
+const onTypeChange = (value: string | number | boolean) => {
+  filters.value.courseType = value === "all" ? undefined : (value as CourseType);
+  handleFilterChange();
+};
+
+// Селект статуса работает с tri-state isActive (undefined/true/false) через строковое значение
+const statusValue = computed(() =>
+  filters.value.isActive === undefined ? "all" : filters.value.isActive ? "active" : "inactive",
+);
+
+const onStatusChange = (e: Event) => {
+  const v = (e.target as HTMLSelectElement).value;
+  filters.value.isActive = v === "all" ? undefined : v === "active";
+  handleFilterChange();
+};
+
+// Чипы применённых второстепенных фильтров (статус; в архиве он не отображается, но в запросе участвует, как раньше)
+const filterChips = computed(() =>
+  filters.value.isActive === undefined
+    ? []
+    : [{ key: "isActive", label: `Статус: ${filters.value.isActive ? "активные" : "неактивные"}` }],
+);
+
+const onChipRemove = (key: string) => {
+  if (key === "isActive") {
+    filters.value.isActive = undefined;
+    handleFilterChange();
+  }
+};
+
+// Меню «⋯» строки: «Открыть» для всех, «Дублировать» — только при праве создания; во время копирования пункт блокируется
+const rowMenu = (course: Course) => [
+  {
+    items: [
+      { key: "open", label: "Открыть", icon: Eye },
+      {
+        key: "duplicate",
+        label: duplicatingId.value === course.id ? "Копирование..." : "Дублировать",
+        description: "Создать копию программы",
+        icon: Copy,
+        hidden: !canCreateCourses.value,
+        disabled: duplicatingId.value !== null,
+        loading: duplicatingId.value === course.id,
+      },
+    ],
+  },
+];
+
+const onRowAction = (key: string, course: Course) => {
+  if (key === "open") viewCourse(course);
+  else if (key === "duplicate") duplicateCourse(course);
+};
 
 // Проверка активных фильтров
 const hasActiveFilters = computed(() => {

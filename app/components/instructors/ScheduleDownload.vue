@@ -42,7 +42,7 @@
             {{ group.code }}
             <span
               v-if="group.isArchived"
-              class="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gray-500 dark:bg-gray-800"
+              class="ml-2 rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-gray-500 dark:bg-gray-800"
               >Архив</span
             >
           </p>

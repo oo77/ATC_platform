@@ -292,7 +292,7 @@
                 <p class="text-xl font-black text-sky-600 dark:text-sky-400">
                   {{ course.students_count }}
                 </p>
-                <p class="text-[10px] font-black uppercase tracking-tighter text-slate-400">чел.</p>
+                <p class="text-[11px] font-black uppercase tracking-tighter text-slate-400">чел.</p>
               </div>
             </div>
           </div>
@@ -350,18 +350,18 @@
                 </div>
                 <div class="flex flex-col items-end gap-1">
                   <span
-                    class="rounded-lg bg-primary/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-tight text-primary dark:bg-primary/10"
+                    class="rounded-lg bg-primary/5 px-2.5 py-1 text-[11px] font-black uppercase tracking-tight text-primary dark:bg-primary/10"
                   >
                     {{ group.student_count }} чел.
                   </span>
-                  <span class="text-[10px] font-bold text-slate-400 italic">
+                  <span class="text-[11px] font-bold text-slate-400 italic">
                     До {{ formatShortDate(group.end_date) }}
                   </span>
                 </div>
               </div>
 
               <div class="space-y-1.5">
-                <div class="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
+                <div class="flex items-center justify-between text-[11px] font-black uppercase tracking-widest">
                   <span class="text-slate-400">Прогресс обучения</span>
                   <span class="text-primary">{{ group.progress }}%</span>
                 </div>
@@ -428,7 +428,7 @@
                   {{ formatTime(event.start_time) }}
                 </span>
                 <span
-                  class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider"
+                  class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black uppercase tracking-wider"
                   :class="getEventTypeClass(event.event_type)"
                 >
                   {{ getEventTypeLabel(event.event_type) }}

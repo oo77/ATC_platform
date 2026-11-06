@@ -1,203 +1,115 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Header Section -->
-    <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-      <div class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-            Библиотека
-          </h2>
-          <p class="text-sm font-bold text-slate-500 mt-2">
-            Доступные вам материалы для чтения и изучения
-          </p>
-        </div>
-        <div v-if="isStaff" class="flex flex-wrap items-center gap-2">
-          <NuxtLink to="/admin/library/books">
-            <UiButton variant="primary" class="h-11 px-6 gap-2 font-bold shadow-sm rounded-xl">
-              <Library class="w-5 h-5 text-white" />
-              <span>Панель управления</span>
-            </UiButton>
-          </NuxtLink>
-        </div>
-      </div>
-    </div>
+  <!-- Внешний враппер без двойного отступа: отступы даёт layout -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок; главное действие для персонала — «Панель управления» -->
+    <UiPageHeader title="Библиотека" description="Доступные вам материалы для чтения и изучения">
+      <template #actions>
+        <UiButton v-if="isStaff" to="/admin/library/books" variant="primary" :start-icon="Library">
+          Панель управления
+        </UiButton>
+      </template>
+    </UiPageHeader>
 
-    <!-- Stats Row (Bento style) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 animate-in fade-in slide-in-from-top-4 duration-700 delay-75">
-      <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:border-primary/30 transition-colors group">
-        <div class="flex items-center gap-4">
-          <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-            <Library class="w-7 h-7" />
-          </div>
-          <div>
-            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Доступно книг</h3>
-            <p class="text-3xl font-black text-slate-900 dark:text-white mt-0.5">{{ pagination.total }}</p>
-          </div>
-        </div>
-      </div>
+    <!-- Три декоративные карточки («В процессе», «Сегодня» — заглушки без данных) убраны: количество книг показывает «Найдено N» в блоке фильтров -->
 
-      <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:border-success/30 transition-colors group text-left">
-        <div class="flex items-center gap-4">
-          <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 group-hover:scale-110 transition-transform">
-            <BookCheck class="w-7 h-7" />
-          </div>
-          <div class="min-w-0">
-            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest truncate">Ваш прогресс</h3>
-            <p class="text-3xl font-black text-slate-900 dark:text-white mt-0.5">В процессе</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:border-amber/30 transition-colors group text-left">
-        <div class="flex items-center gap-4">
-          <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400 group-hover:scale-110 transition-transform">
-            <Clock class="w-7 h-7" />
-          </div>
-          <div class="min-w-0">
-            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest truncate">Последняя активность</h3>
-            <p class="text-lg font-black text-slate-900 dark:text-white mt-0.5 truncate">Сегодня</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Умный Фильтр (Bento style) -->
-    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 sm:p-6 mb-8 animate-in fade-in slide-in-from-top-4 duration-700 delay-100">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- Поиск -->
-        <div class="relative group">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Поиск по названию..."
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all cursor-text h-[52px]"
-            @input="handleSearch"
-          />
-          <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
-        </div>
-
-        <!-- Фильтр по автору (Custom Dropdown) -->
-        <div class="relative group">
-          <div
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 h-[52px] flex items-center cursor-text"
-          >
-            <User class="absolute left-4 w-5 h-5 text-slate-400 pointer-events-none" />
+    <!-- Единый блок фильтров: поиск на виду, автор и язык — в панели «Фильтры»; «Сбросить всё» доступно, как только что-то применено -->
+    <UiFilterBar
+      v-model:search="searchQuery"
+      search-placeholder="Поиск по названию…"
+      :debounce="0"
+      :chips="filterChips"
+      :active-count="filterChips.length"
+      :total="pagination.total"
+      persist-key="library"
+      @search="handleSearch"
+      @remove="removeFilterChip"
+      @reset="resetFilters"
+    >
+      <template #filters>
+        <!-- Автор: поле с подсказками (класс group нужен closeDropdowns для закрытия по клику вне) -->
+        <div class="group relative">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Автор</span>
+          <div class="relative">
+            <User class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               v-model="authorQuery"
               type="text"
-              placeholder="Автор произведения..."
-              class="w-full py-3.5 pl-12 pr-10 text-sm font-bold text-slate-900 dark:text-white bg-transparent outline-none"
+              placeholder="Автор произведения…"
+              class="h-9 w-full rounded-lg border border-gray-300 bg-transparent pl-9 pr-14 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
               @focus="showAuthorDropdown = true"
               @input="showAuthorDropdown = true"
             />
             <button
               v-if="authorQuery"
+              type="button"
+              aria-label="Очистить автора"
+              class="absolute right-8 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               @click.stop="clearAuthor"
-              class="absolute right-10 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
             >
-              <X class="w-4 h-4 text-slate-400" />
+              <X class="h-3.5 w-3.5" />
             </button>
-            <ChevronDown 
-              class="absolute right-4 w-5 h-5 text-slate-400 transition-transform duration-200" 
-              :class="showAuthorDropdown ? 'rotate-180 text-primary' : ''" 
+            <ChevronDown
+              class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 transition-transform duration-200"
+              :class="showAuthorDropdown ? 'rotate-180 text-primary' : ''"
             />
           </div>
-          
-          <div 
-            v-if="showAuthorDropdown && filteredAuthors.length" 
-            class="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+
+          <!-- Список подсказок авторов -->
+          <div
+            v-if="showAuthorDropdown && filteredAuthors.length"
+            class="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900"
           >
-            <div 
-              v-for="author in filteredAuthors" 
+            <div
+              v-for="author in filteredAuthors"
               :key="author"
+              class="cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/[0.06]"
+              :class="authorQuery === author ? 'bg-primary-50 text-primary dark:bg-primary-500/15' : ''"
               @click="selectAuthor(author)"
-              class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors"
-              :class="authorQuery === author ? 'bg-primary/5 text-primary dark:text-primary' : ''"
             >
               {{ author }}
             </div>
           </div>
         </div>
 
-        <!-- Язык (Custom Dropdown) -->
-        <div class="relative group">
-          <div
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800 h-[52px] flex items-center cursor-pointer"
-            @click="showLanguageDropdown = !showLanguageDropdown"
+        <!-- Язык: обычный select вместо самописного выпадающего списка (меньше кода, работает с клавиатурой) -->
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Язык</span>
+          <select
+            :value="selectedLanguage"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            @change="(e) => selectLanguage((e.target as HTMLSelectElement).value)"
           >
-            <Globe class="absolute left-4 w-5 h-5 text-slate-400 pointer-events-none" />
-            <span 
-              class="pl-12 pr-10 text-sm font-bold text-slate-900 dark:text-white w-full"
-              :class="selectedLanguage ? '' : 'text-slate-400'"
-            >
-              {{ selectedLanguageLabel }}
-            </span>
-            <button
-              v-if="selectedLanguage"
-              @click.stop="clearLanguage"
-              class="absolute right-10 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
-            >
-              <X class="w-4 h-4 text-slate-400" />
-            </button>
-            <ChevronDown 
-              class="absolute right-4 w-5 h-5 text-slate-400 transition-transform duration-200" 
-              :class="showLanguageDropdown ? 'rotate-180 text-primary' : ''" 
-            />
-          </div>
-
-          <div 
-            v-if="showLanguageDropdown" 
-            class="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
-          >
-            <div 
-              v-for="lang in languageOptions" 
-              :key="lang.value"
-              @click="selectLanguage(lang.value)"
-              class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-sm font-bold transition-colors"
-              :class="selectedLanguage === lang.value ? 'bg-primary/5 text-primary dark:text-primary' : 'text-slate-700 dark:text-slate-300'"
-            >
-              {{ lang.label }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+            <option v-for="lang in languageOptions" :key="lang.value" :value="lang.value">{{ lang.label }}</option>
+          </select>
+        </label>
+      </template>
+    </UiFilterBar>
 
     <!-- Загрузка -->
-    <div v-if="loading" class="flex justify-center items-center py-32">
-      <div class="text-center">
-        <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        <p class="mt-4 text-slate-500 font-bold">Загрузка каталога...</p>
-      </div>
+    <div v-if="loading" class="rounded-xl border border-gray-200 bg-white py-24 text-center dark:border-gray-800 dark:bg-white/[0.03]">
+      <div class="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+      <p class="mt-4 text-sm text-gray-500">Загрузка каталога...</p>
     </div>
 
-    <!-- Пустое состояние -->
-    <div
-      v-else-if="books.length === 0"
-      class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-16 text-center animate-in fade-in duration-500"
-    >
-      <div class="bg-slate-50 dark:bg-slate-800/50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-        <BookX class="w-12 h-12 text-slate-300 dark:text-slate-600" />
-      </div>
-      <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-3">
-        Ничего не найдено
-      </h3>
-      <p class="text-slate-500 font-medium max-w-md mx-auto">
-        {{
-          searchQuery || selectedLanguage || authorQuery
-            ? "Попробуйте изменить параметры поиска, чтобы найти нужную книгу"
-            : "У вас пока нет доступа к книгам в библиотеке"
-        }}
-      </p>
-      <UiButton v-if="searchQuery || selectedLanguage || authorQuery" @click="resetFilters" variant="outline" class="mt-6 border-slate-200">
-        Сбросить фильтры
-      </UiButton>
+    <!-- Пусто: причина + следующий шаг (сброс фильтров) -->
+    <div v-else-if="books.length === 0" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <UiEmptyState
+        :icon="BookX"
+        title="Ничего не найдено"
+        :description="searchQuery || selectedLanguage || authorQuery
+          ? 'Попробуйте изменить параметры поиска, чтобы найти нужную книгу'
+          : 'У вас пока нет доступа к книгам в библиотеке'"
+      >
+        <template v-if="searchQuery || selectedLanguage || authorQuery" #actions>
+          <UiButton variant="outline" size="sm" @click="resetFilters">Сбросить фильтры</UiButton>
+        </template>
+      </UiEmptyState>
     </div>
 
-    <!-- Список книг -->
-    <div v-else class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-      <!-- Header -->
-      <div class="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-xs font-black text-slate-400 uppercase tracking-widest">
+    <!-- Список книг: карточка, пагинация — футер внутри -->
+    <div v-else id="library-list" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <!-- Шапка колонок (только на десктопе) -->
+      <div class="hidden grid-cols-12 gap-4 border-b border-gray-200 bg-white px-4 py-3 text-xs font-medium text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 md:grid">
         <div class="col-span-5">Название</div>
         <div class="col-span-2">Автор</div>
         <div class="col-span-2 text-center">Язык</div>
@@ -205,106 +117,98 @@
         <div class="col-span-2 text-right">Прогресс</div>
       </div>
 
-      <!-- Book Rows -->
+      <!-- Строки книг: кликабельны целиком -->
       <div
         v-for="book in books"
         :key="book.id"
+        class="group grid cursor-pointer grid-cols-1 gap-4 border-b border-gray-100 px-4 py-3 transition-colors last:border-b-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/[0.03] md:grid-cols-12"
         @click="openBook(book)"
-        class="group grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-5 border-b border-slate-100 dark:border-slate-800 last:border-b-0 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
       >
-        <!-- Book Info -->
-        <div class="col-span-5 flex items-center gap-4">
-          <div class="h-12 w-12 shrink-0 rounded-xl bg-linear-to-br from-primary/20 to-primary/5 border border-primary/10 flex items-center justify-center text-primary group-hover:from-primary group-hover:to-primary group-hover:text-white group-hover:shadow-lg group-hover:shadow-primary/30 transition-all duration-300">
-            <BookOpen class="w-6 h-6" />
+        <!-- Название + бейдж «Продолжить» -->
+        <div class="col-span-5 flex items-center gap-3">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary transition-colors group-hover:bg-primary group-hover:text-white dark:bg-primary-500/15">
+            <BookOpen class="h-5 w-5" />
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <h4 class="text-base font-bold text-slate-900 dark:text-white leading-tight truncate group-hover:text-primary transition-colors">
+              <h4 class="truncate text-sm font-semibold leading-tight text-gray-900 transition-colors group-hover:text-primary dark:text-white">
                 {{ book.title }}
               </h4>
-              <!-- Continue Reading Badge -->
-              <span 
-                v-if="book.progress && book.progress.current_page > 0"
-                class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-primary text-[10px] font-black uppercase tracking-wider"
-              >
-                <BookCheck class="w-3 h-3" />
-                Продолжить
-              </span>
+              <UiBadge v-if="book.progress && book.progress.current_page > 0" size="sm" color="primary" class="shrink-0">Продолжить</UiBadge>
             </div>
-            <p class="text-sm text-slate-500 mt-1 truncate md:hidden">
+            <p class="mt-0.5 truncate text-xs text-gray-500 md:hidden">
               {{ book.author || "Автор не указан" }}
             </p>
           </div>
         </div>
 
-        <!-- Author -->
-        <div class="col-span-2 hidden md:flex items-center">
-          <span class="text-sm font-medium text-slate-600 dark:text-slate-400 truncate">
+        <!-- Автор -->
+        <div class="col-span-2 hidden items-center md:flex">
+          <span class="truncate text-sm text-gray-600 dark:text-gray-400">
             {{ book.author || "Автор не указан" }}
           </span>
         </div>
 
-        <!-- Language -->
-        <div class="col-span-2 hidden md:flex items-center justify-center">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400">
-            <Globe class="w-3.5 h-3.5" />
+        <!-- Язык -->
+        <div class="col-span-2 hidden items-center justify-center md:flex">
+          <span class="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-white/[0.06] dark:text-gray-400">
+            <Globe class="h-3.5 w-3.5" />
             {{ getLanguageLabel(book.language) }}
           </span>
         </div>
 
-        <!-- Year -->
-        <div class="col-span-1 hidden md:flex items-center justify-center">
-          <span class="text-sm font-medium text-slate-500">
+        <!-- Год -->
+        <div class="col-span-1 hidden items-center justify-center md:flex">
+          <span class="text-sm text-gray-500">
             {{ book.published_year || "—" }}
           </span>
         </div>
 
-        <!-- Progress -->
-        <div class="col-span-2 hidden md:flex items-center justify-end">
+        <!-- Прогресс (десктоп) -->
+        <div class="col-span-2 hidden items-center justify-end md:flex">
           <div v-if="book.progress && book.progress.current_page > 0" class="flex items-center gap-3">
-            <div class="w-24 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div 
-                class="h-full bg-primary rounded-full transition-all duration-700 delay-100 ease-out" 
+            <div class="h-1.5 w-24 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+              <div
+                class="h-full rounded-full bg-primary transition-all duration-500 ease-out"
                 :style="{ width: `${book.progress.percentage}%` }"
               ></div>
             </div>
-            <span class="text-xs font-bold text-slate-500 tabular-nums">
+            <span class="text-xs tabular-nums text-gray-500">
               {{ book.progress.percentage }}%
             </span>
           </div>
-          <div v-else class="flex items-center gap-2 text-xs font-bold text-slate-400">
-            <Clock class="w-3.5 h-3.5" />
+          <div v-else class="flex items-center gap-2 text-xs text-gray-400">
+            <Clock class="h-3.5 w-3.5" />
             Не начата
           </div>
         </div>
 
-        <!-- Mobile Progress -->
-        <div class="col-span-1 md:hidden flex items-center justify-end">
+        <!-- Прогресс (мобильный) -->
+        <div class="col-span-1 flex items-center justify-end md:hidden">
           <div v-if="book.progress && book.progress.current_page > 0" class="flex items-center gap-2">
-            <div class="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div 
-                class="h-full bg-primary rounded-full" 
+            <div class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+              <div
+                class="h-full rounded-full bg-primary"
                 :style="{ width: `${book.progress.percentage}%` }"
               ></div>
             </div>
-            <span class="text-xs font-bold text-primary">
+            <span class="text-xs text-primary">
               {{ book.progress.percentage }}%
             </span>
           </div>
-          <span v-else class="text-xs text-slate-400">—</span>
+          <span v-else class="text-xs text-gray-400">—</span>
         </div>
       </div>
-    </div>
 
-    <!-- Пагинация -->
-    <div v-if="pagination.total > pagination.limit" class="mt-10 flex justify-center animate-in fade-in duration-700 delay-300">
+      <!-- Единая пагинация внутри карточки (раньше была снаружи по центру) -->
       <UiPagination
         :current-page="pagination.page"
         :total-pages="Math.ceil(pagination.total / pagination.limit)"
         :total="pagination.total"
         :limit="pagination.limit"
+        :limit-options="[12, 24, 48]"
         @update:page="handlePageChange"
-        @update:limit="(l: number) => { pagination.limit = l; fetchBooks(); }"
+        @update:limit="(l: number) => { pagination.limit = l; pagination.page = 1; fetchBooks(); }"
       />
     </div>
   </div>
@@ -392,6 +296,23 @@ const selectedLanguageLabel = computed(() => {
   const opt = languageOptions.find(o => o.value === selectedLanguage.value);
   return opt ? opt.label : "Все языки";
 });
+
+// Чипы применённых фильтров: поиск, автор, язык — состояние видно и снимается по одному
+const filterChips = computed(() => {
+  const chips: { key: string; label: string }[] = [];
+  if (searchQuery.value) chips.push({ key: "search", label: `Поиск: ${searchQuery.value}` });
+  if (authorQuery.value) chips.push({ key: "author", label: `Автор: ${authorQuery.value}` });
+  if (selectedLanguage.value) chips.push({ key: "language", label: `Язык: ${selectedLanguageLabel.value}` });
+  return chips;
+});
+// Снятие чипа вызывает прежние обработчики очистки
+const removeFilterChip = (key: string) => {
+  if (key === "author") return clearAuthor();
+  if (key === "language") return clearLanguage();
+  searchQuery.value = "";
+  pagination.value.page = 1;
+  fetchBooks();
+};
 
 const fetchAuthors = async () => {
   try {
@@ -502,19 +423,3 @@ const closeDropdowns = (e: MouseEvent) => {
   }
 };
 </script>
-
-<style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
-  border-radius: 10px;
-}
-:global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #475569;
-}
-</style>

@@ -1,404 +1,312 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Загрузка -->
-    <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
+  <!-- Внешний враппер без двойного отступа (отступ задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Загрузка: компактный спиннер -->
+    <div v-if="loading" class="flex min-h-[400px] items-center justify-center">
       <div class="text-center">
-        <div
-          class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-        ></div>
-        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
-          Загрузка информации об инструкторе...
-        </p>
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
+        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Загрузка информации об инструкторе...</p>
       </div>
     </div>
 
-    <!-- Ошибка -->
-    <div
-      v-else-if="error || !instructor"
-      class="flex items-center justify-center min-h-[400px]"
-    >
-      <div class="text-center max-w-md">
-        <div
-          class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6 text-slate-400"
-        >
-          <UserIcon class="w-12 h-12" />
+    <!-- Ошибка: единственное действие — вернуться к списку -->
+    <div v-else-if="error || !instructor" class="flex min-h-[400px] items-center justify-center">
+      <div class="max-w-md text-center">
+        <div class="mb-4 inline-block rounded-full bg-gray-100 p-5 text-gray-400 dark:bg-white/[0.06]">
+          <UserIcon class="h-10 w-10" />
         </div>
-        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
           {{ error || "Инструктор не найден" }}
         </h3>
-        <UiButton class="mt-8 shadow-lg" @click="$router.push('/instructors')"
-          >К списку инструкторов</UiButton
-        >
+        <UiButton class="mt-6" @click="$router.push('/instructors')">К списку инструкторов</UiButton>
       </div>
     </div>
 
     <template v-else>
-      <!-- Header Section -->
-      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-        <!-- Breadcrumbs -->
-        <div class="mb-6">
-          <NuxtLink
-            to="/instructors"
-            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
+      <!-- Единая шапка: крошки, имя, статус бейджем, контакты в мета-строке -->
+      <UiPageHeader
+        :title="instructor.fullName"
+        :breadcrumbs="[{ label: 'Инструкторы', to: '/instructors' }, { label: instructor.fullName }]"
+      >
+        <!-- Статус активности (раньше — мелкий CAPS-бейдж 9px) -->
+        <template #badge>
+          <span
+            class="rounded-md border px-2 py-0.5 text-xs font-medium"
+            :class="instructor.isActive ? 'border-success/20 bg-success/5 text-success' : 'border-danger/20 bg-danger/5 text-danger'"
           >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
-            >
-              <ArrowLeft
-                class="w-4 h-4 transition-transform group-hover:-translate-x-1"
-              />
-            </div>
-            Назад к списку
-          </NuxtLink>
+            {{ instructor.isActive ? 'Активен' : 'Неактивен' }}
+          </span>
+        </template>
+
+        <!-- Контакты; телефон скрыт маской -->
+        <template #meta>
+          <span class="inline-flex items-center gap-1.5"><MailIcon class="h-3.5 w-3.5 text-gray-400" />{{ instructor.email || 'Email не указан' }}</span>
+          <span class="inline-flex items-center gap-1.5">
+            <PhoneIcon class="h-3.5 w-3.5 text-gray-400" />
+            <UiSensitiveValue v-if="instructor.phone" :value="instructor.phone" :visible-tail="4" />
+            <template v-else>Телефон не указан</template>
+          </span>
+        </template>
+
+        <!-- Действия: главное «Карточка PDF» + «Изменить» + «⋯» с группой «Опасные» -->
+        <template #actions>
+          <UiButton variant="primary" :start-icon="FileDownIcon" @click="exportCertificate">Карточка PDF</UiButton>
+          <UiButton v-if="canEditInstructors" variant="outline" :start-icon="SettingsIcon" @click="isEditModalOpen = true">Изменить</UiButton>
+          <UiDropdown
+            v-if="canDeleteInstructors"
+            icon-only
+            variant="outline"
+            aria-label="Другие действия"
+            :groups="menuGroups"
+            @select="onMenuSelect"
+          />
+        </template>
+      </UiPageHeader>
+
+      <!-- Блок профиля: фото + полоса метрик в одну строку вместо 4 «bento»-карточек -->
+      <div class="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-800">
+          <img v-if="instructor.photo_base64" :src="instructor.photo_base64" class="h-full w-full object-cover" />
+          <div v-else class="flex h-full w-full items-center justify-center bg-primary/10 text-primary">
+            <span class="text-xl font-semibold">{{ getInitials(instructor.fullName) }}</span>
+          </div>
         </div>
 
-        <div
-          class="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between"
-        >
-          <!-- Profile Main Info — compact -->
-          <div class="flex items-center gap-4">
-            <div class="relative shrink-0">
-              <div class="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 shadow-xl">
-                <img v-if="instructor.photo_base64" :src="instructor.photo_base64" class="w-full h-full object-cover" />
-                <div v-else class="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
-                  <span class="text-2xl font-black">{{ getInitials(instructor.fullName) }}</span>
-                </div>
-              </div>
-              <div v-if="instructor.isActive" class="absolute -bottom-1 -right-1 h-5 w-5 bg-success rounded-lg border-2 border-white dark:border-slate-900 flex items-center justify-center shadow">
-                <CheckIcon class="w-3 h-3 text-white" />
-              </div>
-            </div>
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">{{ instructor.fullName }}</h1>
-                <div class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border" :class="instructor.isActive ? 'border-success/20 bg-success/5 text-success' : 'border-danger/20 bg-danger/5 text-danger'">
-                  {{ instructor.isActive ? 'Активен' : 'Неактивен' }}
-                </div>
-              </div>
-              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
-                <div class="flex items-center gap-1.5"><MailIcon class="w-3.5 h-3.5 text-slate-400" />{{ instructor.email || 'Email не указан' }}</div>
-                <div class="flex items-center gap-1.5"><PhoneIcon class="w-3.5 h-3.5 text-slate-400" />{{ instructor.phone || 'Телефон не указан' }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Actions -->
-          <div
-            class="flex flex-wrap items-center justify-center lg:justify-end gap-2"
-          >
-            <UiButton variant="primary" size="sm" class="h-9 px-3 gap-1.5 font-bold shadow-lg shadow-primary/20" @click="exportCertificate">
-              <FileDownIcon class="w-3.5 h-3.5" /> Карточку PDF
-            </UiButton>
-            <UiButton v-if="canEditInstructors" variant="outline" size="sm" class="h-9 px-3 gap-1.5 font-bold" @click="isEditModalOpen = true">
-              <SettingsIcon class="w-3.5 h-3.5" /> Изменить
-            </UiButton>
-            <UiButton v-if="canDeleteInstructors" variant="outline" size="sm" class="h-9 px-3 gap-1.5 font-bold text-danger border-danger/20 hover:bg-danger/5" @click="isDeleteModalOpen = true">
-              <Trash2Icon class="w-3.5 h-3.5" /> Удалить
-            </UiButton>
-          </div>
+        <div class="grid min-w-0 flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
+          <UiStat
+            label="Квалификация"
+            :value="instructor.academic_degree || instructor.education || 'Не указана'"
+            :hint="instructor.academic_rank || '—'"
+            :icon="GraduationCapIcon"
+            tone="primary"
+          />
+          <UiStat
+            label="Загрузка часов"
+            :value="`${instructor.usedHours || 0} / ${instructor.maxHours || '∞'}`"
+            :icon="ClockIcon"
+            tone="success"
+            :progress="Math.min(((instructor.usedHours || 0) / (instructor.maxHours || 1)) * 100, 100)"
+          />
+          <UiStat label="Стаж в центре" :value="experienceText" :hint="`С ${formatDate(instructor.hireDate)}`" :icon="CalendarIcon" tone="warning" />
+          <UiStat
+            label="Языки"
+            :value="instructor.languages?.length || 0"
+            :hint="(instructor.languages || []).map((l) => languageMap[l] || l).join(', ')"
+            :icon="GlobeIcon"
+            tone="info"
+          />
         </div>
       </div>
 
-      <!-- Bento Box Metrics Grid — compact -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <!-- Qualification Card -->
-        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-          <div class="flex items-center justify-between">
-            <div class="min-w-0">
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Квалификация</p>
-              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white truncate">
-                {{ instructor.academic_degree || instructor.education || "Не указана" }}
-              </h3>
-              <span class="text-[10px] text-slate-400">{{ instructor.academic_rank || '—' }}</span>
-            </div>
-            <div class="rounded-lg bg-primary/10 p-2 text-primary ml-2 shrink-0">
-              <GraduationCapIcon class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
+      <!-- Вкладки через UiTabs -->
+      <UiTabs v-model="activeTab" :tabs="availableTabs" />
 
-        <!-- Teaching Hours Card -->
-        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Загрузка часов</p>
-              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">
-                {{ instructor.usedHours || 0 }} / {{ instructor.maxHours || '∞' }}
-              </h3>
-            </div>
-            <div class="rounded-lg bg-success/10 p-2 text-success ml-2 shrink-0">
-              <ClockIcon class="w-4 h-4" />
-            </div>
-          </div>
-          <div class="mt-2 h-1 w-full rounded-full bg-slate-100 dark:bg-slate-800">
-            <div class="h-full rounded-full bg-success transition-all duration-500" :style="{ width: `${Math.min(((instructor.usedHours || 0) / (instructor.maxHours || 1)) * 100, 100)}%` }"></div>
-          </div>
-        </div>
-
-        <!-- Experience Card -->
-        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Стаж в центре</p>
-              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ experienceText }}</h3>
-              <span class="text-[10px] text-slate-400">С {{ formatDate(instructor.hireDate) }}</span>
-            </div>
-            <div class="rounded-lg bg-warning/10 p-2 text-warning ml-2 shrink-0">
-              <CalendarIcon class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Languages Card -->
-        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Языки</p>
-              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ instructor.languages?.length || 0 }}</h3>
-            </div>
-            <div class="rounded-lg bg-info/10 p-2 text-info ml-2 shrink-0">
-              <GlobeIcon class="w-4 h-4" />
-            </div>
-          </div>
-          <div class="mt-1 flex flex-wrap gap-1">
-            <span v-for="lang in instructor.languages" :key="lang" class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-bold uppercase tracking-tight text-slate-500">
-              {{ languageMap[lang] || lang }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tabs Navigation — compact -->
-      <div class="mb-5 overflow-x-auto custom-scrollbar pb-1">
-        <div class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
-          <nav class="flex gap-0.5" aria-label="Tabs">
-            <button
-              v-for="tab in availableTabs"
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              :class="[
-                'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-300 whitespace-nowrap',
-                activeTab === tab.id
-                  ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
-              ]"
-            >
-              <component :is="tab.icon" class="h-3.5 w-3.5" />
-              {{ tab.label }}
-            </button>
-          </nav>
-        </div>
-      </div>
-
-      <!-- Tab Content -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <!-- Main Content Area (8 cols) -->
-        <div class="lg:col-span-8 space-y-4">
-          <!-- INFO TAB -->
-          <div
-            v-show="activeTab === 'info'"
-            class="space-y-4 animate-in fade-in duration-500"
-          >
-            <!-- Personal Info — compact row list -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                <UserIcon class="w-4 h-4 text-info" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Данные инструктора</h3>
+      <!-- Содержимое вкладок -->
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <!-- Основная область (8 колонок) -->
+        <div class="space-y-4 lg:col-span-8">
+          <!-- Вкладка «Профиль и Квалификация» -->
+          <div v-show="activeTab === 'info'" class="space-y-4">
+            <!-- Данные инструктора -->
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+                <UserIcon class="h-4 w-4 text-gray-400" />
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Данные инструктора</h3>
               </div>
-              <div class="divide-y divide-slate-100 dark:divide-slate-800">
+              <div class="divide-y divide-gray-100 dark:divide-gray-800">
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Дата рождения</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ formatDate(instructor.birthDate) }}</span>
+                  <span class="w-40 shrink-0 text-sm text-gray-500 dark:text-gray-400">Дата рождения</span>
+                  <span class="text-right text-sm font-medium text-gray-800 dark:text-gray-200">{{ formatDate(instructor.birthDate) }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Паспортные данные</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.passportData || '—' }}</span>
+                  <span class="w-40 shrink-0 text-sm text-gray-500 dark:text-gray-400">Паспортные данные</span>
+                  <!-- Паспорт: маска + показать + копировать -->
+                  <UiSensitiveValue :value="instructor.passportData" :visible-tail="4" class="text-gray-800 dark:text-gray-200" />
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">ФИО на русском</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.full_name_ru || '—' }}</span>
+                  <span class="w-40 shrink-0 text-sm text-gray-500 dark:text-gray-400">ФИО на русском</span>
+                  <span class="text-right text-sm font-medium text-gray-800 dark:text-gray-200">{{ instructor.full_name_ru || '—' }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Сокращенное ФИО (узб.)</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.short_name_uz || '—' }}</span>
+                  <span class="w-40 shrink-0 text-sm text-gray-500 dark:text-gray-400">Сокращенное ФИО (узб.)</span>
+                  <span class="text-right text-sm font-medium text-gray-800 dark:text-gray-200">{{ instructor.short_name_uz || '—' }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Сокращенное ФИО (рус.)</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.short_name_ru || '—' }}</span>
+                  <span class="w-40 shrink-0 text-sm text-gray-500 dark:text-gray-400">Сокращенное ФИО (рус.)</span>
+                  <span class="text-right text-sm font-medium text-gray-800 dark:text-gray-200">{{ instructor.short_name_ru || '—' }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Учёная степень</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.academic_degree || '—' }}</span>
+                  <span class="w-40 shrink-0 text-sm text-gray-500 dark:text-gray-400">Учёная степень</span>
+                  <span class="text-right text-sm font-medium text-gray-800 dark:text-gray-200">{{ instructor.academic_degree || '—' }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Учёное звание</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 text-right">{{ instructor.academic_rank || '—' }}</span>
+                  <span class="w-40 shrink-0 text-sm text-gray-500 dark:text-gray-400">Учёное звание</span>
+                  <span class="text-right text-sm font-medium text-gray-800 dark:text-gray-200">{{ instructor.academic_rank || '—' }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-36 shrink-0">Языки</span>
-                  <div class="flex flex-wrap gap-1 justify-end">
-                    <span v-if="!instructor.languages?.length" class="text-sm font-bold text-slate-400">—</span>
+                  <span class="w-40 shrink-0 text-sm text-gray-500 dark:text-gray-400">Языки</span>
+                  <div class="flex flex-wrap justify-end gap-1">
+                    <span v-if="!instructor.languages?.length" class="text-sm text-gray-400">—</span>
                     <span
                       v-for="lang in instructor.languages"
                       :key="lang"
-                      class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold uppercase tracking-tight text-slate-600 dark:text-slate-400"
+                      class="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-white/[0.06] dark:text-gray-300"
                     >{{ languageMap[lang] || lang }}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Education — compact rows -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                <SchoolIcon class="w-4 h-4 text-primary" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Образование</h3>
+            <!-- Образование -->
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+                <SchoolIcon class="h-4 w-4 text-gray-400" />
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Образование</h3>
               </div>
               <div
                 v-if="!instructor.education_history?.length && !instructor.education && !instructor.university"
-                class="px-4 py-6 text-center text-xs text-slate-400"
+                class="px-4 py-6 text-center text-sm text-gray-400"
               >
                 Сведения об образовании не указаны
               </div>
-              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+              <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
                 <div
                   v-for="(edu, index) in ((instructor.education_history?.length ? instructor.education_history : [{ education: instructor.education, university: instructor.university, specialty: instructor.specialty, diploma_file_ids: instructor.diploma_file_ids }]) as any[])"
                   :key="index"
                   class="px-4 py-3"
                 >
-                  <div class="flex items-start justify-between gap-3 mb-1">
-                    <div class="flex items-start gap-2 min-w-0">
-                      <div class="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                        <SchoolIcon class="w-3.5 h-3.5" />
+                  <div class="mb-1 flex items-start justify-between gap-3">
+                    <div class="flex min-w-0 items-start gap-2">
+                      <div class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <SchoolIcon class="h-3.5 w-3.5" />
                       </div>
                       <div class="min-w-0">
-                        <p class="text-sm font-bold text-slate-800 dark:text-slate-200 leading-tight">{{ edu.university || '—' }}</p>
-                        <p v-if="edu.education" class="text-[10px] font-semibold text-primary mt-0.5 uppercase tracking-wide">{{ edu.education }}</p>
+                        <p class="text-sm font-medium leading-tight text-gray-900 dark:text-gray-100">{{ edu.university || '—' }}</p>
+                        <p v-if="edu.education" class="mt-0.5 text-xs font-medium text-primary">{{ edu.education }}</p>
                       </div>
                     </div>
-                    <span v-if="edu.year_start || edu.year_end || edu.date_start || edu.date_end" class="text-xs font-bold text-slate-500 shrink-0 whitespace-nowrap">
+                    <span v-if="edu.year_start || edu.year_end || edu.date_start || edu.date_end" class="shrink-0 whitespace-nowrap text-xs text-gray-500">
                       {{ edu.year_start || (edu.date_start ? new Date(edu.date_start).getFullYear() : '?') }} – {{ edu.year_end || (edu.date_end ? new Date(edu.date_end).getFullYear() : '?') }}
                     </span>
                   </div>
-                  <div class="flex items-center justify-between gap-2 ml-8">
-                    <span class="text-xs text-slate-500 truncate">{{ edu.specialty || '' }}</span>
-                    <span v-if="edu.diploma_series || edu.diploma_number" class="text-[10px] font-bold text-slate-400 shrink-0 whitespace-nowrap">
+                  <div class="ml-8 flex items-center justify-between gap-2">
+                    <span class="truncate text-xs text-gray-500">{{ edu.specialty || '' }}</span>
+                    <span v-if="edu.diploma_series || edu.diploma_number" class="shrink-0 whitespace-nowrap text-xs text-gray-400">
                       Диплом: {{ [edu.diploma_series, edu.diploma_number].filter(Boolean).join(' ') }}
                     </span>
                   </div>
-                  <div v-if="edu.diploma_file_ids?.length" class="flex flex-wrap gap-1.5 mt-2 ml-8">
+                  <div v-if="edu.diploma_file_ids?.length" class="ml-8 mt-2 flex flex-wrap gap-1.5">
                     <div
                       v-for="fileId in edu.diploma_file_ids"
                       :key="fileId"
+                      class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 transition-colors hover:border-primary/30 hover:bg-primary/5 dark:border-gray-700 dark:bg-white/[0.04]"
                       @click="allEducationFilesMap[fileId] && previewFile(fileId, allEducationFilesMap[fileId].filename)"
-                      class="flex items-center gap-1.5 py-1 px-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-primary/5 hover:border-primary/30 transition-all"
                     >
-                      <FileTextIcon class="w-3 h-3 text-primary" />
-                      <span class="text-[10px] font-bold text-slate-500">{{ allEducationFilesMap[fileId]?.filename || 'Документ' }}</span>
+                      <FileTextIcon class="h-3 w-3 text-primary" />
+                      <span class="text-xs text-gray-600 dark:text-gray-300">{{ allEducationFilesMap[fileId]?.filename || 'Документ' }}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Work Experience — compact -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                <BookOpenIcon class="w-4 h-4 text-info" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Опыт работы</h3>
+            <!-- Опыт работы -->
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+                <BookOpenIcon class="h-4 w-4 text-gray-400" />
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Опыт работы</h3>
               </div>
-              <div v-if="!instructor.work_experience?.length" class="px-4 py-6 text-center text-xs text-slate-400">Опыт работы не указан</div>
-              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+              <div v-if="!instructor.work_experience?.length" class="px-4 py-6 text-center text-sm text-gray-400">Опыт работы не указан</div>
+              <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
                 <div
                   v-for="(exp, index) in instructor.work_experience"
                   :key="index"
-                  class="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                  class="flex items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                 >
                   <div class="min-w-0">
-                    <p class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{{ exp.employer }}</p>
-                    <p class="text-[10px] font-semibold text-info uppercase tracking-wide mt-0.5">{{ exp.position }}</p>
+                    <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ exp.employer }}</p>
+                    <p class="mt-0.5 text-xs text-gray-500">{{ exp.position }}</p>
                   </div>
-                  <span class="text-xs font-bold text-slate-400 shrink-0 whitespace-nowrap">{{ exp.period }}</span>
+                  <span class="shrink-0 whitespace-nowrap text-xs text-gray-400">{{ exp.period }}</span>
                 </div>
               </div>
             </div>
 
-            <!-- Certificates — compact list with series+number+date -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                <AwardIcon class="w-4 h-4 text-warning" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Сертификаты</h3>
+            <!-- Сертификаты -->
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+                <AwardIcon class="h-4 w-4 text-gray-400" />
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Сертификаты</h3>
               </div>
-              <div v-if="!instructor.certificates?.length" class="px-4 py-6 text-center text-xs text-slate-400">Список сертификатов пуст</div>
-              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+              <div v-if="!instructor.certificates?.length" class="px-4 py-6 text-center text-sm text-gray-400">Список сертификатов пуст</div>
+              <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
                 <div
                   v-for="(cert, index) in instructor.certificates"
                   :key="index"
-                  class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
+                  class="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                 >
-                  <div class="w-7 h-7 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
-                    <AwardIcon class="w-3.5 h-3.5 text-warning" />
+                  <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-warning/10">
+                    <AwardIcon class="h-3.5 w-3.5 text-warning" />
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate leading-tight">{{ cert.name }}</p>
-                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span v-if="(cert as any).series || cert.certificate_number" class="text-[10px] font-semibold text-slate-400">
-                        № <span class="text-slate-600 dark:text-slate-300">{{ [(cert as any).series, cert.certificate_number].filter(Boolean).join(' ') }}</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-medium leading-tight text-gray-900 dark:text-gray-100">{{ cert.name }}</p>
+                    <div class="mt-0.5 flex flex-wrap items-center gap-2">
+                      <span v-if="(cert as any).series || cert.certificate_number" class="text-xs text-gray-400">
+                        № <span class="text-gray-600 dark:text-gray-300">{{ [(cert as any).series, cert.certificate_number].filter(Boolean).join(' ') }}</span>
                       </span>
-                      <span v-if="cert.date" class="text-[10px] font-semibold text-slate-400">{{ formatDate(cert.date) }}</span>
+                      <span v-if="cert.date" class="text-xs text-gray-400">{{ formatDate(cert.date) }}</span>
                     </div>
                   </div>
-                  <div v-if="cert.fileId" class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <button @click="previewFile(cert.fileId, cert.name)" class="p-1.5 text-slate-400 hover:text-primary transition-colors"><EyeIcon class="w-3.5 h-3.5" /></button>
-                    <button @click="downloadFile(cert.fileId, cert.name)" class="p-1.5 text-slate-400 hover:text-success transition-colors"><DownloadIcon class="w-3.5 h-3.5" /></button>
+                  <!-- Действия файла: на touch видны всегда, на десктопе — при hover/фокусе -->
+                  <div v-if="cert.fileId" class="flex shrink-0 items-center gap-1 transition-opacity lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover:opacity-100">
+                    <button type="button" title="Просмотр" class="p-1.5 text-gray-400 transition-colors hover:text-primary" @click="previewFile(cert.fileId, cert.name)"><EyeIcon class="h-4 w-4" /></button>
+                    <button type="button" title="Скачать" class="p-1.5 text-gray-400 transition-colors hover:text-success" @click="downloadFile(cert.fileId, cert.name)"><DownloadIcon class="h-4 w-4" /></button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- Attestation certificates — issued automatically after passing certification exams -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                <ShieldCheckIcon class="w-4 h-4 text-success" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Сертификаты аттестации</h3>
+            <!-- Сертификаты аттестации — выдаются автоматически после сдачи -->
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+                <ShieldCheckIcon class="h-4 w-4 text-gray-400" />
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Сертификаты аттестации</h3>
               </div>
-              <div v-if="!attestationCertificates.length" class="px-4 py-6 text-center text-xs text-slate-400">
+              <div v-if="!attestationCertificates.length" class="px-4 py-6 text-center text-sm text-gray-400">
                 Сертификаты аттестации ещё не выданы
               </div>
-              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+              <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
                 <div
                   v-for="cert in attestationCertificates"
                   :key="cert.id"
-                  class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
+                  class="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                 >
-                  <div class="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                    <AwardIcon class="w-3.5 h-3.5 text-success" />
+                  <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-success/10">
+                    <AwardIcon class="h-3.5 w-3.5 text-success" />
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate leading-tight">{{ cert.templateName || "Сертификат" }}</p>
-                    <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                      <span class="text-[10px] font-semibold text-slate-400">№ <span class="text-slate-600 dark:text-slate-300">{{ cert.certificateNumber }}</span></span>
-                      <span class="text-[10px] font-semibold text-slate-400">{{ formatDate(cert.issueDate) }}</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-sm font-medium leading-tight text-gray-900 dark:text-gray-100">{{ cert.templateName || "Сертификат" }}</p>
+                    <div class="mt-0.5 flex flex-wrap items-center gap-2">
+                      <span class="text-xs text-gray-400">№ <span class="text-gray-600 dark:text-gray-300">{{ cert.certificateNumber }}</span></span>
+                      <span class="text-xs text-gray-400">{{ formatDate(cert.issueDate) }}</span>
                     </div>
                   </div>
                   <a
                     v-if="cert.id"
                     :href="`/api/certificates/download/${cert.id}`"
                     target="_blank"
-                    class="p-1.5 text-slate-400 hover:text-success transition-colors shrink-0 opacity-0 group-hover:opacity-100"
+                    title="Скачать"
+                    class="shrink-0 p-1.5 text-gray-400 transition-colors hover:text-success lg:opacity-0 lg:focus-visible:opacity-100 lg:group-hover:opacity-100"
                   >
-                    <DownloadIcon class="w-3.5 h-3.5" />
+                    <DownloadIcon class="h-4 w-4" />
                   </a>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- HOURS TAB -->
-          <div
-            v-show="activeTab === 'hours'"
-            class="animate-in fade-in duration-500"
-          >
+          <!-- Вкладка «Отчётность и Часы» -->
+          <div v-show="activeTab === 'hours'">
             <InstructorsHoursStats
               v-if="instructor"
               :instructor-id="instructor.id"
@@ -407,11 +315,8 @@
             />
           </div>
 
-          <!-- HISTORY TAB -->
-          <div
-            v-show="activeTab === 'history'"
-            class="animate-in fade-in duration-500"
-          >
+          <!-- Вкладка «История дисциплин» -->
+          <div v-show="activeTab === 'history'">
             <InstructorsCourseHistory
               v-if="instructor"
               :instructor-id="instructor.id"
@@ -420,11 +325,8 @@
             />
           </div>
 
-          <!-- SCHEDULE TAB -->
-          <div
-            v-show="activeTab === 'schedule'"
-            class="animate-in fade-in duration-500"
-          >
+          <!-- Вкладка «Расписание» -->
+          <div v-show="activeTab === 'schedule'">
             <InstructorsScheduleDownload
               v-if="instructor"
               :instructor-id="instructor.id"
@@ -434,49 +336,50 @@
           </div>
         </div>
 
-        <!-- Sidebar / Additional Info (4 cols) -->
-        <div class="lg:col-span-4 space-y-4">
-          <!-- Employment Info — compact -->
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <CalendarIcon class="w-4 h-4 text-slate-500" />
-              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Трудоустройство</h4>
+        <!-- Боковая колонка (4 колонки) -->
+        <div class="space-y-4 lg:col-span-4">
+          <!-- Трудоустройство -->
+          <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+              <CalendarIcon class="h-4 w-4 text-gray-400" />
+              <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Трудоустройство</h4>
             </div>
-            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+            <div class="divide-y divide-gray-100 dark:divide-gray-800">
               <div class="flex items-center justify-between px-4 py-2.5">
-                <span class="text-xs font-semibold text-slate-400">Дата приёма</span>
-                <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ formatDate(instructor.hireDate) }}</span>
+                <span class="text-sm text-gray-500 dark:text-gray-400">Дата приёма</span>
+                <span class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ formatDate(instructor.hireDate) }}</span>
               </div>
               <div class="px-4 py-2.5">
-                <span class="text-xs font-semibold text-slate-400 block mb-1">Контрактные данные</span>
-                <span class="text-sm font-bold text-slate-700 dark:text-slate-300 leading-snug">{{ instructor.contractInfo || '—' }}</span>
+                <span class="mb-1 block text-sm text-gray-500 dark:text-gray-400">Контрактные данные</span>
+                <span class="text-sm font-medium leading-snug text-gray-700 dark:text-gray-300">{{ instructor.contractInfo || '—' }}</span>
               </div>
             </div>
           </div>
 
-          <!-- Files List — compact -->
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <FileTextIcon class="w-4 h-4 text-slate-500" />
-              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Документы</h4>
+          <!-- Документы -->
+          <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+              <FileTextIcon class="h-4 w-4 text-gray-400" />
+              <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Документы</h4>
             </div>
-            <div v-if="!additionalFilesList.length" class="px-4 py-5 text-center text-xs text-slate-400">Нет дополнительных файлов</div>
-            <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+            <div v-if="!additionalFilesList.length" class="px-4 py-5 text-center text-sm text-gray-400">Нет дополнительных файлов</div>
+            <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
               <div
                 v-for="file in additionalFilesList"
                 :key="file.uuid"
-                class="group flex items-center justify-between px-4 py-2.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                class="group flex items-center justify-between px-4 py-2.5 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
               >
-                <div class="flex items-center gap-2 min-w-0">
-                  <FileTextIcon class="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 truncate">{{ file.filename }}</span>
+                <div class="flex min-w-0 items-center gap-2">
+                  <FileTextIcon class="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                  <span class="truncate text-sm text-gray-700 dark:text-gray-300">{{ file.filename }}</span>
                 </div>
-                <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button @click="previewFile(file.uuid, file.filename)" class="p-1.5 text-slate-400 hover:text-primary transition-colors">
-                    <EyeIcon class="w-3.5 h-3.5" />
+                <!-- Действия файла: видны всегда на touch, при hover/фокусе — на десктопе -->
+                <div class="flex shrink-0 items-center gap-0.5 transition-opacity lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover:opacity-100">
+                  <button type="button" title="Просмотр" class="p-1.5 text-gray-400 transition-colors hover:text-primary" @click="previewFile(file.uuid, file.filename)">
+                    <EyeIcon class="h-4 w-4" />
                   </button>
-                  <button @click="downloadFile(file.uuid, file.filename)" class="p-1.5 text-slate-400 hover:text-success transition-colors">
-                    <DownloadIcon class="w-3.5 h-3.5" />
+                  <button type="button" title="Скачать" class="p-1.5 text-gray-400 transition-colors hover:text-success" @click="downloadFile(file.uuid, file.filename)">
+                    <DownloadIcon class="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -486,7 +389,7 @@
       </div>
     </template>
 
-    <!-- Modals -->
+    <!-- Модальные окна (логика без изменений) -->
     <UsersInstructorFormModal
       v-if="isEditModalOpen && instructor"
       :instructor="instructor"
@@ -494,6 +397,7 @@
       @saved="loadInstructor"
     />
 
+    <!-- Подтверждение удаления -->
     <UiConfirmModal
       :is-open="isDeleteModalOpen"
       title="Удаление инструктора"
@@ -501,16 +405,17 @@
       :item-name="instructor?.fullName"
       warning="Это действие нельзя отменить."
       :loading="isDeleting"
+      loading-text="Удаление…"
       @confirm="confirmDelete"
       @cancel="isDeleteModalOpen = false"
     />
 
-    <!-- Добавленное окно просмотра документа -->
+    <!-- Окно просмотра документа -->
     <UiModal
       :is-open="showPreviewModal"
-      @close="closePreview"
       :title="previewingFileName"
       size="xl"
+      @close="closePreview"
     >
       <template #footer>
         <div class="flex justify-end gap-3">
@@ -518,32 +423,26 @@
           <UiButton
             v-if="instructor && previewingFileId"
             variant="primary"
-            @click="downloadFile(previewingFileId, previewingFileName)"
             class="gap-2"
+            @click="downloadFile(previewingFileId, previewingFileName)"
           >
-            <DownloadIcon class="w-4 h-4" /> Скачать
+            <DownloadIcon class="h-4 w-4" /> Скачать
           </UiButton>
         </div>
       </template>
 
       <div v-if="loadingPreview" class="flex items-center justify-center py-12">
         <div class="text-center">
-          <div
-            class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-          ></div>
-          <p class="mt-4 text-sm text-gray-500">Загрузка документа...</p>
+          <div class="inline-block h-8 w-8 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
+          <p class="mt-3 text-sm text-gray-500">Загрузка документа...</p>
         </div>
       </div>
-      <div v-else-if="previewError" class="text-center py-12">
-        <AlertCircleIcon class="mx-auto h-12 w-12 text-danger mb-4" />
+      <div v-else-if="previewError" class="py-12 text-center">
+        <AlertCircleIcon class="mx-auto mb-4 h-10 w-10 text-danger" />
         <p class="text-danger">{{ previewError }}</p>
       </div>
       <div v-else-if="previewUrl" class="w-full" style="height: 70vh">
-        <iframe
-          :src="previewUrl"
-          class="w-full h-full border-0 rounded-xl shadow-inner"
-          title="Document Preview"
-        ></iframe>
+        <iframe :src="previewUrl" class="h-full w-full rounded-xl border-0" title="Document Preview"></iframe>
       </div>
     </UiModal>
   </div>
@@ -627,6 +526,18 @@ const availableTabs = [
   { id: "history", label: "История Дисциплин", icon: HistoryIcon },
   { id: "schedule", label: "Расписание", icon: CalendarIcon },
 ];
+
+// Меню «⋯» в шапке: удаление отделено в группу «Опасные» (показывается только при canDeleteInstructors)
+const menuGroups = [
+  {
+    label: "Опасные",
+    items: [{ key: "delete", label: "Удалить инструктора", icon: Trash2Icon, danger: true }],
+  },
+];
+// Пункт меню открывает прежнее подтверждение удаления (UiConfirmModal)
+const onMenuSelect = (key: string) => {
+  if (key === "delete") isDeleteModalOpen.value = true;
+};
 
 // Computed
 const experienceText = computed(() => {

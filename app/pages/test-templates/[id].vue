@@ -1,12 +1,12 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+  <div class="mx-auto max-w-screen-2xl space-y-4">
     <!-- Загрузка -->
     <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
       <div class="text-center">
         <div
           class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
         ></div>
-        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
+        <p class="mt-4 text-gray-600 dark:text-gray-400 font-medium">
           Загрузка шаблона теста...
         </p>
       </div>
@@ -19,172 +19,64 @@
     >
       <div class="text-center max-w-md">
         <div
-          class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6 text-slate-400"
+          class="bg-gray-100 dark:bg-gray-800 p-6 rounded-full inline-block mb-6 text-gray-400"
         >
           <FileTextIcon class="w-12 h-12" />
         </div>
-        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">
           {{ error || "Шаблон теста не найден" }}
         </h3>
-        <UiButton class="mt-8 shadow-lg" @click="$router.push('/test-bank/templates')"
+        <UiButton class="mt-8" @click="$router.push('/test-bank/templates')"
           >К списку шаблонов</UiButton
         >
       </div>
     </div>
 
     <template v-else>
-      <!-- Header Section -->
-      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-        <!-- Breadcrumbs -->
-        <div class="mb-6">
-          <NuxtLink
-            to="/test-templates"
-            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
-            >
-              <ArrowLeft
-                class="w-4 h-4 transition-transform group-hover:-translate-x-1"
-              />
-            </div>
-            Назад к списку
-          </NuxtLink>
-        </div>
+      <!-- Единый заголовок: крошки вместо крупной «Назад», статус и код — рядом с названием -->
+      <UiPageHeader
+        :title="template.name"
+        :breadcrumbs="[{ label: 'Шаблоны тестов', to: '/test-templates' }, { label: template.code || template.name }]"
+      >
+        <template #badge>
+          <UiBadge size="sm" :color="template.is_active ? 'success' : 'light'">{{ template.is_active ? 'Активен' : 'Неактивен' }}</UiBadge>
+        </template>
+        <template #meta>
+          <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs dark:bg-white/[0.06]">{{ template.code }}</span>
+          <span class="flex items-center gap-1.5">
+            <FolderIcon class="h-3.5 w-3.5 text-gray-400" />
+            <NuxtLink :to="`/test-bank/${template.bank_id}`" class="transition-colors hover:text-primary">{{ template.bank_name }}</NuxtLink>
+          </span>
+          <!-- Языки теста: флаги, подсказка — название языка -->
+          <span class="flex items-center gap-1">
+            <template v-if="template.allowed_languages && template.allowed_languages.length > 0">
+              <span v-for="lang in template.allowed_languages" :key="lang" :class="languageBadgeClasses[lang]" :title="languageLabels[lang]">
+                {{ languageFlags[lang] }}
+              </span>
+            </template>
+            <span v-else class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-white/[0.06] dark:text-gray-400">
+              🌐 Все
+            </span>
+          </span>
+        </template>
+        <!-- Единственное действие страницы -->
+        <template #actions>
+          <UiButton variant="outline" size="sm" @click="previewTest">
+            <EyeIcon class="mr-1.5 h-4 w-4" /> Предпросмотр
+          </UiButton>
+        </template>
+      </UiPageHeader>
 
-        <div
-          class="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between"
-        >
-          <!-- Template Main Info -->
-          <div class="flex items-center gap-4">
-            <div class="shrink-0">
-              <div class="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center border-2 border-primary/20">
-                <FileTextIcon class="w-10 h-10 text-primary" />
-              </div>
-            </div>
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">{{ template.name }}</h1>
-                <div class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border" :class="template.is_active ? 'border-success/20 bg-success/5 text-success' : 'border-slate-300 bg-slate-100 text-slate-500'">
-                  {{ template.is_active ? 'Активен' : 'Неактивен' }}
-                </div>
-              </div>
-              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
-                <div class="flex items-center gap-1.5">
-                  <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono">{{ template.code }}</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <FolderIcon class="w-3.5 h-3.5 text-slate-400" />
-                  <NuxtLink :to="`/test-bank/${template.bank_id}`" class="hover:text-primary transition-colors">{{ template.bank_name }}</NuxtLink>
-                </div>
-                <div class="flex items-center gap-1 ml-2">
-                  <template v-if="template.allowed_languages && template.allowed_languages.length > 0">
-                    <span
-                      v-for="lang in template.allowed_languages"
-                      :key="lang"
-                      :class="languageBadgeClasses[lang]"
-                      :title="languageLabels[lang]"
-                    >
-                      {{ languageFlags[lang] }}
-                    </span>
-                  </template>
-                  <span v-else class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
-                    🌐 Все
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Actions -->
-          <div
-            class="flex flex-wrap items-center justify-center lg:justify-end gap-2"
-          >
-            <UiButton variant="outline" size="sm" class="h-9 px-3 gap-1.5 font-bold" @click="previewTest">
-              <EyeIcon class="w-3.5 h-3.5" /> Предпросмотр
-            </UiButton>
-          </div>
-        </div>
+      <!-- Метрики одной строкой UiStat вместо 4 карточек с text-[11px] CAPS -->
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <UiStat label="Вопросов в банке" :value="template.questions_total" :icon="HelpCircleIcon" tone="primary" />
+        <UiStat label="Вопросов в тесте" :value="template.questions_mode === 'all' ? template.questions_total : template.questions_count" :icon="ListIcon" tone="info" />
+        <UiStat label="Макс. баллов" :value="totalPoints" :icon="AwardIcon" tone="success" />
+        <UiStat label="Проходной балл" :value="`${template.passing_score}%`" :icon="TargetIcon" tone="warning" />
       </div>
 
-      <!-- Bento Box Metrics Grid -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <!-- Questions Card -->
-        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-          <div class="flex items-center justify-between">
-            <div class="min-w-0">
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Вопросов в банке</p>
-              <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">{{ template.questions_total }}</h3>
-            </div>
-            <div class="rounded-lg bg-primary/10 p-2 text-primary ml-2 shrink-0">
-              <HelpCircleIcon class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Questions in Test Card -->
-        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-          <div class="flex items-center justify-between">
-            <div class="min-w-0">
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Вопросов в тесте</p>
-              <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">
-                {{ template.questions_mode === 'all' ? template.questions_total : template.questions_count }}
-              </h3>
-            </div>
-            <div class="rounded-lg bg-info/10 p-2 text-info ml-2 shrink-0">
-              <ListIcon class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Max Points Card -->
-        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-          <div class="flex items-center justify-between">
-            <div class="min-w-0">
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Макс. баллов</p>
-              <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">{{ totalPoints }}</h3>
-            </div>
-            <div class="rounded-lg bg-success/10 p-2 text-success ml-2 shrink-0">
-              <AwardIcon class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Passing Score Card -->
-        <div class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md">
-          <div class="flex items-center justify-between">
-            <div class="min-w-0">
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Проходной балл</p>
-              <h3 class="mt-0.5 text-lg font-bold text-slate-900 dark:text-white">{{ template.passing_score }}%</h3>
-            </div>
-            <div class="rounded-lg bg-warning/10 p-2 text-warning ml-2 shrink-0">
-              <TargetIcon class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tabs Navigation -->
-      <div class="mb-5 overflow-x-auto custom-scrollbar pb-1">
-        <div class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
-          <nav class="flex gap-0.5">
-            <button
-              v-for="tab in availableTabs"
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              :class="[
-                'flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-all duration-300 whitespace-nowrap',
-                activeTab === tab.id
-                  ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
-              ]"
-            >
-              <component :is="tab.icon" class="h-3.5 w-3.5" />
-              {{ tab.label }}
-            </button>
-          </nav>
-        </div>
-      </div>
+      <!-- Вкладки: UiTabs (availableTabs уже содержит id/label/icon) -->
+      <UiTabs v-model="activeTab" :tabs="availableTabs" />
 
       <!-- Tab Content -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -193,84 +85,84 @@
           <!-- SETTINGS TAB -->
           <div
             v-show="activeTab === 'settings'"
-            class="space-y-4 animate-in fade-in duration-500"
+            class="space-y-4 "
           >
             <!-- Main Settings -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+            <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                 <SettingsIcon class="w-4 h-4 text-primary" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Основные настройки</h3>
+                <h3 class="text-xs font-semibold text-gray-600 dark:text-gray-300">Основные настройки</h3>
               </div>
-              <div class="divide-y divide-slate-100 dark:divide-slate-800">
+              <div class="divide-y divide-gray-100 dark:divide-gray-800">
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Режим вопросов</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ questionsModeLabels[template.questions_mode] || template.questions_mode }}</span>
+                  <span class="text-xs font-semibold text-gray-400 w-40 shrink-0">Режим вопросов</span>
+                  <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ questionsModeLabels[template.questions_mode] || template.questions_mode }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Лимит времени</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ template.time_limit_minutes ? `${template.time_limit_minutes} мин.` : 'Без лимита' }}</span>
+                  <span class="text-xs font-semibold text-gray-400 w-40 shrink-0">Лимит времени</span>
+                  <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ template.time_limit_minutes ? `${template.time_limit_minutes} мин.` : 'Без лимита' }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Максимум попыток</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ template.max_attempts }}</span>
+                  <span class="text-xs font-semibold text-gray-400 w-40 shrink-0">Максимум попыток</span>
+                  <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ template.max_attempts }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Вопросов на странице</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ template.questions_per_page === 0 ? 'Все сразу' : template.questions_per_page }}</span>
+                  <span class="text-xs font-semibold text-gray-400 w-40 shrink-0">Вопросов на странице</span>
+                  <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ template.questions_per_page === 0 ? 'Все сразу' : template.questions_per_page }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Показ результатов</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ showResultsLabels[template.show_results] || template.show_results }}</span>
+                  <span class="text-xs font-semibold text-gray-400 w-40 shrink-0">Показ результатов</span>
+                  <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ showResultsLabels[template.show_results] || template.show_results }}</span>
                 </div>
                 <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-semibold text-slate-400 w-40 shrink-0">Возврат к вопросам</span>
+                  <span class="text-xs font-semibold text-gray-400 w-40 shrink-0">Возврат к вопросам</span>
                   <span class="text-sm font-bold" :class="template.allow_back ? 'text-success' : 'text-danger'">{{ template.allow_back ? 'Разрешён' : 'Запрещён' }}</span>
                 </div>
               </div>
             </div>
 
             <!-- Shuffle Settings -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+            <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                 <ShuffleIcon class="w-4 h-4 text-warning" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Перемешивание</h3>
+                <h3 class="text-xs font-semibold text-gray-600 dark:text-gray-300">Перемешивание</h3>
               </div>
               <div class="p-4 flex flex-wrap gap-3">
-                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.shuffle_questions ? 'bg-success/10' : 'bg-slate-100 dark:bg-slate-800'">
-                  <component :is="template.shuffle_questions ? CheckIcon : XIcon" class="w-4 h-4" :class="template.shuffle_questions ? 'text-success' : 'text-slate-400'" />
-                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Перемешивать вопросы</span>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.shuffle_questions ? 'bg-success/10' : 'bg-gray-100 dark:bg-gray-800'">
+                  <component :is="template.shuffle_questions ? CheckIcon : XIcon" class="w-4 h-4" :class="template.shuffle_questions ? 'text-success' : 'text-gray-400'" />
+                  <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Перемешивать вопросы</span>
                 </div>
-                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.shuffle_options ? 'bg-success/10' : 'bg-slate-100 dark:bg-slate-800'">
-                  <component :is="template.shuffle_options ? CheckIcon : XIcon" class="w-4 h-4" :class="template.shuffle_options ? 'text-success' : 'text-slate-400'" />
-                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Перемешивать варианты</span>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.shuffle_options ? 'bg-success/10' : 'bg-gray-100 dark:bg-gray-800'">
+                  <component :is="template.shuffle_options ? CheckIcon : XIcon" class="w-4 h-4" :class="template.shuffle_options ? 'text-success' : 'text-gray-400'" />
+                  <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Перемешивать варианты</span>
                 </div>
               </div>
             </div>
 
             <!-- Anti-Proctoring -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+            <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                 <ShieldIcon class="w-4 h-4 text-danger" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Антипрокторинг</h3>
-                <span class="ml-auto text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded" :class="template.proctoring_enabled ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-400'">
+                <h3 class="text-xs font-semibold text-gray-600 dark:text-gray-300">Антипрокторинг</h3>
+                <span class="ml-auto text-[11px] font-bold px-2 py-0.5 rounded" :class="template.proctoring_enabled ? 'bg-success/10 text-success' : 'bg-gray-100 text-gray-400'">
                   {{ template.proctoring_enabled ? 'Включён' : 'Отключён' }}
                 </span>
               </div>
               <div v-if="template.proctoring_enabled && template.proctoring_settings" class="p-4 flex flex-wrap gap-3">
-                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.proctoring_settings.blockTabSwitch ? 'bg-danger/10' : 'bg-slate-100 dark:bg-slate-800'">
-                  <component :is="template.proctoring_settings.blockTabSwitch ? CheckIcon : XIcon" class="w-4 h-4" :class="template.proctoring_settings.blockTabSwitch ? 'text-danger' : 'text-slate-400'" />
-                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Блокировка вкладок</span>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.proctoring_settings.blockTabSwitch ? 'bg-danger/10' : 'bg-gray-100 dark:bg-gray-800'">
+                  <component :is="template.proctoring_settings.blockTabSwitch ? CheckIcon : XIcon" class="w-4 h-4" :class="template.proctoring_settings.blockTabSwitch ? 'text-danger' : 'text-gray-400'" />
+                  <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Блокировка вкладок</span>
                 </div>
-                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.proctoring_settings.blockCopyPaste ? 'bg-danger/10' : 'bg-slate-100 dark:bg-slate-800'">
-                  <component :is="template.proctoring_settings.blockCopyPaste ? CheckIcon : XIcon" class="w-4 h-4" :class="template.proctoring_settings.blockCopyPaste ? 'text-danger' : 'text-slate-400'" />
-                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Блокировка копирования</span>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.proctoring_settings.blockCopyPaste ? 'bg-danger/10' : 'bg-gray-100 dark:bg-gray-800'">
+                  <component :is="template.proctoring_settings.blockCopyPaste ? CheckIcon : XIcon" class="w-4 h-4" :class="template.proctoring_settings.blockCopyPaste ? 'text-danger' : 'text-gray-400'" />
+                  <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Блокировка копирования</span>
                 </div>
-                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.proctoring_settings.blockRightClick ? 'bg-danger/10' : 'bg-slate-100 dark:bg-slate-800'">
-                  <component :is="template.proctoring_settings.blockRightClick ? CheckIcon : XIcon" class="w-4 h-4" :class="template.proctoring_settings.blockRightClick ? 'text-danger' : 'text-slate-400'" />
-                  <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Блокировка правого клика</span>
+                <div class="flex items-center gap-2 px-3 py-2 rounded-lg" :class="template.proctoring_settings.blockRightClick ? 'bg-danger/10' : 'bg-gray-100 dark:bg-gray-800'">
+                  <component :is="template.proctoring_settings.blockRightClick ? CheckIcon : XIcon" class="w-4 h-4" :class="template.proctoring_settings.blockRightClick ? 'text-danger' : 'text-gray-400'" />
+                  <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">Блокировка правого клика</span>
                 </div>
               </div>
-              <div v-else class="px-4 py-6 text-center text-xs text-slate-400">
+              <div v-else class="px-4 py-6 text-center text-xs text-gray-400">
                 Антипрокторинг отключён
               </div>
             </div>
@@ -279,14 +171,14 @@
           <!-- QUESTIONS TAB -->
           <div
             v-show="activeTab === 'questions'"
-            class="space-y-4 animate-in fade-in duration-500"
+            class="space-y-4 "
           >
             <!-- Questions Preview -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+            <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                 <div class="flex items-center gap-2">
                   <HelpCircleIcon class="w-4 h-4 text-primary" />
-                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Вопросы для теста</h3>
+                  <h3 class="text-xs font-semibold text-gray-600 dark:text-gray-300">Вопросы для теста</h3>
                 </div>
                 <NuxtLink :to="`/test-bank/${template.bank_id}`" class="text-xs font-semibold text-primary hover:text-primary/80 flex items-center gap-1">
                   Открыть банк
@@ -298,43 +190,43 @@
                 <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
               </div>
 
-              <div v-else-if="questions.length === 0" class="px-4 py-12 text-center text-sm text-slate-400">
+              <div v-else-if="questions.length === 0" class="px-4 py-12 text-center text-sm text-gray-400">
                 Банк вопросов пуст
               </div>
 
-              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800 max-h-96 overflow-y-auto">
+              <div v-else class="divide-y divide-gray-100 dark:divide-gray-800 max-h-96 overflow-y-auto">
                 <div
                   v-for="(question, index) in questions.slice(0, 20)"
                   :key="question.id"
-                  class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                  class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
                 >
                   <span class="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0 mt-0.5">
                     {{ index + 1 }}
                   </span>
                   <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-slate-800 dark:text-slate-200 line-clamp-2">{{ question.question_text }}</p>
+                    <p class="text-sm font-medium text-gray-800 dark:text-gray-200 line-clamp-2">{{ question.question_text }}</p>
                     <div class="flex items-center gap-2 mt-1">
                       <span
-                        :class="['px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tight', difficultyClasses[question.difficulty] || 'bg-slate-100 text-slate-600']"
+                        :class="['px-1.5 py-0.5 rounded text-[11px] font-bold tracking-tight', difficultyClasses[question.difficulty] || 'bg-gray-100 text-gray-600']"
                       >
                         {{ difficultyLabels[question.difficulty] || question.difficulty }}
                       </span>
-                      <span class="text-[10px] text-slate-400">{{ question.points }} б.</span>
+                      <span class="text-[11px] text-gray-400">{{ question.points }} б.</span>
                     </div>
                   </div>
                 </div>
 
                 <div v-if="questions.length > 20" class="px-4 py-3 text-center">
-                  <span class="text-xs text-slate-400">Показано 20 из {{ questions.length }} вопросов</span>
+                  <span class="text-xs text-gray-400">Показано 20 из {{ questions.length }} вопросов</span>
                 </div>
               </div>
             </div>
 
             <!-- Language Stats -->
-            <div v-if="languageStats.length > 0" class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+            <div v-if="languageStats.length > 0" class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+              <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
                 <GlobeIcon class="w-4 h-4 text-info" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Языки тестирования</h3>
+                <h3 class="text-xs font-semibold text-gray-600 dark:text-gray-300">Языки тестирования</h3>
               </div>
               <div class="p-4 space-y-2">
                 <div
@@ -344,9 +236,9 @@
                 >
                   <div class="flex items-center gap-2">
                     <span class="text-lg">{{ languageFlags[stat.language] }}</span>
-                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ languageLabels[stat.language] }}</span>
+                    <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ languageLabels[stat.language] }}</span>
                   </div>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ stat.count }} вопросов</span>
+                  <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ stat.count }} вопросов</span>
                 </div>
               </div>
             </div>
@@ -355,40 +247,40 @@
           <!-- ANALYTICS TAB -->
           <div
             v-show="activeTab === 'analytics'"
-            class="space-y-4 animate-in fade-in duration-500"
+            class="space-y-4 "
           >
             <!-- Collapsible Analytics Header -->
             <div
-              class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden"
+              class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
             >
               <button
                 @click="analyticsExpanded = !analyticsExpanded"
-                class="w-full flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                class="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <div class="flex items-center gap-2">
                   <BarChart3Icon class="w-4 h-4 text-primary" />
-                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Аналитика прохождений</h3>
+                  <h3 class="text-xs font-semibold text-gray-600 dark:text-gray-300">Аналитика прохождений</h3>
                 </div>
                 <div class="flex items-center gap-2">
-                  <span v-if="!analytics && !analyticsLoading" class="text-[10px] font-semibold text-slate-400">Нажмите для загрузки</span>
-                  <ChevronDownIcon class="w-4 h-4 text-slate-400 transition-transform duration-300" :class="{ 'rotate-180': analyticsExpanded }" />
+                  <span v-if="!analytics && !analyticsLoading" class="text-[11px] font-semibold text-gray-400">Нажмите для загрузки</span>
+                  <ChevronDownIcon class="w-4 h-4 text-gray-400 transition-transform duration-300" :class="{ 'rotate-180': analyticsExpanded }" />
                 </div>
               </button>
 
               <!-- Collapsible Content -->
-              <div v-show="analyticsExpanded" class="divide-y divide-slate-100 dark:divide-slate-800">
+              <div v-show="analyticsExpanded" class="divide-y divide-gray-100 dark:divide-gray-800">
                 <!-- Loading -->
                 <div v-if="analyticsLoading" class="flex items-center justify-center py-12">
                   <div class="text-center">
                     <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-2"></div>
-                    <p class="text-xs text-slate-500">Загрузка аналитики...</p>
+                    <p class="text-xs text-gray-500">Загрузка аналитики...</p>
                   </div>
                 </div>
 
                 <!-- Empty State -->
                 <div v-else-if="!analytics" class="py-12 text-center">
-                  <BarChart3Icon class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-                  <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">Нажмите для загрузки статистики прохождений</p>
+                  <BarChart3Icon class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Нажмите для загрузки статистики прохождений</p>
                   <UiButton variant="outline" size="sm" @click="loadAnalytics">
                     Загрузить аналитику
                   </UiButton>
@@ -397,58 +289,58 @@
                 <!-- Analytics Content -->
                 <template v-else>
                   <!-- Summary Stats -->
-                  <div class="p-4 bg-slate-50/50 dark:bg-slate-800/30">
+                  <div class="p-4 bg-gray-50/50 dark:bg-gray-800/30">
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <div class="text-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <p class="text-2xl font-black text-primary">{{ analytics.summary.totalSessions }}</p>
-                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Прохождений</p>
+                      <div class="text-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                        <p class="text-2xl font-semibold text-primary">{{ analytics.summary.totalSessions }}</p>
+                        <p class="text-[11px] text-gray-400 mt-1">Прохождений</p>
                       </div>
-                      <div class="text-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <p class="text-2xl font-black text-slate-900 dark:text-white">{{ analytics.summary.uniqueStudents }}</p>
-                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Студентов</p>
+                      <div class="text-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                        <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ analytics.summary.uniqueStudents }}</p>
+                        <p class="text-[11px] text-gray-400 mt-1">Студентов</p>
                       </div>
-                      <div class="text-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <p class="text-2xl font-black text-warning">{{ analytics.summary.averageScore }}%</p>
-                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Средний балл</p>
+                      <div class="text-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                        <p class="text-2xl font-semibold text-warning">{{ analytics.summary.averageScore }}%</p>
+                        <p class="text-[11px] text-gray-400 mt-1">Средний балл</p>
                       </div>
-                      <div class="text-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <p class="text-2xl font-black text-success">{{ analytics.summary.passRate }}%</p>
-                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Процент сдачи</p>
+                      <div class="text-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                        <p class="text-2xl font-semibold text-success">{{ analytics.summary.passRate }}%</p>
+                        <p class="text-[11px] text-gray-400 mt-1">Процент сдачи</p>
                       </div>
-                      <div class="text-center p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                        <p class="text-2xl font-black text-slate-600 dark:text-slate-300">{{ formatDuration(analytics.summary.averageTimeSeconds) }}</p>
-                        <p class="text-[10px] text-slate-400 uppercase tracking-widest mt-1">Среднее время</p>
+                      <div class="text-center p-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                        <p class="text-2xl font-semibold text-gray-600 dark:text-gray-300">{{ formatDuration(analytics.summary.averageTimeSeconds) }}</p>
+                        <p class="text-[11px] text-gray-400 mt-1">Среднее время</p>
                       </div>
                     </div>
                   </div>
 
                   <!-- No Data Message -->
-                  <div v-if="analytics.summary.totalSessions === 0" class="py-8 text-center text-sm text-slate-500">
+                  <div v-if="analytics.summary.totalSessions === 0" class="py-8 text-center text-sm text-gray-500">
                     Пока нет данных о прохождениях этого теста
                   </div>
 
                   <!-- Sessions Table -->
                   <div v-else>
                     <!-- Search and Filter -->
-                    <div class="px-4 py-3 flex flex-wrap items-center gap-3 border-b border-slate-100 dark:border-slate-800">
+                    <div class="px-4 py-3 flex flex-wrap items-center gap-3 border-b border-gray-100 dark:border-gray-800">
                       <div class="relative flex-1 min-w-[200px]">
-                        <SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <SearchIcon class="absolute left-3 top-1/2 -trangray-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                           v-model="analyticsSearch"
                           type="text"
                           placeholder="Поиск по студенту..."
-                          class="w-full pl-9 pr-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent text-sm focus:outline-none focus:border-primary"
+                          class="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-transparent text-sm focus:outline-none focus:border-primary"
                         />
                       </div>
                       <select
                         v-model="analyticsFilter"
-                        class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-primary"
+                        class="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:border-primary"
                       >
                         <option value="all">Все</option>
                         <option value="passed">Сдали</option>
                         <option value="failed">Не сдали</option>
                       </select>
-                      <span class="text-xs text-slate-500">
+                      <span class="text-xs text-gray-500">
                         {{ filteredSessions.length }} из {{ analytics.sessions.length }}
                       </span>
                     </div>
@@ -456,25 +348,25 @@
                     <!-- Sessions List -->
                     <div class="max-h-80 overflow-y-auto">
                       <table class="w-full text-sm">
-                        <thead class="sticky top-0 bg-white dark:bg-slate-900">
-                          <tr class="text-left border-b border-slate-100 dark:border-slate-800">
-                            <th class="pb-3 px-4 font-medium text-slate-500 text-xs">Студент</th>
-                            <th class="pb-3 font-medium text-slate-500 text-xs text-center">Балл</th>
-                            <th class="pb-3 font-medium text-slate-500 text-xs text-center">Статус</th>
-                            <th class="pb-3 font-medium text-slate-500 text-xs text-center">Время</th>
-                            <th class="pb-3 font-medium text-slate-500 text-xs">Дата</th>
-                            <th class="pb-3 pr-4 font-medium text-slate-500 text-xs text-right">Действия</th>
+                        <thead class="sticky top-0 bg-white dark:bg-gray-900">
+                          <tr class="text-left border-b border-gray-100 dark:border-gray-800">
+                            <th class="pb-3 px-4 font-medium text-gray-500 text-xs">Студент</th>
+                            <th class="pb-3 font-medium text-gray-500 text-xs text-center">Балл</th>
+                            <th class="pb-3 font-medium text-gray-500 text-xs text-center">Статус</th>
+                            <th class="pb-3 font-medium text-gray-500 text-xs text-center">Время</th>
+                            <th class="pb-3 font-medium text-gray-500 text-xs">Дата</th>
+                            <th class="pb-3 pr-4 font-medium text-gray-500 text-xs text-right">Действия</th>
                           </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-50 dark:divide-slate-800">
+                        <tbody class="divide-y divide-gray-50 dark:divide-gray-800">
                           <tr
                             v-for="session in paginatedSessions"
                             :key="session.sessionId"
-                            class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                            class="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
                           >
                             <td class="py-3 px-4">
-                              <p class="font-medium text-slate-800 dark:text-slate-200">{{ session.studentName }}</p>
-                              <p v-if="session.studentPinfl" class="text-[10px] text-slate-400">{{ session.studentPinfl }}</p>
+                              <p class="font-medium text-gray-800 dark:text-gray-200">{{ session.studentName }}</p>
+                              <p v-if="session.studentPinfl" class="text-[11px] text-gray-400">{{ session.studentPinfl }}</p>
                             </td>
                             <td class="py-3 text-center">
                               <span
@@ -487,46 +379,46 @@
                             <td class="py-3 text-center">
                               <component :is="session.passed ? CheckCircleIcon : XCircleIcon" class="w-5 h-5 mx-auto" :class="session.passed ? 'text-success' : 'text-danger'" />
                             </td>
-                            <td class="py-3 text-center text-slate-500 text-xs">{{ formatDuration(session.timeSpentSeconds) }}</td>
-                            <td class="py-3 px-4 text-slate-500 text-xs">{{ formatDate(session.completedAt) }}</td>
+                            <td class="py-3 text-center text-gray-500 text-xs">{{ formatDuration(session.timeSpentSeconds) }}</td>
+                            <td class="py-3 px-4 text-gray-500 text-xs">{{ formatDate(session.completedAt) }}</td>
                             <td class="py-3 pr-4 text-right">
                               <div class="inline-flex items-center justify-end gap-1.5">
                                 <button
                                   @click="downloadSessionPdf(session.sessionId)"
                                   :disabled="downloadingSessionId === session.sessionId"
-                                  class="group inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  class="group inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:border-primary/40 hover:text-primary hover:bg-primary/5 transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                                   title="Скачать результаты тестирования в PDF"
                                 >
                                   <div v-if="downloadingSessionId === session.sessionId" class="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                                  <FileDown v-else class="w-3 h-3 text-slate-400 group-hover:text-primary transition-colors" />
+                                  <FileDown v-else class="w-3 h-3 text-gray-400 group-hover:text-primary transition-colors" />
                                   <span>PDF</span>
                                 </button>
                                 <button
                                   @click="viewSessionDetails(session.sessionId)"
-                                  class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 active:scale-95"
+                                  class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 active:scale-95"
                                 >
-                                  <ClipboardListIcon class="w-3 h-3 group-hover:rotate-6 transition-transform" />
+                                  <ClipboardListIcon class="w-3 h-3 transition-transform" />
                                   Ответы
                                 </button>
                               </div>
                             </td>
                           </tr>
                           <tr v-if="filteredSessions.length === 0">
-                            <td colspan="6" class="py-8 text-center text-sm text-slate-400">Нет записей</td>
+                            <td colspan="6" class="py-8 text-center text-sm text-gray-400">Нет записей</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
 
                     <!-- Pagination -->
-                    <div v-if="analyticsTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-800">
-                      <p class="text-xs text-slate-500">Страница {{ analyticsPage }} из {{ analyticsTotalPages }}</p>
+                    <div v-if="analyticsTotalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-gray-800">
+                      <p class="text-xs text-gray-500">Страница {{ analyticsPage }} из {{ analyticsTotalPages }}</p>
                       <div class="flex gap-1">
                         <button
                           v-for="page in paginationRange"
                           :key="page"
                           @click="typeof page === 'number' && (analyticsPage = page)"
-                          :class="['w-8 h-8 rounded-lg text-xs font-bold transition-colors', typeof page !== 'number' ? 'text-slate-400 cursor-default' : analyticsPage === page ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800']"
+                          :class="['w-8 h-8 rounded-lg text-xs font-bold transition-colors', typeof page !== 'number' ? 'text-gray-400 cursor-default' : analyticsPage === page ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800']"
                         >{{ page }}</button>
                       </div>
                     </div>
@@ -540,19 +432,19 @@
         <!-- Sidebar (4 cols) -->
         <div class="lg:col-span-4 space-y-4">
           <!-- Test Bank Info -->
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+          <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
               <FolderIcon class="w-4 h-4 text-info" />
-              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Банк вопросов</h4>
+              <h4 class="text-xs font-semibold text-gray-500">Банк вопросов</h4>
             </div>
             <div class="p-4 space-y-3">
               <div>
-                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Название</p>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ template.bank_name }}</p>
+                <p class="text-[11px] font-semibold text-gray-400">Название</p>
+                <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mt-0.5">{{ template.bank_name }}</p>
               </div>
               <div>
-                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Код</p>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 font-mono mt-0.5">{{ template.bank_code }}</p>
+                <p class="text-[11px] font-semibold text-gray-400">Код</p>
+                <p class="text-sm font-bold text-gray-800 dark:text-gray-200 font-mono mt-0.5">{{ template.bank_code }}</p>
               </div>
               <NuxtLink :to="`/test-bank/${template.bank_id}`" class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 mt-2">
                 Открыть банк
@@ -562,45 +454,45 @@
           </div>
 
           <!-- Usage Stats -->
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <BarChart3Icon class="w-4 h-4 text-slate-500" />
-              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Использование</h4>
+          <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+              <BarChart3Icon class="w-4 h-4 text-gray-500" />
+              <h4 class="text-xs font-semibold text-gray-500">Использование</h4>
             </div>
             <div class="p-4 space-y-3">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-400">Привязано к дисциплинам</span>
-                <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ usage.disciplines }}</span>
+                <span class="text-xs font-semibold text-gray-400">Привязано к дисциплинам</span>
+                <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ usage.disciplines }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-400">Назначено тестов</span>
-                <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ usage.assignments }}</span>
+                <span class="text-xs font-semibold text-gray-400">Назначено тестов</span>
+                <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ usage.assignments }}</span>
               </div>
               <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-400">Пройдено сессий</span>
-                <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ usage.sessions }}</span>
+                <span class="text-xs font-semibold text-gray-400">Пройдено сессий</span>
+                <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ usage.sessions }}</span>
               </div>
             </div>
           </div>
 
           <!-- Meta Info -->
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <InfoIcon class="w-4 h-4 text-slate-500" />
-              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Информация</h4>
+          <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+              <InfoIcon class="w-4 h-4 text-gray-500" />
+              <h4 class="text-xs font-semibold text-gray-500">Информация</h4>
             </div>
             <div class="p-4 space-y-3">
               <div>
-                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Создан</p>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ formatDate(template.created_at) }}</p>
+                <p class="text-[11px] font-semibold text-gray-400">Создан</p>
+                <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mt-0.5">{{ formatDate(template.created_at) }}</p>
               </div>
               <div>
-                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Обновлён</p>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ formatDate(template.updated_at) }}</p>
+                <p class="text-[11px] font-semibold text-gray-400">Обновлён</p>
+                <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mt-0.5">{{ formatDate(template.updated_at) }}</p>
               </div>
               <div v-if="template.created_by_name">
-                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Автор</p>
-                <p class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5">{{ template.created_by_name }}</p>
+                <p class="text-[11px] font-semibold text-gray-400">Автор</p>
+                <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mt-0.5">{{ template.created_by_name }}</p>
               </div>
             </div>
           </div>

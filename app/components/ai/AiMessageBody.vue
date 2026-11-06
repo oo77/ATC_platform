@@ -18,7 +18,7 @@
       <div v-show="stepsOpen" class="p-3 border-t border-blue-200/60 dark:border-blue-900/50 space-y-2.5 bg-white/50 dark:bg-gray-900/50">
         <div v-for="step in message.steps" :key="step.step" class="space-y-1.5">
           <div class="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-300 text-[11px]">
-            <span class="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[9px]">{{ step.step }}</span>
+            <span class="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[11px]">{{ step.step }}</span>
             <span>{{ actionLabel(step.action) }}</span>
             <span v-if="step.output?.error" class="text-red-500 font-normal truncate">— ошибка, исправлено</span>
             <span v-else-if="step.output?.rowCount !== undefined" class="text-gray-400 font-normal">— {{ step.output.rowCount }} строк</span>
@@ -27,7 +27,7 @@
           </div>
           <p v-if="step.thought" class="text-gray-600 dark:text-gray-400 text-[11px] italic pl-6">{{ step.thought }}</p>
           <div v-if="step.input?.sql" class="pl-6">
-            <div class="flex items-center justify-between bg-gray-900 text-gray-300 px-3 py-1 rounded-t-lg text-[10px] font-mono">
+            <div class="flex items-center justify-between bg-gray-900 text-gray-300 px-3 py-1 rounded-t-lg text-[11px] font-mono">
               <span>SQL</span>
               <button class="hover:text-blue-400 flex items-center gap-1" @click="copy(step.input.sql)">
                 <Copy class="w-3 h-3" /><span>Копировать</span>
@@ -74,7 +74,7 @@
       </button>
     </div>
 
-    <div class="flex items-center justify-end gap-2 text-[10px] text-gray-400">
+    <div class="flex items-center justify-end gap-2 text-[11px] text-gray-400">
       <span
         v-if="message.meta"
         class="flex items-center gap-1"

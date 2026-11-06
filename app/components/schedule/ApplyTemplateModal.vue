@@ -242,6 +242,15 @@
       </div>
     </div>
 
+    <!-- Подтверждение удаления шаблона (заменяет нативный confirm); телепортируется в body поверх основной модалки -->
+    <UiConfirmModal
+      :is-open="!!templateToDelete"
+      title="Удалить шаблон?"
+      :message="`Вы уверены, что хотите удалить шаблон «${templateToDelete?.name ?? ''}»?`"
+      @confirm="deleteTemplateConfirmed"
+      @cancel="templateToDelete = null"
+    />
+
     <template #footer>
       <div class="flex justify-end gap-3">
         <button
@@ -401,10 +410,17 @@ watch(
   },
 );
 
-const handleDeleteTemplate = async (template: ScheduleTemplate) => {
-  if (!confirm(`Вы уверены, что хотите удалить шаблон "${template.name}"?`)) {
-    return;
-  }
+// Безопасность UX: вместо нативного confirm() запоминаем шаблон и открываем UiConfirmModal
+const templateToDelete = ref<ScheduleTemplate | null>(null);
+const handleDeleteTemplate = (template: ScheduleTemplate) => {
+  templateToDelete.value = template;
+};
+
+// Прежняя логика удаления шаблона — после подтверждения
+const deleteTemplateConfirmed = async () => {
+  const template = templateToDelete.value;
+  if (!template) return;
+  templateToDelete.value = null;
 
   try {
     await authFetch(`/api/schedule/templates/${template.id}`, {

@@ -1,58 +1,28 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Header Section -->
-    <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-      <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div class="space-y-2">
-          <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-            Управление пользователями
-          </h1>
-          <p class="text-slate-500 font-medium">
-            Создание и управление учётными записями, назначение ролей
-          </p>
-        </div>
-      </div>
-    </div>
+  <!-- Внешний враппер без собственных отступов: отступы задаёт layout (убран двойной padding) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок страницы вместо самописного h1 (без uppercase и font-black) -->
+    <UiPageHeader
+      title="Управление пользователями"
+      description="Создание и управление учётными записями, назначение ролей"
+    />
 
-    <!-- Navigation Tabs -->
-    <div class="mb-8 overflow-x-auto custom-scrollbar pb-2">
-      <div class="inline-flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800">
-        <nav class="flex gap-1" aria-label="Tabs">
-          <button
-            v-for="tab in visibleTabs"
-            :key="tab.id"
-            @click="changeTab(tab.id)"
-            :class="[
-              'flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap',
-              activeTab === tab.id 
-                ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white' 
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            ]"
-          >
-            <component :is="getTabIcon(tab.id)" class="h-4 w-4" />
-            {{ tab.label }}
-          </button>
-        </nav>
-      </div>
-    </div>
+    <!-- Вкладки с подчёркиванием: заменили «таблетки» slate-стиля единым UiTabs -->
+    <UiTabs
+      :model-value="activeTab"
+      :tabs="tabItems"
+      @update:model-value="changeTab"
+    />
 
-    <!-- Tab Content Container -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm animate-in fade-in duration-500">
-      <!-- Администраторы Tab (только для ADMIN) -->
-      <div v-if="isAdmin" v-show="activeTab === 'admin'" class="p-6">
-        <UsersUserManagementPanel :role="UserRole.ADMIN" />
-      </div>
+    <!-- Контент вкладок без лишней карточки-обёртки: каждая панель сама рисует фильтры и таблицу -->
+    <!-- Администраторы (только для ADMIN) -->
+    <UsersUserManagementPanel v-if="isAdmin" v-show="activeTab === 'admin'" :role="UserRole.ADMIN" />
 
-      <!-- Модераторы Tab (только для ADMIN) -->
-      <div v-if="isAdmin" v-show="activeTab === 'manager'" class="p-6">
-        <UsersUserManagementPanel :role="UserRole.MANAGER" />
-      </div>
+    <!-- Модераторы (только для ADMIN) -->
+    <UsersUserManagementPanel v-if="isAdmin" v-show="activeTab === 'manager'" :role="UserRole.MANAGER" />
 
-      <!-- Представители Tab (только для ADMIN) -->
-      <div v-if="isAdmin" v-show="activeTab === 'representatives'" class="p-6">
-        <RepresentativesRepresentativeManagementPanel />
-      </div>
-    </div>
+    <!-- Представители (только для ADMIN) -->
+    <RepresentativesRepresentativeManagementPanel v-if="isAdmin" v-show="activeTab === 'representatives'" />
   </div>
 </template>
 
@@ -110,6 +80,11 @@ const getTabIcon = (id: string) => {
   const tab = allTabs.find(t => t.id === id);
   return tab ? tab.icon : Users;
 };
+
+// Данные для UiTabs: только id/label/icon (поле roles вкладкам UI не нужно)
+const tabItems = computed(() =>
+  visibleTabs.value.map((tab) => ({ id: tab.id, label: tab.label, icon: tab.icon })),
+);
 
 // Активная вкладка
 const activeTab = ref<string>("");

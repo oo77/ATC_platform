@@ -1,116 +1,73 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Кнопка назад -->
-    <div class="mb-6">
-      <NuxtLink to="/my-courses" class="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white">
-        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-        </svg>
-        Назад к списку курсов
-      </NuxtLink>
-    </div>
-
+  <!-- Обёртка без двойного отступа (отступы задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
     <!-- Загрузка -->
     <div v-if="loading" class="flex justify-center py-20">
       <div class="h-10 w-10 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
     </div>
 
-    <div v-else-if="!course" class="text-center py-10">
-      <h3 class="text-xl font-medium">Курс не найден</h3>
+    <!-- Курс не найден: общий пустой экран со ссылкой назад -->
+    <div v-else-if="!course" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <UiEmptyState title="Курс не найден" description="Возможно, у вас нет доступа к этому курсу.">
+        <template #actions>
+          <UiButton to="/my-courses" variant="outline" size="sm">К списку курсов</UiButton>
+        </template>
+      </UiEmptyState>
     </div>
 
-    <div v-else class="space-y-6">
-      <!-- Информация о курсе -->
-      <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white p-6 shadow-md dark:bg-boxdark">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 class="text-title-md2 font-bold text-black dark:text-white mb-2">
-              {{ course.info.course_name }}
-            </h2>
-            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">
-              Группа: {{ course.info.group_name }} • {{ course.info.teacher_name || 'Преподаватель не назначен' }}
-            </p>
-          </div>
-          <div class="flex flex-col items-end gap-2">
-            <span 
-              :class="[
-                'rounded-full px-3 py-1 text-sm font-medium',
-                course.info.status === 'active' ? 'bg-success/10 text-success' : 
-                course.info.status === 'completed' ? 'bg-primary/10 text-primary' : 
-                'bg-danger/10 text-danger'
-              ]"
-            >
-              {{ getStatusLabel(course.info.status) }}
-            </span>
-            <span class="text-sm text-gray-500">
-              {{ formatDate(course.info.start_date) }} — {{ formatDate(course.info.end_date) }}
-            </span>
-          </div>
-        </div>
+    <div v-else class="space-y-4">
+      <!-- Единый заголовок с хлебными крошками вместо крупной ссылки «Назад» -->
+      <UiPageHeader
+        :title="course.info.course_name"
+        :breadcrumbs="[{ label: 'Мои курсы', to: '/my-courses' }, { label: course.info.group_name }]"
+      >
+        <!-- Статус рядом с заголовком через UiBadge -->
+        <template #badge>
+          <UiBadge size="sm" :color="course.info.status === 'active' ? 'success' : course.info.status === 'completed' ? 'primary' : 'error'">
+            {{ getStatusLabel(course.info.status) }}
+          </UiBadge>
+        </template>
+        <!-- Мета-строка: группа, преподаватель, даты (убран дубль в правой колонке) -->
+        <template #meta>
+          <span>Группа: {{ course.info.group_name }}</span>
+          <span>{{ course.info.teacher_name || 'Преподаватель не назначен' }}</span>
+          <span>{{ formatDate(course.info.start_date) }} — {{ formatDate(course.info.end_date) }}</span>
+        </template>
+      </UiPageHeader>
 
-        <div class="mt-6">
-          <div class="mb-2 flex items-center justify-between">
-            <span class="text-sm font-medium text-black dark:text-white">Прогресс обучения</span>
-            <span class="text-sm font-medium text-primary">{{ course.info.progress }}%</span>
-          </div>
-          <div class="relative h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-            <div 
-              class="absolute left-0 h-full rounded-full bg-primary"
-              :style="{ width: `${course.info.progress}%` }"
-            ></div>
-          </div>
-           <div class="mt-2 text-xs text-gray-500 flex justify-between">
-              <span>Посещено: {{ course.info.attended_lessons }} / {{ course.info.total_lessons }} занятий</span>
-            </div>
+      <!-- Прогресс обучения: компактная плоская карточка -->
+      <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="mb-1.5 flex items-center justify-between">
+          <span class="text-sm font-medium text-gray-900 dark:text-white">Прогресс обучения</span>
+          <span class="text-sm font-medium text-primary">{{ course.info.progress }}%</span>
+        </div>
+        <div class="relative h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+          <div class="absolute left-0 h-full rounded-full bg-primary" :style="{ width: `${course.info.progress}%` }"></div>
+        </div>
+        <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          Посещено: {{ course.info.attended_lessons }} / {{ course.info.total_lessons }} занятий
         </div>
       </div>
 
-      <!-- Вкладки -->
-      <div class="flex flex-col gap-6">
-        <div class="rounded-lg bg-gray-50 p-1 dark:bg-gray-800 w-fit overflow-x-auto max-w-full">
-          <nav class="flex gap-1">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              :class="[
-                'rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 whitespace-nowrap',
-                activeTab === tab.id
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'text-gray-600 hover:bg-white hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-white',
-              ]"
-            >
-              {{ tab.label }}
-              <!-- Badge for counts -->
-              <span v-if="tab.id === 'tests' && tests.length > 0" 
-                    class="ml-1.5 inline-flex items-center justify-center rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-semibold"
-                    :class="activeTab === tab.id ? 'text-white' : 'text-gray-600 dark:text-gray-400'">
-                {{ tests.length }}
-              </span>
-               <span v-if="tab.id === 'documents' && certificates.length > 0" 
-                    class="ml-1.5 inline-flex items-center justify-center rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-semibold"
-                    :class="activeTab === tab.id ? 'text-white' : 'text-gray-600 dark:text-gray-400'">
-                {{ certificates.length }}
-              </span>
-            </button>
-          </nav>
-        </div>
+      <!-- Вкладки: UiTabs со счётчиками вместо старого стиля TailAdmin (кнопки-таблетки) -->
+      <div class="flex flex-col gap-4">
+        <UiTabs v-model="activeTab" :tabs="tabItems" />
 
         <!-- Содержимое вкладок -->
-        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white shadow-md dark:bg-boxdark">
-          
-          <!-- Расписание / План -->
-          <div v-show="activeTab === 'schedule'" class="p-6">
-            <div class="space-y-4">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Программа курса</h3>
-              
-              <div v-if="course.schedule.length === 0" class="text-gray-500">Расписание пока не составлено</div>
+        <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
 
-              <div v-for="(lesson, index) in course.schedule" :key="lesson.id" 
-                class="relative flex gap-4 pb-6 last:pb-0 border-l border-gray-200 dark:border-gray-700 ml-3 pl-6"
+          <!-- Расписание / План -->
+          <div v-show="activeTab === 'schedule'" class="p-5">
+            <div class="space-y-4">
+              <h3 class="mb-4 text-base font-semibold text-gray-900 dark:text-white">Программа курса</h3>
+
+              <div v-if="course.schedule.length === 0" class="text-sm text-gray-500 dark:text-gray-400">Расписание пока не составлено</div>
+
+              <div v-for="(lesson, index) in course.schedule" :key="lesson.id"
+                class="relative ml-3 flex gap-4 border-l border-gray-200 pb-6 pl-6 last:pb-0 dark:border-gray-700"
               >
                 <!-- Маркер статуса -->
-                <div class="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full border border-white dark:border-boxdark"
+                <div class="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full border border-white dark:border-gray-900"
                   :class="{
                     'bg-success': lesson.attendance_status === 'present',
                     'bg-danger': lesson.attendance_status === 'absent',
@@ -120,42 +77,37 @@
                     'bg-blue-400': !lesson.attendance_status && !isPast(lesson.start_time)
                   }"
                 ></div>
-                
+
                 <div class="flex-1">
-                  <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                    <h4 class="text-base font-semibold text-black dark:text-white">
+                  <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                    <h4 class="text-sm font-semibold text-gray-900 dark:text-white">
                       {{ lesson.title }}
-                      <span v-if="lesson.event_type !== 'theory'" class="ml-2 text-xs font-normal px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600">
+                      <!-- Тип занятия через UiBadge вместо самодельного span -->
+                      <UiBadge v-if="lesson.event_type !== 'theory'" size="sm" color="light" class="ml-2">
                         {{ getEventTypeLabel(lesson.event_type) }}
-                      </span>
+                      </UiBadge>
                     </h4>
-                    <span class="text-sm font-medium" :class="isPast(lesson.start_time) ? 'text-gray-500' : 'text-primary'">
+                    <span class="text-sm font-medium" :class="isPast(lesson.start_time) ? 'text-gray-500 dark:text-gray-400' : 'text-primary'">
                       {{ formatDateTime(lesson.start_time) }}
                     </span>
                   </div>
-                  
-                  <p class="text-sm text-gray-500 mt-1">{{ lesson.description || 'Нет описания' }}</p>
+
+                  <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ lesson.description || 'Нет описания' }}</p>
 
                   <!-- Оценки и посещаемость -->
-                  <div class="mt-3 flex items-center gap-3">
-                    <span v-if="lesson.attendance_status" 
-                      :class="[
-                        'text-xs px-2 py-1 rounded font-medium',
-                        lesson.attendance_status === 'present' ? 'bg-success/10 text-success' : 
-                        lesson.attendance_status === 'absent' ? 'bg-danger/10 text-danger' : 
-                        lesson.attendance_status === 'late' ? 'bg-warning/10 text-warning' : 
-                        'bg-primary/10 text-primary'
-                      ]"
+                  <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <UiBadge
+                      v-if="lesson.attendance_status"
+                      size="sm"
+                      :color="lesson.attendance_status === 'present' ? 'success' : lesson.attendance_status === 'absent' ? 'error' : lesson.attendance_status === 'late' ? 'warning' : 'primary'"
                     >
                       {{ getAttendanceLabel(lesson.attendance_status) }}
-                    </span>
-                    <span v-else-if="isPast(lesson.start_time)" class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-500">
-                      Нет статуса
-                    </span>
+                    </UiBadge>
+                    <UiBadge v-else-if="isPast(lesson.start_time)" size="sm" color="light">Нет статуса</UiBadge>
 
-                    <span v-if="lesson.grade !== null" class="text-xs px-2 py-1 rounded font-bold bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
+                    <UiBadge v-if="lesson.grade !== null" size="sm" color="info">
                       Оценка: {{ lesson.grade }} / {{ lesson.max_grade || 100 }}
-                    </span>
+                    </UiBadge>
                   </div>
                 </div>
               </div>
@@ -163,142 +115,124 @@
           </div>
 
           <!-- Тесты -->
-          <div v-show="activeTab === 'tests'" class="p-6">
-             <div class="flex justify-between items-center mb-4">
-               <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Тестирование</h3>
-               <NuxtLink to="/tests/my" class="text-sm text-primary hover:underline">Все мои тесты</NuxtLink>
-             </div>
+          <div v-show="activeTab === 'tests'" class="p-5">
+            <div class="mb-4 flex items-center justify-between">
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">Тестирование</h3>
+              <NuxtLink to="/tests/my" class="text-sm text-primary hover:underline">Все мои тесты</NuxtLink>
+            </div>
 
-             <div v-if="testsLoading" class="flex justify-center py-10">
-                <div class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
-             </div>
-             
-             <div v-else-if="tests.length === 0" class="flex flex-col items-center justify-center py-10 text-gray-500">
-                <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p>Тесты пока не назначены</p>
-             </div>
+            <div v-if="testsLoading" class="flex justify-center py-10">
+              <div class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
+            </div>
 
-             <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
-                <div v-for="test in tests" :key="test.id" 
-                   class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white p-5 shadow-sm dark:bg-boxdark hover:shadow-md transition-shadow"
-                >
-                  <div class="flex justify-between items-start mb-3">
-                    <div>
-                       <h4 class="text-lg font-semibold text-black dark:text-white">{{ test.template_name }}</h4>
-                       <span class="text-xs text-gray-500">{{ test.discipline_name || 'Основной курс' }}</span>
-                    </div>
-                    <span :class="[
-                      'px-2 py-1 text-xs font-medium rounded',
-                      getTestStatusClass(test.status, test.passed)
-                    ]">
-                       {{ getTestStatusLabel(test.status, test.passed) }}
+            <!-- Пусто: общий компонент вместо inline-SVG -->
+            <UiEmptyState v-else-if="tests.length === 0" title="Тесты пока не назначены" />
+
+            <div v-else class="grid gap-4 md:grid-cols-2">
+              <div v-for="test in tests" :key="test.id"
+                class="rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700"
+              >
+                <div class="mb-3 flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <h4 class="text-base font-semibold text-gray-900 dark:text-white">{{ test.template_name }}</h4>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">{{ test.discipline_name || 'Основной курс' }}</span>
+                  </div>
+                  <!-- Статус теста: класс из прежней функции getTestStatusClass сохранён -->
+                  <span :class="['shrink-0 rounded-full px-2 py-0.5 text-xs font-medium', getTestStatusClass(test.status, test.passed)]">
+                    {{ getTestStatusLabel(test.status, test.passed) }}
+                  </span>
+                </div>
+
+                <div class="mb-4 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div v-if="test.end_date" class="flex items-center gap-2">
+                    <Clock class="h-4 w-4" />
+                    <span>Дедлайн: {{ formatDateTime(test.end_date) }}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <CheckCircle2 class="h-4 w-4" />
+                    <span>Попыток: {{ test.attempts_used }} / {{ test.max_attempts }}</span>
+                  </div>
+                  <div v-if="test.best_score !== null" class="flex items-center gap-2">
+                    <Zap class="h-4 w-4" />
+                    <span :class="test.passed ? 'font-medium text-success' : 'font-medium text-danger'">
+                      Результат: {{ test.best_score }}% {{ test.passed ? '(Сдан)' : '(Не сдан)' }}
                     </span>
                   </div>
-
-                  <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
-                     <div v-if="test.end_date" class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span>Дедлайн: {{ formatDateTime(test.end_date) }}</span>
-                     </div>
-                     <div class="flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span>Попыток: {{ test.attempts_used }} / {{ test.max_attempts }}</span>
-                     </div>
-                     <div v-if="test.best_score !== null" class="flex items-center gap-2">
-                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                         <span :class="test.passed ? 'text-success font-medium' : 'text-danger font-medium'">
-                            Результат: {{ test.best_score }}% {{ test.passed ? '(Сдан)' : '(Не сдан)' }}
-                         </span>
-                     </div>
-                  </div>
-
-                  <NuxtLink v-if="test.status === 'in_progress'" :to="`/tests/session/${test.active_session_id}`" class="flex w-full justify-center rounded bg-primary p-2 font-medium text-gray hover:bg-opacity-90">
-                     Продолжить попытку
-                  </NuxtLink>
-                   <NuxtLink v-else-if="canTakeTest(test)" :to="`/tests/start/${test.id}`" class="flex w-full justify-center rounded bg-primary p-2 font-medium text-gray hover:bg-opacity-90">
-                     Начать тест
-                  </NuxtLink>
-                   <button v-else class="flex w-full justify-center rounded bg-gray-200 p-2 font-medium text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400" disabled>
-                     Недоступен
-                  </button>
                 </div>
-             </div>
+
+                <!-- Одно главное действие карточки — через UiButton -->
+                <UiButton v-if="test.status === 'in_progress'" :to="`/tests/session/${test.active_session_id}`" block>
+                  Продолжить попытку
+                </UiButton>
+                <UiButton v-else-if="canTakeTest(test)" :to="`/tests/start/${test.id}`" block>
+                  Начать тест
+                </UiButton>
+                <UiButton v-else variant="secondary" block disabled>Недоступен</UiButton>
+              </div>
+            </div>
           </div>
 
           <!-- Документы / Сертификаты -->
-          <div v-show="activeTab === 'documents'" class="p-6">
-             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Сертификаты и документы</h3>
-             
-             <div v-if="certificates.length === 0" class="text-gray-500">Документов пока нет</div>
-             
-             <div class="grid gap-4 md:grid-cols-2">
-                <div v-for="cert in certificates" :key="cert.id" 
-                  class="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 bg-white p-4 shadow-sm dark:bg-boxdark"
-                >
-                   <div class="flex items-center gap-4">
-                      <div class="flex h-12 w-12 items-center justify-center rounded bg-primary/5 text-primary">
-                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                         </svg>
-                      </div>
-                      <div>
-                         <h4 class="font-medium text-black dark:text-white">Сертификат {{ cert.certificate_number }}</h4>
-                         <p class="text-sm text-gray-500">Выдан: {{ formatDate(cert.issue_date) }}</p>
-                      </div>
-                   </div>
-                   
-                   <a :href="`/certificates/view/${cert.uuid || ''}`" target="_blank" class="rounded bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-opacity-90">
-                      Скачать
-                   </a>
+          <div v-show="activeTab === 'documents'" class="p-5">
+            <h3 class="mb-4 text-base font-semibold text-gray-900 dark:text-white">Сертификаты и документы</h3>
+
+            <UiEmptyState v-if="certificates.length === 0" title="Документов пока нет" />
+
+            <div class="grid gap-4 md:grid-cols-2">
+              <div v-for="cert in certificates" :key="cert.id"
+                class="flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]"
+              >
+                <div class="flex min-w-0 items-center gap-3">
+                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/5 text-primary">
+                    <FileText class="h-5 w-5" />
+                  </div>
+                  <div class="min-w-0">
+                    <h4 class="truncate text-sm font-medium text-gray-900 dark:text-white">Сертификат {{ cert.certificate_number }}</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Выдан: {{ formatDate(cert.issue_date) }}</p>
+                  </div>
                 </div>
-             </div>
+
+                <UiButton :to="`/certificates/view/${cert.uuid || ''}`" size="sm" target="_blank">Скачать</UiButton>
+              </div>
+            </div>
           </div>
 
           <!-- Журнал -->
-          <div v-show="activeTab === 'grades'" class="p-0">
-            <div class="border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Успеваемость</h3>
+          <div v-show="activeTab === 'grades'">
+            <div class="border-b border-gray-200 px-5 py-4 dark:border-gray-800">
+              <h3 class="text-base font-semibold text-gray-900 dark:text-white">Успеваемость</h3>
             </div>
-            <div class="max-w-full overflow-x-auto">
-              <table class="w-full table-auto">
-                <thead>
-                  <tr class="bg-gray-2 text-left dark:bg-meta-4">
-                    <th class="min-w-[220px] py-4 px-4 font-medium text-black dark:text-white xl:pl-11">Занятие</th>
-                    <th class="min-w-[150px] py-4 px-4 font-medium text-black dark:text-white">Дата</th>
-                    <th class="min-w-[120px] py-4 px-4 font-medium text-black dark:text-white">Посещаемость</th>
-                    <th class="py-4 px-4 font-medium text-black dark:text-white">Оценка</th>
+            <div class="max-h-[60vh] max-w-full overflow-auto">
+              <table class="w-full table-auto text-sm">
+                <!-- Sticky-шапка таблицы: заголовки видны при прокрутке -->
+                <thead class="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900">
+                  <tr class="text-left text-xs font-medium text-gray-500 dark:text-gray-400">
+                    <th class="min-w-[220px] px-4 py-3">Занятие</th>
+                    <th class="min-w-[150px] px-4 py-3">Дата</th>
+                    <th class="min-w-[120px] px-4 py-3">Посещаемость</th>
+                    <th class="px-4 py-3">Оценка</th>
                   </tr>
                 </thead>
                 <tbody>
-                   <tr v-if="gradedLessons.length === 0">
-                      <td colspan="4" class="py-5 px-4 pl-9 xl:pl-11 text-center text-gray-500">Оценок пока нет</td>
-                   </tr>
-                  <tr v-for="lesson in gradedLessons" :key="lesson.id">
-                    <td class="border-b border-[#eee] py-5 px-4 pl-9 dark:border-strokedark xl:pl-11">
-                      <h5 class="font-medium text-black dark:text-white">{{ lesson.title }}</h5>
-                      <span class="text-xs text-gray-500">{{ getEventTypeLabel(lesson.event_type) }}</span>
+                  <tr v-if="gradedLessons.length === 0">
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">Оценок пока нет</td>
+                  </tr>
+                  <tr v-for="lesson in gradedLessons" :key="lesson.id" class="border-t border-gray-100 dark:border-gray-800">
+                    <td class="px-4 py-3">
+                      <h5 class="font-medium text-gray-900 dark:text-white">{{ lesson.title }}</h5>
+                      <span class="text-xs text-gray-500 dark:text-gray-400">{{ getEventTypeLabel(lesson.event_type) }}</span>
                     </td>
-                    <td class="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                      <p class="text-sm text-black dark:text-white">{{ formatDate(lesson.start_time) }}</p>
-                    </td>
-                    <td class="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                      <span 
-                        :class="[
-                          'inline-flex rounded-full bg-opacity-10 py-1 px-3 text-sm font-medium',
-                          lesson.attendance_status === 'present' ? 'bg-success text-success' :
-                          lesson.attendance_status === 'absent' ? 'bg-danger text-danger' :
-                          lesson.attendance_status === 'late' ? 'bg-warning text-warning' :
-                          lesson.attendance_status === 'excused' ? 'bg-primary text-primary' :
-                          'bg-gray-100 text-gray-500'
-                        ]"
+                    <td class="px-4 py-3 text-gray-900 dark:text-white">{{ formatDate(lesson.start_time) }}</td>
+                    <td class="px-4 py-3">
+                      <UiBadge
+                        size="sm"
+                        :color="lesson.attendance_status === 'present' ? 'success' : lesson.attendance_status === 'absent' ? 'error' : lesson.attendance_status === 'late' ? 'warning' : lesson.attendance_status === 'excused' ? 'primary' : 'light'"
                       >
-                       {{ getAttendanceLabel(lesson.attendance_status) || '-' }}
-                      </span>
+                        {{ getAttendanceLabel(lesson.attendance_status) || '-' }}
+                      </UiBadge>
                     </td>
-                    <td class="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
-                      <span v-if="lesson.grade !== null" class="font-bold text-black dark:text-white">
+                    <td class="px-4 py-3">
+                      <span v-if="lesson.grade !== null" class="font-semibold text-gray-900 dark:text-white">
                         {{ lesson.grade }} / {{ lesson.max_grade || 100 }}
                       </span>
                       <span v-else class="text-gray-400">-</span>
@@ -317,6 +251,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+// Иконки lucide вместо inline-SVG (единый набор)
+import { Clock, CheckCircle2, Zap, FileText } from 'lucide-vue-next';
 
 definePageMeta({
   layout: 'default',
@@ -339,6 +275,14 @@ const tabs = [
   { id: 'documents', label: 'Документы' },
   { id: 'grades', label: 'Журнал оценок' },
 ];
+
+// Вкладки для UiTabs: добавлены счётчики тестов и документов (раньше рисовались вручную внутри кнопок)
+const tabItems = computed(() => tabs.map((t) => ({
+  ...t,
+  count: t.id === 'tests' && tests.value.length > 0 ? tests.value.length
+    : t.id === 'documents' && certificates.value.length > 0 ? certificates.value.length
+    : undefined,
+})));
 
 // Computed
 const gradedLessons = computed(() => {

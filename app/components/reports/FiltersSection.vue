@@ -3,7 +3,7 @@
     <!-- Диапазон дат -->
     <div>
       <label
-        class="block text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5"
+        class="block text-[11px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5"
         >Период</label
       >
       <div class="grid grid-cols-2 gap-1.5">
@@ -27,7 +27,7 @@
     <!-- Поле-дата для фильтра -->
     <div>
       <label
-        class="block text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5"
+        class="block text-[11px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5"
         >Применить к</label
       >
       <select
@@ -48,7 +48,7 @@
     <!-- Курсы -->
     <div>
       <label
-        class="block text-[9px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5"
+        class="block text-[11px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-0.5"
         >Курсы</label
       >
       <UiMultiSelect

@@ -55,7 +55,7 @@
         <p class="text-xs font-medium text-center truncate w-full max-w-full" :title="folder.name">
           {{ folder.name }}
         </p>
-        <span v-if="folder.isSystem" class="text-[10px] text-gray-400 mt-1">Системная</span>
+        <span v-if="folder.isSystem" class="text-[11px] text-gray-400 mt-1">Системная</span>
       </div>
 
       <!-- Files -->
@@ -89,7 +89,7 @@
         <p class="text-xs font-medium text-center truncate w-full max-w-full" :title="file.filename">
           {{ file.filename }}
         </p>
-        <p class="text-[10px] text-gray-400 mt-0.5">
+        <p class="text-[11px] text-gray-400 mt-0.5">
           {{ formatFileSize(file.sizeBytes) }}
         </p>
 
