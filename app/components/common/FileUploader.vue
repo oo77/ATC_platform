@@ -82,6 +82,15 @@
         </button>
       </div>
     </div>
+
+    <!-- Подтверждение удаления файла (заменяет нативный confirm) -->
+    <UiConfirmModal
+      :is-open="!!fileUuidToDelete"
+      title="Удалить файл?"
+      message="Вы уверены, что хотите удалить этот файл?"
+      @confirm="deleteFileConfirmed"
+      @cancel="fileUuidToDelete = null"
+    />
   </div>
 </template>
 
@@ -307,10 +316,17 @@ const handleError = (error: any) => {
   emit('error', message);
 };
 
-const handleDelete = async (uuid: string) => {
-  if (!confirm('Вы уверены, что хотите удалить этот файл?')) {
-    return;
-  }
+// Безопасность UX: вместо нативного confirm() запоминаем uuid и открываем UiConfirmModal
+const fileUuidToDelete = ref<string | null>(null);
+const handleDelete = (uuid: string) => {
+  fileUuidToDelete.value = uuid;
+};
+
+// Прежняя логика удаления файла — после подтверждения
+const deleteFileConfirmed = async () => {
+  const uuid = fileUuidToDelete.value;
+  if (!uuid) return;
+  fileUuidToDelete.value = null;
 
   try {
     await deleteFile(uuid);

@@ -10,7 +10,7 @@
           <div class="text-xs font-bold text-amber-950 dark:text-amber-100 leading-tight">
             {{ certificates.length }} {{ plural(certificates.length, 'сертификат', 'сертификата', 'сертификатов') }}
           </div>
-          <div class="text-[10px] text-amber-700/80 dark:text-amber-300/70 leading-tight">
+          <div class="text-[11px] text-amber-700/80 dark:text-amber-300/70 leading-tight">
             действующих: {{ activeCount }}<span v-if="expiredCount"> · истёк срок: {{ expiredCount }}</span><span v-if="revokedCount"> · отозвано: {{ revokedCount }}</span>
           </div>
         </div>
@@ -41,7 +41,7 @@
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1.5 flex-wrap">
             <span class="font-mono text-[11px] font-bold text-gray-900 dark:text-white">№ {{ cert.certificateNumber }}</span>
-            <span class="px-1.5 py-px text-[9px] font-semibold rounded-full" :class="statusOf(cert).badge">
+            <span class="px-1.5 py-px text-[11px] font-semibold rounded-full" :class="statusOf(cert).badge">
               {{ statusOf(cert).label }}
             </span>
           </div>
@@ -51,7 +51,7 @@
           <p class="text-[10.5px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-snug" :title="cert.courseName">
             {{ cert.courseName }}
           </p>
-          <div class="flex items-center gap-2.5 mt-1 text-[10px] text-gray-400">
+          <div class="flex items-center gap-2.5 mt-1 text-[11px] text-gray-400">
             <span v-if="cert.issueDate" class="flex items-center gap-1"><CalendarCheck class="w-3 h-3" />{{ fmtDate(cert.issueDate) }}</span>
             <span v-if="cert.expiryDate" class="flex items-center gap-1"><CalendarClock class="w-3 h-3" />до {{ fmtDate(cert.expiryDate) }}</span>
           </div>

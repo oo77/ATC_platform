@@ -35,7 +35,7 @@
           <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 p-4 flex items-center gap-3">
             <div class="rounded-xl bg-warning/10 p-2.5 text-warning shrink-0"><Clock class="w-5 h-5" /></div>
             <div>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Время</p>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Время</p>
               <p class="font-bold text-slate-900 dark:text-white text-sm">
                 {{ brief.timeLimitMinutes ? `${brief.timeLimitMinutes} мин` : "Без лимита" }}
               </p>
@@ -44,21 +44,21 @@
           <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 p-4 flex items-center gap-3">
             <div class="rounded-xl bg-success/10 p-2.5 text-success shrink-0"><Target class="w-5 h-5" /></div>
             <div>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Проходной балл</p>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Проходной балл</p>
               <p class="font-bold text-slate-900 dark:text-white text-sm">{{ brief.passingScore }}%</p>
             </div>
           </div>
           <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 p-4 flex items-center gap-3">
             <div class="rounded-xl bg-info/10 p-2.5 text-info shrink-0"><RotateCcw class="w-5 h-5" /></div>
             <div>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Попытки</p>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Попытки</p>
               <p class="font-bold text-slate-900 dark:text-white text-sm">{{ brief.attemptsUsed }} / {{ brief.maxAttempts }}</p>
             </div>
           </div>
           <div class="rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 p-4 flex items-center gap-3">
             <div class="rounded-xl bg-primary/10 p-2.5 text-primary shrink-0"><MapPin class="w-5 h-5" /></div>
             <div>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Место</p>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Место</p>
               <p class="font-bold text-slate-900 dark:text-white text-sm truncate">{{ brief.location || "—" }}</p>
             </div>
           </div>
@@ -103,17 +103,17 @@
           <div class="grid grid-cols-3 gap-3 mt-6">
             <div class="bg-white dark:bg-slate-900 rounded-xl p-3">
               <p class="text-lg font-bold text-slate-900 dark:text-white">{{ session?.total_points || 0 }}/{{ session?.max_points || 0 }}</p>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Баллов</p>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Баллов</p>
             </div>
             <div class="bg-white dark:bg-slate-900 rounded-xl p-3">
               <p class="text-lg font-bold text-slate-900 dark:text-white">{{ answeredCount }}/{{ questions.length }}</p>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Отвечено</p>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Отвечено</p>
             </div>
             <div class="bg-white dark:bg-slate-900 rounded-xl p-3">
               <p class="text-lg font-bold text-slate-900 dark:text-white">
                 {{ session?.time_spent_seconds != null ? formatTimer(session.time_spent_seconds) : "—" }}
               </p>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Время</p>
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Время</p>
             </div>
           </div>
         </div>

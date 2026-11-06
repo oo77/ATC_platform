@@ -1,130 +1,43 @@
 <template>
-  <div class="flex flex-col gap-6">
-    <!-- Action Bar -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="space-y-1">
-        <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-          Организации
-        </h2>
-        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-          Всего: {{ pagination.total }}
-          <span v-if="hasActiveFilters" class="text-primary">· (фильтр активен)</span>
-        </p>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <UiButton
+  <div class="flex flex-col gap-4">
+    <!-- Метрики сертификатов: компактная полоса в одну строку; дубль «Организаций» убран (число уже в «Найдено» фильтра) -->
+    <div v-if="globalStats" class="grid grid-cols-2 gap-3">
+      <UiStat label="Выдано сертификатов" :value="globalStats.totalIssued" :icon="Award" tone="primary" />
+      <UiStat label="Среднее на организацию" :value="averagePerOrg" hint="серт./орг." :icon="FileCheck" tone="success" />
+    </div>
+
+    <!-- Единый блок фильтров: поиск + сегмент статуса. Главное действие — «Добавить организацию» -->
+    <UiFilterBar
+      v-model:search="filters.search"
+      search-placeholder="Поиск по названию, ИНН, коду или контактам…"
+      :debounce="0"
+      :segments="statusOptions"
+      :segment="filters.isActive"
+      :total="pagination.total"
+      :chips="filterChips"
+      @search="debouncedFetch"
+      @update:segment="onSegmentChange"
+      @remove="removeFilterChip"
+      @reset="clearFilters"
+    >
+      <!-- Действия: «⋯» с вторичным действием + одно главное -->
+      <template #actions>
+        <UiDropdown
+          icon-only
           variant="outline"
-          size="sm"
-          class="h-10 px-4 gap-2 font-bold shadow-sm border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-          @click="isSyncModalOpen = true"
-        >
-          <RefreshCw class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span>Обновить слушателей</span>
-        </UiButton>
-        <UiButton variant="primary" size="sm" class="h-10 px-4 gap-2 font-bold shadow-sm" @click="openCreateModal">
-          <Plus class="w-4 h-4" />
+          size="md"
+          aria-label="Дополнительные действия"
+          :groups="toolbarMenu"
+          @select="onToolbarSelect"
+        />
+        <UiButton variant="primary" size="md" :start-icon="Plus" @click="openCreateModal">
           Добавить организацию
         </UiButton>
-      </div>
-    </div>
+      </template>
+    </UiFilterBar>
 
-    <!-- Bento Box Metrics -->
-    <div v-if="globalStats" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Выдано сертификатов</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ globalStats.totalIssued }}</h3>
-          </div>
-          <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
-            <Award class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Организаций</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ pagination.total }}</h3>
-          </div>
-          <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
-            <Building2 class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Среднее на орг.</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ averagePerOrg }}</h3>
-          </div>
-          <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
-            <FileCheck class="w-6 h-6" />
-          </div>
-        </div>
-        <p class="mt-1 text-xs font-medium text-slate-400">серт./орг.</p>
-      </div>
-    </div>
-
-    <!-- Filters Panel -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6">
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-3">
-          <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <Filter class="w-5 h-5" />
-          </div>
-          <h4 class="text-lg font-bold text-slate-900 dark:text-white">Фильтры</h4>
-        </div>
-        <button
-          v-if="hasActiveFilters"
-          @click="clearFilters"
-          class="text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10"
-        >
-          <RotateCcw class="w-4 h-4" />
-          Сбросить
-        </button>
-      </div>
-
-      <div class="flex flex-col gap-6">
-        <!-- Search -->
-        <div class="relative max-w-xl">
-          <input
-            v-model="filters.search"
-            type="text"
-            placeholder="Поиск по названию, ИНН, коду или контактам..."
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
-            @input="debouncedFetch"
-          />
-          <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-        </div>
-
-        <!-- Status chips -->
-        <div class="space-y-3">
-          <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-            <Activity class="w-3.5 h-3.5" />
-            Статус
-          </label>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="opt in statusOptions"
-              :key="opt.value"
-              @click="filters.isActive = opt.value; handleFilterChange()"
-              class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-              :class="filters.isActive === opt.value
-                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
-            >
-              {{ opt.label }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Table -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+    <!-- Карточка таблицы: таблица + пагинация-футер внутри одной карточки. Лимит 20 теперь есть в списке опций -->
+    <div id="organizations-table" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <OrganizationsOrganizationTable
         :organizations="organizations"
         :loading="loading"
@@ -134,7 +47,7 @@
         @download="openDownloadModal"
       />
 
-      <!-- Pagination -->
+      <!-- Пагинация -->
       <UiPagination
         v-if="pagination.totalPages > 0"
         :current-page="pagination.page"
@@ -142,6 +55,7 @@
         :total="pagination.total"
         :limit="pagination.limit"
         :loading="loading"
+        scroll-target="#organizations-table"
         @update:page="handlePageChange"
         @update:limit="handleLimitChange"
       />
@@ -190,9 +104,11 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import { Plus, Award, Building2, FileCheck, Filter, RotateCcw, Search, Activity, RefreshCw } from 'lucide-vue-next';
+// Убраны иконки фильтров (Building2/Filter/RotateCcw/Search/Activity) — их рисуют UiFilterBar и UiStat
+import { Plus, Award, FileCheck, RefreshCw } from 'lucide-vue-next';
 import type { Organization } from '~/types/organization';
 
 const { authFetch } = useAuthFetch();
@@ -239,6 +155,36 @@ const averagePerOrg = computed(() => {
   const avg = (globalStats.value?.totalIssued || 0) / pagination.value.total;
   return isNaN(avg) ? 0 : avg.toFixed(1);
 });
+
+// ---- Презентационные хелперы для UiFilterBar (запросы и состояние фильтров не затронуты) ----
+
+// Сегмент статуса: записываем значение в тот же filters.isActive и зовём прежний handleFilterChange
+const onSegmentChange = (value: string | number | boolean) => {
+  filters.value.isActive = String(value);
+  handleFilterChange();
+};
+
+// Чип выбранного статуса: даёт видимое состояние и кнопку «Сбросить всё»
+const filterChips = computed(() => {
+  const chips: { key: string; label: string }[] = [];
+  const opt = statusOptions.find((o) => o.value === filters.value.isActive);
+  if (filters.value.isActive !== '' && opt) chips.push({ key: 'isActive', label: `Статус: ${opt.label}` });
+  return chips;
+});
+const removeFilterChip = (key: string) => {
+  if (key === 'isActive') {
+    filters.value.isActive = '';
+    handleFilterChange();
+  }
+};
+
+// Меню «⋯» в панели: вторичное действие «Обновить слушателей» (открывает прежнюю модалку синхронизации)
+const toolbarMenu = [
+  { items: [{ key: 'sync', label: 'Обновить слушателей', description: 'Синхронизация данных', icon: RefreshCw }] },
+];
+const onToolbarSelect = (key: string) => {
+  if (key === 'sync') isSyncModalOpen.value = true;
+};
 
 const debouncedFetch = () => {
   if (debounceTimer) clearTimeout(debounceTimer);

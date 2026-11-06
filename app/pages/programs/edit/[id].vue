@@ -20,7 +20,7 @@
 
       <div class="flex flex-col gap-2">
         <h1
-          class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase"
+          class="text-2xl font-semibold text-gray-900 dark:text-white tracking-tight"
         >
           Редактирование программы
         </h1>
@@ -144,7 +144,7 @@
                       formData.shortName = formData.shortName.toUpperCase()
                     "
                   />
-                  <p class="text-[10px] uppercase font-bold text-slate-400">
+                  <p class="text-[11px] uppercase font-bold text-slate-400">
                     4-10 заглавных букв
                   </p>
                   <p
@@ -305,7 +305,7 @@
                     class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
                   />
                 </div>
-                <p class="text-[10px] uppercase font-bold text-slate-400">
+                <p class="text-[11px] uppercase font-bold text-slate-400">
                   Пусто для бессрочного
                 </p>
               </div>
@@ -427,12 +427,12 @@
 
             <span
               v-if="discipline.id"
-              class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 uppercase"
+              class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 uppercase"
               >существующая</span
             >
             <span
               v-else
-              class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded bg-success/10 text-success uppercase"
+              class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded bg-success/10 text-success uppercase"
               >новая</span
             >
 

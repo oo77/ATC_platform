@@ -1,121 +1,41 @@
 <template>
-  <div class="flex flex-col gap-6">
-    <!-- Header & Actions -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
-      <div>
-        <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          Представители организаций
-        </h3>
-        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
-          Управление заявками и доступом представителей
-        </p>
-      </div>
-
-      <!-- Статистика -->
-      <div v-if="stats" class="flex gap-3 overflow-x-auto pb-1 custom-scrollbar">
-        <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-5 py-3 shadow-sm flex items-center gap-4">
-          <div>
-            <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Всего</div>
-            <div class="text-xl font-black text-slate-900 dark:text-white">{{ stats.total }}</div>
-          </div>
-          <div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-            <Users class="w-5 h-5" />
-          </div>
-        </div>
-        <div class="rounded-2xl border border-warning/20 bg-warning/5 px-5 py-3 shadow-sm flex items-center gap-4">
-          <div>
-            <div class="text-xs font-bold text-warning uppercase tracking-widest">Ожидают</div>
-            <div class="text-xl font-black text-warning">{{ stats.pending }}</div>
-          </div>
-          <div class="h-10 w-10 rounded-xl bg-warning/10 flex items-center justify-center text-warning">
-            <Clock class="w-5 h-5" />
-          </div>
-        </div>
-        <div class="rounded-2xl border border-success/20 bg-success/5 px-5 py-3 shadow-sm flex items-center gap-4">
-          <div>
-            <div class="text-xs font-bold text-success uppercase tracking-widest">Одобрено</div>
-            <div class="text-xl font-black text-success">{{ stats.approved }}</div>
-          </div>
-          <div class="h-10 w-10 rounded-xl bg-success/10 flex items-center justify-center text-success">
-            <CheckCircle class="w-5 h-5" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Filters Section -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6">
-      <div class="flex items-center gap-3 mb-6">
-        <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-          <Filter class="w-5 h-5" />
-        </div>
-        <h4 class="text-lg font-bold text-slate-900 dark:text-white">
-          Фильтры
-        </h4>
-      </div>
-
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <!-- Поиск -->
+  <div class="space-y-4">
+    <!-- Единый блок фильтров: поиск + сегмент статуса (со счётчиками вместо отдельных KPI-карточек) + организация в «Фильтры» -->
+    <UiFilterBar
+      v-model:search="filters.search"
+      search-placeholder="ФИО, телефон, организация..."
+      :debounce="0"
+      :segments="statusSegments"
+      :segment="filters.status"
+      :chips="filterChips"
+      :active-count="filterChips.length"
+      :total="total"
+      persist-key="representatives"
+      @search="debouncedSearch"
+      @update:segment="onStatusChange"
+      @remove="onChipRemove"
+      @reset="resetFilters"
+    >
+      <!-- Второстепенный фильтр: организация (редко нужен, поэтому спрятан в сворачиваемую панель) -->
+      <template #filters>
         <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-            Поиск
-          </label>
-          <div class="relative">
-            <input
-              v-model="filters.search"
-              type="text"
-              placeholder="ФИО, телефон, организация..."
-              class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
-              @input="debouncedSearch"
-            />
-            <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          </div>
+          <label class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Организация</label>
+          <select
+            v-model="filters.organizationId"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            @change="onOrgChange"
+          >
+            <option value="">Все организации</option>
+            <option v-for="org in organizations" :key="org.id" :value="org.id">
+              {{ org.name }}
+            </option>
+          </select>
         </div>
+      </template>
+    </UiFilterBar>
 
-        <!-- Статус -->
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-            Статус
-          </label>
-          <div class="relative">
-            <select
-              v-model="filters.status"
-              class="w-full appearance-none rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm text-slate-700 dark:text-slate-300"
-              @change="loadRepresentatives"
-            >
-              <option value="">Все статусы</option>
-              <option value="pending">Ожидают одобрения</option>
-              <option value="approved">Одобрены</option>
-              <option value="blocked">Заблокированы</option>
-            </select>
-            <ChevronDown class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          </div>
-        </div>
-
-        <!-- Организация -->
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-            Организация
-          </label>
-          <div class="relative">
-            <select
-              v-model="filters.organizationId"
-              class="w-full appearance-none rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm text-slate-700 dark:text-slate-300"
-              @change="loadRepresentatives"
-            >
-              <option value="">Все организации</option>
-              <option v-for="org in organizations" :key="org.id" :value="org.id">
-                {{ org.name }}
-              </option>
-            </select>
-            <Building2 class="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Таблица представителей -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+    <!-- Таблица представителей; пагинация — футер внутри карточки -->
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <RepresentativesRepresentativeTable
         :representatives="representatives"
         :loading="loading"
@@ -126,24 +46,16 @@
         @delete="handleDelete"
       />
 
-      <!-- Пагинация -->
-      <div v-if="totalPages > 1" class="px-6 py-4 bg-slate-50/30 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex justify-center">
-        <nav class="flex gap-2">
-          <button
-            v-for="page in totalPages"
-            :key="page"
-            @click="changePage(page)"
-            :class="[
-              'px-4 py-2 rounded-lg font-bold transition-all text-sm',
-              currentPage === page
-                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700',
-            ]"
-          >
-            {{ page }}
-          </button>
-        </nav>
-      </div>
+      <!-- Единая пагинация вместо перечисления всех страниц; limit фиксирован → выбор размера скрыт -->
+      <UiPagination
+        :current-page="currentPage"
+        :total-pages="totalPages"
+        :total="total"
+        :limit="limit"
+        :loading="loading"
+        hide-limit
+        @update:page="changePage"
+      />
     </div>
 
     <!-- Модальные окна -->
@@ -200,8 +112,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
-import { Users, Clock, CheckCircle, Search, Filter, ChevronDown, Building2 } from "lucide-vue-next";
+// Иконки KPI-карточек и фильтров больше не нужны: статистика ушла в счётчики сегментов, поля рисует UiFilterBar
+import { ref, reactive, computed, onMounted } from "vue";
 
 // Типы
 interface RepresentativePermissions {
@@ -262,6 +174,8 @@ const filters = reactive({
 
 const currentPage = ref(1);
 const totalPages = ref(1);
+// Общее число записей — нужно UiPagination и счётчику «Найдено N» (API уже возвращает total)
+const total = ref(0);
 const limit = 20;
 
 // Модальные окна
@@ -316,6 +230,7 @@ const loadRepresentatives = async () => {
     if (response.success) {
       representatives.value = response.data;
       totalPages.value = response.totalPages;
+      total.value = response.total ?? 0;
     }
   } catch (error) {
     console.error("Error loading representatives:", error);
@@ -357,6 +272,52 @@ const loadStats = async () => {
 
 const changePage = (page: number) => {
   currentPage.value = page;
+  loadRepresentatives();
+};
+
+// ---- Презентационная обвязка для UiFilterBar (вызывает прежние loadRepresentatives / debouncedSearch) ----
+
+// Сегменты статуса со счётчиками из stats: заменяют отдельные KPI-карточки и убирают дубль информации
+const statusSegments = computed(() => [
+  { value: "", label: "Все", count: stats.value?.total },
+  { value: "pending", label: "Ожидают", count: stats.value?.pending },
+  { value: "approved", label: "Одобрены", count: stats.value?.approved },
+  { value: "blocked", label: "Заблокированы", count: stats.value?.blocked },
+]);
+
+// Смена статуса: возвращаемся на 1-ю страницу, иначе при странице > числа результатов таблица окажется пустой
+const onStatusChange = (value: string | number | boolean) => {
+  filters.status = String(value);
+  currentPage.value = 1;
+  loadRepresentatives();
+};
+
+// Смена организации: так же сбрасываем страницу и перезагружаем список
+const onOrgChange = () => {
+  currentPage.value = 1;
+  loadRepresentatives();
+};
+
+// Чип применённого фильтра по организации (виден в панели, чтобы состояние не нужно было помнить)
+const filterChips = computed(() => {
+  if (!filters.organizationId) return [];
+  const org = organizations.value.find((o) => o.id === filters.organizationId);
+  return [{ key: "organizationId", label: `Организация: ${org?.name ?? "—"}` }];
+});
+
+const onChipRemove = (key: string) => {
+  if (key === "organizationId") {
+    filters.organizationId = "";
+    onOrgChange();
+  }
+};
+
+// «Сбросить всё»: очищаем поиск, статус и организацию одним действием
+const resetFilters = () => {
+  filters.search = "";
+  filters.status = "";
+  filters.organizationId = "";
+  currentPage.value = 1;
   loadRepresentatives();
 };
 

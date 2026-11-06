@@ -1,530 +1,231 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Загрузка -->
-    <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
+  <!-- Внешний враппер без двойного отступа (отступ задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Загрузка: компактный спиннер -->
+    <div v-if="loading" class="flex min-h-[400px] items-center justify-center">
       <div class="text-center">
-        <div
-          class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-        ></div>
-        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
-          Загрузка информации об учебной программе...
-        </p>
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
+        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Загрузка информации об учебной программе...</p>
       </div>
     </div>
 
-    <!-- Ошибка -->
-    <div
-      v-else-if="error"
-      class="flex items-center justify-center min-h-[400px]"
-    >
-      <div class="text-center max-w-md">
-        <div
-          class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6"
-        >
-          <BookOpen class="w-12 h-12 text-slate-400" />
+    <!-- Ошибка: единственное действие — повторить загрузку -->
+    <div v-else-if="error" class="flex min-h-[400px] items-center justify-center">
+      <div class="max-w-md text-center">
+        <div class="mb-4 inline-block rounded-full bg-gray-100 p-5 dark:bg-white/[0.06]">
+          <BookOpen class="h-10 w-10 text-gray-400" />
         </div>
-        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">
-          Ошибка загрузки
-        </h3>
-        <p class="mt-2 text-slate-500 dark:text-gray-400">
-          {{ error }}
-        </p>
-        <UiButton class="mt-8 shadow-lg" @click="loadCourse"
-          >Попробовать снова</UiButton
-        >
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Ошибка загрузки</h3>
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ error }}</p>
+        <UiButton class="mt-6" @click="loadCourse">Попробовать снова</UiButton>
       </div>
     </div>
 
     <!-- Контент -->
     <template v-else-if="course">
-      <!-- Header Section -->
-      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-        <!-- Breadcrumbs / Back Navigation -->
-        <div class="mb-6">
-          <NuxtLink
-            to="/programs"
-            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
-            >
-              <ArrowLeft
-                class="w-4 h-4 transition-transform group-hover:-translate-x-1"
-              />
-            </div>
-            Назад к списку
-          </NuxtLink>
-        </div>
-
-        <div
-          class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
-        >
-          <!-- Left: Title & Info -->
-          <div class="space-y-3">
-            <div class="flex flex-wrap items-center gap-3">
-              <h1
-                class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase"
-              >
-                {{ course.shortName }}
-              </h1>
-              <div
-                class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-primary/20 bg-primary/10 text-primary"
-              >
-                {{ course.courseType || "КПП" }}
-              </div>
-              <div
-                class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border"
-                :class="
-                  course.isActive
-                    ? 'bg-success/10 text-success border-success/20'
-                    : 'bg-danger/10 text-danger border-danger/20'
-                "
-              >
-                {{ course.isActive ? "Активна" : "Неактивна" }}
-              </div>
-              <div
-                v-if="course.isArchived"
-                class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"
-              >
-                В архиве
-              </div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-              <div
-                class="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400"
-              >
-                {{ course.name }}
-              </div>
-              <div
-                v-if="course.nameUz"
-                class="flex items-center gap-2 text-sm font-bold text-slate-500 dark:text-slate-500"
-              >
-                <span class="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-black uppercase text-slate-500">УЗ</span>
-                {{ course.nameUz }}
-              </div>
-              <div
-                class="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400"
-              >
-                <Clock class="w-4 h-4 text-slate-400" />
-                Всего: {{ course.totalHours }} часов
-              </div>
-            </div>
-          </div>
-
-          <!-- Right: Action Buttons Group -->
-          <div class="flex flex-wrap items-center gap-2">
-            <UiButton
-              v-if="canCreateCourses"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold"
-              :loading="isDuplicating"
-              @click="handleDuplicate"
-            >
-              <Copy class="w-4 h-4" />
-              Дублировать
-            </UiButton>
-
-            <UiButton
-              v-if="canEditCourses && !course.isArchived"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold"
-              @click="editCourse"
-            >
-              <Settings class="w-4 h-4" />
-              Редактировать
-            </UiButton>
-
-            <UiButton
-              v-if="canArchiveCourses && !course.isArchived"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold text-warning border-warning/20 hover:bg-warning/5 hover:border-warning/40"
-              @click="handleArchive"
-            >
-              <CalendarDays class="w-4 h-4" />
-              В архив
-            </UiButton>
-
-            <UiButton
-              v-if="canArchiveCourses && course.isArchived"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold text-success border-success/20 hover:bg-success/5 hover:border-success/40"
-              @click="handleRestore"
-            >
-              <Clock class="w-4 h-4" />
-              Восстановить
-            </UiButton>
-
-            <UiButton
-              v-if="canDeleteCourses"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold text-danger border-danger/20 hover:bg-danger/5 hover:border-danger/40"
-              @click="handleDelete"
-            >
-              <Trash2 class="w-4 h-4" />
-              Удалить
-            </UiButton>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bento Box Metrics -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        <!-- Disciplines Card -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Дисциплин
-              </p>
-              <h3
-                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
-              >
-                {{ course.disciplines?.length || 0 }}
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12"
-            >
-              <BookOpen class="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Instructors Card -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Инструкторов
-              </p>
-              <h3
-                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
-              >
-                {{ totalInstructors }}
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12"
-            >
-              <Users class="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Hours Card -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Всего часов
-              </p>
-              <h3
-                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
-              >
-                {{ course.totalHours }}
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12"
-            >
-              <Clock class="w-6 h-6" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Overview Grid -->
-      <div
-        class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 mb-8"
+      <!-- Единая шапка: крошки, короткое имя (text-xl/2xl), тип/статус бейджами, полное название в мета-строке -->
+      <UiPageHeader
+        :title="course.shortName"
+        :breadcrumbs="[{ label: 'Программы', to: '/programs' }, { label: course.shortName }]"
       >
-        <div class="lg:col-span-2 space-y-6">
-          <!-- Main Info Card -->
-          <div
-            class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all hover:shadow-md"
+        <!-- Бейджи: тип, активность, архив (без CAPS и 10px) -->
+        <template #badge>
+          <span class="rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            {{ course.courseType || "КПП" }}
+          </span>
+          <span
+            class="rounded-md border px-2 py-0.5 text-xs font-medium"
+            :class="course.isActive ? 'border-success/20 bg-success/10 text-success' : 'border-danger/20 bg-danger/10 text-danger'"
           >
-            <div
-              class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 px-6 py-2"
-            >
-              <h3
-                class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
-              >
-                <LayoutDashboard class="w-5 h-5 text-primary" />
-                Основная информация
-              </h3>
-            </div>
-            <div class="p-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="space-y-1">
-                  <label
-                    class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                    >Полное название</label
-                  >
-                  <p class="text-sm font-bold text-slate-900 dark:text-white">
-                    {{ course.name }}
-                  </p>
-                </div>
-                <div class="space-y-1">
-                  <label
-                    class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                    >Короткое название</label
-                  >
-                  <p class="text-sm font-bold text-slate-900 dark:text-white">
-                    {{ course.shortName }}
-                  </p>
-                </div>
-                <div v-if="course.nameUz" class="space-y-1">
-                  <label
-                    class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                    >Название на узбекском</label
-                  >
-                  <p class="text-sm font-bold text-slate-900 dark:text-white">
-                    {{ course.nameUz }}
-                  </p>
-                </div>
-                <div class="space-y-1">
-                  <label
-                    class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                    >Код программы</label
-                  >
-                  <p
-                    class="text-sm font-bold text-slate-900 dark:text-white font-mono"
-                  >
-                    {{ course.code }}
-                  </p>
-                </div>
-                <div class="space-y-1">
-                  <label
-                    class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                    >ID программы</label
-                  >
-                  <p
-                    class="text-sm font-bold text-slate-900 dark:text-white font-mono opacity-80"
-                  >
-                    {{ course.id }}
-                  </p>
-                </div>
-                <div
-                  v-if="course.description"
-                  class="col-span-1 md:col-span-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800"
-                >
-                  <label
-                    class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1"
-                    >Описание</label
-                  >
-                  <p
-                    class="text-slate-700 dark:text-slate-300 text-sm leading-relaxed"
-                  >
-                    {{ course.description }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+            {{ course.isActive ? "Активна" : "Неактивна" }}
+          </span>
+          <span
+            v-if="course.isArchived"
+            class="rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:border-gray-700 dark:bg-white/[0.06] dark:text-gray-300"
+          >
+            В архиве
+          </span>
+        </template>
 
-        <div class="space-y-6">
-          <!-- Additional Info Card -->
-          <div
-            class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all hover:shadow-md"
+        <!-- Мета-строка: полное название (и узбекское); «Всего часов» убрано — оно в полосе метрик -->
+        <template #meta>
+          <span>{{ course.name }}</span>
+          <span v-if="course.nameUz" class="inline-flex items-center gap-1.5">
+            <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-semibold text-gray-500 dark:bg-white/[0.06]">УЗ</span>
+            {{ course.nameUz }}
+          </span>
+        </template>
+
+        <!-- Действия: «Редактировать» (главное) + «Дублировать» + «⋯» (Архив/Восстановить, затем «Опасные»: Удалить) -->
+        <template #actions>
+          <UiButton
+            v-if="canEditCourses && !course.isArchived"
+            variant="primary"
+            :start-icon="Settings"
+            @click="editCourse"
           >
-            <div
-              class="bg-linear-to-br from-info/10 to-transparent px-6 py-2 border-b border-slate-100 dark:border-slate-800"
-            >
-              <h3
-                class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
-              >
-                <FileText class="w-5 h-5 text-info" />
-                Дополнительно
-              </h3>
-            </div>
-            <div class="p-6 space-y-2">
-              <div class="space-y-1">
-                <label
-                  class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                  >Шаблон сертификата</label
-                >
-                <p class="text-sm font-bold text-slate-900 dark:text-white">
-                  {{ course.certificateTemplate?.name || "Не указан" }}
-                </p>
-              </div>
-              <div class="space-y-1">
-                <label
-                  class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                  >Дата создания</label
-                >
-                <p class="text-sm font-bold text-slate-900 dark:text-white">
-                  {{ formatDateTime(course.createdAt) }}
-                </p>
-              </div>
-              <div class="space-y-1">
-                <label
-                  class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                  >Последнее обновление</label
-                >
-                <p class="text-sm font-bold text-slate-900 dark:text-white">
-                  {{ formatDateTime(course.updatedAt) }}
-                </p>
-              </div>
-            </div>
+            Редактировать
+          </UiButton>
+          <UiButton
+            v-if="canCreateCourses"
+            variant="outline"
+            :start-icon="Copy"
+            :loading="isDuplicating"
+            @click="handleDuplicate"
+          >
+            Дублировать
+          </UiButton>
+          <UiDropdown
+            v-if="canArchiveCourses || canDeleteCourses"
+            icon-only
+            variant="outline"
+            aria-label="Другие действия"
+            :groups="menuGroups"
+            @select="onMenuSelect"
+          />
+        </template>
+      </UiPageHeader>
+
+      <!-- Полоса метрик в одну строку вместо 3 крупных карточек -->
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <UiStat label="Дисциплин" :value="course.disciplines?.length || 0" :icon="BookOpen" tone="primary" />
+        <UiStat label="Инструкторов" :value="totalInstructors" :icon="Users" tone="success" />
+        <UiStat label="Всего часов" :value="course.totalHours" :icon="Clock" tone="warning" />
+      </div>
+
+      <!-- Единая карточка «Основная информация»: заголовок и названия не дублируем (они уже в шапке) -->
+      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="flex items-center gap-2 border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+          <LayoutDashboard class="h-4 w-4 text-gray-400" />
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Основная информация</h3>
+        </div>
+        <div class="grid grid-cols-1 gap-x-8 gap-y-4 p-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Код программы</p>
+            <p class="font-mono text-sm font-medium text-gray-900 dark:text-white">{{ course.code }}</p>
+          </div>
+          <div>
+            <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">ID программы</p>
+            <p class="break-all font-mono text-sm text-gray-600 dark:text-gray-300">{{ course.id }}</p>
+          </div>
+          <div>
+            <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Шаблон сертификата</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ course.certificateTemplate?.name || "Не указан" }}</p>
+          </div>
+          <div>
+            <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Дата создания</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDateTime(course.createdAt) }}</p>
+          </div>
+          <div>
+            <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Последнее обновление</p>
+            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDateTime(course.updatedAt) }}</p>
+          </div>
+          <div v-if="course.description" class="rounded-lg border border-gray-100 bg-gray-50 p-3 sm:col-span-2 lg:col-span-3 dark:border-gray-800 dark:bg-white/[0.03]">
+            <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">Описание</p>
+            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{{ course.description }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Disciplines Section -->
-      <div
-        class="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150"
-      >
-        <div
-          class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden"
-        >
-          <div
-            class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+      <!-- Дисциплины курса -->
+      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="flex flex-col justify-between gap-3 border-b border-gray-100 px-5 py-3 sm:flex-row sm:items-center dark:border-gray-800">
+          <h3 class="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+            <BookOpen class="h-4 w-4 text-gray-400" />
+            Дисциплины курса
+          </h3>
+          <!-- Одно действие секции; если список пуст — главным становится кнопка в пустом состоянии -->
+          <UiButton
+            v-if="canManageDisciplines && course.disciplines?.length"
+            variant="outline"
+            size="sm"
+            :start-icon="Plus"
+            @click="openDisciplineModal()"
           >
-            <div>
-              <h3
-                class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
-              >
-                <BookOpen class="w-5 h-5 text-primary" />
-                Дисциплины курса
-              </h3>
-            </div>
-            <div class="flex items-center gap-2">
-              <UiButton
-                v-if="canManageDisciplines"
-                variant="outline"
-                size="sm"
-                class="gap-2 font-bold"
-                @click="openDisciplineModal()"
-              >
-                <Plus class="w-4 h-4" />
-                Добавить дисциплину
-              </UiButton>
-            </div>
-          </div>
+            Добавить дисциплину
+          </UiButton>
+        </div>
 
+        <!-- Пустое состояние -->
+        <div v-if="!course.disciplines || course.disciplines.length === 0" class="p-10 text-center">
+          <UiEmptyState title="Дисциплины пока не добавлены" :icon="BookOpen" />
+          <UiButton v-if="canManageDisciplines" variant="primary" class="mt-2" @click="openDisciplineModal()">
+            Добавить первую дисциплину
+          </UiButton>
+        </div>
+
+        <div v-else class="space-y-2 p-4">
           <div
-            v-if="!course.disciplines || course.disciplines.length === 0"
-            class="p-16 text-center"
+            v-for="(discipline, index) in course.disciplines"
+            :key="discipline.id"
+            class="group relative rounded-lg border border-gray-200 px-3 py-2 transition-colors hover:border-primary/30 hover:bg-primary/5 dark:border-gray-800"
           >
-            <div
-              class="bg-slate-50 dark:bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-            >
-              <BookOpen class="w-8 h-8 text-slate-300" />
+            <div class="flex items-center gap-3">
+              <div
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-500 transition-colors group-hover:bg-primary group-hover:text-white dark:bg-white/[0.06]"
+              >
+                {{ index + 1 }}
+              </div>
+
+              <span
+                v-if="discipline.shortName"
+                class="shrink-0 rounded-md bg-primary/10 px-2 py-1 text-xs font-semibold text-primary"
+              >
+                {{ discipline.shortName }}
+              </span>
+
+              <div class="min-w-0 flex-1">
+                <h4 class="truncate text-sm font-medium text-gray-900 dark:text-white" :title="discipline.name">
+                  {{ discipline.name }}
+                </h4>
+              </div>
+
+              <div class="hidden shrink-0 items-center gap-3 text-xs text-gray-500 md:flex dark:text-gray-400">
+                <span>Т: {{ discipline.theoryHours }}ч</span>
+                <span>П: {{ discipline.practiceHours }}ч</span>
+                <span>К: {{ discipline.assessmentHours }}ч</span>
+                <span class="font-medium text-primary">Всего: {{ discipline.hours }}ч</span>
+              </div>
+              <span class="shrink-0 text-xs font-semibold text-primary md:hidden">{{ discipline.hours }}ч</span>
+
+              <div
+                v-if="discipline.instructors && discipline.instructors.length > 0"
+                class="hidden shrink-0 items-center gap-1 lg:flex"
+                :title="discipline.instructors.map(di => di.instructor?.fullName).join(', ')"
+              >
+                <Users class="h-3.5 w-3.5 text-gray-400" />
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ discipline.instructors.length }}</span>
+              </div>
+
+              <!-- Действия строки: одна видимая иконка (изменить) + «⋯» с удалением (опасное — последним) -->
+              <div v-if="canManageDisciplines" class="flex shrink-0 items-center gap-1">
+                <UiButton variant="ghost" size="sm" icon title="Изменить" aria-label="Изменить дисциплину" @click="openDisciplineModal(discipline)">
+                  <Settings class="h-4 w-4" />
+                </UiButton>
+                <UiDropdown
+                  icon-only
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Другие действия"
+                  :groups="[{ items: [{ key: 'delete', label: 'Удалить дисциплину', icon: Trash2, danger: true }] }]"
+                  @select="(key: string) => key === 'delete' && handleDeleteDiscipline(discipline)"
+                />
+              </div>
             </div>
-            <p class="text-slate-500 font-medium mb-4">
-              Дисциплины пока не добавлены
+
+            <p
+              v-if="discipline.description"
+              class="ml-11 mt-1 truncate text-xs text-gray-500 dark:text-gray-400"
+              :title="discipline.description"
+            >
+              {{ discipline.description }}
             </p>
-            <UiButton
-              v-if="canManageDisciplines"
-              variant="primary"
-              @click="openDisciplineModal()"
-            >
-              Добавить первую дисциплину
-            </UiButton>
-          </div>
-
-          <div v-else class="p-4 space-y-2">
-            <div
-              v-for="(discipline, index) in course.disciplines"
-              :key="discipline.id"
-              class="border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 hover:border-primary/30 hover:bg-primary/5 transition-all group relative"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-sm font-semibold shrink-0 group-hover:bg-primary group-hover:text-white transition-colors"
-                >
-                  {{ index + 1 }}
-                </div>
-
-                <span
-                  v-if="discipline.shortName"
-                  class="shrink-0 rounded-md bg-primary/10 px-2 py-1 text-xs font-black uppercase tracking-wide text-primary"
-                >
-                  {{ discipline.shortName }}
-                </span>
-
-                <div class="flex-1 min-w-0">
-                  <h4
-                    class="truncate text-sm font-bold text-slate-900 dark:text-white"
-                    :title="discipline.name"
-                  >
-                    {{ discipline.name }}
-                  </h4>
-                </div>
-
-                <div
-                  class="hidden md:flex items-center gap-3 shrink-0 text-xs font-bold text-slate-500 dark:text-slate-400"
-                >
-                  <span>Т: {{ discipline.theoryHours }}ч</span>
-                  <span>П: {{ discipline.practiceHours }}ч</span>
-                  <span>К: {{ discipline.assessmentHours }}ч</span>
-                  <span class="text-primary">Всего: {{ discipline.hours }}ч</span>
-                </div>
-                <span class="md:hidden shrink-0 text-xs font-black text-primary">
-                  {{ discipline.hours }}ч
-                </span>
-
-                <div
-                  v-if="discipline.instructors && discipline.instructors.length > 0"
-                  class="hidden lg:flex items-center gap-1 shrink-0"
-                  :title="discipline.instructors.map(di => di.instructor?.fullName).join(', ')"
-                >
-                  <Users class="w-3.5 h-3.5 text-slate-400" />
-                  <span class="text-xs font-bold text-slate-500 dark:text-slate-400">
-                    {{ discipline.instructors.length }}
-                  </span>
-                </div>
-
-                <!-- Actions -->
-                <div
-                  v-if="canManageDisciplines"
-                  class="flex items-center gap-1 shrink-0"
-                >
-                  <UiButton
-                    variant="outline"
-                    size="sm"
-                    class="h-7 w-7 p-0!"
-                    @click="openDisciplineModal(discipline)"
-                  >
-                    <Settings class="w-3.5 h-3.5 text-slate-500" />
-                  </UiButton>
-                  <UiButton
-                    variant="outline"
-                    size="sm"
-                    class="h-7 w-7 p-0! border-danger/20 hover:bg-danger/5 hover:border-danger/40"
-                    @click="handleDeleteDiscipline(discipline)"
-                  >
-                    <Trash2 class="w-3.5 h-3.5 text-danger" />
-                  </UiButton>
-                </div>
-              </div>
-
-              <p
-                v-if="discipline.description"
-                class="mt-1 ml-11 truncate text-xs text-slate-500 dark:text-slate-400"
-                :title="discipline.description"
-              >
-                {{ discipline.description }}
-              </p>
-            </div>
           </div>
         </div>
       </div>
     </template>
 
-    <!-- Modals -->
+    <!-- Модальные окна (логика без изменений) -->
     <UiConfirmModal
       :is-open="isDeleteModalOpen"
       title="Удаление учебной программы"
@@ -532,27 +233,34 @@
       :item-name="course?.name"
       warning="Это действие нельзя отменить. Все данные программы и связанные дисциплины будут удалены."
       :loading="isDeleting"
+      loading-text="Удаление…"
       @confirm="confirmDelete"
       @cancel="closeDeleteModal"
     />
 
     <UiConfirmModal
       :is-open="isArchiveModalOpen"
+      variant="warning"
       title="Архивация учебной программы"
       message="Вы уверены, что хотите переместить эту учебную программу в архив?"
+      confirm-text="В архив"
       :item-name="course?.name"
       warning="Архивная программа не будет доступна для создания новых групп. Вы сможете восстановить её позже."
       :loading="isArchiving"
+      loading-text="Архивация…"
       @confirm="confirmArchive"
       @cancel="closeArchiveModal"
     />
 
     <UiConfirmModal
       :is-open="isRestoreModalOpen"
+      variant="warning"
       title="Восстановление учебной программы"
       message="Вы уверены, что хотите восстановить эту учебную программу из архива?"
+      confirm-text="Восстановить"
       :item-name="course?.name"
       :loading="isRestoring"
+      loading-text="Восстановление…"
       @confirm="confirmRestore"
       @cancel="closeRestoreModal"
     />
@@ -572,6 +280,7 @@
       :item-name="selectedDiscipline?.name"
       warning="Это действие нельзя отменить. Дисциплина будет удалена из курса."
       :loading="isDeletingDiscipline"
+      loading-text="Удаление…"
       @confirm="confirmDeleteDiscipline"
       @cancel="closeDeleteDisciplineModal"
     />
@@ -656,6 +365,26 @@ const totalInstructors = computed(() => {
   });
   return instructorIds.size;
 });
+
+// Меню «⋯» в шапке: «В архив»/«Восстановить» (по состоянию курса и правам), затем группа «Опасные» с удалением
+const menuGroups = computed(() => [
+  {
+    items: [
+      { key: "archive", label: "В архив", icon: CalendarDays, hidden: !(canArchiveCourses.value && !course.value?.isArchived) },
+      { key: "restore", label: "Восстановить из архива", icon: Clock, hidden: !(canArchiveCourses.value && course.value?.isArchived) },
+    ],
+  },
+  {
+    label: "Опасные",
+    items: [{ key: "delete", label: "Удалить программу", icon: Trash2, danger: true, hidden: !canDeleteCourses.value }],
+  },
+]);
+// Пункты меню вызывают прежние обработчики (каждый открывает свой UiConfirmModal)
+const onMenuSelect = (key: string) => {
+  if (key === "archive") handleArchive();
+  else if (key === "restore") handleRestore();
+  else if (key === "delete") handleDelete();
+};
 
 // Load course data
 const loadCourse = async () => {

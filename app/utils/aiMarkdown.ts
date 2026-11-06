@@ -25,7 +25,8 @@ function renderInline(text: string): string {
   s = s.replace(/__([^_\n]+?)__/g, "<strong>$1</strong>");
   s = s.replace(/(^|[^*\w])\*([^*\n]+?)\*(?!\w)/g, "$1<em>$2</em>");
   s = s.replace(/~~([^~\n]+?)~~/g, "<del>$1</del>");
-  s = s.replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|\/)[^\s)]+)\)/g, (_, label, url) => {
+  // Безопасность: разрешены только http(s):// и пути от корня /path; протокол-относительные (//evil.com) отклоняются.
+  s = s.replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|\/(?!\/))[^\s)]+)\)/g, (_, label, url) => {
     const external = /^https?:/.test(url);
     return `<a href="${url}" class="ai-md-link"${external ? ' target="_blank" rel="noopener noreferrer"' : ""}>${label}</a>`;
   });

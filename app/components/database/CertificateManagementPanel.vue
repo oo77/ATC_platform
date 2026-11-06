@@ -1,460 +1,249 @@
 <template>
-  <div class="flex flex-col gap-6">
-    <!-- Action Bar -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="space-y-1">
-        <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-          База сертификатов
-        </h2>
-        <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-          Всего в базе: {{ stats.total }}
-          <span v-if="hasActiveFilters" class="text-primary">
-            · найдено: {{ pagination.total }}
-          </span>
-        </p>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <UiButton variant="primary" size="sm" class="h-10 px-4 gap-2 font-bold shadow-sm" @click="openManualFormModal">
-          <Plus class="w-4 h-4" />
-          Добавить вручную
-        </UiButton>
-        <NuxtLink
-          to="/database/import-certificates"
-          class="inline-flex items-center gap-2 h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 text-sm font-bold text-slate-700 dark:text-slate-300 transition-all hover:shadow-sm hover:border-slate-300 dark:hover:border-slate-600"
-        >
-          <FileSpreadsheet class="h-4 w-4" />
-          Импорт Excel
-        </NuxtLink>
-        <button
-          @click="navigateTo('/admin/database/ai-import-certificates')"
-          class="inline-flex items-center gap-2 h-10 rounded-xl bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-500/20 px-4 text-sm font-bold text-violet-700 dark:text-violet-400 transition-all hover:bg-violet-100 dark:hover:bg-violet-500/20"
-        >
-          <Zap class="h-4 w-4" />
-          AI Импорт
-        </button>
-        <UiButton
-          variant="outline"
-          size="sm"
-          class="h-10 px-4 gap-2 font-bold"
-          :loading="isDownloadingExcel"
-          :disabled="loading || isDownloadingExcel || !pagination.total"
-          @click="downloadExcel"
-        >
-          <FileSpreadsheet v-if="!isDownloadingExcel" class="w-4 h-4" />
-          Скачать Excel
-        </UiButton>
-        <UiButton
-          variant="outline"
-          size="sm"
-          class="h-10 px-4 gap-2 font-bold"
-          @click="openExportModal"
-          :disabled="loading || !data.length"
-        >
-          <Download class="w-4 h-4" />
-          Экспорт
-        </UiButton>
-      </div>
+  <div class="flex flex-col gap-4">
+    <!-- KPI: 4 метрики в одну строку (раньше — 4 крупные карточки с анимацией); таблица поднимается выше сгиба -->
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <UiStat label="Выдано" :value="stats.issued" :hint="`из ${stats.total}`" :icon="CheckCircle" tone="success" :loading="loading && !stats.total" />
+      <UiStat label="Отозвано" :value="stats.revoked" :icon="XCircle" tone="danger" :loading="loading && !stats.total" />
+      <UiStat label="Организаций" :value="stats.organizations" :icon="Building2" tone="warning" :loading="loading && !stats.total" />
+      <UiStat label="Учебных групп" :value="stats.groups" :icon="Users" tone="primary" :loading="loading && !stats.total" />
     </div>
 
-    <!-- Bento Box Metrics -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Выдано</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.issued }}</h3>
-          </div>
-          <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
-            <CheckCircle class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Отозвано</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.revoked }}</h3>
-          </div>
-          <div class="rounded-xl bg-danger/10 p-3 text-danger transition-transform group-hover:rotate-12">
-            <XCircle class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Организаций</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.organizations }}</h3>
-          </div>
-          <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
-            <Building2 class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Учебных групп</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.groups }}</h3>
-          </div>
-          <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
-            <Users class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Filters Panel -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6">
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-3">
-          <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <Filter class="w-5 h-5" />
-          </div>
-          <h4 class="text-lg font-bold text-slate-900 dark:text-white">Фильтры</h4>
-        </div>
-        <button
-          v-if="hasActiveFilters"
-          @click="resetFilters"
-          class="text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10"
-        >
-          <RotateCcw class="w-4 h-4" />
-          Сбросить
-        </button>
-      </div>
-
-      <div class="flex flex-col gap-6">
-        <!-- Search Row -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="relative">
-            <input
-              v-model="filters.search"
-              type="text"
-              placeholder="ФИО, номер сертификата, ПИНФЛ..."
-              class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
-              @input="debouncedSearch"
-            />
-            <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-          </div>
-          <div class="relative">
+    <!-- Единый блок фильтров: поиск + сегмент статуса на виду; организация, источник, шаблон и период — в сворачиваемой панели.
+         Главное действие — «Добавить вручную», импорт и выгрузка собраны в одно меню -->
+    <UiFilterBar
+      v-model:search="filters.search"
+      search-placeholder="ФИО, номер сертификата, ПИНФЛ…"
+      :debounce="0"
+      :segments="statusOptions"
+      :segment="filters.status"
+      :total="pagination.total"
+      :active-count="activeFilterCount"
+      :chips="filterChips"
+      persist-key="certificates"
+      @search="debouncedSearch"
+      @update:segment="onStatusSegment"
+      @remove="removeFilterChip"
+      @reset="resetFilters"
+    >
+      <!-- Второстепенные фильтры -->
+      <template #filters>
+        <!-- Организация -->
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Организация</span>
+          <span class="relative block">
+            <Building2 class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               v-model="filters.organizationName"
               type="text"
-              placeholder="Фильтр по организации..."
-              class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
+              placeholder="Название организации"
+              class="h-9 w-full rounded-lg border border-gray-300 bg-transparent pl-9 pr-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
               @input="debouncedSearch"
             />
-            <Building2 class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          </span>
+        </label>
+
+        <!-- Источник: 5 вариантов — компактный select вместо ряда чипов -->
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Источник</span>
+          <select
+            v-model="filters.sourceType"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            @change="handleFilterChange"
+          >
+            <option v-for="opt in sourceOptions" :key="opt.value" :value="opt.value">
+              {{ opt.value === 'all' ? 'Все источники' : opt.label }}
+            </option>
+          </select>
+        </label>
+
+        <!-- Шаблон: число шаблонов не ограничено, поэтому select вместо чипов (чипы раздували панель) -->
+        <label v-if="templates.length" class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Шаблон</span>
+          <select
+            v-model="filters.templateId"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            @change="handleFilterChange"
+          >
+            <option value="">Все шаблоны</option>
+            <option v-for="tpl in templates" :key="tpl.id" :value="tpl.id">{{ tpl.name }}</option>
+          </select>
+        </label>
+
+        <!-- Период выдачи: две даты в одной ячейке сетки -->
+        <div>
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Период выдачи</span>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="filters.dateFrom"
+              type="date"
+              aria-label="Выдан с"
+              class="h-9 min-w-0 flex-1 rounded-lg border border-gray-300 bg-transparent px-2.5 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
+              @change="handleFilterChange"
+            />
+            <span class="text-gray-400">—</span>
+            <input
+              v-model="filters.dateTo"
+              type="date"
+              aria-label="Выдан по"
+              class="h-9 min-w-0 flex-1 rounded-lg border border-gray-300 bg-transparent px-2.5 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
+              @change="handleFilterChange"
+            />
           </div>
         </div>
+      </template>
 
-        <div class="flex flex-wrap gap-x-10 gap-y-5">
-          <!-- Статус (chips) -->
-          <div class="space-y-3">
-            <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-              <CheckCircle class="w-3.5 h-3.5" />
-              Статус
-            </label>
-            <div class="flex flex-wrap gap-2">
-              <button
-                v-for="opt in statusOptions"
-                :key="opt.value"
-                @click="filters.status = opt.value; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                :class="filters.status === opt.value
-                  ? 'bg-primary text-white shadow-md shadow-primary/20'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
-              >
-                {{ opt.label }}
-              </button>
-            </div>
-          </div>
+      <!-- Действия: меню «Импорт и выгрузка» (вторично) + одно главное «Добавить вручную» -->
+      <template #actions>
+        <UiDropdown label="Импорт и выгрузка" variant="outline" size="md" :groups="toolbarMenu" @select="onToolbarSelect" />
+        <UiButton variant="primary" size="md" :start-icon="Plus" @click="openManualFormModal">
+          Добавить вручную
+        </UiButton>
+      </template>
+    </UiFilterBar>
 
-          <!-- Источник (chips) -->
-          <div class="space-y-3">
-            <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-              <Layers class="w-3.5 h-3.5" />
-              Источник
-            </label>
-            <div class="flex flex-wrap gap-2">
-              <button
-                v-for="opt in sourceOptions"
-                :key="opt.value"
-                @click="filters.sourceType = opt.value; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                :class="filters.sourceType === opt.value
-                  ? 'bg-primary text-white shadow-md shadow-primary/20'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
-              >
-                {{ opt.label }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Шаблон сертификата (chips) -->
-          <div v-if="templates.length" class="space-y-3">
-            <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-              <FileCheck class="w-3.5 h-3.5" />
-              Шаблон
-            </label>
-            <div class="flex flex-wrap gap-2">
-              <button
-                @click="filters.templateId = ''; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                :class="filters.templateId === ''
-                  ? 'bg-primary text-white shadow-md shadow-primary/20'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
-              >
-                Все
-              </button>
-              <button
-                v-for="tpl in templates"
-                :key="tpl.id"
-                @click="filters.templateId = tpl.id; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                :class="filters.templateId === tpl.id
-                  ? 'bg-primary text-white shadow-md shadow-primary/20'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
-              >
-                {{ tpl.name }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Период выдачи -->
-          <div class="space-y-3">
-            <label class="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-              <CalendarRange class="w-3.5 h-3.5" />
-              Период выдачи
-            </label>
-            <div class="flex items-center gap-2">
-              <input
-                v-model="filters.dateFrom"
-                type="date"
-                class="rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2 px-3 text-sm outline-none focus:border-primary dark:border-slate-700 dark:text-white transition-all font-medium"
-                @change="handleFilterChange"
-              />
-              <span class="text-slate-400 font-bold text-sm">—</span>
-              <input
-                v-model="filters.dateTo"
-                type="date"
-                class="rounded-xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-2 px-3 text-sm outline-none focus:border-primary dark:border-slate-700 dark:text-white transition-all font-medium"
-                @change="handleFilterChange"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Table -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-      <!-- Loading -->
-      <div v-if="loading" class="p-12 text-center">
-        <div class="mx-auto inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        <p class="mt-4 font-bold text-slate-900 dark:text-white">Загрузка сертификатов...</p>
+    <!-- Карточка таблицы: таблица + пагинация-футер внутри одной карточки -->
+    <div id="certificates-table" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <!-- Загрузка -->
+      <div v-if="loading" class="flex items-center justify-center py-16 text-sm text-gray-500 dark:text-gray-400">
+        <div class="h-5 w-5 animate-spin rounded-full border-2 border-solid border-primary border-t-transparent"></div>
+        <span class="ml-3">Загрузка сертификатов...</span>
       </div>
 
-      <!-- Empty State -->
-      <div v-else-if="!data.length" class="p-16 text-center">
-        <div class="bg-slate-50 dark:bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FileCheck class="w-8 h-8 text-slate-300" />
-        </div>
-        <p class="text-lg font-bold text-slate-900 dark:text-white">
-          {{ hasActiveFilters ? 'По фильтрам не найдено' : 'Сертификаты пока не выданы' }}
-        </p>
-        <p class="mt-2 text-slate-500 font-medium max-w-sm mx-auto">
-          {{ hasActiveFilters ? 'Попробуйте изменить параметры фильтрации' : 'Добавьте первый сертификат через кнопку "Добавить вручную" или импорт' }}
-        </p>
-      </div>
+      <!-- Пусто: что случилось + что делать дальше (сбросить фильтры или добавить первый сертификат) -->
+      <UiEmptyState
+        v-else-if="!data.length"
+        :icon="FileCheck"
+        :title="hasActiveFilters ? 'По фильтрам ничего не найдено' : 'Сертификаты пока не выданы'"
+        :description="hasActiveFilters ? 'Попробуйте изменить параметры фильтрации' : 'Добавьте первый сертификат вручную или импортируйте из файла'"
+      >
+        <template #actions>
+          <UiButton v-if="hasActiveFilters" variant="outline" size="md" @click="resetFilters">Сбросить фильтры</UiButton>
+          <UiButton v-else variant="primary" size="md" :start-icon="Plus" @click="openManualFormModal">Добавить вручную</UiButton>
+        </template>
+      </UiEmptyState>
 
-      <!-- Data Table -->
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
+      <!-- Таблица: контейнер с ограничением высоты, шапка липкая -->
+      <div v-else class="max-h-[70vh] overflow-auto">
+        <table class="w-full border-collapse text-left">
           <thead>
-            <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-              <th
-                class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
-                @click="toggleSort('certificate_number')"
-              >
-                <div class="flex items-center gap-1.5">
+            <tr class="border-b border-gray-200 dark:border-gray-800">
+              <!-- Сортируемые колонки: кнопка внутри th (доступна с клавиатуры), прежний toggleSort -->
+              <th class="sticky top-0 z-10 bg-white px-4 py-3 dark:bg-gray-900" :aria-sort="ariaSort('certificate_number')">
+                <button type="button" class="flex items-center gap-1.5 text-xs font-medium text-gray-500 transition-colors hover:text-primary dark:text-gray-400" @click="toggleSort('certificate_number')">
                   № сертификата
                   <component :is="SortIcon" :active="filters.sortBy === 'certificate_number'" :order="filters.sortOrder" />
-                </div>
+                </button>
               </th>
-              <th
-                class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
-                @click="toggleSort('student_name')"
-              >
-                <div class="flex items-center gap-1.5">
+              <th class="sticky top-0 z-10 bg-white px-4 py-3 dark:bg-gray-900" :aria-sort="ariaSort('student_name')">
+                <button type="button" class="flex items-center gap-1.5 text-xs font-medium text-gray-500 transition-colors hover:text-primary dark:text-gray-400" @click="toggleSort('student_name')">
                   Слушатель
                   <component :is="SortIcon" :active="filters.sortBy === 'student_name'" :order="filters.sortOrder" />
-                </div>
+                </button>
               </th>
-              <th
-                class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
-                @click="toggleSort('course_name')"
-              >
-                <div class="flex items-center gap-1.5">
+              <th class="sticky top-0 z-10 bg-white px-4 py-3 dark:bg-gray-900" :aria-sort="ariaSort('course_name')">
+                <button type="button" class="flex items-center gap-1.5 text-xs font-medium text-gray-500 transition-colors hover:text-primary dark:text-gray-400" @click="toggleSort('course_name')">
                   Курс / Группа
                   <component :is="SortIcon" :active="filters.sortBy === 'course_name'" :order="filters.sortOrder" />
-                </div>
+                </button>
               </th>
-              <th
-                class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-primary transition-colors"
-                @click="toggleSort('issue_date')"
-              >
-                <div class="flex items-center gap-1.5">
+              <th class="sticky top-0 z-10 bg-white px-4 py-3 dark:bg-gray-900" :aria-sort="ariaSort('issue_date')">
+                <button type="button" class="flex items-center gap-1.5 text-xs font-medium text-gray-500 transition-colors hover:text-primary dark:text-gray-400" @click="toggleSort('issue_date')">
                   Дата выдачи
                   <component :is="SortIcon" :active="filters.sortBy === 'issue_date'" :order="filters.sortOrder" />
-                </div>
+                </button>
               </th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">
-                Статус
-              </th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">
-                Действия
+              <th class="sticky top-0 z-10 bg-white px-4 py-3 text-xs font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400">Статус</th>
+              <th class="sticky top-0 z-10 w-24 bg-white px-4 py-3 text-right text-xs font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+                <span class="sr-only">Действия</span>
               </th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             <tr
               v-for="cert in data"
               :key="cert.id"
-              class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group"
+              class="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
             >
-              <!-- № сертификата -->
-              <td class="px-6 py-4">
+              <!-- № сертификата (+ предупреждение, если выдан с замечаниями) -->
+              <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
-                  <span class="font-mono text-sm font-bold text-primary group-hover:text-primary/80 transition-colors">
-                    {{ cert.certificateNumber }}
-                  </span>
-                  <span
-                    v-if="cert.hasWarnings"
-                    class="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold bg-warning/10 text-warning"
-                    title="Выдан с предупреждениями"
+                  <span class="font-mono text-sm font-medium text-primary">{{ cert.certificateNumber }}</span>
+                  <AlertTriangle v-if="cert.hasWarnings" class="h-3.5 w-3.5 text-warning-600 dark:text-warning-400" title="Выдан с предупреждениями" />
+                </div>
+              </td>
+
+              <!-- Слушатель: ФИО, организация; ПИНФЛ скрыт маской -->
+              <td class="px-4 py-3">
+                <p class="text-sm font-medium text-gray-900 dark:text-white">{{ cert.student.fullName }}</p>
+                <p v-if="cert.student.organization" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {{ cert.student.organization }}
+                </p>
+                <UiSensitiveValue v-if="cert.student.pinfl" :value="cert.student.pinfl" class="mt-0.5 text-xs" />
+              </td>
+
+              <!-- Курс / Группа + метка источника -->
+              <td class="px-4 py-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ cert.course.name }}</p>
+                  <!-- Метки источника: один нейтральный стиль, AI выделен информационным цветом; шрифт не мельче 11px -->
+                  <UiBadge
+                    v-if="cert.sourceType === 'import' && cert.importSource === 'ai'"
+                    color="info"
+                    :title="cert.aiConfidence ? 'Уверенность AI: ' + Math.round(cert.aiConfidence * 100) + '%' : 'AI Импорт'"
                   >
-                    ⚠
-                  </span>
+                    <Zap class="mr-1 h-3 w-3" />AI{{ cert.aiConfidence ? ' ' + Math.round(cert.aiConfidence * 100) + '%' : '' }}
+                  </UiBadge>
+                  <UiBadge v-else-if="cert.sourceType === 'import'" color="light">
+                    <FileSpreadsheet class="mr-1 h-3 w-3" />Excel
+                  </UiBadge>
+                  <UiBadge v-else-if="cert.sourceType === 'manual'" color="light">Ручной</UiBadge>
                 </div>
+                <p v-if="cert.group.code" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  Группа: {{ cert.group.code }}
+                </p>
               </td>
 
-              <!-- Слушатель -->
-              <td class="px-6 py-4">
-                <div>
-                  <p class="font-bold text-slate-900 dark:text-white">{{ cert.student.fullName }}</p>
-                  <p v-if="cert.student.organization" class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                    {{ cert.student.organization }}
-                  </p>
-                  <p v-if="cert.student.pinfl" class="text-xs text-slate-400 font-mono mt-0.5">
-                    {{ cert.student.pinfl }}
-                  </p>
-                </div>
+              <!-- Дата выдачи + кто выдал -->
+              <td class="px-4 py-3">
+                <p class="text-sm text-gray-900 dark:text-white">{{ formatDate(cert.issueDate) }}</p>
+                <p v-if="cert.issuedBy" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{{ cert.issuedBy.name }}</p>
               </td>
 
-              <!-- Курс / Группа -->
-              <td class="px-6 py-4">
-                <div>
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <p class="font-bold text-slate-900 dark:text-white">{{ cert.course.name }}</p>
-                    <!-- Source badges -->
-                    <span
-                      v-if="cert.sourceType === 'import' && cert.importSource === 'ai'"
-                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-500/30"
-                      :title="cert.aiConfidence ? 'Уверенность AI: ' + Math.round(cert.aiConfidence * 100) + '%' : 'AI Импорт'"
-                    >
-                      <Zap class="w-2.5 h-2.5" />
-                      AI{{ cert.aiConfidence ? ' ' + Math.round(cert.aiConfidence * 100) + '%' : '' }}
-                    </span>
-                    <span
-                      v-else-if="cert.sourceType === 'import'"
-                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-success/5 text-success border border-success/20"
-                    >
-                      <FileSpreadsheet class="w-2.5 h-2.5" />
-                      Excel
-                    </span>
-                    <span
-                      v-else-if="cert.sourceType === 'manual'"
-                      class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-200 dark:border-purple-500/20"
-                    >
-                      ✍ Ручной
-                    </span>
-                  </div>
-                  <p v-if="cert.group.code" class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                    Группа: {{ cert.group.code }}
-                  </p>
-                </div>
-              </td>
-
-              <!-- Дата выдачи -->
-              <td class="px-6 py-4">
-                <div>
-                  <p class="font-bold text-slate-900 dark:text-white text-sm">{{ formatDate(cert.issueDate) }}</p>
-                  <p v-if="cert.issuedBy" class="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                    {{ cert.issuedBy.name }}
-                  </p>
-                </div>
-              </td>
-
-              <!-- Статус -->
-              <td class="px-6 py-4 text-center">
-                <span
-                  class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-black uppercase tracking-widest border"
-                  :class="cert.status === 'issued'
-                    ? 'bg-success/5 text-success border-success/20'
-                    : 'bg-danger/5 text-danger border-danger/20'"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full" :class="cert.status === 'issued' ? 'bg-success' : 'bg-danger'"></span>
+              <!-- Статус: UiBadge вместо самописной CAPS-плашки; причина отзыва — под бейджем -->
+              <td class="px-4 py-3">
+                <UiBadge :color="cert.status === 'issued' ? 'success' : 'error'">
                   {{ cert.status === 'issued' ? 'Выдан' : 'Отозван' }}
-                </span>
+                </UiBadge>
                 <p
                   v-if="cert.status === 'revoked' && cert.revokeReason"
-                  class="text-xs text-slate-400 mt-1 max-w-32 truncate mx-auto"
+                  class="mt-1 max-w-32 truncate text-xs text-gray-500 dark:text-gray-400"
                   :title="cert.revokeReason"
                 >
                   {{ cert.revokeReason }}
                 </p>
               </td>
 
-              <!-- Действия -->
-              <td class="px-6 py-4 text-center">
-                <div class="flex items-center justify-center gap-1">
+              <!-- Действия: 1 видимая иконка (скачать PDF) + «⋯» (подробнее, отзыв/удаление). Опасное — отдельной группой, последним -->
+              <td class="px-4 py-3">
+                <div class="flex items-center justify-end gap-1">
                   <a
                     v-if="cert.id"
                     :href="`/api/certificates/download/${cert.id}`"
                     target="_blank"
-                    class="p-2 rounded-lg text-primary hover:bg-primary/10 transition-colors"
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:text-gray-400 dark:hover:bg-white/[0.06] dark:hover:text-white"
                     title="Скачать PDF"
+                    aria-label="Скачать PDF"
                   >
                     <Download class="h-4 w-4" />
                   </a>
-                  <button
-                    @click="openDetailModal(cert)"
-                    class="p-2 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 dark:text-slate-400 transition-colors"
-                    title="Подробнее"
-                  >
-                    <Eye class="h-4 w-4" />
-                  </button>
-                  <button
-                    v-if="cert.status === 'issued'"
-                    @click="openRevokeModal(cert)"
-                    class="p-2 rounded-lg text-danger hover:bg-danger/10 transition-colors"
-                    title="Отозвать сертификат"
-                  >
-                    <XCircle class="h-4 w-4" />
-                  </button>
-                  <button
-                    v-else-if="cert.status === 'revoked'"
-                    @click="openDeleteModal(cert)"
-                    class="p-2 rounded-lg text-danger hover:bg-danger/10 transition-colors"
-                    title="Удалить полностью"
-                  >
-                    <Trash2 class="h-4 w-4" />
-                  </button>
+                  <UiDropdown
+                    icon-only
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Другие действия"
+                    :groups="rowMenu(cert)"
+                    @select="(key: string) => onRowAction(key, cert)"
+                  />
                 </div>
               </td>
             </tr>
@@ -462,38 +251,18 @@
         </table>
       </div>
 
-      <!-- Pagination -->
-      <div
-        v-if="pagination.totalPages > 1"
-        class="px-6 py-4 bg-slate-50/30 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"
-      >
-        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">
-          Показано {{ (pagination.page - 1) * pagination.limit + 1 }} — {{ Math.min(pagination.page * pagination.limit, pagination.total) }} из {{ pagination.total }}
-        </span>
-        <div class="flex gap-2">
-          <UiButton
-            variant="outline"
-            size="sm"
-            class="h-8 px-3 font-bold"
-            :disabled="pagination.page <= 1"
-            @click="goToPage(pagination.page - 1)"
-          >
-            Назад
-          </UiButton>
-          <span class="flex items-center px-3 text-sm font-bold text-slate-600 dark:text-slate-400">
-            {{ pagination.page }} / {{ pagination.totalPages }}
-          </span>
-          <UiButton
-            variant="outline"
-            size="sm"
-            class="h-8 px-3 font-bold"
-            :disabled="pagination.page >= pagination.totalPages"
-            @click="goToPage(pagination.page + 1)"
-          >
-            Вперёд
-          </UiButton>
-        </div>
-      </div>
+      <!-- Пагинация: единый UiPagination вместо самописных «Назад/Вперёд»; лимит страницы на этой странице не меняется -->
+      <UiPagination
+        v-if="pagination.totalPages > 0 && !loading"
+        :current-page="pagination.page"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        :loading="loading"
+        hide-limit
+        scroll-target="#certificates-table"
+        @update:page="goToPage"
+      />
     </div>
 
     <!-- Modals -->
@@ -511,29 +280,30 @@
       size="md"
     >
       <div class="space-y-4">
-        <div class="p-4 bg-danger/5 border border-danger/20 rounded-xl">
-          <p class="text-danger font-bold flex items-center gap-2">
-            <AlertTriangle class="w-4 h-4" />
+        <!-- Предупреждение: спокойный красный блок без жирных акцентов -->
+        <div class="rounded-xl border border-error-200 bg-error-50 p-4 dark:border-error-500/20 dark:bg-error-500/10">
+          <p class="flex items-center gap-2 text-sm font-semibold text-error-700 dark:text-error-400">
+            <AlertTriangle class="h-4 w-4" />
             Внимание!
           </p>
-          <p class="text-sm text-slate-600 dark:text-slate-400 mt-2">
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Вы собираетесь отозвать сертификат
-            <span class="font-mono font-bold">{{ revokeTarget?.certificateNumber }}</span>
+            <span class="font-mono font-medium">{{ revokeTarget?.certificateNumber }}</span>
             слушателя
-            <span class="font-bold">{{ revokeTarget?.student.fullName }}</span>.
+            <span class="font-medium">{{ revokeTarget?.student.fullName }}</span>.
             Это действие будет записано в журнал.
           </p>
         </div>
 
         <div>
-          <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-            Причина отзыва <span class="text-danger">*</span>
+          <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Причина отзыва <span class="text-error-600">*</span>
           </label>
           <textarea
             v-model="revokeReason"
             rows="3"
             placeholder="Укажите причину отзыва сертификата..."
-            class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 py-2.5 px-4 text-slate-900 dark:text-white outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all resize-none"
+            class="w-full resize-none rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-white"
           ></textarea>
         </div>
 
@@ -582,13 +352,14 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
 import { ref, computed, onMounted, defineComponent, h } from 'vue';
 import * as XLSX from 'xlsx';
+// Убраны иконки Filter/RotateCcw/Search/Layers/CalendarRange (фильтры рисует UiFilterBar)
 import {
-  Plus, FileCheck, CheckCircle, XCircle, Building2, Users, Filter,
-  RotateCcw, Search, Download, Eye, Zap, FileSpreadsheet, Layers,
-  CalendarRange, AlertTriangle, Trash2,
+  Plus, FileCheck, CheckCircle, XCircle, Building2, Users,
+  Download, Eye, Zap, FileSpreadsheet, AlertTriangle, Trash2,
 } from 'lucide-vue-next';
 
 const { authFetch } = useAuthFetch();
@@ -600,7 +371,8 @@ const SortIcon = defineComponent({
   setup(props) {
     return () =>
       h('svg', {
-        class: ['h-3.5 w-3.5 transition-colors', props.active ? 'text-primary' : 'text-slate-300'],
+        // Нейтральный gray вместо slate — единая палитра
+        class: ['h-3.5 w-3.5 transition-colors', props.active ? 'text-primary' : 'text-gray-300 dark:text-gray-600'],
         fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24',
       }, [
         h('path', {
@@ -691,6 +463,92 @@ async function loadData() {
   } finally {
     loading.value = false;
   }
+}
+
+// ---- Презентационные хелперы для UiFilterBar, меню и таблицы (запросы и логика фильтров не затронуты) ----
+
+// Сегмент статуса: пишем в тот же filters.status и зовём прежний handleFilterChange
+function onStatusSegment(value: string | number | boolean) {
+  filters.value.status = String(value);
+  handleFilterChange();
+}
+
+// Сколько фильтров из раскрывающейся панели применено (статус и поиск видны сами) — для бейджа на кнопке «Фильтры»
+const activeFilterCount = computed(() =>
+  [
+    filters.value.sourceType !== 'all',
+    !!filters.value.organizationName,
+    !!filters.value.templateId,
+    !!filters.value.dateFrom,
+    !!filters.value.dateTo,
+  ].filter(Boolean).length
+);
+
+// Чипы применённых фильтров: состояние видно без раскрытия панели
+const filterChips = computed(() => {
+  const f = filters.value;
+  const chips: { key: string; label: string }[] = [];
+  if (f.status !== 'all') chips.push({ key: 'status', label: `Статус: ${statusOptions.find((o) => o.value === f.status)?.label ?? f.status}` });
+  if (f.sourceType !== 'all') chips.push({ key: 'sourceType', label: `Источник: ${sourceOptions.find((o) => o.value === f.sourceType)?.label ?? f.sourceType}` });
+  if (f.organizationName) chips.push({ key: 'organizationName', label: `Организация: ${f.organizationName}` });
+  if (f.templateId) chips.push({ key: 'templateId', label: `Шаблон: ${templates.value.find((t) => t.id === f.templateId)?.name ?? '…'}` });
+  if (f.dateFrom) chips.push({ key: 'dateFrom', label: `С ${f.dateFrom}` });
+  if (f.dateTo) chips.push({ key: 'dateTo', label: `По ${f.dateTo}` });
+  return chips;
+});
+
+// Снятие одного чипа: возвращаем значение по умолчанию и используем прежний handleFilterChange
+function removeFilterChip(key: string) {
+  const f = filters.value as Record<string, any>;
+  f[key] = key === 'status' || key === 'sourceType' ? 'all' : '';
+  handleFilterChange();
+}
+
+// Меню «Импорт и выгрузка»: импорт — ссылки, выгрузка — прежние функции; недоступные пункты блокируются теми же условиями, что были у кнопок
+const toolbarMenu = computed(() => [
+  {
+    label: 'Импорт',
+    items: [
+      { key: 'import-excel', label: 'Импорт из Excel', icon: FileSpreadsheet, to: '/database/import-certificates' },
+      { key: 'import-ai', label: 'AI-импорт', icon: Zap, to: '/admin/database/ai-import-certificates' },
+    ],
+  },
+  {
+    label: 'Выгрузка',
+    items: [
+      { key: 'download-excel', label: 'Скачать Excel', description: 'Все по текущим фильтрам', icon: FileSpreadsheet, loading: isDownloadingExcel.value, disabled: loading.value || isDownloadingExcel.value || !pagination.value.total },
+      { key: 'export', label: 'Экспорт…', icon: Download, disabled: loading.value || !data.value.length },
+    ],
+  },
+]);
+function onToolbarSelect(key: string) {
+  if (key === 'download-excel') downloadExcel();
+  else if (key === 'export') openExportModal();
+}
+
+// Меню строки «⋯»: «Подробнее» — безопасное; отзыв/удаление (опасные) — отдельной группой в конце
+function rowMenu(cert: any) {
+  return [
+    { items: [{ key: 'details', label: 'Подробнее', icon: Eye }] },
+    {
+      items: [
+        { key: 'revoke', label: 'Отозвать сертификат', icon: XCircle, danger: true, hidden: cert.status !== 'issued' },
+        { key: 'delete', label: 'Удалить полностью', icon: Trash2, danger: true, hidden: cert.status !== 'revoked' },
+      ],
+    },
+  ];
+}
+// Выбор пункта → прежние обработчики модалок (подтверждение остаётся в модалках)
+function onRowAction(key: string, cert: any) {
+  if (key === 'details') openDetailModal(cert);
+  else if (key === 'revoke') openRevokeModal(cert);
+  else if (key === 'delete') openDeleteModal(cert);
+}
+
+// aria-sort для заголовков сортируемых колонок (доступность для скринридеров)
+function ariaSort(field: string): 'ascending' | 'descending' | 'none' {
+  if (filters.value.sortBy !== field) return 'none';
+  return filters.value.sortOrder === 'asc' ? 'ascending' : 'descending';
 }
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;

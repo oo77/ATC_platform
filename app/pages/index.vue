@@ -1,15 +1,17 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl space-y-6">
+  <!-- Обёртка без двойного отступа: внешние отступы даёт layout -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
     <Suspense>
       <component :is="activeDashboardComponent" />
       <template #fallback>
         <div class="space-y-4">
-          <div class="h-24 rounded-2xl bg-white/80 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/70 dark:ring-slate-800 skeleton" />
+          <!-- Скелетон дашборда: единая нейтральная палитра gray, без теней (редизайн) -->
+          <div class="h-24 rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] skeleton" />
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div
               v-for="i in 4"
               :key="`dashboard-skeleton-card-${i}`"
-              class="h-28 rounded-2xl bg-white/80 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/70 dark:ring-slate-800 skeleton"
+              class="h-28 rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] skeleton"
             />
           </div>
         </div>
@@ -41,9 +43,10 @@ const DashboardFallback = defineComponent({
   name: "DashboardFallback",
   setup() {
     return () =>
-      h("div", { class: "rounded-2xl border border-slate-200/70 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/70" }, [
-        h("h1", { class: "text-xl font-bold text-slate-900 dark:text-white" }, "Панель управления"),
-        h("p", { class: "mt-2 text-sm text-slate-600 dark:text-slate-300" }, "Для вашей роли пока не настроен отдельный дашборд."),
+      // Презентационно: карточка и заголовок приведены к общей системе (gray, font-semibold)
+      h("div", { class: "rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.03]" }, [
+        h("h1", { class: "text-2xl font-semibold text-gray-900 dark:text-white" }, "Панель управления"),
+        h("p", { class: "mt-2 text-sm text-gray-600 dark:text-gray-300" }, "Для вашей роли пока не настроен отдельный дашборд."),
       ]);
   },
 });

@@ -1,350 +1,195 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Loading State -->
-    <div v-if="loading" class="flex justify-center items-center py-20">
-      <div class="flex flex-col items-center gap-4">
-        <div class="h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent shadow-lg"></div>
-        <p class="text-slate-500 font-medium animate-pulse">Загрузка профиля...</p>
+  <!-- Внешний враппер без двойного отступа (отступ задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Загрузка: компактный спиннер -->
+    <div v-if="loading" class="flex items-center justify-center py-20">
+      <div class="flex flex-col items-center gap-3">
+        <div class="h-8 w-8 animate-spin rounded-full border-2 border-solid border-primary border-t-transparent"></div>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Загрузка профиля...</p>
       </div>
     </div>
 
-    <!-- Error State -->
-    <div v-else-if="error" class="rounded-3xl border border-danger/20 bg-danger/5 p-8 text-center backdrop-blur-sm animate-in fade-in zoom-in duration-300">
-      <AlertCircle class="h-16 w-16 text-danger mx-auto mb-4" />
-      <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Ошибка загрузки</h3>
-      <p class="text-gray-600 dark:text-gray-400 mb-6">{{ error }}</p>
-      <UiButton variant="primary" @click="loadProfile" class="shadow-lg shadow-primary/20">
-        Попробовать снова
-      </UiButton>
+    <!-- Ошибка: плоская карточка без blur и больших радиусов, одно действие -->
+    <div v-else-if="error" class="rounded-xl border border-danger/20 bg-danger/5 p-8 text-center">
+      <AlertCircle class="mx-auto mb-3 h-10 w-10 text-danger" />
+      <h3 class="mb-1 text-xl font-semibold text-gray-900 dark:text-white">Ошибка загрузки</h3>
+      <p class="mb-5 text-sm text-gray-600 dark:text-gray-400">{{ error }}</p>
+      <UiButton variant="primary" @click="loadProfile">Попробовать снова</UiButton>
     </div>
 
-    <!-- Profile Content -->
-    <div v-else-if="profile" class="animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <!-- Header Section - New Design -->
-      <div class="mb-8">
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between bg-white dark:bg-slate-900 p-6 rounded-4xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
-          <!-- Profile Main Info -->
-          <div class="flex items-center gap-6">
-            <div class="relative shrink-0">
-              <div class="w-24 h-24 rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-900 shadow-2xl relative group">
-                <img 
-                  v-if="profile.photo_base64 || (isTeacher && instructorData?.photo_base64) || (isStudent && studentData?.photo_base64)"
-                  :src="profile.photo_base64 || (isTeacher ? instructorData?.photo_base64 : studentData?.photo_base64)" 
-                  class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-                />
-                <div v-else class="w-full h-full flex items-center justify-center bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
-                  <span class="text-3xl font-black">{{ getInitials(profile.name) }}</span>
+    <!-- Содержимое профиля -->
+    <div v-else-if="profile" class="space-y-4">
+      <!-- Единая шапка: имя (text-xl/2xl), роль бейджем, контакты в мета-строке; крошка — «Личный кабинет» -->
+      <UiPageHeader :title="profile.name" :breadcrumbs="[{ label: 'Личный кабинет' }]">
+        <template #badge>
+          <span class="rounded-md border border-primary/20 bg-primary/5 px-2 py-0.5 text-xs font-medium text-primary">
+            {{ getRoleLabel(profile.role) }}
+          </span>
+        </template>
+
+        <!-- Контакты; телефон скрыт маской (показать/копировать по кнопке) -->
+        <template #meta>
+          <span class="inline-flex items-center gap-1.5"><Mail class="h-3.5 w-3.5 text-gray-400" />{{ profile.email }}</span>
+          <span v-if="profile.phone" class="inline-flex items-center gap-1.5">
+            <Phone class="h-3.5 w-3.5 text-gray-400" />
+            <UiSensitiveValue :value="profile.phone" :visible-tail="4" />
+          </span>
+          <span v-if="isStudent && studentData?.organization" class="inline-flex items-center gap-1.5">
+            <BuildingIcon class="h-3.5 w-3.5 text-gray-400" />{{ studentData.organization }}
+          </span>
+        </template>
+
+        <!-- Действия: «Карточка PDF» — главное (для инструктора/студента), «Изменить данные» — вторичное -->
+        <template #actions>
+          <UiButton v-if="isTeacher || isStudent" variant="primary" :start-icon="FileDown" @click="exportProfilePDF">Карточка PDF</UiButton>
+          <UiButton v-if="isAdmin || isManager" variant="outline" :start-icon="Settings" @click="openEditModal">Изменить данные</UiButton>
+        </template>
+      </UiPageHeader>
+
+      <!-- Аватар + полоса метрик в одну строку (вместо «bento»-карточек с декоративными иконками) -->
+      <div class="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+        <!-- Фото: убран hover-оверлей с камерой (загрузки фото здесь нет — он вводил в заблуждение) -->
+        <div class="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-800">
+          <img
+            v-if="profile.photo_base64 || (isTeacher && instructorData?.photo_base64) || (isStudent && studentData?.photo_base64)"
+            :src="profile.photo_base64 || (isTeacher ? instructorData?.photo_base64 : studentData?.photo_base64)"
+            class="h-full w-full object-cover"
+          />
+          <div v-else class="flex h-full w-full items-center justify-center bg-primary/10 text-primary">
+            <span class="text-xl font-semibold">{{ getInitials(profile.name) }}</span>
+          </div>
+        </div>
+
+        <!-- Метрики инструктора -->
+        <div v-if="isTeacher && instructorData" class="grid min-w-0 flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
+          <UiStat
+            label="Квалификация"
+            :value="instructorData.academic_degree || instructorData.education || 'Не указана'"
+            :hint="instructorData.academic_rank || '—'"
+            :icon="GraduationCap"
+            tone="primary"
+          />
+          <UiStat
+            label="Загрузка часов"
+            :value="`${instructorData.usedHours || 0} / ${instructorData.maxHours || '∞'}`"
+            :icon="Clock"
+            tone="success"
+            :progress="Math.min(((instructorData.usedHours || 0) / (instructorData.maxHours || 1)) * 100, 100)"
+          />
+          <UiStat label="Стаж в центре" :value="teacherExperience" :hint="`С ${formatDateShort(instructorData.hireDate)}`" :icon="Calendar" tone="warning" />
+          <UiStat
+            label="Языки"
+            :value="instructorData.languages?.length || 0"
+            :hint="instructorData.languages?.length ? instructorData.languages.map((l) => languageMap[l] || l).join(', ') : 'Не указаны'"
+            :icon="GlobeIcon"
+            tone="info"
+          />
+        </div>
+
+        <!-- Метрики студента -->
+        <div v-else-if="isStudent && studentData" class="grid min-w-0 flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
+          <UiStat label="Сертификаты" :value="studentData.certificates?.length || 0" hint="Всего получено" :icon="Award" tone="warning" />
+          <UiStat label="Курсы" :value="studentCourses.length" :hint="`${activeStudentCourses.length} активных`" :icon="BookOpen" tone="primary" />
+          <UiStat label="Посещаемость" :value="`${averageStudentProgress}%`" :icon="Activity" tone="success" :progress="averageStudentProgress" />
+          <UiStat label="В системе" :value="studentRegistrationDays" :hint="`С ${formatDateShort(profile.created_at)}`" :icon="Calendar" tone="info" />
+        </div>
+
+        <!-- Метрики администратора: цвет задаётся через tone, а не динамическим bg-${color} (Tailwind такие классы не генерирует) -->
+        <div v-else-if="isAdmin" class="grid min-w-0 flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
+          <UiStat v-for="stat in adminStatsList" :key="stat.label" :label="stat.label" :value="stat.value" :icon="stat.icon" :tone="stat.color" />
+        </div>
+      </div>
+
+      <!-- Вкладки через UiTabs -->
+      <UiTabs v-model="activeTab" :tabs="roleTabs" />
+
+      <!-- Содержимое вкладок -->
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <!-- Основная область -->
+        <div class="space-y-4 lg:col-span-8">
+          <!-- Вкладка «Обзор» -->
+          <div v-show="activeTab === 'overview'" class="space-y-4">
+            <!-- Основные данные -->
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-2 border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+                <User class="h-4 w-4 text-gray-400" />
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Основные данные</h3>
+              </div>
+              <div class="grid grid-cols-1 gap-x-8 gap-y-4 p-5 sm:grid-cols-2">
+                <div>
+                  <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Полное имя</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ profile.name }}</p>
                 </div>
-                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                   <Camera class="w-8 h-8 text-white" />
+                <div>
+                  <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Email адрес</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ profile.email }}</p>
                 </div>
-              </div>
-              <div class="absolute -bottom-1 -right-1 h-7 w-7 bg-success rounded-xl border-4 border-white dark:border-slate-900 flex items-center justify-center shadow-lg">
-                <Check class="w-4 h-4 text-white" />
-              </div>
-            </div>
-
-            <div>
-              <div class="flex flex-wrap items-center gap-3 mb-2">
-                <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">
-                  {{ profile.name }}
-                </h1>
-                <div class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-primary/20 bg-primary/5 text-primary shadow-sm">
-                  {{ getRoleLabel(profile.role) }}
+                <div>
+                  <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Телефон</p>
+                  <UiSensitiveValue v-if="profile.phone" :value="profile.phone" :visible-tail="4" class="text-gray-900 dark:text-white" />
+                  <p v-else class="text-sm font-medium text-gray-900 dark:text-white">Не указан</p>
                 </div>
-              </div>
-              <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-semibold text-slate-500">
-                <div class="flex items-center gap-2"><Mail class="w-4 h-4 text-slate-400" />{{ profile.email }}</div>
-                <div v-if="profile.phone" class="flex items-center gap-2"><Phone class="w-4 h-4 text-slate-400" />{{ profile.phone }}</div>
-                <div v-if="isStudent && studentData?.organization" class="flex items-center gap-2"><BuildingIcon class="w-4 h-4 text-slate-400" />{{ studentData.organization }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Actions -->
-          <div class="flex flex-wrap items-center gap-3">
-            <template v-if="isTeacher || isStudent">
-              <UiButton variant="primary" size="md" class="rounded-2xl gap-2 font-bold shadow-lg shadow-primary/20 px-6" @click="exportProfilePDF">
-                <FileDown class="w-4 h-4" /> Карточка PDF
-              </UiButton>
-            </template>
-            <UiButton v-if="isAdmin || isManager" variant="outline" size="md" class="rounded-2xl gap-2 font-bold border-slate-200 dark:border-slate-700 px-6" @click="openEditModal">
-              <Settings class="w-4 h-4" /> Изменить данные
-            </UiButton>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bento Box Metrics Grid -->
-      <div v-if="isTeacher && instructorData" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-          <div class="flex items-center justify-between relative z-10">
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Квалификация</p>
-              <h3 class="text-base font-bold text-slate-900 dark:text-white line-clamp-1">
-                {{ instructorData.academic_degree || instructorData.education || "Не указана" }}
-              </h3>
-              <p class="text-xs text-slate-500 mt-0.5">{{ instructorData.academic_rank || '—' }}</p>
-            </div>
-            <div class="rounded-2xl bg-primary/10 p-3 text-primary group-hover:scale-110 transition-transform">
-              <GraduationCap class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-            <GraduationCap class="w-24 h-24 text-primary" />
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-          <div class="flex items-center justify-between relative z-10">
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Загрузка часов</p>
-              <h3 class="text-xl font-black text-slate-900 dark:text-white">
-                {{ instructorData.usedHours || 0 }} / {{ instructorData.maxHours || '∞' }}
-              </h3>
-              <div class="mt-2 h-1.5 w-32 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                <div class="h-full bg-success rounded-full transition-all duration-1000" :style="{ width: `${Math.min(((instructorData.usedHours || 0) / (instructorData.maxHours || 1)) * 100, 100)}%` }"></div>
-              </div>
-            </div>
-            <div class="rounded-2xl bg-success/10 p-3 text-success group-hover:scale-110 transition-transform">
-              <Clock class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-            <Clock class="w-24 h-24 text-success" />
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-          <div class="flex items-center justify-between relative z-10">
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Стаж в центре</p>
-              <h3 class="text-base font-bold text-slate-900 dark:text-white">{{ teacherExperience }}</h3>
-              <p class="text-xs text-slate-500 mt-0.5">С {{ formatDateShort(instructorData.hireDate) }}</p>
-            </div>
-            <div class="rounded-2xl bg-warning/10 p-3 text-warning group-hover:scale-110 transition-transform">
-              <Calendar class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-            <Calendar class="w-24 h-24 text-warning" />
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-          <div class="flex items-center justify-between relative z-10">
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Языки</p>
-              <div class="flex flex-wrap gap-1 mt-1">
-                <span v-for="lang in instructorData.languages" :key="lang" class="px-2 py-0.5 rounded-lg bg-info/10 text-info text-[10px] font-black uppercase">
-                  {{ languageMap[lang] || lang }}
-                </span>
-                <span v-if="!instructorData.languages?.length" class="text-base font-bold text-slate-900 dark:text-white">Не указаны</span>
-              </div>
-            </div>
-            <div class="rounded-2xl bg-info/10 p-3 text-info group-hover:scale-110 transition-transform">
-              <GlobeIcon class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-            <GlobeIcon class="w-24 h-24 text-info" />
-          </div>
-        </div>
-      </div>
-
-      <div v-else-if="isStudent && studentData" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-          <div class="flex items-center justify-between relative z-10">
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Сертификаты</p>
-              <h3 class="text-2xl font-black text-slate-900 dark:text-white">{{ studentData.certificates?.length || 0 }}</h3>
-              <p class="text-xs text-slate-500 mt-0.5">Всего получено</p>
-            </div>
-            <div class="rounded-2xl bg-warning/10 p-3 text-warning group-hover:scale-110 transition-transform">
-              <Award class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-            <Award class="w-24 h-24 text-warning" />
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-          <div class="flex items-center justify-between relative z-10">
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Курсы</p>
-              <h3 class="text-2xl font-black text-slate-900 dark:text-white">{{ studentCourses.length }}</h3>
-              <p class="text-xs text-slate-500 mt-0.5">{{ activeStudentCourses.length }} активных</p>
-            </div>
-            <div class="rounded-2xl bg-primary/10 p-3 text-primary group-hover:scale-110 transition-transform">
-              <BookOpen class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-            <BookOpen class="w-24 h-24 text-primary" />
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-          <div class="flex items-center justify-between relative z-10">
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Посещаемость</p>
-              <h3 class="text-2xl font-black text-slate-900 dark:text-white">{{ averageStudentProgress }}%</h3>
-              <div class="mt-2 h-1.5 w-32 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                <div class="h-full bg-success rounded-full transition-all duration-1000" :style="{ width: `${averageStudentProgress}%` }"></div>
-              </div>
-            </div>
-            <div class="rounded-2xl bg-success/10 p-3 text-success group-hover:scale-110 transition-transform">
-              <Activity class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-            <Activity class="w-24 h-24 text-success" />
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
-          <div class="flex items-center justify-between relative z-10">
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">В системе</p>
-              <h3 class="text-base font-bold text-slate-900 dark:text-white">{{ studentRegistrationDays }}</h3>
-              <p class="text-xs text-slate-500 mt-0.5">С {{ formatDateShort(profile.created_at) }}</p>
-            </div>
-            <div class="rounded-2xl bg-info/10 p-3 text-info group-hover:scale-110 transition-transform">
-              <Calendar class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
-            <Calendar class="w-24 h-24 text-info" />
-          </div>
-        </div>
-      </div>
-
-      <div v-else-if="isAdmin" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div v-for="stat in adminStatsList" :key="stat.label" class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm group">
-          <div class="flex items-center gap-4">
-            <div :class="`rounded-2xl p-3 bg-${stat.color}/10 text-${stat.color} group-hover:scale-110 transition-transform`">
-              <component :is="stat.icon" class="w-6 h-6" />
-            </div>
-            <div>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{{ stat.label }}</p>
-              <p class="text-2xl font-black text-slate-900 dark:text-white leading-none">{{ stat.value }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tabs Navigation -->
-      <div class="mb-6 overflow-x-auto custom-scrollbar pb-1">
-        <div class="inline-flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800/50 backdrop-blur-sm">
-          <nav class="flex gap-1" aria-label="Tabs">
-            <button
-              v-for="tab in roleTabs"
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              :class="[
-                'flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black transition-all duration-300 whitespace-nowrap uppercase tracking-wider',
-                activeTab === tab.id
-                  ? 'bg-white text-primary shadow-lg dark:bg-slate-700 dark:text-white'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
-              ]"
-            >
-              <component :is="tab.icon" class="h-4 w-4" />
-              {{ tab.label }}
-            </button>
-          </nav>
-        </div>
-      </div>
-
-      <!-- Tab Content Area -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <!-- Main Content Area -->
-        <div class="lg:col-span-8 space-y-6">
-          <!-- OVERVIEW TAB -->
-          <div v-show="activeTab === 'overview'" class="space-y-6 animate-in fade-in duration-500">
-            <!-- Personal Info Card -->
-            <div class="rounded-4xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-              <div class="flex items-center gap-2 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                <User class="w-4 h-4 text-info" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Основные данные</h3>
-              </div>
-              <div class="p-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div class="space-y-1">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Полное имя</p>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ profile.name }}</p>
-                  </div>
-                  <div class="space-y-1">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email адрес</p>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ profile.email }}</p>
-                  </div>
-                  <div class="space-y-1">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Телефон</p>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ profile.phone || 'Не указан' }}</p>
-                  </div>
-                  <div v-if="profile.pinfl" class="space-y-1">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">ПИНФЛ</p>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white font-mono tracking-wider">{{ profile.pinfl }}</p>
-                  </div>
-                  <div v-if="profile.workplace" class="space-y-1">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Место работы</p>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ profile.workplace }}</p>
-                  </div>
-                  <div v-if="profile.position" class="space-y-1">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Должность</p>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white">{{ profile.position }}</p>
-                  </div>
+                <div v-if="profile.pinfl">
+                  <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">ПИНФЛ</p>
+                  <!-- ПИНФЛ: маска + показать + копировать -->
+                  <UiSensitiveValue :value="profile.pinfl" class="text-gray-900 dark:text-white" />
+                </div>
+                <div v-if="profile.workplace">
+                  <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Место работы</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ profile.workplace }}</p>
+                </div>
+                <div v-if="profile.position">
+                  <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Должность</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ profile.position }}</p>
                 </div>
               </div>
             </div>
 
-            <!-- Role Specific Data -->
+            <!-- Данные, зависящие от роли -->
             <template v-if="isTeacher && instructorData">
-              <!-- Education for Teacher -->
-              <div class="rounded-4xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-                <div class="flex items-center gap-2 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                  <SchoolIcon class="w-4 h-4 text-primary" />
-                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Образование</h3>
+              <!-- Образование инструктора -->
+              <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+                <div class="flex items-center gap-2 border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+                  <SchoolIcon class="h-4 w-4 text-gray-400" />
+                  <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Образование</h3>
                 </div>
-                <div v-if="!instructorData.education_history?.length" class="p-8 text-center text-slate-400">
+                <div v-if="!instructorData.education_history?.length" class="p-8 text-center text-sm text-gray-400">
                   Сведения об образовании не указаны
                 </div>
-                <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
-                  <div v-for="(edu, idx) in instructorData.education_history" :key="idx" class="p-6">
+                <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
+                  <div v-for="(edu, idx) in instructorData.education_history" :key="idx" class="p-5">
                     <div class="flex items-start justify-between gap-4">
-                      <div class="flex items-start gap-4">
-                         <div class="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                           <SchoolIcon class="w-5 h-5" />
-                         </div>
-                         <div>
-                           <p class="text-base font-bold text-slate-900 dark:text-white">{{ edu.university }}</p>
-                           <p class="text-xs font-black text-primary mt-1 uppercase tracking-widest">{{ edu.education }}</p>
-                           <p class="text-sm text-slate-500 mt-1">{{ edu.specialty }}</p>
-                         </div>
+                      <div class="flex items-start gap-3">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <SchoolIcon class="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p class="text-sm font-medium text-gray-900 dark:text-white">{{ edu.university }}</p>
+                          <p class="mt-0.5 text-xs font-medium text-primary">{{ edu.education }}</p>
+                          <p class="mt-1 text-sm text-gray-500">{{ edu.specialty }}</p>
+                        </div>
                       </div>
-                      <div class="text-right">
-                        <span class="text-sm font-black text-slate-400">{{ edu.year_start }} - {{ edu.year_end }}</span>
-                      </div>
+                      <span class="shrink-0 text-sm text-gray-400">{{ edu.year_start }} - {{ edu.year_end }}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Experience for Teacher -->
-              <div class="rounded-4xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-                <div class="flex items-center gap-2 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                  <BriefcaseIcon class="w-4 h-4 text-info" />
-                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Опыт работы</h3>
+              <!-- Опыт работы инструктора -->
+              <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+                <div class="flex items-center gap-2 border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+                  <BriefcaseIcon class="h-4 w-4 text-gray-400" />
+                  <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Опыт работы</h3>
                 </div>
-                <div v-if="!instructorData.work_experience?.length" class="p-8 text-center text-slate-400">Опыт работы не указан</div>
-                <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
-                  <div v-for="(exp, idx) in instructorData.work_experience" :key="idx" class="p-6 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                    <div class="flex justify-between items-start">
+                <div v-if="!instructorData.work_experience?.length" class="p-8 text-center text-sm text-gray-400">Опыт работы не указан</div>
+                <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
+                  <div v-for="(exp, idx) in instructorData.work_experience" :key="idx" class="p-4 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]">
+                    <div class="flex items-start justify-between gap-3">
                       <div>
-                        <p class="text-base font-bold text-slate-900 dark:text-white">{{ exp.employer }}</p>
-                        <p class="text-xs font-black text-info uppercase tracking-widest mt-1">{{ exp.position }}</p>
+                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ exp.employer }}</p>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ exp.position }}</p>
                       </div>
-                      <span class="text-sm font-black text-slate-400">{{ exp.period }}</span>
+                      <span class="shrink-0 text-sm text-gray-400">{{ exp.period }}</span>
                     </div>
                   </div>
                 </div>
@@ -352,99 +197,97 @@
             </template>
           </div>
 
-          <!-- TEACHER: HOURS & HISTORY -->
+          <!-- Инструктор: часы и история -->
           <template v-if="isTeacher && instructorData">
-            <div v-show="activeTab === 'hours'" class="animate-in fade-in duration-500">
+            <div v-show="activeTab === 'hours'">
               <InstructorsHoursStats :instructor-id="instructorData.id" :initial-load="false" ref="hoursStatsRef" />
             </div>
-            <div v-show="activeTab === 'history'" class="animate-in fade-in duration-500">
+            <div v-show="activeTab === 'history'">
               <InstructorsCourseHistory :instructor-id="instructorData.id" :initial-load="false" ref="courseHistoryRef" />
             </div>
           </template>
 
-          <!-- STUDENT: COURSES & CERTIFICATES -->
+          <!-- Студент: обучение и сертификаты -->
           <template v-if="isStudent && studentData">
-            <div v-show="activeTab === 'courses'" class="space-y-4 animate-in fade-in duration-500">
-              <div v-if="coursesLoading" class="flex justify-center py-20">
-                <div class="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+            <div v-show="activeTab === 'courses'" class="space-y-4">
+              <div v-if="coursesLoading" class="flex justify-center py-16">
+                <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
               </div>
               <template v-else-if="studentCourses.length > 0">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div v-for="course in studentCourses" :key="course.group_id" class="p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-primary/30 transition-all shadow-sm">
-                    <div class="flex justify-between items-start mb-4">
-                      <div>
-                        <h4 class="text-base font-bold text-slate-900 dark:text-white line-clamp-1">{{ course.course_name }}</h4>
-                        <p class="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{{ course.group_name }}</p>
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div v-for="course in studentCourses" :key="course.group_id" class="rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-primary/40 dark:border-gray-800 dark:bg-white/[0.03]">
+                    <div class="mb-3 flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <h4 class="line-clamp-1 text-sm font-medium text-gray-900 dark:text-white">{{ course.course_name }}</h4>
+                        <p class="mt-0.5 text-xs text-gray-500">{{ course.group_name }}</p>
                       </div>
-                      <div :class="`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${course.status === 'active' ? 'bg-success/10 text-success' : 'bg-slate-100 text-slate-500'}`">
+                      <span :class="`shrink-0 rounded-md px-2 py-0.5 text-xs font-medium ${course.status === 'active' ? 'bg-success/10 text-success' : 'bg-gray-100 text-gray-500 dark:bg-white/[0.06]'}`">
                         {{ course.status === 'active' ? 'Активен' : 'Завершен' }}
-                      </div>
+                      </span>
                     </div>
-                    <div class="space-y-3">
-                      <div class="flex justify-between text-xs font-black uppercase text-slate-400">
+                    <div class="space-y-2">
+                      <div class="flex justify-between text-xs text-gray-400">
                         <span>Прогресс</span>
-                        <span class="text-primary">{{ course.progress }}%</span>
+                        <span class="font-semibold text-primary">{{ course.progress }}%</span>
                       </div>
-                      <div class="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div class="h-full bg-primary rounded-full transition-all duration-1000" :style="{ width: `${course.progress}%` }"></div>
+                      <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div class="h-full rounded-full bg-primary transition-all duration-500" :style="{ width: `${course.progress}%` }"></div>
                       </div>
                     </div>
                   </div>
                 </div>
               </template>
-              <div v-else class="p-10 text-center bg-slate-50 dark:bg-slate-800/30 rounded-3xl border-2 border-dashed border-slate-200">
-                <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Курсы не найдены</p>
-              </div>
+              <!-- Пустое состояние через UiEmptyState -->
+              <UiEmptyState v-else title="Курсы не найдены" :icon="BookOpen" />
             </div>
 
-            <div v-show="activeTab === 'certificates'" class="space-y-4 animate-in fade-in duration-500">
-              <div v-if="studentData.certificates?.length > 0" class="grid grid-cols-1 gap-3">
-                <div v-for="cert in studentData.certificates" :key="cert.id" class="flex items-center justify-between p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:shadow-md transition-all">
-                  <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-warning/10 flex items-center justify-center text-warning shrink-0">
-                      <Award class="w-6 h-6" />
+            <div v-show="activeTab === 'certificates'" class="space-y-4">
+              <div v-if="studentData.certificates?.length > 0" class="grid grid-cols-1 gap-2">
+                <div v-for="cert in studentData.certificates" :key="cert.id" class="flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                  <div class="flex min-w-0 items-center gap-3">
+                    <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+                      <Award class="h-5 w-5" />
                     </div>
-                    <div>
-                      <h4 class="text-base font-bold text-slate-900 dark:text-white">{{ cert.courseName }}</h4>
-                      <p class="text-xs font-black text-slate-400 mt-1 uppercase tracking-widest">№ {{ cert.certificateNumber }} • {{ formatDateShort(cert.issueDate) }}</p>
+                    <div class="min-w-0">
+                      <h4 class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ cert.courseName }}</h4>
+                      <p class="mt-0.5 text-xs text-gray-500">№ {{ cert.certificateNumber }} • {{ formatDateShort(cert.issueDate) }}</p>
                     </div>
                   </div>
-                  <a v-if="cert.fileUrl" :href="`/api/certificates/download/${cert.id}`" target="_blank" class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-primary transition-all">
-                    <DownloadIcon class="w-5 h-5" />
+                  <a v-if="cert.fileUrl" :href="`/api/certificates/download/${cert.id}`" target="_blank" title="Скачать" class="shrink-0 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-primary dark:hover:bg-white/10">
+                    <DownloadIcon class="h-4 w-4" />
                   </a>
                 </div>
               </div>
-              <div v-else class="p-10 text-center bg-slate-50 dark:bg-slate-800/30 rounded-3xl border-2 border-dashed border-slate-200">
-                <p class="text-slate-400 font-bold uppercase tracking-widest text-xs">Сертификаты отсутствуют</p>
-              </div>
+              <UiEmptyState v-else title="Сертификаты отсутствуют" :icon="Award" />
             </div>
           </template>
 
-          <!-- SECURITY TAB (Shared) -->
-          <div v-show="activeTab === 'security'" class="animate-in fade-in duration-500">
-            <div class="rounded-4xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-              <div class="flex items-center gap-2 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                <Lock class="w-4 h-4 text-warning" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Безопасность аккаунта</h3>
+          <!-- Вкладка «Безопасность» (общая) -->
+          <div v-show="activeTab === 'security'">
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-2 border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+                <Lock class="h-4 w-4 text-gray-400" />
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Безопасность аккаунта</h3>
               </div>
-              <div class="p-6 max-w-xl">
-                <form @submit.prevent="changePassword" class="space-y-6">
+              <div class="max-w-xl p-5">
+                <!-- Форма смены пароля: поля h-9, text-sm, подписи не меньше 12px -->
+                <form class="space-y-5" @submit.prevent="changePassword">
                   <div class="space-y-4">
-                    <div class="space-y-2">
-                      <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Текущий пароль</label>
-                      <input v-model="passwordForm.currentPassword" type="password" required class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary focus:ring-primary/20 transition-all" />
+                    <div class="space-y-1.5">
+                      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Текущий пароль</label>
+                      <input v-model="passwordForm.currentPassword" type="password" required class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                     </div>
-                    <div class="space-y-2">
-                      <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Новый пароль</label>
-                      <input v-model="passwordForm.newPassword" type="password" required minlength="6" class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary focus:ring-primary/20 transition-all" />
+                    <div class="space-y-1.5">
+                      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Новый пароль</label>
+                      <input v-model="passwordForm.newPassword" type="password" required minlength="6" class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                     </div>
-                    <div class="space-y-2">
-                      <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Подтверждение</label>
-                      <input v-model="passwordForm.confirmPassword" type="password" required class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary focus:ring-primary/20 transition-all" />
+                    <div class="space-y-1.5">
+                      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Подтверждение</label>
+                      <input v-model="passwordForm.confirmPassword" type="password" required class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
                     </div>
                   </div>
-                  <div class="flex justify-end pt-2">
-                    <UiButton variant="primary" size="md" type="submit" :disabled="changingPassword" class="rounded-2xl px-8 shadow-lg shadow-primary/20">
+                  <div class="flex justify-end pt-1">
+                    <UiButton variant="primary" type="submit" :disabled="changingPassword" :loading="changingPassword">
                       {{ changingPassword ? 'Обновление...' : 'Обновить пароль' }}
                     </UiButton>
                   </div>
@@ -454,65 +297,50 @@
           </div>
         </div>
 
-        <!-- Sidebar / System Info -->
-        <div class="lg:col-span-4 space-y-6">
-          <div class="rounded-4xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
-            <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
-               <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-500">Системные данные</h4>
+        <!-- Боковая колонка: системные данные; градиентный промо-блок «Безопасность» убран (дубль вкладки) -->
+        <div class="lg:col-span-4">
+          <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-800">
+              <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Системные данные</h4>
             </div>
-            <div class="p-6 space-y-5">
-              <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                  <Clock class="w-5 h-5" />
+            <div class="space-y-4 p-5">
+              <div class="flex items-center gap-3">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-white/[0.06]">
+                  <Clock class="h-4 w-4" />
                 </div>
                 <div>
-                  <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Зарегистрирован</p>
-                  <p class="text-sm font-bold text-slate-900 dark:text-white">{{ formatDateShort(profile.created_at) }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Зарегистрирован</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDateShort(profile.created_at) }}</p>
                 </div>
               </div>
-              <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                  <RefreshCwIcon class="w-5 h-5" />
+              <div class="flex items-center gap-3">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-white/[0.06]">
+                  <RefreshCwIcon class="h-4 w-4" />
                 </div>
                 <div>
-                  <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Последнее обновление</p>
-                  <p class="text-sm font-bold text-slate-900 dark:text-white">{{ formatDateShort(profile.updated_at) }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Последнее обновление</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDateShort(profile.updated_at) }}</p>
                 </div>
               </div>
-              <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                  <ShieldCheck class="w-5 h-5" />
+              <div class="flex items-center gap-3">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-white/[0.06]">
+                  <ShieldCheck class="h-4 w-4" />
                 </div>
                 <div>
-                  <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Статус аккаунта</p>
-                  <div class="flex items-center gap-1.5 mt-0.5">
-                    <span class="w-2 h-2 rounded-full bg-success"></span>
-                    <span class="text-sm font-bold text-success">Активен</span>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Статус аккаунта</p>
+                  <div class="mt-0.5 flex items-center gap-1.5">
+                    <span class="h-2 w-2 rounded-full bg-success"></span>
+                    <span class="text-sm font-medium text-success">Активен</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          <div class="rounded-4xl bg-linear-to-br from-primary to-primary-dark p-6 text-white shadow-xl shadow-primary/20">
-             <div class="flex items-center gap-3 mb-4">
-               <div class="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                 <ShieldCheck class="w-5 h-5 text-white" />
-               </div>
-               <h4 class="text-xs font-black uppercase tracking-widest">Безопасность</h4>
-             </div>
-             <p class="text-xs leading-relaxed font-medium text-white/80 mb-4">
-               Ваши персональные данные защищены и видны только вам и администраторам центра. Регулярно обновляйте пароль для поддержания высокого уровня безопасности.
-             </p>
-             <UiButton variant="white" size="sm" class="w-full rounded-xl font-bold text-primary" @click="activeTab = 'security'">
-               Настройки безопасности
-             </UiButton>
-          </div>
         </div>
       </div>
     </div>
 
-    <!-- Modals -->
+    <!-- Модальные окна (логика без изменений) -->
     <UsersInstructorFormModal
       v-if="isEditModalOpen && isTeacher && instructorData"
       :instructor="instructorData"
@@ -528,26 +356,26 @@
       @submit="handleStudentUpdate"
     />
 
-    <!-- Modal for generic user edit (Admin/Manager) -->
-    <UiModal v-if="isEditModalOpen && !isTeacher && !isStudent" :is-open="isEditModalOpen" @close="isEditModalOpen = false" title="Редактировать профиль">
-       <div class="p-6 space-y-5">
-         <div class="space-y-2">
-            <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Полное имя</label>
-            <input v-model="editForm.name" type="text" class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary transition-all" />
-         </div>
-         <div class="space-y-2">
-            <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Телефон</label>
-            <input v-model="editForm.phone" type="text" class="w-full rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-sm focus:border-primary transition-all" />
-         </div>
-       </div>
-       <template #footer>
-         <div class="flex justify-end gap-3 p-4">
-           <UiButton variant="outline" @click="isEditModalOpen = false">Отмена</UiButton>
-           <UiButton variant="primary" @click="updateProfile" :disabled="updatingProfile">
-             {{ updatingProfile ? 'Сохранение...' : 'Сохранить' }}
-           </UiButton>
-         </div>
-       </template>
+    <!-- Редактирование профиля администратора/менеджера: поля единого размера h-9 -->
+    <UiModal v-if="isEditModalOpen && !isTeacher && !isStudent" :is-open="isEditModalOpen" title="Редактировать профиль" @close="isEditModalOpen = false">
+      <div class="space-y-4 p-6">
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Полное имя</label>
+          <input v-model="editForm.name" type="text" class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Телефон</label>
+          <input v-model="editForm.phone" type="text" class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-3 p-4">
+          <UiButton variant="outline" @click="isEditModalOpen = false">Отмена</UiButton>
+          <UiButton variant="primary" :disabled="updatingProfile" @click="updateProfile">
+            {{ updatingProfile ? 'Сохранение...' : 'Сохранить' }}
+          </UiButton>
+        </div>
+      </template>
     </UiModal>
   </div>
 </template>
@@ -698,6 +526,7 @@ const studentRegistrationDays = computed(() => {
   return `${Math.floor(months / 12)} г. ${months % 12} мес.`
 })
 
+// Поле color используется как tone у UiStat (primary/success/warning/info) — динамические bg-${color} Tailwind не собирает
 const adminStatsList = computed(() => {
   if (!adminStats.value) return []
   return [

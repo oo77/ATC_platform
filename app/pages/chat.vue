@@ -18,7 +18,7 @@
           <h1 class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">
             {{ currentSessionTitle }}
           </h1>
-          <span class="hidden md:inline-flex px-2 py-0.5 text-[10px] font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200/50 dark:border-blue-800/50 shrink-0">
+          <span class="hidden md:inline-flex px-2 py-0.5 text-[11px] font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full border border-blue-200/50 dark:border-blue-800/50 shrink-0">
             ReAct Data Agent
           </span>
         </div>
@@ -38,7 +38,7 @@
               <span>{{ selectedModelLabel }}</span>
               <span
                 v-if="currentSelectedProvider"
-                class="hidden md:inline text-[10px] text-gray-400 font-normal"
+                class="hidden md:inline text-[11px] text-gray-400 font-normal"
               >
                 ({{ currentSelectedProvider.providerName }})
               </span>
@@ -58,13 +58,13 @@
                   <Cpu :size="13" class="text-blue-600" />
                   <span>Настроенные модели ИИ</span>
                 </div>
-                <div class="text-[10px] text-gray-400">
+                <div class="text-[11px] text-gray-400">
                   Активные подключения провайдеров
                 </div>
               </div>
               <NuxtLink
                 to="/settings"
-                class="text-[10px] text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium hover:underline flex items-center gap-0.5"
+                class="text-[11px] text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium hover:underline flex items-center gap-0.5"
                 title="Перейти к подключению провайдеров"
               >
                 <span>Настройки</span>
@@ -111,7 +111,7 @@
                 <div class="px-2.5 pt-1.5 pb-0.5 flex items-center justify-between">
                   <div class="flex items-center gap-1.5 min-w-0">
                     <span
-                      class="px-1.5 py-0.5 text-[9px] font-bold rounded-md uppercase tracking-wide border"
+                      class="px-1.5 py-0.5 text-[11px] font-bold rounded-md uppercase tracking-wide border"
                       :class="getProviderBadgeColor(group.provider)"
                     >
                       {{ group.providerName }}
@@ -122,7 +122,7 @@
                   </div>
                   <span
                     v-if="group.isDefault"
-                    class="text-[9px] text-emerald-600 dark:text-emerald-400 font-medium shrink-0"
+                    class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium shrink-0"
                   >
                     По умолчанию
                   </span>
@@ -145,14 +145,14 @@
                         <span class="truncate font-medium">{{ m.name }}</span>
                         <div class="flex items-center gap-1.5 mt-0.5">
                           <span
-                            class="text-[9px] px-1 py-0.2 rounded font-medium"
+                            class="text-[11px] px-1 py-0.2 rounded font-medium"
                             :class="m.isConfigured
                               ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
                               : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'"
                           >
                             {{ m.tag }}
                           </span>
-                          <span class="text-[10px] text-gray-400 font-mono truncate max-w-[120px]">
+                          <span class="text-[11px] text-gray-400 font-mono truncate max-w-[120px]">
                             {{ m.id }}
                           </span>
                         </div>
@@ -172,7 +172,7 @@
             <!-- Footer banner if fallback -->
             <div
               v-if="!hasConfiguredProviders"
-              class="mt-1 pt-1.5 px-3 border-t border-gray-100 dark:border-gray-800 text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1"
+              class="mt-1 pt-1.5 px-3 border-t border-gray-100 dark:border-gray-800 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1"
             >
               <span>⚠️ Используются системные fallback-настройки</span>
             </div>
@@ -204,7 +204,7 @@
             v-if="isEffortMenuOpen"
             class="absolute right-0 mt-1.5 w-60 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100"
           >
-            <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-gray-800">
+            <div class="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 dark:border-gray-800">
               Глубина рассуждений (Effort)
             </div>
             <button
@@ -219,7 +219,7 @@
                   <span class="w-2 h-2 rounded-full" :class="eff.color"></span>
                   <span class="font-medium">{{ eff.name }}</span>
                 </div>
-                <span class="text-[10px] text-gray-400 mt-0.5">{{ eff.desc }}</span>
+                <span class="text-[11px] text-gray-400 mt-0.5">{{ eff.desc }}</span>
               </div>
               <span v-if="selectedEffort === eff.id" class="text-blue-600 shrink-0">✓</span>
             </button>
@@ -239,7 +239,7 @@
           <span class="hidden sm:inline">{{ isCanvasOpen ? 'Скрыть Canvas' : 'Canvas' }}</span>
           <span
             v-if="currentArtifact?.rows?.length"
-            class="px-1.5 py-0.2 text-[9px] rounded-full bg-blue-500/20 text-blue-100"
+            class="px-1.5 py-0.2 text-[11px] rounded-full bg-blue-500/20 text-blue-100"
           >
             {{ currentArtifact.rows.length }}
           </span>
@@ -305,7 +305,7 @@
               <MessageSquare :size="14" class="shrink-0 text-gray-400 group-hover:text-blue-500" />
               <div class="min-w-0 flex-1">
                 <p class="truncate leading-snug">{{ s.title }}</p>
-                <span class="text-[10px] text-gray-400">{{ formatDate(s.updatedAt) }}</span>
+                <span class="text-[11px] text-gray-400">{{ formatDate(s.updatedAt) }}</span>
               </div>
             </div>
 
@@ -387,12 +387,12 @@
                 title="Откатить текст в поле ввода"
               >
                 <RotateCcw :size="13" />
-                <span class="text-[10px]">Откатить</span>
+                <span class="text-[11px]">Откатить</span>
               </button>
 
               <div class="max-w-[85%] bg-gradient-to-tr from-blue-600 to-indigo-600 text-white p-4 rounded-2xl rounded-tr-sm shadow-sm">
                 <p class="text-sm whitespace-pre-wrap leading-relaxed">{{ msg.content }}</p>
-                <span class="block text-right text-[10px] text-blue-200/80 mt-1.5">
+                <span class="block text-right text-[11px] text-blue-200/80 mt-1.5">
                   {{ formatTime(msg.createdAt) }}
                 </span>
               </div>
@@ -425,7 +425,7 @@
               <div class="flex items-center gap-2.5">
                 <Loader2 :size="15" class="animate-spin text-blue-600" />
                 <span>{{ liveStatus }}</span>
-                <span class="ml-auto tabular-nums text-[10px] text-gray-400">{{ liveElapsed }} с</span>
+                <span class="ml-auto tabular-nums text-[11px] text-gray-400">{{ liveElapsed }} с</span>
               </div>
               <div
                 v-for="s in liveSteps"
@@ -500,7 +500,7 @@
                 <Send :size="16" />
               </button>
             </div>
-            <p class="text-[10px] text-gray-400 text-center">
+            <p class="text-[11px] text-gray-400 text-center">
               Shift + Enter для переноса строки • Доступ к БД только для чтения • Защита персональных данных
             </p>
           </div>
@@ -523,7 +523,7 @@
               <h3 class="text-xs font-bold text-gray-900 dark:text-white truncate">
                 {{ currentArtifact.title || 'Интерактивный холст' }}
               </h3>
-              <p class="text-[10px] text-gray-400 truncate">
+              <p class="text-[11px] text-gray-400 truncate">
                 {{ currentArtifact.description || 'Табличный и графический анализ' }}
               </p>
             </div>
@@ -643,7 +643,7 @@
             <div class="rounded-2xl border border-gray-200/80 dark:border-gray-800 overflow-hidden shadow-xs">
               <div class="overflow-x-auto custom-scrollbar">
                 <table class="w-full text-left text-xs border-collapse">
-                  <thead class="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200/80 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold uppercase tracking-wider text-[10px]">
+                  <thead class="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200/80 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold uppercase tracking-wider text-[11px]">
                     <tr>
                       <th
                         v-for="col in currentArtifact.columns"
@@ -754,7 +754,7 @@
               <FileText :size="15" class="text-blue-600 shrink-0" />
               <div class="min-w-0">
                 <p class="font-medium text-gray-900 dark:text-white truncate">{{ file.filename }}</p>
-                <span class="text-[10px] text-gray-400">{{ file.category }} • {{ formatFileSize(file.sizeBytes) }}</span>
+                <span class="text-[11px] text-gray-400">{{ file.category }} • {{ formatFileSize(file.sizeBytes) }}</span>
               </div>
             </div>
             <button class="text-blue-600 font-semibold text-xs shrink-0">Выбрать</button>
@@ -784,6 +784,15 @@
         </div>
       </div>
     </Modal>
+
+    <!-- Подтверждение удаления диалога (заменяет нативный confirm) -->
+    <UiConfirmModal
+      :is-open="!!sessionIdToDelete"
+      title="Удалить диалог?"
+      message="Вы действительно хотите удалить этот диалог?"
+      @confirm="deleteSessionConfirmed"
+      @cancel="sessionIdToDelete = null"
+    />
   </div>
 </template>
 
@@ -1204,8 +1213,17 @@ async function handleRenameSession() {
   }
 }
 
-async function confirmDeleteSession(sessionId: string) {
-  if (!confirm('Вы действительно хотите удалить этот диалог?')) return;
+// Безопасность UX: вместо нативного confirm() запоминаем id диалога и открываем UiConfirmModal
+const sessionIdToDelete = ref<string | null>(null);
+function confirmDeleteSession(sessionId: string) {
+  sessionIdToDelete.value = sessionId;
+}
+
+// Прежняя логика удаления диалога — выполняется после подтверждения
+async function deleteSessionConfirmed() {
+  const sessionId = sessionIdToDelete.value;
+  if (!sessionId) return;
+  sessionIdToDelete.value = null;
   try {
     await authFetch(`/api/ai/chat/sessions/${sessionId}`, { method: 'DELETE' });
     sessions.value = sessions.value.filter((s) => s.id !== sessionId);

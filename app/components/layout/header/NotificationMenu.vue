@@ -103,7 +103,7 @@
                     <span class="block text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
                         {{ notification.message }}
                     </span>
-                    <span class="block text-[10px] text-gray-400 mt-1">
+                    <span class="block text-[11px] text-gray-400 mt-1">
                         {{ formatDate(notification.created_at) }}
                     </span>
                   </div>

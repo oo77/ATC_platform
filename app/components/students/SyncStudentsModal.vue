@@ -66,15 +66,15 @@
                 <div class="grid grid-cols-3 gap-2 text-[11px]">
                   <div class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700/40 text-center">
                     <span class="font-bold text-emerald-600 dark:text-emerald-400 block">UZ / RU / EN</span>
-                    <span class="text-[10px] text-slate-500 dark:text-slate-400">Службы и должности</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Службы и должности</span>
                   </div>
                   <div class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700/40 text-center">
                     <span class="font-bold text-blue-600 dark:text-blue-400 block">Base64</span>
-                    <span class="text-[10px] text-slate-500 dark:text-slate-400">Фотографии</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Фотографии</span>
                   </div>
                   <div class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700/40 text-center">
                     <span class="font-bold text-purple-600 dark:text-purple-400 block">По ИНН</span>
-                    <span class="text-[10px] text-slate-500 dark:text-slate-400">Организации</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Организации</span>
                   </div>
                 </div>
               </div>
@@ -133,25 +133,25 @@
                 <!-- 4 Live Counter Chips -->
                 <div class="grid grid-cols-4 gap-2 pt-1">
                   <div class="px-2 py-1.5 rounded-lg bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/40 text-center">
-                    <span class="text-[9px] uppercase font-bold text-blue-600 dark:text-blue-400 block">Обновлено</span>
+                    <span class="text-[11px] uppercase font-bold text-blue-600 dark:text-blue-400 block">Обновлено</span>
                     <span class="font-mono font-bold text-xs text-blue-800 dark:text-blue-200">
                       {{ liveStats.updated.toLocaleString() }}
                     </span>
                   </div>
                   <div class="px-2 py-1.5 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-900/40 text-center">
-                    <span class="text-[9px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block">Создано</span>
+                    <span class="text-[11px] uppercase font-bold text-emerald-600 dark:text-emerald-400 block">Создано</span>
                     <span class="font-mono font-bold text-xs text-emerald-800 dark:text-emerald-200">
                       +{{ liveStats.created.toLocaleString() }}
                     </span>
                   </div>
                   <div class="px-2 py-1.5 rounded-lg bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200/60 dark:border-indigo-900/40 text-center">
-                    <span class="text-[9px] uppercase font-bold text-indigo-600 dark:text-indigo-400 block">С Фото</span>
+                    <span class="text-[11px] uppercase font-bold text-indigo-600 dark:text-indigo-400 block">С Фото</span>
                     <span class="font-mono font-bold text-xs text-indigo-800 dark:text-indigo-200">
                       {{ liveStats.photosCount.toLocaleString() }}
                     </span>
                   </div>
                   <div class="px-2 py-1.5 rounded-lg bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200/60 dark:border-purple-900/40 text-center">
-                    <span class="text-[9px] uppercase font-bold text-purple-600 dark:text-purple-400 block">Орг по ИНН</span>
+                    <span class="text-[11px] uppercase font-bold text-purple-600 dark:text-purple-400 block">Орг по ИНН</span>
                     <span class="font-mono font-bold text-xs text-purple-800 dark:text-purple-200">
                       {{ liveStats.matchedOrgs.toLocaleString() }}
                     </span>
@@ -181,8 +181,8 @@
                       <span v-else class="text-slate-400 flex-shrink-0 text-xs">○</span>
                       <span class="truncate font-semibold">{{ step.title }}</span>
                     </div>
-                    <span v-if="step.status === 'completed'" class="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 flex-shrink-0 bg-emerald-100/60 dark:bg-emerald-900/40 px-2 py-0.5 rounded-md">Готово</span>
-                    <span v-else-if="step.status === 'active'" class="text-[10px] font-mono text-blue-600 dark:text-blue-400 font-semibold animate-pulse flex-shrink-0 bg-blue-100/60 dark:bg-blue-900/40 px-2 py-0.5 rounded-md">В процессе</span>
+                    <span v-if="step.status === 'completed'" class="text-[11px] uppercase font-bold text-emerald-600 dark:text-emerald-400 flex-shrink-0 bg-emerald-100/60 dark:bg-emerald-900/40 px-2 py-0.5 rounded-md">Готово</span>
+                    <span v-else-if="step.status === 'active'" class="text-[11px] font-mono text-blue-600 dark:text-blue-400 font-semibold animate-pulse flex-shrink-0 bg-blue-100/60 dark:bg-blue-900/40 px-2 py-0.5 rounded-md">В процессе</span>
                   </div>
 
                   <!-- DETAILED SUB-STEPS FOR STAGE 3 -->
@@ -195,7 +195,7 @@
                         <span class="inline-block w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
                         Детализация 3 этапа:
                       </span>
-                      <span class="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                      <span class="text-[11px] font-mono text-slate-500 dark:text-slate-400">
                         {{ subStepsCompletedCount }}/{{ stage3SubSteps.length }} под-этапов
                       </span>
                     </div>
@@ -219,14 +219,14 @@
                           <div class="flex-shrink-0 w-4 h-4 flex items-center justify-center">
                             <span v-if="sub.status === 'completed'" class="text-emerald-600 dark:text-emerald-400 font-bold text-xs">✓</span>
                             <span v-else-if="sub.status === 'active'" class="inline-block w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
-                            <span v-else class="text-slate-300 dark:text-slate-600 text-[10px]">○</span>
+                            <span v-else class="text-slate-300 dark:text-slate-600 text-[11px]">○</span>
                           </div>
 
                           <div class="truncate">
                             <div class="font-medium truncate text-[11px] leading-tight flex items-center gap-1.5">
                               <span>{{ sub.title }}</span>
                             </div>
-                            <div class="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                               {{ sub.desc }}
                             </div>
                           </div>
@@ -235,23 +235,23 @@
                         <!-- Language / Feature Pills -->
                         <div class="flex items-center gap-1 flex-shrink-0 pl-2">
                           <template v-if="sub.type === 'lang'">
-                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">UZ</span>
-                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">RU</span>
-                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300">EN</span>
+                            <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300">UZ</span>
+                            <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">RU</span>
+                            <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300">EN</span>
                           </template>
                           <template v-else-if="sub.type === 'photo'">
-                            <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">Base64</span>
+                            <span class="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">Base64</span>
                           </template>
                           <template v-else-if="sub.type === 'db'">
-                            <span class="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300">Bulk 200</span>
+                            <span class="text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300">Bulk 200</span>
                           </template>
                           <template v-else>
-                            <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">ИНН</span>
+                            <span class="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">ИНН</span>
                           </template>
 
                           <!-- Status text pill -->
                           <span
-                            class="text-[9px] font-bold uppercase ml-1 px-1.5 py-0.5 rounded"
+                            class="text-[11px] font-bold uppercase ml-1 px-1.5 py-0.5 rounded"
                             :class="[
                               sub.status === 'completed'
                                 ? 'text-emerald-600 dark:text-emerald-400'
@@ -292,19 +292,19 @@
               <!-- Main Stats Grid -->
               <div v-if="result.success" class="grid grid-cols-4 gap-2">
                 <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 text-center">
-                  <span class="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Всего в API</span>
+                  <span class="text-[11px] text-slate-500 dark:text-slate-400 block font-medium">Всего в API</span>
                   <span class="text-sm font-extrabold text-slate-900 dark:text-white font-mono">{{ result.total }}</span>
                 </div>
                 <div class="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/40 text-center">
-                  <span class="text-[10px] text-emerald-600 dark:text-emerald-400 block font-medium">Создано</span>
+                  <span class="text-[11px] text-emerald-600 dark:text-emerald-400 block font-medium">Создано</span>
                   <span class="text-sm font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">+{{ result.created }}</span>
                 </div>
                 <div class="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200/60 dark:border-blue-800/40 text-center">
-                  <span class="text-[10px] text-blue-600 dark:text-blue-400 block font-medium">Обновлено</span>
+                  <span class="text-[11px] text-blue-600 dark:text-blue-400 block font-medium">Обновлено</span>
                   <span class="text-sm font-extrabold text-blue-600 dark:text-blue-400 font-mono">{{ result.updated }}</span>
                 </div>
                 <div class="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-200/60 dark:border-purple-800/40 text-center">
-                  <span class="text-[10px] text-purple-600 dark:text-purple-400 block font-medium">Орг по ИНН</span>
+                  <span class="text-[11px] text-purple-600 dark:text-purple-400 block font-medium">Орг по ИНН</span>
                   <span class="text-sm font-extrabold text-purple-600 dark:text-purple-400 font-mono">{{ result.matchedOrgs }}</span>
                 </div>
               </div>
@@ -318,7 +318,7 @@
                       Детализация 3 этапа: Языки и Фото
                     </h5>
                   </div>
-                  <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-100/50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
+                  <span class="text-[11px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-100/50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
                     Этап выполнен
                   </span>
                 </div>
@@ -334,7 +334,7 @@
                       <span class="text-sm font-extrabold text-slate-900 dark:text-white font-mono">
                         {{ result.multilingualDeptCount || result.total }}
                       </span>
-                      <span class="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">3 языка</span>
+                      <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">3 языка</span>
                     </div>
                   </div>
 
@@ -347,7 +347,7 @@
                       <span class="text-sm font-extrabold text-slate-900 dark:text-white font-mono">
                         {{ result.multilingualPosCount || result.total }}
                       </span>
-                      <span class="text-[9px] text-blue-600 dark:text-blue-400 font-bold">3 языка</span>
+                      <span class="text-[11px] text-blue-600 dark:text-blue-400 font-bold">3 языка</span>
                     </div>
                   </div>
 
@@ -360,7 +360,7 @@
                       <span class="text-sm font-extrabold text-indigo-600 dark:text-indigo-400 font-mono">
                         {{ result.photosCount || 0 }}
                       </span>
-                      <span class="text-[9px] text-indigo-600 dark:text-indigo-400 font-bold">Сохранено</span>
+                      <span class="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">Сохранено</span>
                     </div>
                   </div>
                 </div>
@@ -369,7 +369,7 @@
                 <div v-if="result.samples && result.samples.length > 0" class="space-y-2 pt-1">
                   <div class="flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300">
                     <span>Примеры сохраненных слушателей (детализация переводов):</span>
-                    <span class="text-[10px] text-slate-400 font-normal">Сэмплы из API</span>
+                    <span class="text-[11px] text-slate-400 font-normal">Сэмплы из API</span>
                   </div>
 
                   <div class="space-y-2">
@@ -381,32 +381,32 @@
                       <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-1.5">
                         <div class="flex items-center space-x-2">
                           <span class="font-bold text-slate-900 dark:text-white">{{ sample.name }}</span>
-                          <span class="font-mono text-[10px] text-slate-500 dark:text-slate-400">ПИНФЛ: {{ sample.pinfl }}</span>
+                          <span class="font-mono text-[11px] text-slate-500 dark:text-slate-400">ПИНФЛ: {{ sample.pinfl }}</span>
                         </div>
                         <div class="flex items-center space-x-1.5">
                           <span
                             v-if="sample.hasPhoto"
-                            class="inline-flex items-center text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+                            class="inline-flex items-center text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
                           >
                             📸 Фото есть
                           </span>
                           <span
                             v-else
-                            class="inline-flex items-center text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500"
+                            class="inline-flex items-center text-[11px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500"
                           >
                             Без фото
                           </span>
-                          <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 truncate max-w-[120px]">
+                          <span class="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 truncate max-w-[120px]">
                             {{ sample.organization || 'Организация' }}
                           </span>
                         </div>
                       </div>
 
                       <!-- Multilingual Department & Position Details -->
-                      <div class="grid grid-cols-2 gap-2 text-[10px]">
+                      <div class="grid grid-cols-2 gap-2 text-[11px]">
                         <!-- Department -->
                         <div class="space-y-0.5">
-                          <span class="font-bold text-slate-500 dark:text-slate-400 block text-[9px] uppercase tracking-wide">
+                          <span class="font-bold text-slate-500 dark:text-slate-400 block text-[11px] uppercase tracking-wide">
                             Служба / Отдел:
                           </span>
                           <div class="flex items-start gap-1">
@@ -425,7 +425,7 @@
 
                         <!-- Position -->
                         <div class="space-y-0.5">
-                          <span class="font-bold text-slate-500 dark:text-slate-400 block text-[9px] uppercase tracking-wide">
+                          <span class="font-bold text-slate-500 dark:text-slate-400 block text-[11px] uppercase tracking-wide">
                             Должность:
                           </span>
                           <div class="flex items-start gap-1">
@@ -449,12 +449,12 @@
 
               <!-- Errors List if any -->
               <div v-if="result.errors && result.errors.length > 0" class="max-h-24 overflow-y-auto p-2 rounded-lg bg-rose-50/70 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 space-y-1 text-[11px]">
-                <h5 class="font-bold text-rose-800 dark:text-rose-300 text-[10px] uppercase">
+                <h5 class="font-bold text-rose-800 dark:text-rose-300 text-[11px] uppercase">
                   Предупреждения ({{ result.errors.length }}):
                 </h5>
                 <div v-for="(err, i) in result.errors" :key="i" class="text-rose-700 dark:text-rose-400 flex justify-between">
                   <span class="truncate pr-2">• {{ err.name }}</span>
-                  <span class="font-mono text-[10px] text-rose-500 flex-shrink-0">{{ err.error }}</span>
+                  <span class="font-mono text-[11px] text-rose-500 flex-shrink-0">{{ err.error }}</span>
                 </div>
               </div>
             </div>

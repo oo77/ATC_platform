@@ -21,7 +21,7 @@
       
       <!-- Content Area with its own scroll container -->
       <main class="flex-1 overflow-x-hidden overflow-y-auto w-full px-4 md:px-6 2xl:px-10 pb-10">
-        <div class="animate-content-in pt-4">
+        <div class="animate-content-in pt-3">
            <slot />
         </div>
       </main>

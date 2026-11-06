@@ -76,7 +76,7 @@
           class="flex p-1 bg-gray-50 dark:bg-gray-800/50 border-b border-stroke dark:border-strokedark"
         >
           <button
-            class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all"
+            class="flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all"
             :class="
               pickerTab === 'field'
                 ? 'bg-white dark:bg-gray-700 text-primary shadow-sm'
@@ -87,7 +87,7 @@
             Поля
           </button>
           <button
-            class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all"
+            class="flex-1 py-2 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all"
             :class="
               pickerTab === 'time'
                 ? 'bg-white dark:bg-gray-700 text-primary shadow-sm'
@@ -107,7 +107,7 @@
             class="border-b border-gray-50 dark:border-gray-800 last:border-b-0"
           >
             <div
-              class="px-4 py-2 text-[9px] font-black uppercase text-gray-400 tracking-[0.15em] bg-gray-50/50 dark:bg-gray-800/30"
+              class="px-4 py-2 text-[11px] font-black uppercase text-gray-400 tracking-[0.15em] bg-gray-50/50 dark:bg-gray-800/30"
             >
               {{ group.label }}
             </div>
@@ -139,7 +139,7 @@
         <div v-else class="p-4 space-y-4">
           <div class="space-y-1.5">
             <label
-              class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
+              class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
               >Поле-дата</label
             >
             <select
@@ -165,14 +165,14 @@
 
           <div class="space-y-1.5">
             <label
-              class="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
+              class="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500"
               >Периодичность</label
             >
             <div class="grid grid-cols-2 gap-1.5">
               <button
                 v-for="(lbl, key) in TIME_SCALE_LABELS"
                 :key="key"
-                class="px-2 py-2 text-[10px] font-bold rounded-lg border transition-all"
+                class="px-2 py-2 text-[11px] font-bold rounded-lg border transition-all"
                 :class="
                   timeScaleValue === key
                     ? 'border-primary bg-primary/10 text-primary'

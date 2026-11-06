@@ -1,65 +1,50 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-in fade-in slide-in-from-top-4 duration-700">
-      <div class="flex items-center gap-4">
-        <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary shrink-0">
-          <ShieldCheck class="w-7 h-7" />
-        </div>
-        <div>
-          <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Аттестация</h1>
-          <p class="text-sm font-bold text-slate-500 dark:text-slate-400 mt-0.5">
-            {{ isTeacher ? "Ваши сертификационные экзамены" : "Группы аттестации инструкторов" }}
-          </p>
-        </div>
-      </div>
-      <UiButton
-        v-if="canManageAttestation"
-        size="sm"
-        class="h-10 px-4 gap-2 font-bold shadow-sm shrink-0"
-        @click="navigateTo('/attestation/groups/create')"
-      >
-        <Plus class="w-4 h-4" /> Новая группа
-      </UiButton>
-    </div>
+  <!-- Обёртка без двойного отступа (отступы задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок вместо text-3xl font-black; «Новая группа» — единственное главное действие -->
+    <UiPageHeader
+      title="Аттестация"
+      :description="isTeacher ? 'Ваши сертификационные экзамены' : 'Группы аттестации инструкторов'"
+    >
+      <template #actions>
+        <UiButton v-if="canManageAttestation" size="sm" @click="navigateTo('/attestation/groups/create')">
+          <Plus class="mr-1.5 h-4 w-4" /> Новая группа
+        </UiButton>
+      </template>
+    </UiPageHeader>
 
     <!-- TEACHER: собственный список -->
-    <div v-if="isTeacher" class="space-y-4">
+    <div v-if="isTeacher" class="space-y-3">
       <div v-if="loading" class="flex items-center justify-center py-20">
         <div class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
       </div>
-      <div
-        v-else-if="myItems.length === 0"
-        class="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-16 text-center"
-      >
-        <div class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-full inline-block mb-4">
-          <ShieldCheck class="w-10 h-10 text-slate-300 dark:text-slate-600" />
-        </div>
-        <p class="text-slate-500 font-medium">Вам пока не назначена аттестация</p>
+      <!-- Пусто: общий компонент -->
+      <div v-else-if="myItems.length === 0" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <UiEmptyState :icon="ShieldCheck" title="Вам пока не назначена аттестация" />
       </div>
       <div
         v-for="item in myItems"
         :key="item.groupId"
-        class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 transition-all hover:shadow-md"
+        class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white p-5 transition-colors hover:border-gray-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-gray-700 md:flex-row md:items-center md:justify-between"
       >
         <div class="min-w-0">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white truncate">{{ item.groupName }}</h3>
-          <p class="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
+          <h3 class="truncate text-base font-semibold text-gray-900 dark:text-white">{{ item.groupName }}</h3>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {{ item.templateName || "Тест ещё не назначен" }}
             <span v-if="item.examStart">• {{ formatDateTime(item.examStart) }} — {{ formatDateTime(item.examEnd) }}</span>
           </p>
-          <p v-if="item.location" class="text-sm font-semibold text-slate-500 dark:text-slate-400">Место: {{ item.location }}</p>
+          <p v-if="item.location" class="text-sm text-gray-500 dark:text-gray-400">Место: {{ item.location }}</p>
         </div>
-        <div class="flex flex-col items-end gap-2 shrink-0">
-          <span :class="['inline-flex items-center rounded-full px-3 py-1 text-xs font-bold', decisionBadgeClass(item.decision)]">
+        <div class="flex shrink-0 flex-col items-start gap-2 md:items-end">
+          <span :class="['inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium', decisionBadgeClass(item.decision)]">
             {{ decisionLabel(item.decision) }}
           </span>
-          <div v-if="item.bestScore !== null" class="text-sm font-semibold text-slate-600 dark:text-slate-400">
-            Балл: <b class="text-slate-900 dark:text-white">{{ Math.round(item.bestScore) }}%</b>
+          <div v-if="item.bestScore !== null" class="text-sm text-gray-600 dark:text-gray-400">
+            Балл: <b class="font-semibold text-gray-900 dark:text-white">{{ Math.round(item.bestScore) }}%</b>
           </div>
           <UiButton
             v-if="canStartExam(item)"
             size="sm"
-            class="gap-2 font-bold"
             @click="startExam(item)"
             :loading="startingGroupId === item.groupId"
           >
@@ -69,56 +54,53 @@
       </div>
     </div>
 
-    <!-- ADMIN/MANAGER: список групп -->
-    <div v-else class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+    <!-- ADMIN/MANAGER: список групп в стандартной карточке таблицы -->
+    <div v-else class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <div v-if="loading" class="flex items-center justify-center py-20">
         <div class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
       </div>
-      <div v-else-if="groups.length === 0" class="p-16 text-center">
-        <div class="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-full inline-block mb-4">
-          <ShieldCheck class="w-10 h-10 text-slate-300 dark:text-slate-600" />
-        </div>
-        <p class="text-slate-500 font-medium">Группы аттестации ещё не созданы</p>
-        <UiButton v-if="canManageAttestation" class="mt-6 gap-2 font-bold" @click="navigateTo('/attestation/groups/create')">
-          <Plus class="w-4 h-4" /> Создать первую группу
-        </UiButton>
-      </div>
-      <div v-else class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-slate-50/50 dark:bg-slate-800/50">
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Группа</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Инструкторов</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Тест</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Экзамен</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Статус</th>
+      <UiEmptyState v-else-if="groups.length === 0" :icon="ShieldCheck" title="Группы аттестации ещё не созданы">
+        <template #actions>
+          <UiButton v-if="canManageAttestation" size="sm" @click="navigateTo('/attestation/groups/create')">
+            <Plus class="mr-1.5 h-4 w-4" /> Создать первую группу
+          </UiButton>
+        </template>
+      </UiEmptyState>
+      <div v-else class="max-h-[70vh] overflow-auto">
+        <table class="w-full border-collapse text-left">
+          <!-- Sticky-шапка: без CAPS и tracking-wider, подписи 12px -->
+          <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+            <tr class="border-b border-gray-200 dark:border-gray-800">
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Группа</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Инструкторов</th>
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Тест</th>
+              <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Экзамен</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Статус</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            <!-- Строка кликабельна (как и раньше) -->
             <tr
               v-for="group in groups"
               :key="group.id"
-              class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
+              class="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]"
               @click="navigateTo(`/attestation/groups/${group.id}`)"
             >
-              <td class="px-6 py-4">
-                <p class="font-bold text-slate-900 dark:text-white text-sm">{{ group.code }}</p>
-                <p class="text-xs font-semibold text-slate-500 truncate max-w-[280px]">{{ group.name }}</p>
+              <td class="px-4 py-3">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ group.code }}</p>
+                <p class="max-w-[280px] truncate text-xs text-gray-500 dark:text-gray-400">{{ group.name }}</p>
               </td>
-              <td class="px-6 py-4 text-center">
-                <span class="inline-flex items-center gap-1.5 text-sm font-bold text-slate-700 dark:text-slate-300">
-                  <Users class="w-3.5 h-3.5 text-slate-400" /> {{ group.instructorsCount }}
+              <td class="px-4 py-3 text-center">
+                <span class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Users class="h-3.5 w-3.5 text-gray-400" /> {{ group.instructorsCount }}
                 </span>
               </td>
-              <td class="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-400">{{ group.templateName || "—" }}</td>
-              <td class="px-6 py-4 text-sm font-semibold text-slate-600 dark:text-slate-400">
+              <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{{ group.templateName || "—" }}</td>
+              <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                 {{ group.examStart ? formatDateTime(group.examStart) : "—" }}
               </td>
-              <td class="px-6 py-4 text-right">
-                <span
-                  class="inline-flex items-center rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest border"
-                  :class="statusBadgeClass(group.status)"
-                >
+              <td class="px-4 py-3 text-right">
+                <span class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium" :class="statusBadgeClass(group.status)">
                   {{ statusLabel(group.status) }}
                 </span>
               </td>
@@ -167,7 +149,7 @@ const statusLabel = (status) => ({
 
 const statusBadgeClass = (status) => {
   const map = {
-    draft: "bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700",
+    draft: "bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700",
     scheduled: "bg-primary/10 text-primary border-primary/20",
     in_progress: "bg-warning/10 text-warning border-warning/20",
     completed: "bg-success/10 text-success border-success/20",
@@ -185,7 +167,7 @@ const decisionLabel = (decision) => ({
 const decisionBadgeClass = (decision) => {
   if (decision === "passed") return "bg-success/10 text-success";
   if (decision === "failed") return "bg-danger/10 text-danger";
-  return "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400";
+  return "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400";
 };
 
 const canStartExam = (item) => {

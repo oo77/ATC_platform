@@ -44,13 +44,14 @@
           </svg>
           Повторить
         </button>
-        <button @click="showDebug = !showDebug" class="tg-btn-secondary">
+        <!-- Безопасность: кнопка и панель отладки доступны только в dev-режиме, в проде initData/hash не показываются -->
+        <button v-if="isDev" @click="showDebug = !showDebug" class="tg-btn-secondary">
           {{ showDebug ? "Скрыть детали" : "Детали ошибки" }}
         </button>
       </div>
 
       <!-- Debug Panel -->
-      <div v-if="showDebug" class="tg-debug-info">
+      <div v-if="isDev && showDebug" class="tg-debug-info">
         <h3>Debug Info:</h3>
         <pre>{{ debugInfo }}</pre>
       </div>
@@ -189,6 +190,8 @@ const state = ref("loading");
 const statusMessage = ref("Инициализация...");
 const errorMessage = ref("");
 const showDebug = ref(false);
+// Безопасность: отладочная панель разрешена только в dev-сборке
+const isDev = import.meta.dev;
 
 const telegramData = ref(null);
 const representative = ref(null);
@@ -214,10 +217,7 @@ async function initialize() {
 
     let rawInitData = tg.initData || "";
 
-    console.log(
-      "[TG] SDK initData:",
-      rawInitData ? `length ${rawInitData.length}` : "empty",
-    );
+    // Безопасность: убран console.log с initData (данные авторизации не должны попадать в консоль)
 
     const platform = tg.platform || "unknown";
 
@@ -263,11 +263,6 @@ async function checkAuth() {
       initData: telegramData.value.initData,
     };
 
-    console.log(
-      "[TG Client] Sending Auth with initData length:",
-      payload.initData.length,
-    );
-
     const res = await $fetch("/api/tg-app/auth", {
       method: "POST",
       body: payload,
@@ -279,8 +274,6 @@ async function checkAuth() {
     }
   } catch (e) {
     console.error("Auth Failed:", e);
-    console.log("Error statusCode:", e.statusCode);
-    console.log("Error data:", e.data);
 
     if (e.statusCode === 404) {
       console.log("[TG] ✅ Пользователь не найден, переход к регистрации");
@@ -313,13 +306,9 @@ function updateDebugInfo(tg, parsedInitData) {
     {
       version: tg.version,
       platform: tg.platform,
-      locationHash: window.location.hash.substring(0, 300) + "...",
-      locationSearch: window.location.search,
+      // Безопасность: hash/search/образец initData не выводим — там лежат данные авторизации
       sdkInitDataLen: tg.initData?.length || 0,
       parsedInitDataLen: parsedInitData?.length || 0,
-      initDataSample: parsedInitData
-        ? parsedInitData.substring(0, 150) + "..."
-        : "empty",
       sdkUser: tg.initDataUnsafe?.user,
       extractedUser: extractedUser,
       hasHash: parsedInitData?.includes("hash=") || false,

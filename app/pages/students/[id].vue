@@ -1,518 +1,300 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Состояние загрузки -->
-    <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
+  <!-- Внешний враппер без двойного отступа (отступ уже задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Состояние загрузки: спокойный спиннер вместо крупного -->
+    <div v-if="loading" class="flex min-h-[400px] items-center justify-center">
       <div class="text-center">
-        <div
-          class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-        ></div>
-        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
-          Загрузка информации о слушателе...
-        </p>
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
+        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Загрузка информации о слушателе...</p>
       </div>
     </div>
 
-    <!-- Ошибка -->
-    <div
-      v-else-if="error || !student"
-      class="flex items-center justify-center min-h-[400px]"
-    >
-      <div class="text-center max-w-md">
-        <div
-          class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6 text-slate-400"
-        >
-          <UserIcon class="w-12 h-12" />
+    <!-- Ошибка: пустое состояние с единственным действием «К списку» -->
+    <div v-else-if="error || !student" class="flex min-h-[400px] items-center justify-center">
+      <div class="max-w-md text-center">
+        <div class="mb-4 inline-block rounded-full bg-gray-100 p-5 text-gray-400 dark:bg-white/[0.06]">
+          <UserIcon class="h-10 w-10" />
         </div>
-        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
           {{ error || "Слушатель не найден" }}
         </h3>
-        <UiButton
-          class="mt-8 shadow-lg"
-          @click="$router.push('/students')"
-          >К списку слушателей</UiButton
-        >
+        <UiButton class="mt-6" @click="$router.push('/students')">К списку слушателей</UiButton>
       </div>
     </div>
 
     <template v-else>
-      <!-- Header Section -->
-      <div class="mb-6 animate-in fade-in slide-in-from-top-4 duration-700">
-        <!-- Breadcrumbs -->
-        <div class="mb-4">
-          <NuxtLink
-            to="/students"
-            class="group inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-primary transition-colors"
-          >
-            <div
-              class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
-            >
-              <ArrowLeft
-                class="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5"
-              />
+      <!-- Единая шапка: крошки вместо крупной ссылки «Назад», заголовок без CAPS/font-black -->
+      <UiPageHeader
+        :title="student.fullName"
+        :breadcrumbs="[{ label: 'Слушатели', to: '/students' }, { label: student.fullName }]"
+      >
+        <!-- Мета-строка: организация и должность (одна строка вместо дублей по странице) -->
+        <template #meta>
+          <span class="inline-flex items-center gap-1.5"><BuildingIcon class="h-3.5 w-3.5 text-gray-400" />{{ student.organization }}</span>
+          <span class="inline-flex items-center gap-1.5"><BriefcaseIcon class="h-3.5 w-3.5 text-gray-400" />{{ currentPosition }}</span>
+        </template>
+
+        <!-- Действия: одно главное (PDF) + «Изменить» + «⋯» с опасными действиями -->
+        <template #actions>
+          <UiButton variant="primary" size="md" :start-icon="FileDownIcon" @click="exportTranscript">Карточка PDF</UiButton>
+          <UiButton v-if="canEditStudents" variant="outline" size="md" :start-icon="SettingsIcon" @click="openEditModal">Изменить</UiButton>
+          <!-- Меню «⋯»: удаление отделено группой «Опасные», условие прав сохранено -->
+          <UiDropdown
+            v-if="canDeleteStudents"
+            icon-only
+            variant="outline"
+            aria-label="Другие действия"
+            :groups="menuGroups"
+            @select="onMenuSelect"
+          />
+        </template>
+      </UiPageHeader>
+
+      <!-- Блок профиля: фото кликабельно (лайтбокс) + полоса метрик в одну строку вместо 4 «bento»-карточек -->
+      <div class="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="group relative shrink-0 cursor-pointer" title="Нажмите для просмотра фото" @click="isPhotoModalOpen = true">
+          <div class="relative h-16 w-16 overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-800">
+            <img v-if="student.photo_base64" :src="student.photo_base64" class="h-full w-full object-cover" />
+            <div v-else class="flex h-full w-full items-center justify-center bg-primary/10 text-primary">
+              <span class="text-xl font-semibold">{{ getInitials(student.fullName) }}</span>
             </div>
-            Назад к списку
-          </NuxtLink>
+            <!-- Иконка увеличения при наведении -->
+            <div class="absolute inset-0 flex items-center justify-center bg-gray-900/40 text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <Maximize2Icon class="h-5 w-5" />
+            </div>
+          </div>
         </div>
 
-        <div
-          class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
-        >
-          <!-- Profile Main Info — compact -->
-          <div class="flex items-center gap-4">
-            <div
-              class="relative shrink-0 cursor-pointer group"
-              @click="isPhotoModalOpen = true"
-              title="Нажмите для просмотра фото"
-            >
-              <div
-                class="w-20 h-20 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-900 shadow-xl relative"
-              >
-                <img
-                  v-if="student.photo_base64"
-                  :src="student.photo_base64"
-                  class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                />
-                <div
-                  v-else
-                  class="w-full h-full flex items-center justify-center bg-primary/10 text-primary"
-                >
-                  <span class="text-2xl font-black">{{
-                    getInitials(student.fullName)
-                  }}</span>
-                </div>
-
-                <!-- Hover Overlay Zoom Icon -->
-                <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                  <Maximize2Icon class="w-5 h-5" />
-                </div>
-              </div>
-              <div
-                class="absolute -bottom-1 -right-1 h-5 w-5 bg-success rounded-lg border-2 border-white dark:border-slate-900 flex items-center justify-center shadow"
-              >
-                <CheckIcon class="w-3 h-3 text-white" />
-              </div>
-            </div>
-
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <h1
-                  class="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none"
-                >
-                  {{ student.fullName }}
-                </h1>
-              </div>
-
-              <div
-                class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-500"
-              >
-                <div class="flex items-center gap-1.5">
-                  <BuildingIcon class="w-3.5 h-3.5 text-slate-400" />
-                  {{ student.organization }}
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <BriefcaseIcon class="w-3.5 h-3.5 text-slate-400" />
-                  {{ currentPosition }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Actions -->
-          <div
-            class="flex flex-wrap items-center justify-center lg:justify-end gap-2"
-          >
-            <UiButton
-              variant="primary"
-              size="sm"
-              class="h-9 px-3 gap-1.5 font-bold shadow-lg shadow-primary/20"
-              @click="exportTranscript"
-            >
-              <FileDownIcon class="w-3.5 h-3.5" />
-              Карточка PDF
-            </UiButton>
-
-            <UiButton
-              v-if="canEditStudents"
-              variant="outline"
-              size="sm"
-              class="h-9 px-3 gap-1.5 font-bold"
-              @click="openEditModal"
-            >
-              <SettingsIcon class="w-3.5 h-3.5" />
-              Изменить
-            </UiButton>
-
-            <UiButton
-              v-if="canDeleteStudents"
-              variant="outline"
-              size="sm"
-              class="h-9 px-3 gap-1.5 font-bold text-danger border-danger/20 hover:bg-danger/5"
-              @click="handleDelete"
-            >
-              <Trash2Icon class="w-3.5 h-3.5" />
-              Удалить
-            </UiButton>
-          </div>
+        <div class="grid min-w-0 flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
+          <UiStat label="Сертификаты" :value="student.certificates?.length || 0" hint="Всего получено" :icon="AwardIcon" tone="warning" />
+          <UiStat label="Курсы" :value="studentCourses.length" :hint="`${activeCourses.length} активных`" :icon="BookOpenIcon" tone="primary" />
+          <UiStat label="Посещаемость" :value="`${averageProgress}%`" :icon="ActivityIcon" tone="success" :progress="averageProgress" />
+          <UiStat label="В системе" :value="registrationDays" :hint="`С ${formatDateShort(student.created_at)}`" :icon="CalendarIcon" tone="info" />
         </div>
       </div>
 
-      <!-- Bento Box Metrics Grid — compact -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <!-- Certificates Card -->
-        <div
-          class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md"
-        >
-          <div class="flex items-center justify-between">
-            <div class="min-w-0">
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Сертификаты</p>
-              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">
-                {{ student.certificates?.length || 0 }}
-              </h3>
-              <span class="text-[10px] text-slate-400 truncate block">Всего получено</span>
-            </div>
-            <div class="rounded-lg bg-warning/10 p-2 text-warning ml-2 shrink-0">
-              <AwardIcon class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
+      <!-- Вкладки: единый UiTabs со счётчиками вместо самописных «таблеток» -->
+      <UiTabs v-model="activeTab" :tabs="tabItems" />
 
-        <!-- Courses Card -->
-        <div
-          class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Курсы</p>
-              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">
-                {{ studentCourses.length }}
-              </h3>
-              <span class="text-[10px] text-slate-400 block">{{ activeCourses.length }} активных</span>
-            </div>
-            <div class="rounded-lg bg-primary/10 p-2 text-primary ml-2 shrink-0">
-              <BookOpenIcon class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Attendance Card -->
-        <div
-          class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Посещаемость</p>
-              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">
-                {{ averageProgress }}%
-              </h3>
-            </div>
-            <div class="rounded-lg bg-success/10 p-2 text-success ml-2 shrink-0">
-              <ActivityIcon class="w-4 h-4" />
-            </div>
-          </div>
-          <div class="mt-2 h-1 w-full rounded-full bg-slate-100 dark:bg-slate-800">
-            <div class="h-full rounded-full bg-success transition-all duration-500" :style="{ width: `${averageProgress}%` }"></div>
-          </div>
-        </div>
-
-        <!-- Registration Card -->
-        <div
-          class="group relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3 transition-all hover:shadow-md"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">В системе</p>
-              <h3 class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">
-                {{ registrationDays }}
-              </h3>
-              <span class="text-[10px] text-slate-400 block">С {{ formatDateShort(student.created_at) }}</span>
-            </div>
-            <div class="rounded-lg bg-info/10 p-2 text-info ml-2 shrink-0">
-              <CalendarIcon class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tabs Navigation — compact -->
-      <div class="mb-5 overflow-x-auto custom-scrollbar pb-1">
-        <div class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
-          <nav class="flex gap-0.5" aria-label="Tabs">
-            <button
-              v-for="tab in availableTabs"
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              :class="[
-                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all duration-300 whitespace-nowrap uppercase tracking-wider',
-                activeTab === tab.id
-                  ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
-              ]"
-            >
-              <component :is="tab.icon" class="h-3.5 w-3.5" />
-              {{ tab.label }}
-            </button>
-          </nav>
-        </div>
-      </div>
-
-      <!-- Tab Content -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <!-- Main Content Area (8 cols) -->
-        <div class="lg:col-span-8 space-y-5">
-          <!-- INFO TAB -->
-          <div
-            v-show="activeTab === 'info'"
-            class="space-y-5 animate-in fade-in duration-500"
-          >
-            <!-- Student Data List — compact -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+      <!-- Содержимое вкладок -->
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <!-- Основная область (8 колонок) -->
+        <div class="space-y-4 lg:col-span-8">
+          <!-- Вкладка «Профиль» -->
+          <div v-show="activeTab === 'info'" class="space-y-4">
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800">
                 <div class="flex items-center gap-2">
-                  <UserIcon class="w-4 h-4 text-info" />
-                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Данные слушателя</h3>
+                  <UserIcon class="h-4 w-4 text-gray-400" />
+                  <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Данные слушателя</h3>
                 </div>
 
-                <!-- Language Switcher Trigger -->
-                <div class="flex items-center gap-1 bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                  <span class="text-[10px] text-slate-400 font-bold px-1.5 hidden sm:inline">Язык:</span>
+                <!-- Переключатель языка полей (RU/UZ/EN) — компактный сегмент, подписи не меньше 11px -->
+                <div class="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-0.5 dark:border-gray-700 dark:bg-gray-900">
+                  <span class="hidden px-1.5 text-[11px] text-gray-400 sm:inline">Язык:</span>
                   <button
                     v-for="lang in (['ru', 'uz', 'en'] as const)"
                     :key="lang"
-                    @click="selectedLang = lang"
+                    type="button"
                     :class="[
-                      'px-2 py-0.5 text-[10px] font-extrabold rounded uppercase transition-all',
+                      'rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase transition-colors',
                       selectedLang === lang
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                        ? 'bg-primary text-white'
+                        : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200',
                     ]"
+                    @click="selectedLang = lang"
                   >
                     {{ lang }}
                   </button>
                 </div>
               </div>
-              <div class="divide-y divide-slate-100 dark:divide-slate-800">
-                <!-- PINFL -->
-                <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-bold text-slate-400">ПИНФЛ</span>
-                  <div class="flex items-center gap-2">
-                    <span class="text-sm font-bold text-slate-700 dark:text-slate-200 font-mono tracking-wider">
-                      {{ showPinfl ? student.pinfl : "••••••••••••••" }}
-                    </span>
-                    <div class="flex items-center gap-0.5">
-                      <button @click="showPinfl = !showPinfl" class="p-1 text-slate-400 hover:text-primary transition-colors">
-                        <component :is="showPinfl ? EyeOffIcon : EyeIcon" class="w-3.5 h-3.5" />
-                      </button>
-                      <button @click="copyToClipboard(student.pinfl)" class="p-1 text-slate-400 hover:text-primary transition-colors">
-                        <CopyIcon class="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
+              <div class="divide-y divide-gray-100 dark:divide-gray-800">
+                <!-- ПИНФЛ: маска + показать + копировать через UiSensitiveValue -->
+                <div class="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <span class="text-sm text-gray-500 dark:text-gray-400">ПИНФЛ</span>
+                  <UiSensitiveValue :value="student.pinfl" class="text-gray-800 dark:text-gray-200" />
                 </div>
 
-                <!-- Birth Date -->
-                <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-bold text-slate-400">Дата рождения</span>
-                  <span class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ formatDate(student.birthDate) }}</span>
+                <div class="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Дата рождения</span>
+                  <span class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ formatDate(student.birthDate) }}</span>
                 </div>
 
-                <!-- Organization -->
-                <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-bold text-slate-400">Организация</span>
-                  <span class="text-sm font-bold text-slate-700 dark:text-slate-200 text-right">{{ student.organization }}</span>
+                <div class="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <span class="text-sm text-gray-500 dark:text-gray-400">Организация</span>
+                  <span class="text-right text-sm font-medium text-gray-800 dark:text-gray-200">{{ student.organization }}</span>
                 </div>
 
-                <!-- Department (Служба) -->
-                <div class="flex items-center justify-between px-4 py-2.5">
+                <div class="flex items-center justify-between gap-3 px-4 py-2.5">
                   <div class="flex items-center gap-1.5">
-                    <span class="text-xs font-bold text-slate-400">Подразделение (Служба)</span>
-                    <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-primary uppercase">{{ selectedLang }}</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Подразделение (Служба)</span>
+                    <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-primary dark:bg-white/[0.06]">{{ selectedLang }}</span>
                   </div>
-                  <span class="text-sm font-bold text-slate-700 dark:text-slate-200 text-right">{{ currentDepartment }}</span>
+                  <span class="text-right text-sm font-medium text-gray-800 dark:text-gray-200">{{ currentDepartment }}</span>
                 </div>
 
-                <!-- Position (Должность) -->
-                <div class="flex items-center justify-between px-4 py-2.5">
+                <div class="flex items-center justify-between gap-3 px-4 py-2.5">
                   <div class="flex items-center gap-1.5">
-                    <span class="text-xs font-bold text-slate-400">Должность</span>
-                    <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-primary uppercase">{{ selectedLang }}</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Должность</span>
+                    <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-semibold uppercase text-primary dark:bg-white/[0.06]">{{ selectedLang }}</span>
                   </div>
-                  <span class="text-sm font-bold text-slate-700 dark:text-slate-200 text-right">{{ currentPosition }}</span>
+                  <span class="text-right text-sm font-medium text-gray-800 dark:text-gray-200">{{ currentPosition }}</span>
                 </div>
-
-                <!-- Registration Date -->
-                <div class="flex items-center justify-between px-4 py-2.5">
-                  <span class="text-xs font-bold text-slate-400">Регистрация</span>
-                  <span class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ formatDate(student.created_at) }}</span>
-                </div>
+                <!-- Строка «Регистрация» убрана: дата уже есть в метриках и в блоке «Системная информация» -->
               </div>
             </div>
           </div>
 
-          <!-- COURSES TAB -->
-          <div
-            v-show="activeTab === 'courses'"
-            class="space-y-4 animate-in fade-in duration-500"
-          >
+          <!-- Вкладка «Обучение» -->
+          <div v-show="activeTab === 'courses'" class="space-y-4">
             <div v-if="coursesLoading" class="flex justify-center py-10">
               <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
             </div>
 
             <template v-else-if="studentCourses.length > 0">
-              <!-- Active Courses -->
+              <!-- Текущее обучение: карточки с прогрессом -->
               <div v-if="activeCourses.length > 0">
-                <div class="flex items-center gap-2 mb-3">
-                  <div class="h-1.5 w-1.5 rounded-full bg-success animate-pulse"></div>
-                  <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-500">Текущее обучение</h3>
+                <div class="mb-3 flex items-center gap-2">
+                  <div class="h-1.5 w-1.5 rounded-full bg-success"></div>
+                  <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Текущее обучение</h3>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div
                     v-for="course in activeCourses"
                     :key="course.group_id"
+                    class="group relative cursor-pointer rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-primary/40 dark:border-gray-800 dark:bg-white/[0.03]"
                     @click="openCourseDetailModal(course)"
-                    class="group p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-primary/30 transition-all hover:shadow-md cursor-pointer relative"
                   >
-                    <div class="flex justify-between items-start mb-2">
-                      <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 line-clamp-1 pr-6">{{ course.course_name }}</h4>
-                      <ArrowRightIcon class="w-3.5 h-3.5 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity absolute top-4 right-4" />
+                    <div class="mb-2 flex items-start justify-between">
+                      <h4 class="line-clamp-1 pr-6 text-sm font-medium text-gray-900 dark:text-gray-100">{{ course.course_name }}</h4>
+                      <ArrowRightIcon class="absolute right-4 top-4 h-3.5 w-3.5 text-gray-300" />
                     </div>
-                    <p class="text-[10px] text-slate-500 mb-4 truncate">Группа: {{ course.group_name }}</p>
+                    <p class="mb-3 truncate text-xs text-gray-500 dark:text-gray-400">Группа: {{ course.group_name }}</p>
 
                     <div class="space-y-2">
-                      <div class="flex justify-between items-end">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Прогресс</span>
-                        <span class="text-xs font-black text-primary">{{ course.progress }}%</span>
+                      <div class="flex items-end justify-between">
+                        <span class="text-xs text-gray-400">Прогресс</span>
+                        <span class="text-xs font-semibold text-primary">{{ course.progress }}%</span>
                       </div>
-                      <div class="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div class="h-full bg-primary rounded-full transition-all duration-700" :style="{ width: `${course.progress}%` }"></div>
+                      <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                        <div class="h-full rounded-full bg-primary transition-all duration-500" :style="{ width: `${course.progress}%` }"></div>
                       </div>
                       <div class="flex justify-between pt-1">
-                        <span class="text-[10px] font-bold text-slate-400">{{ formatShortDate(course.start_date) }} - {{ formatShortDate(course.end_date) }}</span>
-                        <span class="text-[10px] font-bold text-slate-400">{{ course.attended_lessons }}/{{ course.total_lessons }} ач</span>
+                        <span class="text-xs text-gray-400">{{ formatShortDate(course.start_date) }} - {{ formatShortDate(course.end_date) }}</span>
+                        <span class="text-xs text-gray-400">{{ course.attended_lessons }}/{{ course.total_lessons }} ач</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <!-- Completed Courses -->
-              <div v-if="completedCourses.length > 0" :class="{ 'mt-6': activeCourses.length > 0 }">
-                <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">История обучения</h3>
-                <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+              <!-- История обучения: компактный список -->
+              <div v-if="completedCourses.length > 0" :class="{ 'pt-2': activeCourses.length > 0 }">
+                <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">История обучения</h3>
+                <div class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white dark:divide-gray-800 dark:border-gray-800 dark:bg-white/[0.03]">
                   <div
                     v-for="course in completedCourses"
                     :key="course.group_id"
+                    class="group flex cursor-pointer items-center justify-between p-3.5 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                     @click="openCourseDetailModal(course)"
-                    class="group flex items-center justify-between p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                   >
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
-                        <CheckIcon class="w-4 h-4 text-success" />
+                    <div class="flex min-w-0 items-center gap-3">
+                      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/10">
+                        <CheckIcon class="h-4 w-4 text-success" />
                       </div>
                       <div class="min-w-0">
-                        <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{{ course.course_name }}</h4>
-                        <p class="text-[10px] text-slate-500 font-semibold uppercase tracking-tighter">
+                        <h4 class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{{ course.course_name }}</h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
                           Завершен {{ formatShortDate(course.end_date) }} • {{ course.total_lessons }} ач • {{ course.progress }}%
                         </p>
                       </div>
                     </div>
-                    <ArrowRightIcon class="w-3.5 h-3.5 text-slate-300 group-hover:translate-x-0.5 transition-transform shrink-0" />
+                    <ArrowRightIcon class="h-3.5 w-3.5 shrink-0 text-gray-300" />
                   </div>
                 </div>
               </div>
             </template>
+
+            <!-- Пустое состояние вкладки (раньше вкладка была просто пустой) -->
+            <UiEmptyState v-else title="Курсов пока нет" description="Слушатель ещё не зачислен ни в одну группу" :icon="BookOpenIcon" />
           </div>
 
-          <!-- CERTIFICATES TAB — compact list -->
-          <div
-            v-show="activeTab === 'certificates'"
-            class="space-y-4 animate-in fade-in duration-500"
-          >
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-[10px] font-black uppercase tracking-widest text-slate-500">Выданные документы</h3>
-              <UiButton v-if="canEditStudents" variant="outline" size="sm" @click="openCertificatesModal" class="h-7 gap-1 px-2 text-[10px]">
-                <PlusIcon class="w-3 h-3" /> Добавить
-              </UiButton>
+          <!-- Вкладка «Сертификаты» -->
+          <div v-show="activeTab === 'certificates'" class="space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Выданные документы</h3>
+              <UiButton v-if="canEditStudents" variant="outline" size="sm" :start-icon="PlusIcon" @click="openCertificatesModal">Добавить</UiButton>
             </div>
 
-            <div v-if="student.certificates?.length > 0" class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+            <div v-if="student.certificates?.length > 0" class="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white dark:divide-gray-800 dark:border-gray-800 dark:bg-white/[0.03]">
               <div
                 v-for="cert in student.certificates"
                 :key="cert.id"
+                class="group flex cursor-pointer items-center justify-between p-3.5 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                 @click="openCertificateDetailModal(cert)"
-                class="group flex items-center justify-between p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
               >
-                <div class="flex items-center gap-3 min-w-0">
-                  <div class="h-8 w-8 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
-                    <AwardIcon class="w-4 h-4 text-warning" />
+                <div class="flex min-w-0 items-center gap-3">
+                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning/10">
+                    <AwardIcon class="h-4 w-4 text-warning" />
                   </div>
                   <div class="min-w-0">
-                    <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200 truncate leading-none mb-1.5">{{ cert.courseName }}</h4>
-                    <div class="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                    <h4 class="mb-1 truncate text-sm font-medium leading-none text-gray-900 dark:text-gray-100">{{ cert.courseName }}</h4>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                       <span>№ {{ cert.certificateNumber }}</span>
                       <span>•</span>
                       <span>Выдан {{ formatDateShort(cert.issueDate) }}</span>
                       <span>•</span>
-                      <span :class="getExpiryBadgeClass(cert.expiryDate).replace('px-2 py-0.5 rounded-md', 'text-primary uppercase')">{{ getExpiryLabel(cert.expiryDate) }}</span>
+                      <span :class="getExpiryBadgeClass(cert.expiryDate).replace('px-2 py-0.5 rounded-md', 'text-primary')">{{ getExpiryLabel(cert.expiryDate) }}</span>
                     </div>
                   </div>
                 </div>
-                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <a v-if="cert.fileUrl" :href="`/api/certificates/download/${cert.id}`" target="_blank" @click.stop class="p-1.5 text-slate-400 hover:text-primary transition-colors">
-                    <DownloadIcon class="w-3.5 h-3.5" />
+                <!-- Скачивание: на touch видно всегда, на десктопе — при hover/фокусе строки -->
+                <div class="flex items-center gap-1">
+                  <a v-if="cert.fileUrl" :href="`/api/certificates/download/${cert.id}`" target="_blank" title="Скачать" class="p-1.5 text-gray-400 transition-colors hover:text-primary lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100" @click.stop>
+                    <DownloadIcon class="h-4 w-4" />
                   </a>
-                  <ArrowRightIcon class="w-3.5 h-3.5 text-slate-300 group-hover:translate-x-0.5 transition-transform" />
+                  <ArrowRightIcon class="h-3.5 w-3.5 text-gray-300" />
                 </div>
               </div>
             </div>
 
-            <div v-else class="text-center py-10 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
-              <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Сертификаты не найдены</p>
-            </div>
+            <!-- Пустое состояние через UiEmptyState -->
+            <UiEmptyState v-else title="Сертификаты не найдены" :icon="AwardIcon" />
           </div>
         </div>
 
-        <!-- Sidebar (4 cols) — compact -->
-        <div class="lg:col-span-4 space-y-4">
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
-            <div class="px-4 py-3 bg-slate-50 dark:bg-slate-800/50">
-              <h4 class="text-[10px] font-black uppercase tracking-widest text-slate-500">Системная информация</h4>
+        <!-- Боковая колонка (4 колонки): только системная информация; блок «Подсказка» убран как дубль кнопки PDF -->
+        <div class="space-y-4 lg:col-span-4">
+          <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+              <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Системная информация</h4>
             </div>
-            <div class="p-4 space-y-4">
+            <div class="space-y-4 p-4">
               <div class="flex items-center gap-3">
-                <div class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 shrink-0">
-                  <ClockIcon class="w-4 h-4 text-slate-500" />
+                <div class="shrink-0 rounded-lg bg-gray-100 p-2 dark:bg-white/[0.06]">
+                  <ClockIcon class="h-4 w-4 text-gray-500" />
                 </div>
                 <div class="min-w-0">
-                  <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest leading-none mb-1">Создан</p>
-                  <p class="text-xs font-bold text-slate-700 dark:text-slate-200">{{ formatDate(student.created_at) }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Создан</p>
+                  <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ formatDate(student.created_at) }}</p>
                 </div>
               </div>
               <div class="flex items-center gap-3">
-                <div class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 shrink-0">
-                  <RefreshCwIcon class="w-4 h-4 text-slate-500" />
+                <div class="shrink-0 rounded-lg bg-gray-100 p-2 dark:bg-white/[0.06]">
+                  <RefreshCwIcon class="h-4 w-4 text-gray-500" />
                 </div>
                 <div class="min-w-0">
-                  <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest leading-none mb-1">Обновлен</p>
-                  <p class="text-xs font-bold text-slate-700 dark:text-slate-200">{{ formatDate(student.updated_at) }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Обновлен</p>
+                  <p class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ formatDate(student.updated_at) }}</p>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div class="rounded-2xl bg-primary/5 border border-primary/10 p-4">
-            <div class="flex items-center gap-2 mb-2">
-              <InfoIcon class="w-3.5 h-3.5 text-primary" />
-              <h4 class="text-[10px] font-black uppercase tracking-widest text-primary">Подсказка</h4>
-            </div>
-            <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-              Вы можете скачать полную справку о слушателе в формате PDF. В нее включены все пройденные курсы и выданные сертификаты.
-            </p>
           </div>
         </div>
       </div>
     </template>
 
-    <!-- Modals -->
+    <!-- Модальные окна (логика без изменений) -->
     <DatabaseStudentFormModal
       v-if="isEditModalOpen && student"
       :student="student"
@@ -543,6 +325,7 @@
       @close="closeCourseDetailModal"
     />
 
+    <!-- Подтверждение удаления: тот же обработчик, что и раньше -->
     <UiConfirmModal
       :is-open="isDeleteModalOpen"
       title="Удаление слушателя"
@@ -550,48 +333,47 @@
       :item-name="student?.fullName"
       warning="Это действие нельзя отменить."
       :loading="isDeleting"
+      loading-text="Удаление…"
       @confirm="confirmDelete"
       @cancel="closeDeleteModal"
     />
 
-    <!-- Photo Lightbox Modal -->
+    <!-- Лайтбокс фото: без blur/shadow-2xl, ПИНФЛ скрыт маской -->
     <Teleport to="body">
       <Transition name="modal-fade">
         <div
           v-if="isPhotoModalOpen && student"
-          class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md"
+          class="fixed inset-0 z-[99999] flex items-center justify-center bg-gray-900/80 p-4"
           @click="isPhotoModalOpen = false"
         >
           <div
-            class="relative max-w-md w-full bg-white dark:bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 p-5 text-center space-y-4"
+            class="relative w-full max-w-md space-y-4 overflow-hidden rounded-xl border border-gray-200 bg-white p-5 text-center dark:border-gray-800 dark:bg-gray-900"
             @click.stop
           >
-            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div class="text-left min-w-0 pr-2">
-                <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wide truncate">{{ student.fullName }}</h3>
-                <p class="text-[11px] text-slate-400 font-mono">ПИНФЛ: {{ student.pinfl }}</p>
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-800">
+              <div class="min-w-0 pr-2 text-left">
+                <h3 class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ student.fullName }}</h3>
+                <p class="flex items-center gap-1 text-xs text-gray-500">ПИНФЛ: <UiSensitiveValue :value="student.pinfl" /></p>
               </div>
               <button
+                type="button"
+                aria-label="Закрыть"
+                class="shrink-0 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-white"
                 @click="isPhotoModalOpen = false"
-                class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 shrink-0"
               >
-                <XIcon class="w-5 h-5" />
+                <XIcon class="h-5 w-5" />
               </button>
             </div>
 
-            <div class="relative max-h-[60vh] flex items-center justify-center overflow-hidden rounded-2xl bg-slate-950 p-2">
-              <img
-                v-if="student.photo_base64"
-                :src="student.photo_base64"
-                class="max-h-[50vh] w-auto object-contain rounded-xl shadow-lg"
-              />
-              <div v-else class="w-36 h-36 rounded-full bg-primary/10 text-primary flex items-center justify-center text-4xl font-black">
+            <div class="relative flex max-h-[60vh] items-center justify-center overflow-hidden rounded-xl bg-gray-950 p-2">
+              <img v-if="student.photo_base64" :src="student.photo_base64" class="max-h-[50vh] w-auto rounded-lg object-contain" />
+              <div v-else class="flex h-36 w-36 items-center justify-center rounded-full bg-primary/10 text-4xl font-semibold text-primary">
                 {{ getInitials(student.fullName) }}
               </div>
             </div>
 
-            <div class="pt-1 text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center justify-center space-x-1.5">
-              <BuildingIcon class="w-3.5 h-3.5 text-slate-400" />
+            <div class="flex items-center justify-center space-x-1.5 pt-1 text-sm text-gray-500 dark:text-gray-400">
+              <BuildingIcon class="h-3.5 w-3.5 text-gray-400" />
               <span>{{ student.organization }}</span>
             </div>
           </div>
@@ -677,6 +459,31 @@ const availableTabs = [
   { id: "courses", label: "Обучение", icon: BookOpenIcon },
   { id: "certificates", label: "Сертификаты", icon: AwardIcon },
 ];
+
+// Презентационное: вкладки для UiTabs со счётчиками (видно объём раздела, не открывая его)
+const tabItems = computed(() =>
+  availableTabs.map((t) => ({
+    ...t,
+    count:
+      t.id === "courses"
+        ? studentCourses.value.length
+        : t.id === "certificates"
+          ? student.value?.certificates?.length || 0
+          : undefined,
+  })),
+);
+
+// Меню «⋯» в шапке: удаление вынесено в отдельную группу «Опасные» (показывается только при canDeleteStudents)
+const menuGroups = [
+  {
+    label: "Опасные",
+    items: [{ key: "delete", label: "Удалить слушателя", icon: Trash2Icon, danger: true }],
+  },
+];
+// Выбор пункта меню вызывает прежний обработчик handleDelete (подтверждение через UiConfirmModal)
+const onMenuSelect = (key: string) => {
+  if (key === "delete") handleDelete();
+};
 
 /**
  * Курсы слушателя

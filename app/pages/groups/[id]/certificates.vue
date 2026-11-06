@@ -1,12 +1,13 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+  <!-- Внешний враппер без двойного отступа: отступы задаёт layout -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
     <!-- Загрузка -->
     <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
       <div class="text-center">
         <div
-          class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+          class="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
         ></div>
-        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
+        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
           Загрузка сертификатов...
         </p>
       </div>
@@ -14,294 +15,130 @@
 
     <!-- Контент -->
     <template v-else-if="group">
-      <!-- Header Section -->
-      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-        <!-- Breadcrumbs -->
-        <div class="mb-6">
+      <!-- Шапка: UiPageHeader с хлебными крошками вместо большой ссылки «Назад» и CAPS-заголовка; код группы и курс — в мета-строке -->
+      <UiPageHeader
+        title="Выдача сертификатов"
+        :breadcrumbs="[
+          { label: 'Группы', to: '/groups' },
+          { label: group.code, to: `/groups/${groupId}` },
+          { label: 'Сертификаты' },
+        ]"
+      >
+        <template #meta>
+          <span class="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{{ group.code }}</span>
+          <span>{{ group.course?.name }}</span>
+        </template>
+      </UiPageHeader>
+
+      <!-- Настройки выдачи: одна компактная карточка с контролами h-9 вместо россыпи разнокалиберных блоков -->
+      <div class="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-white/[0.03]">
+        <!-- Информация о шаблоне -->
+        <div
+          v-if="template"
+          class="flex h-9 items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-3 text-sm font-medium text-primary"
+        >
+          <FileIcon class="w-4 h-4" />
+          <span>{{ template.name }}</span>
+        </div>
+
+        <!-- Предупреждение если нет шаблона -->
+        <div
+          v-else
+          class="flex h-9 items-center gap-2 rounded-lg border border-warning/20 bg-warning/10 px-3 text-sm font-medium text-warning"
+        >
+          <AlertTriangle class="w-4 h-4" />
+          <span>Шаблон не назначен для курса</span>
           <NuxtLink
-            :to="`/groups/${groupId}`"
-            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
+            :to="`/programs/edit/${group.course?.id}`"
+            class="ml-1 text-xs underline hover:no-underline"
           >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
-            >
-              <ArrowLeft
-                class="w-4 h-4 transition-transform group-hover:-translate-x-1"
-              />
-            </div>
-            Назад к группе
+            Настроить
           </NuxtLink>
         </div>
 
-        <div
-          class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
+        <!-- Выбор инструктора -->
+        <div v-if="instructors.length > 0" class="relative flex items-center">
+          <UserIcon class="pointer-events-none absolute left-3 z-10 h-4 w-4 text-gray-400" />
+          <select
+            v-model="selectedInstructorId"
+            class="h-9 cursor-pointer appearance-none rounded-lg border border-gray-300 bg-white pl-9 pr-8 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+          >
+            <option :value="null">Инструктор (не указан)</option>
+            <option
+              v-for="instructor in instructors"
+              :key="instructor.id"
+              :value="instructor.id"
+            >
+              {{ instructor.fullName }}
+              <template v-if="instructor.isPrimary"> (основной)</template>
+            </option>
+          </select>
+          <ChevronDown class="pointer-events-none absolute right-3 h-4 w-4 text-gray-400" />
+        </div>
+
+        <!-- Дата выдачи -->
+        <input
+          v-model="issueDate"
+          type="date"
+          title="Дата выдачи"
+          class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+        />
+
+        <!-- Расширенные функции: дополнительные даты для шаблона -->
+        <label
+          class="flex h-9 cursor-pointer select-none items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
         >
-          <!-- Left: Title & Info -->
-          <div class="space-y-3">
-            <h1
-              class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase flex items-center gap-4"
-            >
-              Выдача сертификатов
-            </h1>
-            <p
-              class="text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2"
-            >
-              <span
-                class="text-primary bg-primary/10 px-2 py-0.5 rounded uppercase tracking-wider"
-                >{{ group.code }}</span
-              >
-              {{ group.course?.name }}
-            </p>
-          </div>
+          <input
+            v-model="extendedFeatures"
+            type="checkbox"
+            class="h-4 w-4 rounded border-gray-300 bg-white text-primary focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800"
+          />
+          <span class="text-sm text-gray-700 dark:text-gray-300">Расширенные функции</span>
+        </label>
+        <template v-if="extendedFeatures">
+          <label
+            class="flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white pl-3 pr-1 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 dark:border-gray-700 dark:bg-gray-900"
+          >
+            <span class="text-xs text-gray-500 dark:text-gray-400">Дата теоретического обучения</span>
+            <input
+              v-model="theoryDate"
+              type="date"
+              class="border-0 bg-transparent px-2 text-sm text-gray-800 focus:outline-none focus:ring-0 dark:text-gray-100"
+            />
+          </label>
+          <label
+            class="flex h-9 items-center gap-2 rounded-lg border border-gray-300 bg-white pl-3 pr-1 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 dark:border-gray-700 dark:bg-gray-900"
+          >
+            <span class="text-xs text-gray-500 dark:text-gray-400">Дата проведения практического занятия</span>
+            <input
+              v-model="practiceDate"
+              type="date"
+              class="border-0 bg-transparent px-2 text-sm text-gray-800 focus:outline-none focus:ring-0 dark:text-gray-100"
+            />
+          </label>
+        </template>
 
-          <!-- Настройки выдачи -->
-          <div class="flex flex-wrap items-center gap-3">
-            <!-- Информация о шаблоне -->
-            <div
-              v-if="template"
-              class="flex items-center gap-2 px-3 py-2 bg-primary/10 text-primary rounded-xl font-bold text-sm border border-primary/20 shadow-sm"
-            >
-              <FileIcon class="w-4 h-4" />
-              <span>{{ template.name }}</span>
-            </div>
-
-            <!-- Предупреждение если нет шаблона -->
-            <div
-              v-else
-              class="flex items-center gap-2 px-3 py-2 bg-warning/10 text-warning rounded-xl font-bold text-sm border border-warning/20 shadow-sm"
-            >
-              <AlertTriangle class="w-4 h-4" />
-              <span>Шаблон не назначен для курса</span>
-              <NuxtLink
-                :to="`/programs/edit/${group.course?.id}`"
-                class="text-xs underline hover:no-underline ml-2 text-warning/80"
-              >
-                Настроить
-              </NuxtLink>
-            </div>
-
-            <!-- Выбор инструктора -->
-            <div
-              v-if="instructors.length > 0"
-              class="flex items-center gap-2 group relative"
-            >
-              <div
-                class="absolute left-3 text-slate-400 pointer-events-none z-10"
-              >
-                <UserIcon class="w-4 h-4" />
-              </div>
-              <select
-                v-model="selectedInstructorId"
-                class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 pl-9 pr-8 py-2 text-sm font-bold text-slate-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none shadow-sm cursor-pointer"
-              >
-                <option :value="null">Инструктор (не указан)</option>
-                <option
-                  v-for="instructor in instructors"
-                  :key="instructor.id"
-                  :value="instructor.id"
-                >
-                  {{ instructor.fullName }}
-                  <template v-if="instructor.isPrimary"> (основной)</template>
-                </option>
-              </select>
-              <div class="absolute right-3 pointer-events-none text-slate-400">
-                <ChevronDown class="w-4 h-4" />
-              </div>
-            </div>
-
-            <!-- Дата выдачи -->
-            <div class="flex items-center gap-2 relative">
-              <input
-                v-model="issueDate"
-                type="date"
-                class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm font-bold text-slate-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm appearance-none"
-              />
-            </div>
-
-            <!-- Расширенные функции: дополнительные даты для шаблона -->
-            <label
-              class="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm cursor-pointer select-none"
-            >
-              <input
-                v-model="extendedFeatures"
-                type="checkbox"
-                class="rounded-md border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/20 bg-white dark:bg-slate-800 w-4 h-4"
-              />
-              <span
-                class="text-sm font-bold text-slate-600 dark:text-slate-400"
-                >Расширенные функции</span
-              >
-            </label>
-            <template v-if="extendedFeatures">
-              <label
-                class="flex items-center gap-2 pl-3 pr-1 py-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"
-              >
-                <span
-                  class="text-xs font-bold text-slate-500 dark:text-slate-400"
-                  >Дата теоретического обучения</span
-                >
-                <input
-                  v-model="theoryDate"
-                  type="date"
-                  class="border-0 bg-transparent px-2 py-1 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-0 appearance-none"
-                />
-              </label>
-              <label
-                class="flex items-center gap-2 pl-3 pr-1 py-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"
-              >
-                <span
-                  class="text-xs font-bold text-slate-500 dark:text-slate-400"
-                  >Дата проведения практического занятия</span
-                >
-                <input
-                  v-model="practiceDate"
-                  type="date"
-                  class="border-0 bg-transparent px-2 py-1 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-0 appearance-none"
-                />
-              </label>
-            </template>
-
-            <!-- Срок действия -->
-            <div
-              v-if="group.course?.certificateValidityMonths"
-              class="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
-            >
-              <Clock class="w-4 h-4 text-slate-500" />
-              <span
-                class="text-sm font-bold text-slate-600 dark:text-slate-400"
-              >
-                Срок: {{ group.course.certificateValidityMonths }} мес.
-              </span>
-            </div>
-            <div
-              v-else
-              class="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl"
-            >
-              <Clock class="w-4 h-4 text-slate-500" />
-              <span class="text-sm font-bold text-slate-600 dark:text-slate-400"
-                >Бессрочный</span
-              >
-            </div>
-          </div>
+        <!-- Срок действия: один блок вместо двух дублей с v-if/v-else -->
+        <div class="ml-auto flex h-9 items-center gap-2 rounded-lg bg-gray-100 px-3 text-sm text-gray-600 dark:bg-white/[0.06] dark:text-gray-300">
+          <Clock class="h-4 w-4 text-gray-500" />
+          <span v-if="group.course?.certificateValidityMonths">Срок: {{ group.course.certificateValidityMonths }} мес.</span>
+          <span v-else>Бессрочный</span>
         </div>
       </div>
 
-      <!-- Bento Box Metrics -->
-      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-        <!-- Total -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Слушателей
-              </p>
-              <h3
-                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
-              >
-                {{ stats.totalStudents }}
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-slate-100 dark:bg-slate-800 p-3 text-slate-600 dark:text-slate-300 transition-transform group-hover:rotate-12"
-            >
-              <Users class="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Eligible -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Допущены
-              </p>
-              <h3 class="mt-1 text-2xl font-bold text-success">
-                {{ stats.eligible }}
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12"
-            >
-              <CheckCircle class="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        <!-- With Warnings -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                С предупреждениями
-              </p>
-              <h3 class="mt-1 text-2xl font-bold text-warning">
-                {{ stats.withWarnings }}
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12"
-            >
-              <AlertTriangle class="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Issued -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Выдано
-              </p>
-              <h3 class="mt-1 text-2xl font-bold text-primary">
-                {{ stats.issued }}
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12"
-            >
-              <Award class="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Revoked -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Отозвано
-              </p>
-              <h3 class="mt-1 text-2xl font-bold text-danger">
-                {{ stats.revoked }}
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-danger/10 p-3 text-danger transition-transform group-hover:rotate-12"
-            >
-              <XCircle class="w-5 h-5" />
-            </div>
-          </div>
-        </div>
+      <!-- Метрики одной строкой: 5 плоских UiStat вместо крупных bento-карточек -->
+      <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <UiStat label="Слушателей" :value="stats.totalStudents" :icon="Users" />
+        <UiStat label="Допущены" :value="stats.eligible" :icon="CheckCircle" tone="success" />
+        <UiStat label="С предупреждениями" :value="stats.withWarnings" :icon="AlertTriangle" tone="warning" />
+        <UiStat label="Выдано" :value="stats.issued" :icon="Award" tone="primary" />
+        <UiStat label="Отозвано" :value="stats.revoked" :icon="XCircle" tone="danger" />
       </div>
 
-      <!-- Actions Toolkit -->
-      <div
-        class="flex flex-wrap items-center justify-between gap-4 mb-6 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100"
-      >
-        <div class="flex flex-wrap gap-3">
-          <!-- Выдать всем допущенным -->
+      <!-- Панель действий: одна строка из 4 кнопок; главное действие — «Выдать всем допущенным», остальное вторично -->
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Выдать всем допущенным (primary) -->
           <UiButton
             @click="openBulkIssueModal('eligible')"
             :disabled="
@@ -310,20 +147,8 @@
               certIssueStore.isIssuing.value
             "
             variant="primary"
+            :start-icon="Award"
           >
-            <svg
-              class="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-              />
-            </svg>
             Выдать всем допущенным ({{ eligibleWithoutCertificate }})
           </UiButton>
 
@@ -336,20 +161,8 @@
               certIssueStore.isIssuing.value
             "
             variant="outline"
+            :start-icon="CheckCircle2"
           >
-            <svg
-              class="w-4 h-4 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
             Выдать выбранным ({{ selectedStudentIds.length }})
           </UiButton>
 
@@ -358,71 +171,20 @@
             @click="downloadAllCertificates"
             :disabled="issuedCertificateIds.length === 0 || downloadingArchive"
             variant="outline"
+            :loading="downloadingArchive"
+            :start-icon="Download"
           >
-            <Loader2 v-if="downloadingArchive" class="w-4 h-4 mr-2 animate-spin" />
-            <Download v-else class="w-4 h-4 mr-2" />
-            Скачать все сертификаты ({{ issuedCertificateIds.length }})
+            Скачать все ({{ issuedCertificateIds.length }})
           </UiButton>
 
-          <!-- Скачать ведомость с выбором формата -->
-          <div class="relative inline-block">
-            <UiButton
-              @click="toggleReportDropdown"
-              :disabled="generatingPdf || journal.length === 0"
-              variant="outline"
-              class="font-bold border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-            >
-              <FileIcon v-if="!generatingPdf" class="w-4 h-4 mr-2" />
-              <Loader2 v-else class="w-4 h-4 mr-2 animate-spin" />
-              <span>{{ generatingPdf ? "Генерация..." : "Ведомость" }}</span>
-              <ChevronDown class="w-4 h-4 ml-1 opacity-50" />
-            </UiButton>
-
-            <!-- Выпадающее меню -->
-            <div
-              v-if="showReportDropdown"
-              class="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden"
-            >
-              <button
-                @click="downloadReport('pdf')"
-                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-t-lg text-gray-900 dark:text-white"
-              >
-                <svg
-                  class="w-4 h-4 text-danger"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <span>Скачать PDF</span>
-              </button>
-              <button
-                @click="downloadReport('docx')"
-                class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2 rounded-b-lg text-gray-900 dark:text-white"
-              >
-                <svg
-                  class="w-4 h-4 text-primary"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <span>Скачать Word</span>
-              </button>
-            </div>
-          </div>
+          <!-- Ведомость: UiDropdown вместо самописного меню (клик-вне, Esc, клавиатура); пункты блокируются, пока нет данных или идёт генерация -->
+          <UiDropdown
+            :label="generatingPdf ? 'Генерация...' : 'Ведомость'"
+            variant="outline"
+            :trigger-icon="FileIcon"
+            :groups="reportMenuGroups"
+            @select="downloadReport($event as 'pdf' | 'docx')"
+          />
         </div>
 
         <!-- Индикатор активной фоновой выдачи -->
@@ -431,133 +193,85 @@
             certIssueStore.isIssuing.value &&
             certIssueStore.currentJob.value?.groupId === groupId
           "
-          class="w-full sm:w-auto px-4 py-3 bg-success/5 dark:bg-success/10 rounded-xl border border-success/20 flex items-center justify-between gap-4"
+          class="flex w-full items-center gap-3 rounded-lg border border-success/20 bg-success/5 px-3 py-2 sm:w-auto dark:bg-success/10"
         >
-          <div class="flex items-center gap-3">
-            <Loader2 class="w-5 h-5 text-success animate-spin" />
-            <div class="flex-1 min-w-[200px]">
-              <div class="flex items-center justify-between gap-4 mb-1">
-                <span class="text-sm font-bold text-success"
-                  >Выдача сертификатов</span
-                >
-                <span class="text-xs font-bold text-success"
-                  >{{ certIssueStore.processedCount.value }}/{{
-                    certIssueStore.totalCount.value
-                  }}</span
-                >
-              </div>
-              <div
-                class="h-1.5 w-full bg-success/20 rounded-full overflow-hidden"
+          <Loader2 class="h-5 w-5 animate-spin text-success" />
+          <div class="min-w-[200px] flex-1">
+            <div class="mb-1 flex items-center justify-between gap-4">
+              <span class="text-sm font-medium text-success">Выдача сертификатов</span>
+              <span class="text-xs font-medium text-success"
+                >{{ certIssueStore.processedCount.value }}/{{
+                  certIssueStore.totalCount.value
+                }}</span
               >
-                <div
-                  class="h-full bg-success transition-all duration-300 rounded-full"
-                  :style="{ width: `${certIssueStore.percentage.value}%` }"
-                ></div>
-              </div>
-              <p
-                class="text-xs font-medium text-success mt-1 opacity-80 truncate max-w-[200px]"
-              >
-                {{ certIssueStore.currentStudentName.value || "Обработка..." }}
-              </p>
             </div>
+            <div class="h-1.5 w-full overflow-hidden rounded-full bg-success/20">
+              <div
+                class="h-full rounded-full bg-success transition-all duration-300"
+                :style="{ width: `${certIssueStore.percentage.value}%` }"
+              ></div>
+            </div>
+            <p class="mt-1 max-w-[200px] truncate text-xs text-success opacity-80">
+              {{ certIssueStore.currentStudentName.value || "Обработка..." }}
+            </p>
           </div>
         </div>
       </div>
 
-      <!-- Таблица журнала -->
-      <div
-        class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 mb-8"
-      >
-        <div class="overflow-x-auto custom-scrollbar">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr
-                class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800"
-              >
-                <th
-                  class="px-4 py-3 w-12 text-center border-r border-slate-100 dark:border-slate-800"
-                >
+      <!-- Таблица журнала: карточка единого стиля, sticky-шапка, без анимаций появления -->
+      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <div class="custom-scrollbar max-h-[calc(100vh-20rem)] min-h-[240px] overflow-auto">
+          <table class="w-full border-collapse text-left">
+            <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+              <tr class="border-b border-gray-200 dark:border-gray-800">
+                <th class="w-12 px-4 py-3 text-center">
                   <input
                     type="checkbox"
                     :checked="isAllSelected"
                     :indeterminate="isPartialSelected"
                     @change="toggleSelectAll"
-                    class="rounded-md border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/20 bg-white dark:bg-slate-800 w-4 h-4"
+                    class="h-4 w-4 rounded border-gray-300 bg-white text-primary focus:ring-primary/20 dark:border-gray-600 dark:bg-gray-800"
                   />
                 </th>
-                <th
-                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider"
-                >
-                  Слушатель
-                </th>
-                <th
-                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
-                >
-                  Посещаемость
-                </th>
-                <th
-                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
-                >
-                  Дисциплин
-                </th>
-                <th
-                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
-                >
-                  Ср. балл
-                </th>
-                <th
-                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
-                >
-                  Допуск
-                </th>
-                <th
-                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
-                >
-                  Сертификат
-                </th>
-                <th
-                  class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
-                >
-                  Действия
-                </th>
+                <th class="px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Слушатель</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Посещаемость</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Дисциплин</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Ср. балл</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Допуск</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Сертификат</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Действия</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
               <tr
                 v-for="row in journal"
                 :key="row.student.id"
-                class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors group"
+                class="group transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]"
               >
                 <!-- Чекбокс -->
-                <td
-                  class="px-4 py-4 text-center border-r border-slate-100 dark:border-slate-800"
-                >
+                <td class="px-4 py-3 text-center">
                   <input
                     type="checkbox"
                     :checked="selectedStudentIds.includes(row.student.id)"
                     :disabled="row.certificate?.status === 'issued'"
                     @change="toggleStudent(row.student.id)"
-                    class="rounded-md border-slate-300 dark:border-slate-600 text-primary focus:ring-primary/20 bg-white dark:bg-slate-800 w-4 h-4 disabled:opacity-50"
+                    class="h-4 w-4 rounded border-gray-300 bg-white text-primary focus:ring-primary/20 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800"
                   />
                 </td>
 
                 <!-- Слушатель -->
-                <td class="px-6 py-4">
+                <td class="px-4 py-3">
                   <div class="flex items-center gap-3">
                     <div
-                      class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/10 text-sm font-bold shadow-inner"
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-primary/10 bg-primary/10 text-sm font-semibold text-primary"
                     >
                       {{ getInitials(row.student.fullName) }}
                     </div>
                     <div class="min-w-0">
-                      <p
-                        class="font-bold text-slate-900 dark:text-white truncate"
-                      >
+                      <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
                         {{ row.student.fullName }}
                       </p>
-                      <p
-                        class="text-xs text-slate-500 font-medium truncate mt-0.5"
-                      >
+                      <p class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
                         {{ row.student.organization }}
                       </p>
                     </div>
@@ -565,29 +279,25 @@
                 </td>
 
                 <!-- Посещаемость -->
-                <td class="px-6 py-4 text-center">
+                <td class="px-4 py-3 text-center">
                   <span
-                    class="inline-flex flex-col items-center justify-center"
+                    class="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset"
+                    :class="
+                      row.totalAttendancePercent >= 75
+                        ? 'bg-success/10 text-success ring-success/20'
+                        : row.totalAttendancePercent >= 50
+                          ? 'bg-warning/10 text-warning ring-warning/20'
+                          : 'bg-danger/10 text-danger ring-danger/20'
+                    "
                   >
-                    <span
-                      class="inline-block px-2.5 py-1 rounded-full text-xs font-bold ring-1 ring-inset"
-                      :class="
-                        row.totalAttendancePercent >= 75
-                          ? 'bg-success/10 text-success ring-success/20'
-                          : row.totalAttendancePercent >= 50
-                            ? 'bg-warning/10 text-warning ring-warning/20'
-                            : 'bg-danger/10 text-danger ring-danger/20'
-                      "
-                    >
-                      {{ row.totalAttendancePercent.toFixed(0) }}%
-                    </span>
+                    {{ row.totalAttendancePercent.toFixed(0) }}%
                   </span>
                 </td>
 
                 <!-- Дисциплин пройдено -->
-                <td class="px-6 py-4 text-center">
+                <td class="px-4 py-3 text-center">
                   <span
-                    class="inline-flex items-center justify-center px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold"
+                    class="inline-flex items-center justify-center rounded bg-gray-100 px-2 py-0.5 text-xs font-medium tabular-nums text-gray-700 dark:bg-white/[0.06] dark:text-gray-300"
                   >
                     {{ row.eligibility.completedDisciplines }} /
                     {{ row.eligibility.totalDisciplines }}
@@ -595,22 +305,22 @@
                 </td>
 
                 <!-- Средний балл -->
-                <td class="px-6 py-4 text-center">
+                <td class="px-4 py-3 text-center">
                   <span
                     v-if="row.averageGrade !== null"
-                    class="text-sm font-black text-slate-900 dark:text-white"
+                    class="text-sm font-semibold tabular-nums text-gray-900 dark:text-white"
                   >
                     {{ row.averageGrade.toFixed(1) }}
                   </span>
-                  <span v-else class="text-slate-400 font-bold">—</span>
+                  <span v-else class="text-gray-400">—</span>
                 </td>
 
                 <!-- Допуск -->
-                <td class="px-6 py-4">
+                <td class="px-4 py-3">
                   <div class="flex items-center justify-center">
                     <div
                       v-if="row.eligibility.isEligible"
-                      class="flex items-center gap-1.5 text-success font-bold"
+                      class="flex items-center gap-1.5 font-medium text-success"
                     >
                       <CheckCircle class="w-4 h-4" />
                       <span class="text-xs">Допущен</span>
@@ -618,60 +328,45 @@
                     <button
                       v-else
                       @click="showWarnings(row)"
-                      class="flex items-center gap-1.5 text-warning hover:text-warning/80 hover:bg-warning/10 px-2 py-1 rounded-lg transition-colors font-bold"
+                      class="flex items-center gap-1.5 rounded-lg px-2 py-1 font-medium text-warning transition-colors hover:bg-warning/10 hover:text-warning/80"
                     >
                       <AlertTriangle class="w-4 h-4" />
-                      <span class="text-xs"
-                        >{{ row.eligibility.warnings.length }} замеч.</span
-                      >
+                      <span class="text-xs">{{ row.eligibility.warnings.length }} замеч.</span>
                     </button>
                   </div>
                 </td>
 
-                <!-- Статус сертификата -->
-                <td class="px-6 py-4 text-center">
+                <!-- Статус сертификата: без CAPS, шрифт 12px -->
+                <td class="px-4 py-3 text-center">
                   <span
                     v-if="row.certificate"
-                    class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border"
+                    class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium"
                     :class="[
                       row.certificate.status === 'issued'
                         ? 'bg-success/10 text-success border-success/20'
                         : row.certificate.status === 'revoked'
                           ? 'bg-danger/10 text-danger border-danger/20'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700',
+                          : 'border-gray-200 bg-gray-100 text-gray-600 dark:border-gray-700 dark:bg-white/[0.06] dark:text-gray-400',
                     ]"
                   >
                     {{ certificateStatusLabels[row.certificate.status] }}
                   </span>
-                  <span v-else class="text-slate-400 font-medium text-xs"
-                    >Не выдан</span
-                  >
+                  <span v-else class="text-xs text-gray-400">Не выдан</span>
                 </td>
 
-                <!-- Действия -->
-                <td class="px-6 py-4">
+                <!-- Действия: ровно одна иконка в строке (скачать ИЛИ выдать), всегда видна, в т.ч. на touch -->
+                <td class="px-4 py-3">
                   <div class="flex items-center justify-center gap-2">
                     <!-- Скачать (показываем для выданных сертификатов) -->
                     <a
                       v-if="row.certificate?.status === 'issued'"
                       :href="`/api/certificates/download/${row.certificate.id}`"
                       target="_blank"
-                      class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-primary transition-colors"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-primary transition-colors hover:bg-gray-100 dark:hover:bg-white/[0.06]"
                       title="Скачать сертификат"
+                      aria-label="Скачать сертификат"
                     >
-                      <svg
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
+                      <Download class="h-4 w-4" />
                     </a>
 
                     <!-- Выдать -->
@@ -683,44 +378,13 @@
                       :disabled="
                         isIssuing || issuingStudentId === row.student.id
                       "
-                      class="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
                       title="Выдать сертификат"
+                      aria-label="Выдать сертификат"
                     >
                       <!-- Спиннер при выдаче этому студенту -->
-                      <svg
-                        v-if="issuingStudentId === row.student.id"
-                        class="w-5 h-5 animate-spin"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          class="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          stroke-width="4"
-                        ></circle>
-                        <path
-                          class="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      <svg
-                        v-else
-                        class="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                      <Loader2 v-if="issuingStudentId === row.student.id" class="h-4 w-4 animate-spin" />
+                      <CheckCircle2 v-else class="h-4 w-4" />
                     </button>
                   </div>
                 </td>
@@ -1194,6 +858,16 @@ const issueToStudents = async (
     issuingStudentId.value = null;
   }
 };
+
+// Пункты меню «Ведомость» для UiDropdown: те же обработчики downloadReport, блокировка — пока нет данных или идёт генерация
+const reportMenuGroups = computed(() => [
+  {
+    items: [
+      { key: "pdf", label: "Скачать PDF", icon: FileText, disabled: generatingPdf.value || journal.value.length === 0, loading: generatingPdf.value },
+      { key: "docx", label: "Скачать Word", icon: FileIcon, disabled: generatingPdf.value || journal.value.length === 0 },
+    ],
+  },
+]);
 
 // Функция переключения выпадающего меню формата ведомости
 const toggleReportDropdown = () => {

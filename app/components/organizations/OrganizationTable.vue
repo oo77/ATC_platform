@@ -1,172 +1,149 @@
 <template>
-  <div class="overflow-x-auto">
-    <table class="w-full text-left border-collapse">
+  <!-- Контейнер с ограничением высоты: шапка таблицы остаётся на виду при прокрутке -->
+  <div class="max-h-[70vh] overflow-auto">
+    <table class="w-full border-collapse text-left">
+      <!-- Sticky-шапка: непрозрачный фон, обычный регистр, 12px вместо мелких CAPS -->
       <thead>
-        <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Организация</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">ИНН</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Код</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Слушатели</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Контакты</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Статус</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Сертификаты</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Действия</th>
+        <tr class="border-b border-gray-200 dark:border-gray-800">
+          <th class="sticky top-0 z-10 bg-white px-4 py-3 text-xs font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400">Организация</th>
+          <th class="sticky top-0 z-10 bg-white px-4 py-3 text-xs font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400">ИНН</th>
+          <th class="sticky top-0 z-10 bg-white px-4 py-3 text-xs font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400">Код</th>
+          <th class="sticky top-0 z-10 bg-white px-4 py-3 text-center text-xs font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400">Слушатели</th>
+          <th class="sticky top-0 z-10 bg-white px-4 py-3 text-xs font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400">Контакты</th>
+          <th class="sticky top-0 z-10 bg-white px-4 py-3 text-xs font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400">Статус</th>
+          <th class="sticky top-0 z-10 bg-white px-4 py-3 text-xs font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400">Сертификаты</th>
+          <th class="sticky top-0 z-10 w-24 bg-white px-4 py-3 text-right text-xs font-medium text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+            <span class="sr-only">Действия</span>
+          </th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-        <!-- Loading -->
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+        <!-- Загрузка: компактный спиннер -->
         <tr v-if="loading">
-          <td colspan="8" class="px-6 py-12 text-center">
-            <div class="flex flex-col items-center gap-3">
-              <div class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-              <p class="font-bold text-slate-500 dark:text-slate-400">Загрузка организаций...</p>
+          <td colspan="8" class="py-12 text-center">
+            <div class="flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+              <div class="h-5 w-5 animate-spin rounded-full border-2 border-solid border-primary border-t-transparent"></div>
+              <span class="ml-3">Загрузка организаций...</span>
             </div>
           </td>
         </tr>
 
-        <!-- Empty State -->
+        <!-- Пусто: единый UiEmptyState -->
         <tr v-else-if="organizations.length === 0">
-          <td colspan="8" class="px-6 py-16 text-center">
-            <div class="flex flex-col items-center gap-3">
-              <div class="h-16 w-16 rounded-full bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center">
-                <Building2 class="w-8 h-8 text-slate-300" />
-              </div>
-              <p class="text-lg font-bold text-slate-900 dark:text-white">Организации не найдены</p>
-              <p class="text-sm text-slate-500 font-medium">Создайте первую организацию или измените параметры фильтра</p>
-            </div>
+          <td colspan="8">
+            <UiEmptyState
+              title="Организации не найдены"
+              description="Создайте первую организацию или измените параметры поиска"
+              :icon="Building2"
+            />
           </td>
         </tr>
 
-        <!-- Data Rows -->
+        <!-- Строки данных: кликабельны (открывают карточку организации), как и раньше -->
         <tr
           v-else
           v-for="org in organizations"
           :key="org.id"
-          class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group"
+          class="group cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
           @click="emit('view', org)"
         >
-          <!-- Название -->
-          <td class="px-6 py-4">
-            <div>
-              <p class="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
-                {{ org.name }}
-              </p>
-              <p v-if="org.contactPerson" class="text-xs font-medium text-slate-400 mt-0.5">
-                {{ org.contactPerson }}
-              </p>
-            </div>
+          <!-- Название + контактное лицо -->
+          <td class="px-4 py-3">
+            <p class="text-sm font-medium text-gray-900 transition-colors group-hover:text-primary dark:text-white">
+              {{ org.name }}
+            </p>
+            <p v-if="org.contactPerson" class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+              {{ org.contactPerson }}
+            </p>
           </td>
 
-          <!-- ИНН -->
-          <td class="px-6 py-4">
-            <span
-              v-if="org.inn"
-              class="inline-flex items-center gap-1 rounded-lg bg-primary/10 dark:bg-primary/20 px-2.5 py-1 text-xs font-bold text-primary font-mono"
-            >
-              <Hash class="w-3 h-3" />
-              {{ org.inn }}
-            </span>
-            <span v-else class="text-xs text-slate-400 italic">не указан</span>
+          <!-- ИНН: моноширинный текст без цветной плашки (один акцентный цвет на строку — у названия) -->
+          <td class="px-4 py-3">
+            <span v-if="org.inn" class="font-mono text-sm tabular-nums text-gray-700 dark:text-gray-300">{{ org.inn }}</span>
+            <span v-else class="text-xs text-gray-400">не указан</span>
           </td>
 
-          <!-- Код -->
-          <td class="px-6 py-4">
-            <span class="inline-flex items-center rounded-lg bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-300 font-mono">
+          <!-- Код: нейтральная плашка -->
+          <td class="px-4 py-3">
+            <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-700 dark:bg-white/[0.06] dark:text-gray-300">
               {{ org.code }}
             </span>
           </td>
 
-          <!-- Слушатели -->
-          <td class="px-6 py-4 text-center">
+          <!-- Слушатели: число, нулевое значение приглушено -->
+          <td class="px-4 py-3 text-center">
             <span
-              class="inline-flex items-center justify-center min-w-10 px-2.5 py-1 rounded-lg text-sm font-bold"
-              :class="org.studentsCount > 0
-                ? 'bg-primary/10 text-primary'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-400'"
+              class="text-sm font-medium tabular-nums"
+              :class="org.studentsCount > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400'"
             >
               {{ org.studentsCount }}
             </span>
           </td>
 
-          <!-- Контакты -->
-          <td class="px-6 py-4">
-            <div class="flex flex-col gap-1 text-sm">
-              <div v-if="org.contactPhone" class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                <Phone class="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                <span class="font-medium text-xs">{{ org.contactPhone }}</span>
+          <!-- Контакты (иконки уменьшены, текст не мельче 12px) -->
+          <td class="px-4 py-3">
+            <div class="flex flex-col gap-1">
+              <div v-if="org.contactPhone" class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                <Phone class="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                <span class="text-xs">{{ org.contactPhone }}</span>
               </div>
-              <div v-if="org.contactEmail" class="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-                <Mail class="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                <span class="font-medium text-xs truncate max-w-[150px]">{{ org.contactEmail }}</span>
+              <div v-if="org.contactEmail" class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                <Mail class="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                <span class="max-w-[150px] truncate text-xs">{{ org.contactEmail }}</span>
               </div>
-              <span v-if="!org.contactPhone && !org.contactEmail" class="text-slate-300 dark:text-slate-600 text-xs italic">
-                Не указаны
-              </span>
+              <span v-if="!org.contactPhone && !org.contactEmail" class="text-xs text-gray-400">Не указаны</span>
             </div>
           </td>
 
-          <!-- Статус -->
-          <td class="px-6 py-4 text-center">
-            <span
-              class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-black uppercase tracking-widest border"
-              :class="org.isActive
-                ? 'bg-success/5 text-success border-success/20'
-                : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'"
-            >
-              <span class="w-1.5 h-1.5 rounded-full" :class="org.isActive ? 'bg-success' : 'bg-slate-400'"></span>
+          <!-- Статус: UiBadge вместо самописной CAPS-плашки -->
+          <td class="px-4 py-3">
+            <UiBadge :color="org.isActive ? 'success' : 'light'" size="md">
               {{ org.isActive ? 'Активна' : 'Неактивна' }}
-            </span>
+            </UiBadge>
           </td>
 
-          <!-- Сертификаты -->
-          <td class="px-6 py-4">
-            <div class="flex flex-col gap-2 min-w-[130px]">
-              <div class="flex items-center justify-between text-xs font-bold">
-                <span class="text-slate-400">Выдано</span>
-                <span class="text-slate-900 dark:text-white">
+          <!-- Сертификаты: «выдано / всего» + тонкий прогресс -->
+          <td class="px-4 py-3">
+            <div class="flex min-w-[130px] flex-col gap-1.5">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-gray-500 dark:text-gray-400">Выдано</span>
+                <span class="font-medium tabular-nums text-gray-900 dark:text-white">
                   {{ org.issuedCertificates || 0 }} / {{ org.totalCertificates || 0 }}
                 </span>
               </div>
-              <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div class="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
                 <div
-                  class="h-full bg-primary transition-all duration-500 rounded-full"
+                  class="h-full rounded-full bg-primary transition-all duration-500"
                   :style="{ width: `${getPercent(org)}%` }"
                 ></div>
               </div>
-              <div v-if="org.latestCertificateDate" class="text-[10px] text-slate-400 text-right">
+              <div v-if="org.latestCertificateDate" class="text-right text-[11px] text-gray-400">
                 {{ formatDate(org.latestCertificateDate) }}
               </div>
             </div>
           </td>
 
-          <!-- Действия -->
-          <td class="px-6 py-4" @click.stop>
-            <div class="flex items-center justify-center gap-1">
-              <button
-                @click="emit('edit', org)"
-                class="p-2 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors"
+          <!-- Действия: 1 видимая иконка (редактирование) + «⋯»; удаление — последним пунктом, красным. Видно всегда, в т.ч. на touch -->
+          <td class="px-4 py-3" @click.stop>
+            <div class="flex items-center justify-end gap-1">
+              <UiButton
+                variant="ghost"
+                size="sm"
+                icon
                 title="Редактировать"
+                aria-label="Редактировать организацию"
+                @click="emit('edit', org)"
               >
-                <Pencil class="w-4 h-4" />
-              </button>
-              <button
-                @click="emit('download', org)"
-                class="p-2 rounded-lg text-slate-400 hover:text-success hover:bg-success/10 transition-colors"
-                title="Скачать сертификаты (ZIP)"
-              >
-                <Download class="w-4 h-4" />
-              </button>
-              <button
-                @click="emit('delete', org.id)"
-                class="p-2 rounded-lg transition-colors"
-                :class="org.studentsCount > 0
-                  ? 'text-slate-200 dark:text-slate-700 cursor-not-allowed'
-                  : 'text-slate-400 hover:text-danger hover:bg-danger/10'"
-                :disabled="org.studentsCount > 0"
-                :title="org.studentsCount > 0 ? 'Нельзя удалить: есть слушатели' : 'Удалить'"
-              >
-                <Trash2 class="w-4 h-4" />
-              </button>
+                <Pencil class="h-4 w-4" />
+              </UiButton>
+              <UiDropdown
+                icon-only
+                variant="ghost"
+                size="sm"
+                aria-label="Другие действия"
+                :groups="rowMenu(org)"
+                @select="(key: string) => onRowAction(key, org)"
+              />
             </div>
           </td>
         </tr>
@@ -176,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { Building2, Phone, Mail, Pencil, Download, Trash2, Hash } from 'lucide-vue-next';
+import { Building2, Phone, Mail, Pencil, Download, Trash2 } from 'lucide-vue-next';
 import type { Organization } from '~/types/organization';
 
 defineProps<{
@@ -190,6 +167,30 @@ const emit = defineEmits<{
   (e: 'view', organization: Organization): void;
   (e: 'download', organization: Organization): void;
 }>();
+
+// Меню строки «⋯»: скачивание ZIP, затем отдельной группой — удаление (опасное, последним).
+// Удаление по-прежнему недоступно, пока у организации есть слушатели (то же условие, что было у кнопки)
+const rowMenu = (org: Organization) => [
+  { items: [{ key: 'download', label: 'Скачать сертификаты (ZIP)', icon: Download }] },
+  {
+    items: [
+      {
+        key: 'delete',
+        label: 'Удалить',
+        description: org.studentsCount > 0 ? 'Нельзя удалить: есть слушатели' : undefined,
+        icon: Trash2,
+        danger: true,
+        disabled: org.studentsCount > 0,
+      },
+    ],
+  },
+];
+
+// Выбор пункта меню → существующие эмиты (контракт компонента не менялся)
+const onRowAction = (key: string, org: Organization) => {
+  if (key === 'download') emit('download', org);
+  else if (key === 'delete') emit('delete', org.id);
+};
 
 const getPercent = (org: Organization) => {
   if (!org.totalCertificates || org.totalCertificates === 0) return 0;

@@ -1,336 +1,183 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Загрузка -->
-    <div v-if="isLoading" class="flex items-center justify-center min-h-[400px]">
+  <!-- Внешний враппер без двойного отступа (отступ задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Загрузка: компактный спиннер -->
+    <div v-if="isLoading" class="flex min-h-[400px] items-center justify-center">
       <div class="text-center">
-        <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">Загрузка информации о пользователе...</p>
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
+        <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Загрузка информации о пользователе...</p>
       </div>
     </div>
 
-    <!-- Ошибка -->
-    <div v-else-if="error || !userData" class="flex items-center justify-center min-h-[400px]">
-      <div class="text-center max-w-md">
-        <div class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6 text-slate-400">
-          <UserIcon class="w-12 h-12" />
+    <!-- Ошибка: единственное действие — вернуться к списку -->
+    <div v-else-if="error || !userData" class="flex min-h-[400px] items-center justify-center">
+      <div class="max-w-md text-center">
+        <div class="mb-4 inline-block rounded-full bg-gray-100 p-5 text-gray-400 dark:bg-white/[0.06]">
+          <UserIcon class="h-10 w-10" />
         </div>
-        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">{{ error || 'Пользователь не найден' }}</h3>
-        <UiButton class="mt-8 shadow-lg" @click="$router.push('/users')">К списку пользователей</UiButton>
+        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">{{ error || 'Пользователь не найден' }}</h3>
+        <UiButton class="mt-6" @click="$router.push('/users')">К списку пользователей</UiButton>
       </div>
     </div>
 
     <template v-else>
-      <!-- Header Section -->
-      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-        <!-- Breadcrumbs -->
-        <div class="mb-6">
-          <NuxtLink to="/users" class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors">
-              <ArrowLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            </div>
-            Назад к списку
-          </NuxtLink>
-        </div>
+      <!-- Единая шапка: крошки, имя (text-xl/2xl вместо 4xl uppercase), роль бейджем -->
+      <UiPageHeader
+        :title="userData.name"
+        :breadcrumbs="[{ label: 'Пользователи', to: '/users' }, { label: userData.name }]"
+      >
+        <!-- Бейдж роли рядом с заголовком (раньше дублировался ещё и в карточке метрик) -->
+        <template #badge>
+          <span class="rounded-md border px-2 py-0.5 text-xs font-medium" :class="getRoleBadgeClass(userData.role)">
+            {{ getRoleLabel(userData.role) }}
+          </span>
+        </template>
 
-        <div class="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-          <!-- Profile Main Info -->
-          <div class="flex flex-col sm:flex-row items-center gap-6">
-            <div class="relative">
-              <div class="w-32 h-32 rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-900 shadow-2xl flex items-center justify-center">
-                <div class="w-full h-full flex items-center justify-center bg-primary/10 text-primary">
-                  <span class="text-4xl font-black">{{ getInitials(userData.name) }}</span>
-                </div>
-              </div>
-              <div class="absolute -bottom-1 -right-1 h-8 w-8 rounded-xl border-4 border-white dark:border-slate-900 flex items-center justify-center shadow-lg"
-                :class="userData.role === 'ADMIN' ? 'bg-danger' : userData.role === 'MANAGER' ? 'bg-warning' : 'bg-success'"
-              >
-                <ShieldCheck class="w-4 h-4 text-white" />
-              </div>
-            </div>
+        <!-- Контакты: email и телефон (телефон — через маскирование) -->
+        <template #meta>
+          <span class="inline-flex items-center gap-1.5"><MailIcon class="h-3.5 w-3.5 text-gray-400" />{{ userData.email }}</span>
+          <span v-if="userData.phone" class="inline-flex items-center gap-1.5">
+            <PhoneIcon class="h-3.5 w-3.5 text-gray-400" />
+            <UiSensitiveValue :value="userData.phone" :visible-tail="4" />
+          </span>
+        </template>
 
-            <div class="space-y-3 text-center sm:text-left">
-              <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-                  {{ userData.name }}
-                </h1>
-                <div 
-                  class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border"
-                  :class="getRoleBadgeClass(userData.role)"
-                >
-                  {{ getRoleLabel(userData.role) }}
-                </div>
-              </div>
-              
-              <div class="flex flex-wrap items-center justify-center sm:justify-start gap-x-6 gap-y-2 text-sm font-bold text-slate-500">
-                <div class="flex items-center gap-2">
-                  <MailIcon class="w-4 h-4 text-slate-400" />
-                  {{ userData.email }}
-                </div>
-                <div v-if="userData.phone" class="flex items-center gap-2">
-                  <PhoneIcon class="w-4 h-4 text-slate-400" />
-                  {{ userData.phone }}
-                </div>
-              </div>
-            </div>
-          </div>
+        <!-- Действия: одно главное «Редактировать» + «⋯» с группой «Опасные» (условия прав сохранены) -->
+        <template #actions>
+          <UiButton v-if="canEdit" variant="primary" :start-icon="SettingsIcon" @click="openEditModal">Редактировать</UiButton>
+          <UiDropdown
+            v-if="canResetPassword || canDelete"
+            icon-only
+            variant="outline"
+            aria-label="Другие действия"
+            :groups="menuGroups"
+            @select="onMenuSelect"
+          />
+        </template>
+      </UiPageHeader>
 
-          <!-- Actions -->
-          <div class="flex flex-wrap items-center justify-center lg:justify-end gap-2">
-            <UiButton
-              v-if="canEdit"
-              variant="primary"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold shadow-lg shadow-primary/20"
-              @click="openEditModal"
-            >
-              <SettingsIcon class="w-4 h-4" />
-              Редактировать
-            </UiButton>
-
-            <UiButton
-              v-if="canResetPassword"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold"
-              @click="openPasswordModal"
-            >
-              <KeyRoundIcon class="w-4 h-4" />
-              Сбросить пароль
-            </UiButton>
-
-            <UiButton
-              v-if="canDelete"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold text-danger border-danger/20 hover:bg-danger/5"
-              @click="isDeleteModalOpen = true"
-            >
-              <Trash2Icon class="w-4 h-4" />
-              Удалить
-            </UiButton>
-          </div>
-        </div>
+      <!-- Полоса метрик в одну строку: убрана карточка «Роль» (дубль бейджа в шапке) -->
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <UiStat label="Регистрация" :value="formatDateShort(userData.created_at)" :hint="`В системе ${daysSinceJoin} дн.`" :icon="CalendarIcon" tone="success" />
+        <UiStat label="Активность" :value="lastActivityDate" hint="Последнее действие" :icon="ActivityIcon" tone="warning" />
+        <UiStat label="Статус" value="Активен" hint="Доступ разрешён" :icon="CheckIcon" tone="success" />
       </div>
 
-      <!-- Bento Box Metrics Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <!-- Role Card -->
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Роль в системе</p>
-              <h3 class="mt-1 text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
-                {{ getRoleLabel(userData.role) }}
-              </h3>
-            </div>
-            <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
-              <ShieldCheck class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="mt-4">
-            <span class="text-xs text-slate-400 font-medium">Уровень доступа: {{ userData.role }}</span>
-          </div>
-        </div>
+      <!-- Вкладки через UiTabs -->
+      <UiTabs v-model="activeTab" :tabs="availableTabs" />
 
-        <!-- Join Date Card -->
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Регистрация</p>
-              <h3 class="mt-1 text-xl font-bold text-slate-900 dark:text-white">
-                {{ formatDateShort(userData.created_at) }}
-              </h3>
-            </div>
-            <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
-              <CalendarIcon class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="mt-4">
-            <span class="text-xs text-slate-400 font-medium">В системе {{ daysSinceJoin }} дней</span>
-          </div>
-        </div>
-
-        <!-- Last Activity Card -->
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Активность</p>
-              <h3 class="mt-1 text-xl font-bold text-slate-900 dark:text-white">
-                {{ lastActivityDate }}
-              </h3>
-            </div>
-            <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
-              <ActivityIcon class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="mt-4">
-            <span class="text-xs text-slate-400 font-medium">Последнее действие</span>
-          </div>
-        </div>
-
-        <!-- Status Card -->
-        <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Статус</p>
-              <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-widest">
-                Активен
-              </h3>
-            </div>
-            <div class="rounded-xl bg-slate-100 dark:bg-slate-800 p-3 text-slate-400 transition-transform group-hover:rotate-12">
-              <CheckIcon class="w-6 h-6 text-success" />
-            </div>
-          </div>
-          <div class="mt-4">
-            <span class="text-xs text-success font-medium flex items-center gap-1">
-              <div class="h-1.5 w-1.5 rounded-full bg-success animate-pulse"></div>
-              Доступ разрешен
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <!-- Main Content (8 cols) -->
-        <div class="lg:col-span-8 space-y-8">
-          <!-- Tabs Navigation -->
-          <div class="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
-            <button 
-              v-for="tab in availableTabs" 
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              class="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all"
-              :class="activeTab === tab.id 
-                ? 'bg-white dark:bg-slate-900 text-primary shadow-sm' 
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
-            >
-              <component :is="tab.icon" class="w-4 h-4" />
-              {{ tab.label }}
-            </button>
-          </div>
-
-          <!-- Tab Content -->
-          <div class="min-h-[400px]">
-            <!-- PROFILE TAB -->
-            <div v-show="activeTab === 'info'" class="space-y-8 animate-in fade-in duration-500">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <!-- Personal Info -->
-                <div class="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
-                    <UserIcon class="w-4 h-4" /> Персональные данные
-                  </h3>
-                  <div class="space-y-6">
-                    <div v-if="userData.pinfl">
-                      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">ПИНФЛ</p>
-                      <p class="text-sm font-bold text-slate-900 dark:text-white font-mono">{{ userData.pinfl }}</p>
-                    </div>
-                    <div>
-                      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Ф.И.О</p>
-                      <p class="text-sm font-bold text-slate-900 dark:text-white">{{ userData.name }}</p>
-                    </div>
-                    <div>
-                      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Email адрес</p>
-                      <p class="text-sm font-bold text-slate-900 dark:text-white">{{ userData.email }}</p>
-                    </div>
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <!-- Основная область (8 колонок) -->
+        <div class="lg:col-span-8">
+          <div class="min-h-[300px]">
+            <!-- Вкладка «Профиль» -->
+            <div v-show="activeTab === 'info'" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <!-- Персональные данные -->
+              <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+                <h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                  <UserIcon class="h-4 w-4 text-gray-400" /> Персональные данные
+                </h3>
+                <div class="space-y-4">
+                  <div v-if="userData.pinfl">
+                    <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">ПИНФЛ</p>
+                    <!-- ПИНФЛ: маска + показать + копировать -->
+                    <UiSensitiveValue :value="userData.pinfl" class="text-gray-900 dark:text-white" />
+                  </div>
+                  <div>
+                    <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Ф.И.О</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ userData.name }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Email адрес</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ userData.email }}</p>
                   </div>
                 </div>
+              </div>
 
-                <!-- Workplace Info -->
-                <div class="p-6 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-                  <h3 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
-                    <BriefcaseIcon class="w-4 h-4" /> Рабочая информация
-                  </h3>
-                  <div class="space-y-6">
-                    <div>
-                      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Место работы</p>
-                      <p class="text-sm font-bold text-slate-900 dark:text-white">{{ userData.workplace || '—' }}</p>
-                    </div>
-                    <div>
-                      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Должность</p>
-                      <p class="text-sm font-bold text-slate-900 dark:text-white">{{ userData.position || '—' }}</p>
-                    </div>
-                    <div>
-                      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Роль доступа</p>
-                      <p class="text-sm font-bold text-slate-900 dark:text-white">{{ getRoleLabel(userData.role) }}</p>
-                    </div>
+              <!-- Рабочая информация -->
+              <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+                <h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                  <BriefcaseIcon class="h-4 w-4 text-gray-400" /> Рабочая информация
+                </h3>
+                <div class="space-y-4">
+                  <div>
+                    <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Место работы</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ userData.workplace || '—' }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Должность</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ userData.position || '—' }}</p>
+                  </div>
+                  <div>
+                    <p class="mb-0.5 text-xs text-gray-500 dark:text-gray-400">Роль доступа</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ getRoleLabel(userData.role) }}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <!-- ACTIVITY TAB -->
-            <div v-show="activeTab === 'activity'" class="space-y-6 animate-in fade-in duration-500">
+            <!-- Вкладка «Активность» -->
+            <div v-show="activeTab === 'activity'" class="space-y-3">
               <div v-if="logsLoading" class="flex justify-center py-12">
-                <div class="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                <div class="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
               </div>
-              
-              <div v-else-if="activityLogs.length > 0" class="space-y-4">
-                <div 
-                  v-for="log in activityLogs" 
+
+              <div v-else-if="activityLogs.length > 0" class="space-y-2">
+                <div
+                  v-for="log in activityLogs"
                   :key="log.id"
-                  class="p-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-start gap-4"
+                  class="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-3.5 dark:border-gray-800 dark:bg-white/[0.03]"
                 >
-                  <div class="p-2 rounded-xl" :class="getLogActionClass(log.action)">
-                    <component :is="getLogIcon(log.action)" class="w-4 h-4" />
+                  <div class="rounded-lg p-2" :class="getLogActionClass(log.action)">
+                    <component :is="getLogIcon(log.action)" class="h-4 w-4" />
                   </div>
-                  <div class="flex-1">
-                    <div class="flex items-center justify-between mb-1">
-                      <p class="text-sm font-bold text-slate-900 dark:text-white">{{ log.action }}</p>
-                      <span class="text-[10px] font-bold text-slate-400">{{ formatDateTime(log.created_at) }}</span>
+                  <div class="min-w-0 flex-1">
+                    <div class="mb-0.5 flex items-center justify-between gap-2">
+                      <p class="text-sm font-medium text-gray-900 dark:text-white">{{ log.action }}</p>
+                      <span class="shrink-0 text-xs text-gray-400">{{ formatDateTime(log.created_at) }}</span>
                     </div>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ log.details || 'Действие выполнено в системе' }}</p>
-                    <p v-if="log.ip_address" class="text-[10px] text-slate-300 dark:text-slate-600 mt-2 font-mono">IP: {{ log.ip_address }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ log.details || 'Действие выполнено в системе' }}</p>
+                    <p v-if="log.ip_address" class="mt-1.5 font-mono text-xs text-gray-400 dark:text-gray-500">IP: {{ log.ip_address }}</p>
                   </div>
                 </div>
               </div>
 
-              <div v-else class="text-center py-20 bg-slate-50 dark:bg-slate-800/30 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
-                <ActivityIcon class="w-12 h-12 text-slate-200 dark:text-slate-700 mx-auto mb-4" />
-                <p class="text-slate-500 font-medium">История активности пуста</p>
-              </div>
+              <!-- Пустое состояние через UiEmptyState -->
+              <UiEmptyState v-else title="История активности пуста" :icon="ActivityIcon" />
             </div>
           </div>
         </div>
 
-        <!-- Sidebar (4 cols) -->
-        <div class="lg:col-span-4 space-y-6">
-          <!-- System Info -->
-          <div class="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
-            <h4 class="text-xs font-black uppercase tracking-widest text-slate-400 mb-6">Системная информация</h4>
-            <div class="space-y-6">
-              <div class="flex items-start gap-4">
-                <div class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800">
-                  <ClockIcon class="w-5 h-5 text-slate-500" />
+        <!-- Боковая колонка: системная информация; блок «Подсказка» убран как лишний шум -->
+        <div class="lg:col-span-4">
+          <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+            <h4 class="mb-4 text-sm font-semibold text-gray-900 dark:text-white">Системная информация</h4>
+            <div class="space-y-4">
+              <div class="flex items-start gap-3">
+                <div class="rounded-lg bg-gray-100 p-2 dark:bg-white/[0.06]">
+                  <ClockIcon class="h-4 w-4 text-gray-500" />
                 </div>
                 <div>
-                  <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Создан</p>
-                  <p class="text-sm font-bold text-slate-900 dark:text-white">{{ formatDate(userData.created_at) }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Создан</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(userData.created_at) }}</p>
                 </div>
               </div>
-              <div class="flex items-start gap-4">
-                <div class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800">
-                  <RefreshCwIcon class="w-5 h-5 text-slate-500" />
+              <div class="flex items-start gap-3">
+                <div class="rounded-lg bg-gray-100 p-2 dark:bg-white/[0.06]">
+                  <RefreshCwIcon class="h-4 w-4 text-gray-500" />
                 </div>
                 <div>
-                  <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-1">Обновлен</p>
-                  <p class="text-sm font-bold text-slate-900 dark:text-white">{{ formatDate(userData.updated_at) }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">Обновлен</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ formatDate(userData.updated_at) }}</p>
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Help Card -->
-          <div class="rounded-3xl bg-primary/5 border border-primary/10 p-6">
-            <h4 class="text-xs font-black uppercase tracking-widest text-primary mb-4">Подсказка</h4>
-            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-              Здесь вы можете просмотреть детальную информацию о пользователе и его активности в системе. Администраторы и модераторы имеют возможность редактировать данные и сбрасывать пароли.
-            </p>
           </div>
         </div>
       </div>
     </template>
 
-    <!-- Modals -->
+    <!-- Модальные окна (логика без изменений) -->
     <UsersUserFormModal
       v-if="isEditModalOpen && userData"
       :user="userData"
@@ -348,6 +195,7 @@
       @success="handlePasswordResetSuccess"
     />
 
+    <!-- Подтверждение удаления -->
     <UiConfirmModal
       :is-open="isDeleteModalOpen"
       title="Удаление пользователя"
@@ -355,6 +203,7 @@
       :item-name="userData?.name"
       warning="Это действие нельзя отменить."
       :loading="isDeleting"
+      loading-text="Удаление…"
       @confirm="confirmDelete"
       @cancel="isDeleteModalOpen = false"
     />
@@ -460,6 +309,22 @@ const canDelete = computed(() => {
   return false;
 });
 
+// Меню «⋯» в шапке: «Сбросить пароль» и «Удалить» собраны в группу «Опасные», видимость — по прежним флагам прав
+const menuGroups = computed(() => [
+  {
+    label: "Опасные",
+    items: [
+      { key: "reset-password", label: "Сбросить пароль", icon: KeyRoundIcon, hidden: !canResetPassword.value },
+      { key: "delete", label: "Удалить пользователя", icon: Trash2Icon, danger: true, hidden: !canDelete.value },
+    ],
+  },
+]);
+// Пункты меню вызывают прежние обработчики (openPasswordModal / открытие ConfirmModal удаления)
+const onMenuSelect = (key: string) => {
+  if (key === "reset-password") openPasswordModal();
+  else if (key === "delete") isDeleteModalOpen.value = true;
+};
+
 // Watch tab change to fetch logs
 watch(activeTab, (newTab) => {
   if (newTab === 'activity') {
@@ -487,7 +352,7 @@ const getRoleBadgeClass = (role?: UserRole | string): string => {
     STUDENT: "border-success/20 bg-success/5 text-success",
     REPRESENTATIVE: "border-info/20 bg-info/5 text-info",
   };
-  return classes[role || ""] || "border-slate-200 bg-slate-50 text-slate-500";
+  return classes[role || ""] || "border-gray-200 bg-gray-50 text-gray-500";
 };
 
 const formatDate = (date: Date | string): string => {
@@ -603,7 +468,7 @@ const getLogActionClass = (action: string) => {
   if (action.includes('Удаление') || action.includes('Delete')) return 'bg-danger/10 text-danger';
   if (action.includes('Обновление') || action.includes('Update')) return 'bg-warning/10 text-warning';
   if (action.includes('Вход') || action.includes('Login')) return 'bg-primary/10 text-primary';
-  return 'bg-slate-100 text-slate-500';
+  return 'bg-gray-100 text-gray-500 dark:bg-white/[0.06]';
 };
 
 const getLogIcon = (action: string) => {

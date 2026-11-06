@@ -1,412 +1,88 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Заголовок страницы -->
-    <div
-      class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div>
-        <h2 class="text-title-md2 font-bold text-black dark:text-white">
-          Мои тесты
-        </h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-          Назначенные вам тесты для прохождения
-        </p>
-      </div>
+  <!-- Обёртка без двойного отступа (отступы задаёт layout) -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок страницы -->
+    <UiPageHeader title="Мои тесты" description="Назначенные вам тесты для прохождения" />
+
+    <!-- Метрики: одна плоская строка UiStat вместо 5 больших карточек с inline-SVG -->
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+      <UiStat label="Ожидают начала" :value="stats.notStarted" :icon="CalendarDays" />
+      <UiStat label="Доступны сейчас" :value="stats.pending" :icon="Clock" tone="warning" />
+      <UiStat label="В процессе" :value="stats.inProgress" :icon="PlayCircle" tone="primary" />
+      <UiStat label="Успешно пройдены" :value="stats.passed" :icon="CheckCircle2" tone="success" />
+      <UiStat label="Не пройдены" :value="stats.failed" :icon="XCircle" tone="danger" />
     </div>
 
-    <!-- Статистика -->
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
-      <!-- Ожидают начала -->
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700"
-          >
-            <svg
-              class="w-6 h-6 text-gray-500 dark:text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Ожидают начала
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats.notStarted }}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ожидают прохождения -->
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10"
-          >
-            <svg
-              class="w-6 h-6 text-warning"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Доступны сейчас
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats.pending }}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- В процессе -->
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10"
-          >
-            <svg
-              class="w-6 h-6 text-primary"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              В процессе
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats.inProgress }}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Успешно пройдены -->
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-success/10"
-          >
-            <svg
-              class="w-6 h-6 text-success"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Успешно пройдены
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats.passed }}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Не пройдены -->
-      <div class="rounded-lg bg-white dark:bg-boxdark p-6 shadow-md">
-        <div class="flex items-center gap-4">
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-full bg-danger/10"
-          >
-            <svg
-              class="w-6 h-6 text-danger"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Не пройдены
-            </h3>
-            <p class="text-2xl font-bold text-black dark:text-white">
-              {{ stats.failed }}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Фильтр по статусу -->
-    <div class="bg-white dark:bg-boxdark rounded-xl shadow-md p-6 mb-6">
-      <div class="flex flex-wrap gap-2">
-        <button
-          v-for="tab in tabs"
-          :key="tab.value"
-          @click="activeTab = tab.value"
-          :class="[
-            'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
-            activeTab === tab.value
-              ? 'bg-primary text-white shadow-sm'
-              : 'bg-gray-100 dark:bg-meta-4 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700',
-          ]"
-        >
-          {{ tab.label }}
-          <span
-            v-if="tab.count > 0"
-            :class="[
-              'ml-2 px-2 py-0.5 rounded-full text-xs',
-              activeTab === tab.value
-                ? 'bg-white/20 text-white'
-                : 'bg-gray-200 dark:bg-gray-600',
-            ]"
-          >
-            {{ tab.count }}
-          </span>
-        </button>
-      </div>
-    </div>
+    <!-- Фильтр по статусу: UiTabs со счётчиками вместо кнопок-таблеток -->
+    <UiTabs v-model="activeTab" :tabs="tabItems" />
 
     <!-- Список тестов -->
-    <div class="rounded-lg bg-white dark:bg-boxdark shadow-md overflow-hidden">
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <div v-if="loading" class="p-12 text-center">
-        <div
-          class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-        ></div>
-        <p class="mt-4 text-gray-600 dark:text-gray-400">Загрузка тестов...</p>
+        <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
+        <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Загрузка тестов...</p>
       </div>
 
-      <div
+      <!-- Пусто: общий компонент -->
+      <UiEmptyState
         v-else-if="filteredAssignments.length === 0"
-        class="p-12 text-center text-gray-500 dark:text-gray-400"
-      >
-        <svg
-          class="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600 mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="1.5"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
-        <p class="text-lg font-medium">Тесты не найдены</p>
-        <p class="mt-2 text-sm">{{ getEmptyMessage() }}</p>
-      </div>
+        title="Тесты не найдены"
+        :description="getEmptyMessage()"
+      />
 
-      <div v-else class="divide-y divide-gray-200 dark:divide-gray-700">
+      <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
         <div
           v-for="assignment in filteredAssignments"
           :key="assignment.id"
-          class="p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+          class="p-4 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03] md:p-5"
         >
-          <div
-            class="flex flex-col md:flex-row md:items-start md:justify-between gap-4"
-          >
+          <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <!-- Информация о тесте -->
             <div class="flex-1">
               <div class="flex items-start gap-4">
-                <div
-                  :class="[
-                    'flex h-14 w-14 shrink-0 items-center justify-center rounded-xl',
-                    getStatusBgClass(assignment),
-                  ]"
-                >
-                  <svg
-                    :class="['w-7 h-7', getStatusIconClass(assignment)]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <!-- В процессе -->
-                    <path
-                      v-if="assignment.has_active_session"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                    <!-- Сдан -->
-                    <path
-                      v-else-if="assignment.passed"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                    <!-- Не сдан -->
-                    <path
-                      v-else-if="
-                        assignment.best_score !== null && !assignment.passed
-                      "
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                    <!-- Ожидает -->
-                    <path
-                      v-else
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
+                <!-- Иконка статуса: lucide вместо inline-SVG, цвета из прежних функций -->
+                <div :class="['flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', getStatusBgClass(assignment)]">
+                  <Clock v-if="assignment.has_active_session" :class="['h-5 w-5', getStatusIconClass(assignment)]" />
+                  <CheckCircle2 v-else-if="assignment.passed" :class="['h-5 w-5', getStatusIconClass(assignment)]" />
+                  <XCircle v-else-if="assignment.best_score !== null && !assignment.passed" :class="['h-5 w-5', getStatusIconClass(assignment)]" />
+                  <FileText v-else :class="['h-5 w-5', getStatusIconClass(assignment)]" />
                 </div>
                 <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-1">
-                    <h3
-                      class="text-lg font-semibold text-gray-900 dark:text-white"
-                    >
-                      {{ assignment.template_name }}
-                    </h3>
-                    <!-- Бейдж перездачи -->
-                    <span
-                      v-if="
-                        assignment.original_event_id ||
-                        assignment.allowed_student_ids
-                      "
-                      class="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/30 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300"
+                  <div class="mb-1 flex flex-wrap items-center gap-2">
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ assignment.template_name }}</h3>
+                    <!-- Бейдж перездачи через UiBadge (без purple) -->
+                    <UiBadge
+                      v-if="assignment.original_event_id || assignment.allowed_student_ids"
+                      size="sm"
+                      color="info"
                       title="Тест для перездачи"
                     >
-                      <svg
-                        class="w-3 h-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
+                      <RefreshCw class="h-3 w-3" />
                       Перездача
-                    </span>
+                    </UiBadge>
                   </div>
-                  <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                  <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">
                     {{ assignment.group_name }} •
                     {{ assignment.discipline_name || "Дисциплина не указана" }}
                   </p>
 
                   <!-- Метаданные теста -->
-                  <div class="flex flex-wrap gap-3 text-sm">
-                    <span
-                      class="inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400"
-                    >
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                  <div class="flex flex-wrap gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span class="inline-flex items-center gap-1.5">
+                      <HelpCircle class="h-4 w-4" />
                       {{ assignment.questions_count || "?" }} вопросов
                     </span>
-                    <span
-                      v-if="assignment.time_limit"
-                      class="inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400"
-                    >
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                    <span v-if="assignment.time_limit" class="inline-flex items-center gap-1.5">
+                      <Clock class="h-4 w-4" />
                       {{ assignment.time_limit }} мин
                     </span>
-                    <span
-                      class="inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400"
-                    >
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                    <span class="inline-flex items-center gap-1.5">
+                      <CheckCircle2 class="h-4 w-4" />
                       от {{ assignment.passing_score }}%
                     </span>
-                    <span
-                      v-if="assignment.max_attempts"
-                      class="inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-400"
-                    >
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                      {{ assignment.attempts_used || 0 }}/{{
-                        assignment.max_attempts
-                      }}
-                      попыток
+                    <span v-if="assignment.max_attempts" class="inline-flex items-center gap-1.5">
+                      <RefreshCw class="h-4 w-4" />
+                      {{ assignment.attempts_used || 0 }}/{{ assignment.max_attempts }} попыток
                     </span>
                   </div>
                 </div>
@@ -414,102 +90,35 @@
             </div>
 
             <!-- Статус и действия -->
-            <div class="flex flex-col items-end gap-3">
-              <div class="flex items-center gap-2">
-                <span :class="getStatusBadgeClass(assignment)">
-                  {{ getStatusLabel(assignment) }}
-                </span>
+            <div class="flex flex-col items-start gap-3 md:items-end">
+              <span :class="getStatusBadgeClass(assignment)">{{ getStatusLabel(assignment) }}</span>
+
+              <div v-if="assignment.event_date" class="text-sm text-gray-500 dark:text-gray-400 md:text-right">
+                <div class="font-medium">{{ formatDate(assignment.event_date) }}</div>
+                <div v-if="assignment.start_date || assignment.end_date" class="mt-1 text-xs font-medium text-primary">Весь день</div>
+                <div v-else-if="assignment.event_time" class="mt-1">{{ assignment.event_time }}</div>
               </div>
 
-              <div
-                v-if="assignment.event_date"
-                class="text-sm text-gray-500 dark:text-gray-400 text-right"
-              >
-                <div class="font-medium">
-                  {{ formatDate(assignment.event_date) }}
-                </div>
-                <div
-                  v-if="assignment.start_date || assignment.end_date"
-                  class="mt-1 text-xs text-primary font-medium"
-                >
-                  Весь день
-                </div>
-                <div v-else-if="assignment.event_time" class="mt-1">
-                  {{ assignment.event_time }}
-                </div>
-
-              </div>
-
-              <!-- Результат если завершён -->
-              <div
-                v-if="
-                  assignment.best_score !== null &&
-                  assignment.best_score !== undefined
-                "
-                class="text-right"
-              >
-                <div class="text-sm text-gray-500 dark:text-gray-400">
-                  Лучший результат:
-                </div>
-                <div
-                  :class="[
-                    'text-xl font-bold',
-                    assignment.passed ? 'text-success' : 'text-danger',
-                  ]"
-                >
+              <!-- Результат, если завершён -->
+              <div v-if="assignment.best_score !== null && assignment.best_score !== undefined" class="md:text-right">
+                <div class="text-xs text-gray-500 dark:text-gray-400">Лучший результат</div>
+                <div :class="['text-lg font-semibold', assignment.passed ? 'text-success' : 'text-danger']">
                   {{ Math.round(assignment.best_score) }}%
                 </div>
               </div>
 
-              <!-- Кнопка действия -->
+              <!-- Одно главное действие строки: «Начать/Продолжить», иначе вторичное «Результаты» -->
               <UiButton
                 v-if="canTakeTest(assignment)"
                 @click="startTest(assignment)"
                 :loading="startingTest === assignment.id"
-                class="mt-2"
               >
-                <svg
-                  class="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                {{
-                  assignment.has_active_session ? "Продолжить" : "Начать тест"
-                }}
+                <PlayCircle class="mr-2 h-4 w-4" />
+                {{ assignment.has_active_session ? "Продолжить" : "Начать тест" }}
               </UiButton>
 
-              <UiButton
-                v-else-if="assignment.best_score !== null"
-                variant="outline"
-                @click="viewResults(assignment)"
-              >
-                <svg
-                  class="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
+              <UiButton v-else-if="assignment.best_score !== null" variant="outline" @click="viewResults(assignment)">
+                <BarChart3 class="mr-2 h-4 w-4" />
                 Результаты
               </UiButton>
             </div>
@@ -539,6 +148,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+// Иконки lucide вместо inline-SVG (единый набор для переработанного шаблона)
+import { CalendarDays, Clock, PlayCircle, CheckCircle2, XCircle, FileText, RefreshCw, HelpCircle, BarChart3 } from "lucide-vue-next";
 
 definePageMeta({
   layout: "default",
@@ -632,7 +243,9 @@ const tabs = computed(() => [
   },
 ]);
 
-// Статистика
+// Вкладки в формате UiTabs (id вместо value): прежний массив tabs не тронут, activeTab хранит те же значения
+const tabItems = computed(() => tabs.value.map((t) => ({ id: t.value, label: t.label, count: t.count > 0 ? t.count : undefined })));
+
 // Статистика
 const stats = computed(() => {
   const now = new Date();

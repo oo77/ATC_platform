@@ -563,7 +563,7 @@
                     {{ m }}
                   </option>
                 </select>
-                <p class="mt-1 text-[10px] text-gray-400">Модель для фото, сканов и PDF</p>
+                <p class="mt-1 text-[11px] text-gray-400">Модель для фото, сканов и PDF</p>
               </div>
 
               <!-- Text Model -->
@@ -603,7 +603,7 @@
                     {{ m }}
                   </option>
                 </select>
-                <p class="mt-1 text-[10px] text-gray-400">Модель для разбора текста и списков</p>
+                <p class="mt-1 text-[11px] text-gray-400">Модель для разбора текста и списков</p>
               </div>
             </div>
 
@@ -780,6 +780,15 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Подтверждение удаления настройки ИИ (заменяет нативный confirm) -->
+    <UiConfirmModal
+      :is-open="!!settingToDelete"
+      title="Удалить настройку?"
+      message="Вы уверены, что хотите удалить эту настройку?"
+      @confirm="deleteSettingConfirmed"
+      @cancel="settingToDelete = null"
+    />
   </div>
 </template>
 
@@ -1357,8 +1366,17 @@ const setDefault = async (setting: AISetting) => {
   }
 };
 
-const deleteSetting = async (setting: AISetting) => {
-  if (!confirm("Вы уверены, что хотите удалить эту настройку?")) return;
+// Безопасность UX: вместо нативного confirm() открываем UiConfirmModal, удаление — после подтверждения
+const settingToDelete = ref<AISetting | null>(null);
+const deleteSetting = (setting: AISetting) => {
+  settingToDelete.value = setting;
+};
+
+// Прежняя логика удаления настройки
+const deleteSettingConfirmed = async () => {
+  const setting = settingToDelete.value;
+  if (!setting) return;
+  settingToDelete.value = null;
 
   try {
     await ($fetch as any)(`/api/admin/ai-settings/${setting.id}`, {

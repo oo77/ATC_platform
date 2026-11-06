@@ -1,174 +1,109 @@
 <template>
-  <div class="flex flex-col gap-6">
-    <!-- Header & Actions -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-2">
-      <div>
-        <h3 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          Управление слушателями
-        </h3>
-        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
-          Всего слушателей: {{ pagination.total }}
-          <span v-if="hasActiveFilters" class="text-primary font-bold">
-            (отфильтровано)
-          </span>
-        </p>
-      </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <button
-          @click="isSyncModalOpen = true"
-          class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-emerald-500/80 bg-transparent text-sm font-bold text-emerald-600 dark:text-emerald-400 transition-all duration-200 hover:bg-emerald-600 hover:text-white hover:shadow-md hover:shadow-emerald-500/20"
-        >
-          <RefreshCw class="w-4 h-4" />
-          Обновить слушателей
-        </button>
-        <NuxtLink
-          to="/database/import"
-          class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-primary bg-transparent text-sm font-bold text-primary transition-all duration-200 hover:bg-primary hover:text-white hover:shadow-md hover:shadow-primary/20"
-        >
-          <Upload class="w-4 h-4" />
-          Импорт слушателей
-        </NuxtLink>
-        <button
-          @click="openCreateModal"
-          class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-bold shadow-md shadow-primary/20 hover:bg-primary/90 hover:shadow-lg transition-all whitespace-nowrap"
-        >
-          <Plus class="w-4 h-4" />
-          Добавить слушателя
-        </button>
-      </div>
-    </div>
-
-    <!-- Filters Section -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6">
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-3">
-          <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <Filter class="w-5 h-5" />
-          </div>
-          <h4 class="text-lg font-bold text-slate-900 dark:text-white">
-            Фильтры
-          </h4>
-        </div>
-        <button
-          v-if="hasActiveFilters"
-          @click="clearFilters"
-          class="text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10"
-        >
-          <RotateCcw class="w-4 h-4" />
-          Сбросить фильтры
-        </button>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Поиск по ФИО -->
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-            Поиск по ФИО
-          </label>
-          <div class="relative">
-            <input
-              v-model="filters.fullName"
-              type="text"
-              placeholder="Введите имя..."
-              class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
-              @input="debouncedFetch"
-            />
-            <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          </div>
-        </div>
-
-        <!-- Поиск по ПИНФЛ -->
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-            Поиск по ПИНФЛ
-          </label>
-          <div class="relative">
+  <div class="flex flex-col gap-4">
+    <!-- Единый блок фильтров: основной поиск по ФИО на виду, остальное — в сворачиваемой панели. Главное действие — «Добавить слушателя» -->
+    <UiFilterBar
+      v-model:search="filters.fullName"
+      search-placeholder="Поиск по ФИО…"
+      :debounce="0"
+      :total="pagination.total"
+      :active-count="activeFilterCount"
+      :chips="filterChips"
+      persist-key="students"
+      @search="debouncedFetch"
+      @remove="removeFilterChip"
+      @reset="clearFilters"
+    >
+      <!-- Второстепенные фильтры: ПИНФЛ, организация, должность, наличие сертификатов -->
+      <template #filters>
+        <!-- ПИНФЛ -->
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">ПИНФЛ</span>
+          <span class="relative block">
+            <CreditCard class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               v-model="filters.pinfl"
               type="text"
-              placeholder="Введите ПИНФЛ..."
-              class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
+              inputmode="numeric"
+              placeholder="Введите ПИНФЛ"
+              class="h-9 w-full rounded-lg border border-gray-300 bg-transparent pl-9 pr-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
               @input="debouncedFetch"
             />
-            <CreditCard class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          </div>
-        </div>
+          </span>
+        </label>
 
-        <!-- Поиск по организации -->
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-            Организация
-          </label>
-          <div class="relative">
+        <!-- Организация -->
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Организация</span>
+          <span class="relative block">
+            <Building2 class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               v-model="filters.organization"
               type="text"
-              placeholder="Введите организацию..."
-              class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
+              placeholder="Название организации"
+              class="h-9 w-full rounded-lg border border-gray-300 bg-transparent pl-9 pr-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
               @input="debouncedFetch"
             />
-            <Building2 class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          </div>
-        </div>
+          </span>
+        </label>
 
-        <!-- Поиск по должности -->
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-            Должность
-          </label>
-          <div class="relative">
+        <!-- Должность -->
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Должность</span>
+          <span class="relative block">
+            <Briefcase class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               v-model="filters.position"
               type="text"
-              placeholder="Введите должность..."
-              class="w-full rounded-xl border border-slate-200 bg-white dark:bg-slate-900 py-2.5 pl-10 pr-4 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium text-sm"
+              placeholder="Название должности"
+              class="h-9 w-full rounded-lg border border-gray-300 bg-transparent pl-9 pr-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
               @input="debouncedFetch"
             />
-            <Briefcase class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          </span>
+        </label>
+
+        <!-- Сертификаты: два взаимоисключающих варианта оформлены как единый переключатель «Любые / Есть / Нет»,
+             чтобы было видно, что выбрать оба сразу нельзя. Пишет в те же ref filters.hasCertificates / filters.noCertificates -->
+        <div>
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Сертификаты</span>
+          <div class="inline-flex w-full rounded-lg bg-gray-100 p-0.5 dark:bg-white/[0.06]" role="radiogroup" aria-label="Фильтр по сертификатам">
+            <button
+              v-for="opt in certModeOptions"
+              :key="opt.value"
+              type="button"
+              role="radio"
+              :aria-checked="certMode === opt.value"
+              :class="[
+                'h-8 flex-1 rounded-md px-3 text-sm font-medium transition-colors',
+                certMode === opt.value
+                  ? 'bg-white text-gray-900 shadow-theme-xs dark:bg-gray-800 dark:text-white'
+                  : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200',
+              ]"
+              @click="setCertMode(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
           </div>
         </div>
-      </div>
+      </template>
 
-      <!-- Дополнительные фильтры -->
-      <div class="mt-6 flex flex-wrap gap-4">
-        <label class="inline-flex items-center gap-2.5 cursor-pointer group">
-          <div class="relative flex items-center">
-            <input
-              v-model="filters.hasCertificates"
-              type="checkbox"
-              class="peer sr-only"
-              @change="handleFilterChange"
-            />
-            <div class="h-5 w-5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 transition-all peer-checked:bg-primary peer-checked:border-primary group-hover:border-primary/50 flex items-center justify-center">
-              <svg class="h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          </div>
-          <span class="text-sm font-medium text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Только с сертификатами</span>
-        </label>
+      <!-- Действия: одно главное (primary) + «⋯» с вторичными (импорт, обновление) -->
+      <template #actions>
+        <UiDropdown
+          icon-only
+          variant="outline"
+          size="md"
+          aria-label="Импорт и синхронизация"
+          :groups="toolbarMenu"
+          @select="onToolbarSelect"
+        />
+        <UiButton variant="primary" size="md" :start-icon="Plus" @click="openCreateModal">
+          Добавить слушателя
+        </UiButton>
+      </template>
+    </UiFilterBar>
 
-        <label class="inline-flex items-center gap-2.5 cursor-pointer group">
-          <div class="relative flex items-center">
-            <input
-              v-model="filters.noCertificates"
-              type="checkbox"
-              class="peer sr-only"
-              @change="handleFilterChange"
-            />
-            <div class="h-5 w-5 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 transition-all peer-checked:bg-primary peer-checked:border-primary group-hover:border-primary/50 flex items-center justify-center">
-              <svg class="h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          </div>
-          <span class="text-sm font-medium text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Только без сертификатов</span>
-        </label>
-      </div>
-    </div>
-
-    <!-- Таблица студентов -->
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+    <!-- Карточка таблицы: таблица + пагинация-футер внутри одной карточки -->
+    <div id="students-table" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
       <DatabaseStudentTable
         :students="students"
         :loading="loading"
@@ -177,7 +112,7 @@
         @view-certificates="openCertificatesModal"
       />
 
-      <!-- Пагинация -->
+      <!-- Пагинация (футер карточки); после смены страницы прокручиваем к началу таблицы -->
       <UiPagination
         v-if="pagination.totalPages > 0"
         :current-page="pagination.page"
@@ -185,6 +120,7 @@
         :total="pagination.total"
         :limit="pagination.limit"
         :loading="loading"
+        scroll-target="#students-table"
         @update:page="handlePageChange"
         @update:limit="handleLimitChange"
       />
@@ -228,10 +164,12 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import type { Student, CreateStudentData, UpdateStudentData } from '~/types/student';
-import { Search, Plus, Filter, RotateCcw, Upload, CreditCard, Building2, Briefcase, RefreshCw } from "lucide-vue-next";
+// Search/Filter/RotateCcw убраны (их рисует UiFilterBar); Plus/Upload/RefreshCw — для кнопки и меню «⋯»
+import { Plus, Upload, CreditCard, Building2, Briefcase, RefreshCw } from "lucide-vue-next";
 
 // Используем authFetch для авторизованных запросов
 const { authFetch } = useAuthFetch();
@@ -289,6 +227,64 @@ const hasActiveFilters = computed(() => {
     filters.value.noCertificates
   );
 });
+
+/// ---- Презентационные вычисления для UiFilterBar (логика запросов не затронута) ----
+
+// Сколько фильтров применено помимо основного поиска по ФИО — для бейджа на кнопке «Фильтры»
+const activeFilterCount = computed(() => {
+  const f = filters.value;
+  return [f.pinfl, f.organization, f.position].filter((v) => v !== '').length
+    + (f.hasCertificates ? 1 : 0)
+    + (f.noCertificates ? 1 : 0);
+});
+
+// Чипы применённых фильтров: состояние видно без раскрытия панели
+const filterChips = computed(() => {
+  const f = filters.value;
+  const chips: { key: string; label: string }[] = [];
+  if (f.pinfl) chips.push({ key: 'pinfl', label: `ПИНФЛ: ${f.pinfl}` });
+  if (f.organization) chips.push({ key: 'organization', label: `Организация: ${f.organization}` });
+  if (f.position) chips.push({ key: 'position', label: `Должность: ${f.position}` });
+  if (f.hasCertificates) chips.push({ key: 'hasCertificates', label: 'С сертификатами' });
+  if (f.noCertificates) chips.push({ key: 'noCertificates', label: 'Без сертификатов' });
+  return chips;
+});
+
+// Снятие одного чипа: обнуляем соответствующее поле и используем уже существующий handleFilterChange
+const removeFilterChip = (key: string) => {
+  const f = filters.value as Record<string, any>;
+  f[key] = typeof f[key] === 'boolean' ? false : '';
+  handleFilterChange();
+};
+
+// Переключатель сертификатов «Любые / Есть / Нет»: режим вычисляется из двух существующих флагов
+const certModeOptions = [
+  { value: 'any', label: 'Любые' },
+  { value: 'with', label: 'Есть' },
+  { value: 'without', label: 'Нет' },
+];
+const certMode = computed(() =>
+  filters.value.hasCertificates ? 'with' : filters.value.noCertificates ? 'without' : 'any'
+);
+// Выставляем флаги так, чтобы активен был ровно один режим, затем вызываем прежний handleFilterChange
+const setCertMode = (mode: string) => {
+  filters.value.hasCertificates = mode === 'with';
+  filters.value.noCertificates = mode === 'without';
+  handleFilterChange();
+};
+
+// Меню «⋯» в панели: вторичные действия (импорт — ссылка, синхронизация — открывает прежнюю модалку)
+const toolbarMenu = [
+  {
+    items: [
+      { key: 'import', label: 'Импорт слушателей', description: 'Из файла Excel', icon: Upload, to: '/database/import' },
+      { key: 'sync', label: 'Обновить слушателей', description: 'Синхронизация данных', icon: RefreshCw },
+    ],
+  },
+];
+const onToolbarSelect = (key: string) => {
+  if (key === 'sync') isSyncModalOpen.value = true;
+};
 
 // Debounced fetch для фильтров
 const debouncedFetch = () => {

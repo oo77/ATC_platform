@@ -84,7 +84,7 @@
             <!-- Match Score -->
             <div class="shrink-0 text-right">
               <div class="text-lg font-black text-emerald-600 dark:text-emerald-400">{{ getMatchScore(item) }}%</div>
-              <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-0.5">совпадение</div>
+              <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mt-0.5">совпадение</div>
             </div>
           </div>
         </div>

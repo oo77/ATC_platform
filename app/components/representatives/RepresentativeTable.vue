@@ -2,171 +2,72 @@
   <div class="w-full">
     <!-- Загрузка -->
     <div v-if="loading" class="p-8 text-center">
-      <div
-        class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-      ></div>
+      <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-r-transparent"></div>
       <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Загрузка...</p>
     </div>
 
-    <!-- Таблица -->
-    <div v-else-if="representatives.length > 0" class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
-        <thead>
-          <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-              ФИО
-            </th>
-            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Организация
-            </th>
-            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Телефон
-            </th>
-            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Telegram
-            </th>
-            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Статус
-            </th>
-            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Дата заявки
-            </th>
-            <th
-              class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
-            >
-              Действия
-            </th>
+    <!-- Таблица: контейнер со скроллом, чтобы sticky-шапка работала при длинном списке -->
+    <div v-else-if="representatives.length > 0" class="max-h-[calc(100vh-18rem)] min-h-[200px] overflow-auto">
+      <table class="w-full border-collapse text-left text-sm">
+        <!-- Шапка: обычный регистр, sticky -->
+        <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+          <tr class="border-b border-gray-200 dark:border-gray-800">
+            <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">ФИО</th>
+            <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Организация</th>
+            <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Телефон</th>
+            <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Telegram</th>
+            <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Статус</th>
+            <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Дата заявки</th>
+            <th class="w-24 px-4 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Действия</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          <!-- Строка кликабельна: открывает карточку представителя (то же событие view, что и у иконки) -->
           <tr
             v-for="rep in representatives"
             :key="rep.id"
-            class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group"
+            class="group cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+            @click="$emit('view', rep)"
           >
-            <!-- ФИО -->
-            <td class="px-6 py-4">
-              <p class="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
-                {{ rep.fullName }}
-              </p>
+            <td class="px-4 py-3">
+              <p class="font-medium text-gray-900 transition-colors group-hover:text-primary dark:text-white">{{ rep.fullName }}</p>
             </td>
-
-            <!-- Организация -->
-            <td class="px-6 py-4">
-              <p class="font-medium text-slate-700 dark:text-slate-300">
-                {{ rep.organizationName || "Не указана" }}
-              </p>
+            <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ rep.organizationName || "Не указана" }}</td>
+            <td class="px-4 py-3 font-mono text-gray-700 dark:text-gray-300">{{ rep.phone }}</td>
+            <td class="px-4 py-3">
+              <span v-if="rep.telegramUsername" class="text-gray-700 dark:text-gray-300">@{{ rep.telegramUsername }}</span>
+              <span v-else class="text-xs italic text-gray-400">Не указан</span>
             </td>
-
-            <!-- Телефон -->
-            <td class="px-6 py-4">
-              <p class="font-medium text-slate-700 dark:text-slate-300 font-mono">
-                {{ rep.phone }}
-              </p>
+            <!-- Статус: единый UiBadge вместо самописной плашки uppercase -->
+            <td class="px-4 py-3">
+              <UiBadge :color="statusColor(rep.status)">{{ getStatusLabel(rep.status) }}</UiBadge>
             </td>
-
-            <!-- Telegram -->
-            <td class="px-6 py-4">
-              <p
-                v-if="rep.telegramUsername"
-                class="font-medium text-slate-700 dark:text-slate-300"
-              >
-                @{{ rep.telegramUsername }}
-              </p>
-              <p v-else class="text-xs font-bold text-slate-400 italic">
-                Не указан
-              </p>
-            </td>
-
-            <!-- Статус -->
-            <td class="px-6 py-4">
-              <span
-                :class="[
-                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-black uppercase tracking-widest border',
-                  rep.status === 'pending' && 'bg-warning/5 text-warning border-warning/20',
-                  rep.status === 'approved' && 'bg-success/5 text-success border-success/20',
-                  rep.status === 'blocked' && 'bg-danger/5 text-danger border-danger/20',
-                ]"
-              >
-                <span
-                  :class="[
-                    'h-1.5 w-1.5 rounded-full',
-                    rep.status === 'pending' && 'bg-warning',
-                    rep.status === 'approved' && 'bg-success',
-                    rep.status === 'blocked' && 'bg-danger',
-                  ]"
-                ></span>
-                {{ getStatusLabel(rep.status) }}
-              </span>
-            </td>
-
-            <!-- Дата заявки -->
-            <td class="px-6 py-4">
-              <p class="font-medium text-slate-700 dark:text-slate-300">
-                {{ formatDate(rep.createdAt) }}
-              </p>
-            </td>
-
-            <!-- Действия -->
-            <td class="px-6 py-4">
-              <div class="flex items-center justify-center gap-2">
-                <!-- Просмотр -->
-                <UiButton
-                  variant="outline"
-                  size="sm"
-                  @click="$emit('view', rep)"
-                  title="Просмотр"
-                  class="h-8 w-8 p-0! flex items-center justify-center rounded-lg"
-                >
-                  <Eye class="w-4 h-4 text-slate-500" />
-                </UiButton>
-
-                <!-- Одобрить (только для pending) -->
+            <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ formatDate(rep.createdAt) }}</td>
+            <!-- Действия: одна главная иконка по состоянию (для заявки — «Одобрить», иначе «Просмотр») + «⋯»; клик не должен открывать строку -->
+            <td class="px-4 py-3" @click.stop>
+              <div class="flex items-center justify-end gap-1">
                 <UiButton
                   v-if="rep.status === 'pending'"
-                  variant="success"
+                  variant="soft"
                   size="sm"
-                  @click="$emit('approve', rep)"
+                  icon
                   title="Одобрить"
-                  class="h-8 w-8 p-0! flex items-center justify-center rounded-lg"
+                  aria-label="Одобрить"
+                  @click="$emit('approve', rep)"
                 >
-                  <Check class="w-4 h-4" />
+                  <Check class="h-4 w-4" />
                 </UiButton>
-
-                <!-- Заблокировать (для pending и approved) -->
-                <UiButton
-                  v-if="rep.status !== 'blocked'"
-                  variant="warning"
+                <UiButton v-else variant="ghost" size="sm" icon title="Просмотр" aria-label="Просмотр" @click="$emit('view', rep)">
+                  <Eye class="h-4 w-4" />
+                </UiButton>
+                <UiDropdown
+                  :groups="rowMenu(rep)"
+                  icon-only
+                  variant="ghost"
                   size="sm"
-                  @click="$emit('block', rep)"
-                  title="Заблокировать"
-                  class="h-8 w-8 p-0! flex items-center justify-center rounded-lg"
-                >
-                  <Ban class="w-4 h-4" />
-                </UiButton>
-
-                <!-- Разблокировать (только для blocked) -->
-                <UiButton
-                  v-if="rep.status === 'blocked'"
-                  variant="success"
-                  size="sm"
-                  @click="$emit('unblock', rep)"
-                  title="Разблокировать"
-                  class="h-8 w-8 p-0! flex items-center justify-center rounded-lg"
-                >
-                  <Unlock class="w-4 h-4" />
-                </UiButton>
-
-                <!-- Удалить -->
-                <UiButton
-                  variant="danger"
-                  size="sm"
-                  @click="$emit('delete', rep)"
-                  title="Удалить"
-                  class="h-8 w-8 p-0! flex items-center justify-center rounded-lg"
-                >
-                  <Trash2 class="w-4 h-4" />
-                </UiButton>
+                  aria-label="Ещё действия"
+                  @select="(key) => onRowAction(key, rep)"
+                />
               </div>
             </td>
           </tr>
@@ -174,15 +75,8 @@
       </table>
     </div>
 
-    <!-- Пусто -->
-    <div v-else class="p-12 text-center">
-      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-50 text-slate-400 mb-4 dark:bg-slate-800/50">
-        <Users class="w-8 h-8" />
-      </div>
-      <p class="text-slate-500 dark:text-slate-400 font-medium">
-        Представители не найдены
-      </p>
-    </div>
+    <!-- Пусто: единое пустое состояние -->
+    <UiEmptyState v-else title="Представители не найдены" description="Измените запрос или сбросьте фильтры" :icon="Users" />
   </div>
 </template>
 
@@ -215,13 +109,42 @@ interface Props {
 
 defineProps<Props>();
 
-defineEmits<{
+// Сохраняем emit в переменную, чтобы вызывать события из меню «⋯»
+const emit = defineEmits<{
   view: [representative: Representative];
   approve: [representative: Representative];
   block: [representative: Representative];
   unblock: [representative: Representative];
   delete: [representative: Representative];
 }>();
+
+// Цвет UiBadge по статусу заявки
+const statusColor = (status: string): 'warning' | 'success' | 'error' | 'light' => {
+  if (status === "pending") return "warning";
+  if (status === "approved") return "success";
+  if (status === "blocked") return "error";
+  return "light";
+};
+
+// Меню «⋯»: просмотр, затем блокировка/разблокировка, и отдельной группой внизу — удаление (danger)
+const rowMenu = (rep: Representative) => [
+  {
+    items: [
+      { key: "view", label: "Просмотр", icon: Eye },
+      { key: "block", label: "Заблокировать", icon: Ban, hidden: rep.status === "blocked" },
+      { key: "unblock", label: "Разблокировать", icon: Unlock, hidden: rep.status !== "blocked" },
+    ],
+  },
+  { items: [{ key: "delete", label: "Удалить", icon: Trash2, danger: true }] },
+];
+
+// Выбранный пункт меню → прежнее событие с тем же аргументом (контракт эмитов не менялся)
+const onRowAction = (key: string, rep: Representative) => {
+  if (key === "view") emit("view", rep);
+  else if (key === "block") emit("block", rep);
+  else if (key === "unblock") emit("unblock", rep);
+  else if (key === "delete") emit("delete", rep);
+};
 
 // Вспомогательные функции
 const getStatusLabel = (status: string): string => {

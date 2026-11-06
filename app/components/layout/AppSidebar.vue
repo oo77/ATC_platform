@@ -4,7 +4,7 @@
       'fixed top-4 left-4 h-[calc(100vh-2rem)] z-50 flex flex-col',
       'transform-gpu transition-all duration-200 ease-out',
       'bg-white/80 dark:bg-gray-900/80 backdrop-blur-md',
-      'border border-white/20 dark:border-gray-800/20 shadow-2xl rounded-3xl',
+      'border border-gray-200/70 dark:border-gray-800 shadow-theme-md rounded-2xl',
       {
         'w-[272px]': isExpanded || isMobileOpen || isHovered,
         'w-[72px]': !isExpanded && !isHovered && !isMobileOpen,
@@ -42,7 +42,7 @@
               >ATC Platform</span
             >
             <span
-              class="text-[9px] font-semibold uppercase tracking-[0.15em] text-blue-600 dark:text-blue-400 leading-tight"
+              class="text-[11px] font-semibold uppercase tracking-[0.15em] text-blue-600 dark:text-blue-400 leading-tight"
               >Управление</span
             >
           </div>
@@ -86,7 +86,7 @@
             v-show="
               menuGroup.title && (isExpanded || isHovered || isMobileOpen)
             "
-            class="px-3 mb-1 mt-2 text-[9px] font-black uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500"
+            class="px-3 mb-1 mt-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
           >
             {{ menuGroup.title }}
           </h3>
@@ -197,7 +197,7 @@
                   ? 'px-3 py-2.5'
                   : 'px-0 py-2.5 justify-center',
                 isActive(item.path ?? '', item.excludePaths)
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
+                  ? 'bg-primary text-white shadow-theme-xs'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-white',
               ]"
             >
@@ -260,7 +260,7 @@
               {{ userName }}
             </p>
             <p
-              class="text-[9px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-tight"
+              class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-tight"
             >
               {{ userRoleLabel }}
             </p>

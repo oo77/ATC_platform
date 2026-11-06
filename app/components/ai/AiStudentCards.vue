@@ -39,7 +39,7 @@
             </h4>
             <span
               v-if="s.confidence < 100"
-              class="px-1.5 py-px text-[9px] font-semibold rounded-full shrink-0"
+              class="px-1.5 py-px text-[11px] font-semibold rounded-full shrink-0"
               :class="s.confidence >= 90
                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                 : 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'"
@@ -92,7 +92,7 @@
         </button>
         <div v-if="open[s.id]" class="px-3 pb-3 space-y-2.5 bg-gray-50/60 dark:bg-gray-800/30">
           <div v-if="s.groups.length" class="pt-2 space-y-1">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Группы</div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Группы</div>
             <div
               v-for="g in s.groups"
               :key="g.id"
@@ -101,7 +101,7 @@
               <span class="font-mono font-semibold text-gray-800 dark:text-gray-200 shrink-0">{{ g.code }}</span>
               <span class="text-gray-500 dark:text-gray-400 truncate flex-1" :title="g.courseName">{{ g.courseName }}</span>
               <span
-                class="px-1.5 py-px rounded-full text-[9px] font-semibold shrink-0"
+                class="px-1.5 py-px rounded-full text-[11px] font-semibold shrink-0"
                 :class="g.isActive
                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                   : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'"

@@ -99,7 +99,7 @@
             <div class="flex flex-wrap items-center gap-2 mt-0.5">
               <span
                 v-if="ins.specialty"
-                class="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                class="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
               >
                 {{ ins.specialty }}
               </span>

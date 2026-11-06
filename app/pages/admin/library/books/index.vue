@@ -1,393 +1,153 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Заголовок страницы -->
-    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between animate-in fade-in slide-in-from-top-4 duration-700">
-      <div>
-        <h2 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-          Управление библиотекой
-        </h2>
-        <p class="text-sm font-medium text-slate-500 mt-2">
-          Управляйте файлами, данными и доступностью книг
-        </p>
-      </div>
-      <div class="flex gap-3">
-        <UiButton
-          @click="exportBooks"
-          variant="outline"
-          class="flex items-center gap-2 rounded-xl font-bold border-slate-200"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Экспорт
-        </UiButton>
-        <UiButton @click="openUploadModal" variant="primary" class="flex items-center gap-2 rounded-xl font-bold">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          Загрузить книгу
-        </UiButton>
-      </div>
+  <!-- Внешний враппер без двойного отступа: отступы даёт layout -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок; главное действие — «Загрузить книгу», «Экспорт» вторичный -->
+    <UiPageHeader title="Управление библиотекой" description="Управляйте файлами, данными и доступностью книг">
+      <template #actions>
+        <UiButton variant="outline" :start-icon="Download" @click="exportBooks">Экспорт</UiButton>
+        <UiButton variant="primary" :start-icon="Upload" @click="openUploadModal">Загрузить книгу</UiButton>
+      </template>
+    </UiPageHeader>
+
+    <!-- Метрики одной строкой; три статуса одновременно служат быстрым фильтром (клик = фильтр по статусу), поэтому отдельный выпадающий список статусов убран -->
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <UiStat label="Всего книг" :value="pagination.total" :icon="BookOpen" tone="primary" clickable :active="filters.status === ''" @click="selectStatus('')" />
+      <UiStat label="Готовы к чтению" :value="stats.ready" :icon="CheckCircle2" tone="success" clickable :active="filters.status === 'ready'" @click="selectStatus('ready')" />
+      <UiStat label="В обработке" :value="stats.processing" :icon="Clock" tone="warning" clickable :active="filters.status === 'processing'" @click="selectStatus('processing')" />
+      <UiStat label="С ошибками" :value="stats.failed" :icon="AlertCircle" tone="danger" clickable :active="filters.status === 'failed'" @click="selectStatus('failed')" />
     </div>
 
-    <!-- Статистика (Bento Box) -->
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-4 mb-8">
-      <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:border-primary/30 transition-colors">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-            </svg>
+    <!-- Единый блок фильтров: поиск на виду, автор и язык — в панели; сброс — через чипы -->
+    <UiFilterBar
+      v-model:search="filters.search"
+      search-placeholder="Поиск по названию…"
+      :debounce="0"
+      :chips="filterChips"
+      :active-count="filterChips.length"
+      :total="pagination.total"
+      persist-key="admin-library-books"
+      @search="handleFilterChange"
+      @remove="removeFilterChip"
+      @reset="resetFilters"
+    >
+      <template #filters>
+        <!-- Автор: поле с подсказками (логика blur/mousedown прежняя) -->
+        <div class="relative">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Автор</span>
+          <div class="relative">
+            <User class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              v-model="authorQuery"
+              type="text"
+              placeholder="Автор…"
+              class="h-9 w-full rounded-lg border border-gray-300 bg-transparent pl-9 pr-9 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
+              @focus="showAuthorDropdown = true"
+              @blur="hideAuthorDropdown"
+              @input="handleAuthorInput"
+            />
+            <ChevronDown
+              class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 transition-transform duration-200"
+              :class="showAuthorDropdown ? 'rotate-180 text-primary' : ''"
+            />
           </div>
-          <div>
-            <h3 class="text-sm font-bold text-slate-500">Всего книг</h3>
-            <p class="text-2xl font-black text-slate-900 dark:text-white">{{ pagination.total }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:border-success/30 transition-colors">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-success/10 text-success">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-sm font-bold text-slate-500">Готовы к чтению</h3>
-            <p class="text-2xl font-black text-slate-900 dark:text-white">{{ stats.ready }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:border-warning/30 transition-colors">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-warning/10 text-warning">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-sm font-bold text-slate-500">В обработке</h3>
-            <p class="text-2xl font-black text-slate-900 dark:text-white">{{ stats.processing }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:border-danger/30 transition-colors">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-danger/10 text-danger">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <h3 class="text-sm font-bold text-slate-500">С ошибками</h3>
-            <p class="text-2xl font-black text-slate-900 dark:text-white">{{ stats.failed }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Фильтры (Bento Style) -->
-    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 mb-8">
-      <div class="flex items-center gap-3 mb-5">
-        <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-          </svg>
-        </div>
-        <h4 class="text-xl font-bold text-slate-900 dark:text-white">Фильтры</h4>
-        <button
-          v-if="hasActiveFilters"
-          @click="resetFilters"
-          class="ml-auto text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1.5"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          Сбросить
-        </button>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <!-- Поиск -->
-        <div class="relative group">
-          <input
-            v-model="filters.search"
-            type="text"
-            placeholder="Поиск по названию..."
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-4 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all h-[52px]"
-            @input="handleFilterChange"
-          />
-          <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-
-        <!-- Фильтр по автору (Smart Dropdown) -->
-        <div class="relative group">
-          <input
-            v-model="authorQuery"
-            type="text"
-            placeholder="Автор..."
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-10 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all h-[52px]"
-            @focus="showAuthorDropdown = true"
-            @blur="hideAuthorDropdown"
-            @input="handleAuthorInput"
-          />
-          <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none transition-transform duration-300" :class="showAuthorDropdown ? 'rotate-180 text-primary' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-          
-          <transition
-            enter-active-class="transition ease-out duration-200"
-            enter-from-class="opacity-0 translate-y-1"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition ease-in duration-150"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 translate-y-1"
+          <div
+            v-if="showAuthorDropdown && filteredAuthors.length"
+            class="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900"
           >
-            <div v-if="showAuthorDropdown && filteredAuthors.length" class="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
-              <div 
-                v-for="author in filteredAuthors" 
-                :key="author"
-                @mousedown.prevent="selectAuthor(author)"
-                class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors"
-                :class="filters.author === author ? 'bg-primary/5 text-primary' : ''"
-              >
-                {{ author }}
-              </div>
+            <div
+              v-for="author in filteredAuthors"
+              :key="author"
+              class="cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/[0.06]"
+              :class="filters.author === author ? 'bg-primary-50 text-primary dark:bg-primary-500/15' : ''"
+              @mousedown.prevent="selectAuthor(author)"
+            >
+              {{ author }}
             </div>
-          </transition>
+          </div>
         </div>
 
-        <!-- Статус (Custom Dropdown) -->
-        <div class="relative group">
-          <button
-            type="button"
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-10 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all text-left h-[52px]"
-            @click="showStatusDropdown = !showStatusDropdown"
-            @blur="hideStatusDropdown"
+        <!-- Язык: обычный select вместо самописного списка -->
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Язык</span>
+          <select
+            :value="filters.language"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            @change="(e) => selectLanguage((e.target as HTMLSelectElement).value)"
           >
-            {{ currentStatusLabel }}
-          </button>
-          <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none transition-transform duration-300" :class="showStatusDropdown ? 'rotate-180 text-primary' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
+            <option v-for="opt in languageOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </label>
+      </template>
+    </UiFilterBar>
 
-          <transition
-            enter-active-class="transition ease-out duration-200"
-            enter-from-class="opacity-0 translate-y-1"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition ease-in duration-150"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 translate-y-1"
-          >
-            <div v-if="showStatusDropdown" class="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden min-w-[200px]">
-              <div 
-                v-for="opt in statusOptions" 
-                :key="opt.value"
-                @mousedown.prevent="selectStatus(opt.value)"
-                class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-sm font-bold transition-colors"
-                :class="filters.status === opt.value ? 'bg-primary/5 text-primary' : 'text-slate-700 dark:text-slate-300'"
-              >
-                {{ opt.label }}
-              </div>
-            </div>
-          </transition>
-        </div>
-
-        <!-- Язык (Custom Dropdown) -->
-        <div class="relative group">
-          <button
-            type="button"
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 pl-12 pr-10 text-sm font-bold text-slate-900 outline-none focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-primary transition-all text-left h-[52px]"
-            @click="showLanguageDropdown = !showLanguageDropdown"
-            @blur="hideLanguageDropdown"
-          >
-            {{ currentLanguageLabel }}
-          </button>
-          <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none transition-transform duration-300" :class="showLanguageDropdown ? 'rotate-180 text-primary' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-          </svg>
-
-          <transition
-            enter-active-class="transition ease-out duration-200"
-            enter-from-class="opacity-0 translate-y-1"
-            enter-to-class="opacity-100 translate-y-0"
-            leave-active-class="transition ease-in duration-150"
-            leave-from-class="opacity-100 translate-y-0"
-            leave-to-class="opacity-0 translate-y-1"
-          >
-            <div v-if="showLanguageDropdown" class="absolute top-[calc(100%+8px)] left-0 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden min-w-[200px]">
-              <div 
-                v-for="opt in languageOptions" 
-                :key="opt.value"
-                @mousedown.prevent="selectLanguage(opt.value)"
-                class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer text-sm font-bold transition-colors"
-                :class="filters.language === opt.value ? 'bg-primary/5 text-primary' : 'text-slate-700 dark:text-slate-300'"
-              >
-                {{ opt.label }}
-              </div>
-            </div>
-          </transition>
-        </div>
-      </div>
-    </div>
-
-    <!-- Панель массовых действий -->
+    <!-- Панель массовых действий: одна липкая строка «Выбрано N · действия · Снять» -->
     <transition name="slide-down">
       <div
         v-if="selectedBookIds.size > 0"
-        class="bg-primary/10 dark:bg-primary/20 border border-primary/30 rounded-xl px-6 py-4 mb-4 flex items-center gap-4 flex-wrap"
+        class="sticky top-2 z-20 flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary-50 px-4 py-2.5 dark:bg-gray-900 dark:ring-1 dark:ring-primary/30"
       >
-        <div class="flex items-center gap-2">
-          <svg
-            class="w-5 h-5 text-primary"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span class="font-medium text-primary">
-            Выбрано книг: {{ selectedBookIds.size }}
-          </span>
-        </div>
-        <div class="ml-auto flex items-center gap-2">
-          <UiButton
-            @click="openBulkAccessModal"
-            class="flex items-center gap-2"
-            size="sm"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-              />
-            </svg>
-            Выдать доступ
-          </UiButton>
-          <UiButton
-            @click="openBulkRevokeModal"
-            variant="danger"
-            class="flex items-center gap-2"
-            size="sm"
-          >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-              />
-            </svg>
-            Отозвать доступы
-          </UiButton>
-          <button
-            @click="clearSelection"
-            class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-          >
-            Отменить выбор
-          </button>
+        <span class="text-sm font-medium text-primary dark:text-primary-300">Выбрано: {{ selectedBookIds.size }}</span>
+        <div class="ml-auto flex flex-wrap items-center gap-2">
+          <UiButton size="sm" variant="primary" @click="openBulkAccessModal">Выдать доступ</UiButton>
+          <UiButton size="sm" variant="danger-ghost" @click="openBulkRevokeModal">Отозвать доступы</UiButton>
+          <UiButton size="sm" variant="ghost" @click="clearSelection">Снять</UiButton>
         </div>
       </div>
     </transition>
 
-    <!-- Список книг (Таблица) -->
-    <div class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-      <!-- Состояние загрузки -->
+    <!-- Карточка таблицы книг -->
+    <div id="books-table" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <!-- Загрузка -->
       <div v-if="loading" class="p-12 text-center">
         <div class="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        <p class="mt-4 font-bold text-slate-500">Загрузка книг...</p>
+        <p class="mt-4 text-sm text-gray-500">Загрузка книг...</p>
       </div>
 
-      <!-- Состояние: пусто -->
-      <div v-else-if="books.length === 0" class="p-16 text-center text-slate-500">
-        <div class="h-20 w-20 bg-slate-50 dark:bg-slate-800 rounded-3xl flex items-center justify-center mx-auto mb-4">
-          <svg class="h-10 w-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-          </svg>
-        </div>
-        <p class="text-xl font-bold text-slate-900 dark:text-white">Книги не найдены</p>
-        <p class="mt-2 text-sm font-medium">Загрузите первую книгу в библиотеку</p>
-      </div>
+      <!-- Пусто: следующий шаг — загрузить книгу или сбросить фильтры -->
+      <UiEmptyState
+        v-else-if="books.length === 0"
+        :icon="BookOpen"
+        title="Книги не найдены"
+        :description="hasActiveFilters ? 'Измените условия поиска или сбросьте фильтры' : 'Загрузите первую книгу в библиотеку'"
+      >
+        <template #actions>
+          <UiButton v-if="hasActiveFilters" variant="outline" size="sm" @click="resetFilters">Сбросить фильтры</UiButton>
+          <UiButton v-else variant="primary" size="sm" :start-icon="Upload" @click="openUploadModal">Загрузить книгу</UiButton>
+        </template>
+      </UiEmptyState>
 
-      <!-- Таблица -->
-      <div v-else class="overflow-x-auto">
+      <!-- Таблица со sticky-шапкой -->
+      <div v-else class="max-h-[70vh] overflow-auto">
         <table class="w-full">
-          <thead class="bg-slate-50 dark:bg-slate-800/50">
-            <tr class="border-b border-slate-200 dark:border-slate-800">
+          <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+            <tr class="border-b border-gray-200 dark:border-gray-800">
               <!-- Чекбокс "Выбрать все" -->
-              <th class="px-6 py-5 w-12">
+              <th class="w-12 px-4 py-3">
                 <input
                   type="checkbox"
                   :checked="isAllSelected"
                   :indeterminate="isSomeSelected"
                   @change="toggleSelectAll"
-                  class="rounded-md border-slate-300 text-primary focus:ring-primary cursor-pointer w-5 h-5 transition-all"
+                  aria-label="Выбрать все"
+                  class="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary dark:border-gray-600"
                 />
               </th>
-              <th class="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase tracking-wider">
-                Год
-              </th>
-              <th class="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase tracking-wider">
-                Название / Автор
-              </th>
-              <th class="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase tracking-wider">
-                Язык
-              </th>
-              <th class="px-6 py-5 text-center text-xs font-black text-slate-500 uppercase tracking-wider">
-                Страницы
-              </th>
-              <th class="px-6 py-5 text-center text-xs font-black text-slate-500 uppercase tracking-wider">
-                Статус
-              </th>
-              <th class="px-6 py-5 text-center text-xs font-black text-slate-500 uppercase tracking-wider">
-                Читатели
-              </th>
-              <th class="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase tracking-wider">
-                Дата загрузки
-              </th>
-              <th class="px-6 py-5 text-center text-xs font-black text-slate-500 uppercase tracking-wider">
-                Действия
-              </th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Название / Автор</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Язык</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Страницы</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Статус</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Читатели</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Загружена</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Действия</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             <tr
               v-for="book in books"
               :key="book.id"
               :class="[
-                'hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group',
-                selectedBookIds.has(book.id) ? 'bg-primary/5 dark:bg-primary/10' : '',
+                'transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]',
+                selectedBookIds.has(book.id) ? 'bg-primary-50/60 dark:bg-primary-500/10' : '',
               ]"
             >
               <!-- Чекбокс -->
@@ -396,212 +156,66 @@
                   type="checkbox"
                   :checked="selectedBookIds.has(book.id)"
                   @change="toggleBookSelection(book.id)"
-                  class="rounded border-stroke text-primary focus:ring-primary cursor-pointer"
+                  :aria-label="`Выбрать «${book.title}»`"
+                  class="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary dark:border-gray-600"
                 />
               </td>
 
-              <!-- Год -->
-              <td class="px-4 py-3">
-                <span class="text-sm font-semibold text-gray-900 dark:text-white">
-                  {{ (book as any).published_year || (book as any).published_at || "—" }}
-                </span>
-              </td>
-
-              <!-- Название / Автор -->
+              <!-- Название / автор · год (колонка «Год» объединена с автором — меньше столбцов) -->
               <td class="px-4 py-3">
                 <div class="max-w-md">
-                  <p
-                    class="font-semibold text-gray-900 dark:text-white line-clamp-2"
-                  >
-                    {{ book.title }}
-                  </p>
-                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <p class="line-clamp-2 text-sm font-semibold text-gray-900 dark:text-white">{{ book.title }}</p>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                     {{ book.author || "Автор не указан" }}
+                    <template v-if="(book as any).published_year || (book as any).published_at"> · {{ (book as any).published_year || (book as any).published_at }}</template>
                   </p>
-                  <p
-                    v-if="book.description"
-                    class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1"
-                  >
-                    {{ book.description }}
-                  </p>
+                  <p v-if="book.description" class="mt-0.5 line-clamp-1 text-xs text-gray-400">{{ book.description }}</p>
                 </div>
               </td>
 
               <!-- Язык -->
               <td class="px-4 py-3">
-                <span
-                  class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                >
+                <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-white/[0.06] dark:text-gray-200">
                   {{ getLanguageLabel(book.language) }}
                 </span>
               </td>
 
               <!-- Страницы -->
               <td class="px-4 py-3 text-center">
-                <div class="flex items-center justify-center gap-1">
-                  <svg
-                    class="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                    />
-                  </svg>
-                  <span class="text-sm text-gray-900 dark:text-white">
-                    {{ book.total_pages || 0 }}
-                  </span>
-                </div>
+                <span class="text-sm tabular-nums text-gray-900 dark:text-white">{{ book.total_pages || 0 }}</span>
               </td>
 
               <!-- Статус -->
-              <td class="px-4 py-3 text-center">
-                <span
-                  :class="[
-                    'inline-flex items-center rounded-full px-3 py-1 text-xs font-medium',
-                    book.status === 'ready'
-                      ? 'bg-success/10 text-success'
-                      : book.status === 'processing'
-                        ? 'bg-warning/10 text-warning'
-                        : 'bg-danger/10 text-danger',
-                  ]"
-                >
+              <td class="px-4 py-3">
+                <UiBadge :color="book.status === 'ready' ? 'success' : book.status === 'processing' ? 'warning' : 'error'" size="sm">
                   {{ getStatusLabel(book.status) }}
-                </span>
+                </UiBadge>
               </td>
 
               <!-- Читатели -->
               <td class="px-4 py-3 text-center">
-                <div class="flex items-center justify-center gap-1">
-                  <svg
-                    class="w-4 h-4 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                    />
-                  </svg>
-                  <span class="text-sm text-gray-900 dark:text-white">
-                    {{ book.readers_count || 0 }}
-                  </span>
-                </div>
+                <span class="text-sm tabular-nums text-gray-900 dark:text-white">{{ book.readers_count || 0 }}</span>
               </td>
 
               <!-- Дата загрузки -->
               <td class="px-4 py-3">
-                <span class="text-sm text-gray-600 dark:text-gray-400">
-                  {{ formatDate(book.created_at) }}
-                </span>
+                <span class="whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{{ formatDate(book.created_at) }}</span>
               </td>
 
-              <!-- Действия -->
+              <!-- Действия: 1 иконка «Аналитика» + «⋯» (доступ, редактирование, переобработка, удаление последним) -->
               <td class="px-4 py-3">
-                <div class="flex items-center justify-center gap-1">
-                  <button
-                    @click="viewAnalytics(book)"
-                    class="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                    title="Аналитика"
-                  >
-                    <svg
-                      class="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    @click="manageAccess(book)"
-                    class="p-2 text-gray-500 hover:text-success hover:bg-success/10 rounded-lg transition-colors"
-                    title="Управление доступом"
-                  >
-                    <svg
-                      class="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    @click="editBook(book)"
-                    class="p-2 text-gray-500 hover:text-warning hover:bg-warning/10 rounded-lg transition-colors"
-                    title="Редактировать"
-                  >
-                    <svg
-                      class="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    v-if="book.status !== 'processing'"
-                    @click="reprocessBook(book)"
-                    class="p-2 text-gray-500 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                    title="Переобработать"
-                  >
-                    <svg
-                      class="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    @click="confirmDelete(book)"
-                    class="p-2 text-gray-500 hover:text-danger hover:bg-danger/10 rounded-lg transition-colors"
-                    title="Удалить"
-                  >
-                    <svg
-                      class="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
-                  </button>
+                <div class="flex items-center justify-end gap-1">
+                  <UiButton variant="ghost" size="sm" icon title="Аналитика" aria-label="Аналитика" @click="viewAnalytics(book)">
+                    <BarChart3 class="h-4 w-4" />
+                  </UiButton>
+                  <UiDropdown
+                    icon-only
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Действия с книгой"
+                    :groups="bookMenuGroups(book)"
+                    @select="(key) => onBookAction(key, book)"
+                  />
                 </div>
               </td>
             </tr>
@@ -609,25 +223,21 @@
         </table>
       </div>
 
-      <!-- Пагинация -->
-      <div
-        v-if="pagination.total > pagination.limit"
-        class="border-t border-gray-200 dark:border-gray-700 px-6 py-4"
-      >
-        <UiPagination
-          :current-page="pagination.page"
-          :total-pages="Math.ceil(pagination.total / pagination.limit)"
-          :total="pagination.total"
-          :limit="pagination.limit"
-          @update:page="handlePageChange"
-          @update:limit="
-            (l: number) => {
-              pagination.limit = l;
-              fetchBooks();
-            }
-          "
-        />
-      </div>
+      <!-- Единая пагинация внутри карточки -->
+      <UiPagination
+        :current-page="pagination.page"
+        :total-pages="Math.ceil(pagination.total / pagination.limit)"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        scroll-target="#books-table"
+        @update:page="handlePageChange"
+        @update:limit="
+          (l: number) => {
+            pagination.limit = l;
+            fetchBooks();
+          }
+        "
+      />
     </div>
 
     <!-- Модальные окна -->
@@ -744,7 +354,7 @@
           </label>
           <select
             v-model="bulkAccessForm.targetId"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
           >
             <option value="">
               {{
@@ -931,6 +541,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useToast } from "~/composables/useToast";
+// Иконки для нового интерфейса: кнопки шапки, метрики, поле автора и пункты меню «⋯»
+import {
+  Download, Upload, BookOpen, CheckCircle2, Clock, AlertCircle, User, ChevronDown,
+  BarChart3, Users, Pencil, RefreshCw, Trash2,
+} from "lucide-vue-next";
 
 const exportBooks = () => {
   const params = new URLSearchParams({
@@ -1204,6 +819,40 @@ const grantBulkAccess = async () => {
   } finally {
     bulkGranting.value = false;
   }
+};
+
+// Чипы применённых фильтров (статус, язык, автор, поиск) — состояние видно и снимается по одному
+const filterChips = computed(() => {
+  const chips: { key: string; label: string }[] = [];
+  if (filters.value.search) chips.push({ key: "search", label: `Поиск: ${filters.value.search}` });
+  if (filters.value.status) chips.push({ key: "status", label: `Статус: ${currentStatusLabel.value}` });
+  if (filters.value.language) chips.push({ key: "language", label: `Язык: ${currentLanguageLabel.value}` });
+  if (filters.value.author) chips.push({ key: "author", label: `Автор: ${filters.value.author}` });
+  return chips;
+});
+const removeFilterChip = (key: string) => {
+  if (key === "author") authorQuery.value = "";
+  (filters.value as Record<string, string>)[key] = "";
+  handleFilterChange();
+};
+
+// Меню «⋯» строки: доступ, редактирование, переобработка (кроме книг в обработке), затем удаление красным и отдельной группой
+const bookMenuGroups = (book: Book) => [
+  {
+    items: [
+      { key: "access", label: "Управление доступом", icon: Users },
+      { key: "edit", label: "Редактировать", icon: Pencil },
+      { key: "reprocess", label: "Переобработать", icon: RefreshCw, hidden: book.status === "processing" },
+    ],
+  },
+  { items: [{ key: "delete", label: "Удалить", icon: Trash2, danger: true }] },
+];
+// Диспетчер меню вызывает прежние обработчики manageAccess / editBook / reprocessBook / confirmDelete
+const onBookAction = (key: string, book: Book) => {
+  if (key === "access") manageAccess(book);
+  else if (key === "edit") editBook(book);
+  else if (key === "reprocess") reprocessBook(book);
+  else if (key === "delete") confirmDelete(book);
 };
 
 // Computed

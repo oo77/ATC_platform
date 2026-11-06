@@ -147,8 +147,8 @@
           </div>
           <div class="flex items-center gap-2">
             <div class="flex bg-slate-100 rounded p-0.5">
-              <button class="px-1.5 py-0.5 text-[10px] rounded transition-all" :class="courseTab === 'groups' ? 'bg-cyan-500 text-white' : 'text-slate-500'" @click.stop="courseTab = 'groups'">Гр</button>
-              <button class="px-1.5 py-0.5 text-[10px] rounded transition-all" :class="courseTab === 'students' ? 'bg-cyan-500 text-white' : 'text-slate-500'" @click.stop="courseTab = 'students'">Об</button>
+              <button class="px-1.5 py-0.5 text-[11px] rounded transition-all" :class="courseTab === 'groups' ? 'bg-cyan-500 text-white' : 'text-slate-500'" @click.stop="courseTab = 'groups'">Гр</button>
+              <button class="px-1.5 py-0.5 text-[11px] rounded transition-all" :class="courseTab === 'students' ? 'bg-cyan-500 text-white' : 'text-slate-500'" @click.stop="courseTab = 'students'">Об</button>
             </div>
             <svg class="w-4 h-4 text-slate-400 transition-transform" :class="{ 'rotate-180': coursesExpanded }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -194,7 +194,7 @@
               </div>
               <div>
                 <p class="text-xl font-bold text-slate-800">{{ stats?.todayRegistrations || 0 }}</p>
-                <p class="text-[10px] text-emerald-600">Новые</p>
+                <p class="text-[11px] text-emerald-600">Новые</p>
               </div>
             </div>
             <div class="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-100">
@@ -203,7 +203,7 @@
               </div>
               <div>
                 <p class="text-xl font-bold text-slate-800">{{ stats?.activeSessions || 0 }}</p>
-                <p class="text-[10px] text-amber-600">Онлайн</p>
+                <p class="text-[11px] text-amber-600">Онлайн</p>
               </div>
             </div>
             <div class="flex items-center gap-2 p-2 rounded-lg bg-sky-50 border border-sky-100 cursor-pointer" @click="navigateTo('/activity-logs')">
@@ -212,7 +212,7 @@
               </div>
               <div>
                 <p class="text-xl font-bold text-slate-800">{{ stats?.todayLogs || 0 }}</p>
-                <p class="text-[10px] text-sky-600">События</p>
+                <p class="text-[11px] text-sky-600">События</p>
               </div>
             </div>
           </div>
@@ -239,13 +239,13 @@
               <div class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" :class="getActivityDotColor(activity.action)"></div>
               <div class="min-w-0 flex-1">
                 <p class="text-xs font-medium text-slate-700 truncate">{{ activity.user_name }}</p>
-                <p class="text-[10px] text-slate-400 truncate">{{ activity.action }}</p>
+                <p class="text-[11px] text-slate-400 truncate">{{ activity.action }}</p>
               </div>
             </div>
           </div>
         </div>
         <div class="px-4 py-1.5 border-t border-slate-100 text-center">
-          <NuxtLink to="/activity-logs" class="text-[10px] text-pink-600 hover:text-pink-700">Все →</NuxtLink>
+          <NuxtLink to="/activity-logs" class="text-[11px] text-pink-600 hover:text-pink-700">Все →</NuxtLink>
         </div>
       </div>
     </div>
@@ -267,7 +267,7 @@
           </div>
           <div>
             <span class="block text-xs font-semibold text-slate-700">{{ action.label }}</span>
-            <span class="text-[10px] text-slate-400">{{ action.desc }}</span>
+            <span class="text-[11px] text-slate-400">{{ action.desc }}</span>
           </div>
         </NuxtLink>
       </div>

@@ -21,7 +21,7 @@
         <Users class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
       </div>
-      <div v-if="loading" class="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
+      <div v-if="loading" class="text-[11px] text-slate-400 font-bold uppercase flex items-center gap-1">
         <span class="w-3 h-3 rounded-full border-2 border-primary border-t-transparent animate-spin"></span> Загрузка...
       </div>
     </div>
@@ -49,7 +49,7 @@
               <div class="flex items-center gap-2 mt-0.5">
                 <span
                   v-if="index === 0"
-                  class="inline-flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded"
+                  class="inline-flex items-center gap-1 text-[11px] font-black text-primary uppercase tracking-widest bg-primary/10 px-2 py-0.5 rounded"
                 >
                   <Star class="w-3 h-3 fill-primary text-primary" /> Основной
                 </span>
@@ -57,7 +57,7 @@
                   v-else
                   type="button"
                   @click="setPrimary(index)"
-                  class="text-[10px] font-bold text-slate-400 hover:text-primary transition-colors flex items-center gap-1 uppercase tracking-widest"
+                  class="text-[11px] font-bold text-slate-400 hover:text-primary transition-colors flex items-center gap-1 uppercase tracking-widest"
                 >
                   <Star class="w-3 h-3" /> Сделать основным
                 </button>

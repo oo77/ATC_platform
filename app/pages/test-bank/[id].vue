@@ -1,340 +1,226 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+  <div class="mx-auto max-w-screen-2xl space-y-4">
     <!-- Loading -->
     <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
       <div class="text-center">
         <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">Загрузка банка вопросов...</p>
+        <p class="mt-4 text-gray-600 dark:text-gray-400 font-medium">Загрузка банка вопросов...</p>
       </div>
     </div>
 
     <!-- Error -->
     <div v-else-if="error || !bank" class="flex items-center justify-center min-h-[400px]">
       <div class="text-center max-w-md">
-        <div class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6 text-slate-400">
+        <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-full inline-block mb-6 text-gray-400">
           <Library class="w-12 h-12" />
         </div>
-        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">{{ error || "Банк не найден" }}</h3>
-        <UiButton class="mt-8 shadow-lg" @click="navigateTo('/test-bank')">К списку банков</UiButton>
+        <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{ error || "Банк не найден" }}</h3>
+        <UiButton class="mt-8" @click="navigateTo('/test-bank')">К списку банков</UiButton>
       </div>
     </div>
 
     <template v-else>
-      <!-- Header Section -->
-      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-        <div class="mb-6">
-          <NuxtLink to="/test-bank" class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors">
-            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors">
-              <ArrowLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            </div>
-            Назад к списку
-          </NuxtLink>
-        </div>
+      <!-- Единый заголовок: крошки вместо крупной «Назад», статус и код в мета-строке -->
+      <UiPageHeader
+        :title="bank.name"
+        :breadcrumbs="[{ label: 'Банк тестов', to: '/test-bank' }, { label: bank.code || bank.name }]"
+      >
+        <template #badge>
+          <UiBadge size="sm" :color="bank.is_active ? 'success' : 'light'">{{ bank.is_active ? 'Активен' : 'Неактивен' }}</UiBadge>
+        </template>
+        <template #meta>
+          <span class="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs dark:bg-white/[0.06]">{{ bank.code }}</span>
+          <span v-if="bank.category" class="flex items-center gap-1"><Tags class="h-3.5 w-3.5" /> {{ bank.category }}</span>
+          <span>{{ bank.questions_count || 0 }} вопросов</span>
+        </template>
+        <!-- Действия только в шапке (дубль из сайдбара убран): главное — «Добавить вопрос», остальное — в «Импорт» и «⋯» -->
+        <template #actions>
+          <UiButton v-if="canManageTestBanks" variant="outline" size="sm" @click="showImportModal = true">
+            <Upload class="mr-1.5 h-4 w-4" /> Импорт
+          </UiButton>
+          <UiButton v-if="canManageTestBanks" size="sm" @click="openCreateQuestionModal">
+            <Plus class="mr-1.5 h-4 w-4" /> Добавить вопрос
+          </UiButton>
+          <UiDropdown
+            v-if="canManageTestBanks"
+            icon-only
+            aria-label="Действия с банком"
+            :groups="[{ items: [{ key: 'edit-bank', label: 'Редактировать банк', icon: Pencil }] }]"
+            @select="openEditBankModal"
+          />
+        </template>
+      </UiPageHeader>
 
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div class="flex items-center gap-4">
-            <div class="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center border-2 border-primary/20">
-              <Library class="w-10 h-10 text-primary" />
-            </div>
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">{{ bank.name }}</h1>
-                <div class="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border" :class="bank.is_active ? 'border-success/20 bg-success/5 text-success' : 'border-slate-300 bg-slate-100 text-slate-500'">
-                  {{ bank.is_active ? 'Активен' : 'Неактивен' }}
-                </div>
-              </div>
-              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-500">
-                <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono">{{ bank.code }}</span>
-                <span v-if="bank.category" class="flex items-center gap-1">
-                  <Tags class="w-3.5 h-3.5" /> {{ bank.category }}
-                </span>
-                <span>{{ bank.questions_count || 0 }} вопросов</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap items-center justify-center lg:justify-end gap-2">
-            <UiButton v-if="canManageTestBanks" variant="outline" size="sm" class="h-9 px-3 gap-1.5 font-bold" @click="showImportModal = true">
-              <Upload class="w-3.5 h-3.5" /> Импорт
-            </UiButton>
-            <UiButton v-if="canManageTestBanks" size="sm" class="h-9 px-3 gap-1.5 font-bold" @click="openCreateQuestionModal">
-              <Plus class="w-3.5 h-3.5" /> Добавить вопрос
-            </UiButton>
-          </div>
-        </div>
+      <!-- Метрики одной строкой UiStat: всего + сложность + языки (вместо двух рядов карточек с text-[11px] CAPS) -->
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+        <UiStat label="Всего" :value="stats.total" :icon="HelpCircle" tone="primary" />
+        <UiStat label="Лёгкие" :value="stats.difficulty.easy" :icon="Zap" tone="success" />
+        <UiStat label="Средние" :value="stats.difficulty.medium" :icon="TrendingUp" tone="warning" />
+        <UiStat label="Сложные" :value="stats.difficulty.hard" :icon="Flame" tone="danger" />
+        <UiStat v-for="lang in languageStats" :key="lang.code" :label="`${lang.flag} ${lang.label}`" :value="lang.count" />
       </div>
 
-      <!-- Metrics Grid -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Всего</p>
-              <h3 class="mt-0.5 text-lg font-bold text-primary">{{ stats.total }}</h3>
-            </div>
-            <div class="rounded-lg bg-primary/10 p-2 text-primary">
-              <HelpCircle class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
+      <!-- Вкладки: UiTabs вместо «сегмента» с заливкой -->
+      <UiTabs v-model="activeTab" :tabs="availableTabs" />
 
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Лёгкие</p>
-              <h3 class="mt-0.5 text-lg font-bold text-success">{{ stats.difficulty.easy }}</h3>
-            </div>
-            <div class="rounded-lg bg-success/10 p-2 text-success">
-              <Zap class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Средние</p>
-              <h3 class="mt-0.5 text-lg font-bold text-warning">{{ stats.difficulty.medium }}</h3>
-            </div>
-            <div class="rounded-lg bg-warning/10 p-2 text-warning">
-              <TrendingUp class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Сложные</p>
-              <h3 class="mt-0.5 text-lg font-bold text-danger">{{ stats.difficulty.hard }}</h3>
-            </div>
-            <div class="rounded-lg bg-danger/10 p-2 text-danger">
-              <Flame class="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Language Stats -->
-      <div class="grid grid-cols-3 gap-3 mb-5">
-        <div v-for="lang in languageStats" :key="lang.code" class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
-          <div class="flex items-center gap-2">
-            <span class="text-xl">{{ lang.flag }}</span>
-            <div>
-              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{{ lang.label }}</p>
-              <p class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ lang.count }}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tabs -->
-      <div class="mb-5 overflow-x-auto custom-scrollbar pb-1">
-        <div class="inline-flex rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
-          <nav class="flex gap-0.5">
-            <button
-              v-for="tab in availableTabs"
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              :class="['flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold transition-all whitespace-nowrap', activeTab === tab.id ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-700']"
+      <!-- Основная колонка + узкий сайдбар с аналитикой -->
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-12">
+        <div class="space-y-4 lg:col-span-8">
+          <!-- ВКЛАДКА «ВОПРОСЫ» -->
+          <div v-show="activeTab === 'questions'" class="space-y-4">
+            <!-- Единый блок фильтров: поиск + «Фильтры» (тип, сложность) + чипы; прежние ref и сброс сохранены -->
+            <UiFilterBar
+              :search="questionFilters.search"
+              search-placeholder="Поиск по вопросам..."
+              :debounce="0"
+              :active-count="(questionFilters.type ? 1 : 0) + (questionFilters.difficulty ? 1 : 0)"
+              :total="pagination.total"
+              :chips="questionFilterChips"
+              persist-key="test-bank-questions"
+              @update:search="questionFilters.search = $event"
+              @remove="questionFilters[$event] = ''"
+              @reset="resetQuestionFilters"
             >
-              <component :is="tab.icon" class="h-3.5 w-3.5" />
-              {{ tab.label }}
-            </button>
-          </nav>
-        </div>
-      </div>
+              <template #filters>
+                <select v-model="questionFilters.type" class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-900">
+                  <option value="">Тип</option>
+                  <option value="single">Один</option>
+                  <option value="multiple">Несколько</option>
+                  <option value="text">Текст</option>
+                </select>
+                <select v-model="questionFilters.difficulty" class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-primary dark:border-gray-700 dark:bg-gray-900">
+                  <option value="">Сложность</option>
+                  <option value="easy">Лёгкий</option>
+                  <option value="medium">Средний</option>
+                  <option value="hard">Сложный</option>
+                </select>
+              </template>
+            </UiFilterBar>
 
-      <!-- Tab Content -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-8 space-y-4">
-          <!-- QUESTIONS TAB -->
-          <div v-show="activeTab === 'questions'" class="space-y-4 animate-in fade-in duration-500">
-            <!-- Filters -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                <Filter class="w-4 h-4 text-info" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Фильтры</h3>
-                <button v-if="hasActiveQuestionFilters" @click="resetQuestionFilters" class="ml-auto text-xs font-bold text-primary hover:text-primary/80 flex items-center gap-1">
-                  <RotateCcw class="w-3 h-3" /> Сбросить
-                </button>
-              </div>
-              <div class="p-4">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div class="col-span-2">
-                    <div class="relative">
-                      <input v-model="questionFilters.search" type="text" placeholder="Поиск..." class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 py-2 pl-9 pr-3 text-sm outline-none focus:border-primary" />
-                      <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    </div>
-                  </div>
-                  <div>
-                    <select v-model="questionFilters.type" class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 py-2 pl-3 pr-8 text-sm outline-none focus:border-primary appearance-none">
-                      <option value="">Тип</option>
-                      <option value="single">Один</option>
-                      <option value="multiple">Несколько</option>
-                      <option value="text">Текст</option>
-                    </select>
-                  </div>
-                  <div>
-                    <select v-model="questionFilters.difficulty" class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 py-2 pl-3 pr-8 text-sm outline-none focus:border-primary appearance-none">
-                      <option value="">Сложность</option>
-                      <option value="easy">Лёгкий</option>
-                      <option value="medium">Средний</option>
-                      <option value="hard">Сложный</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Questions List -->
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+            <!-- Список вопросов: карточка с пагинацией-футером внутри -->
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
               <div v-if="questionsLoading" class="p-12 text-center">
                 <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
               </div>
-              <div v-else-if="questions.length === 0" class="py-16 text-center">
-                <HelpCircle class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-                <p class="text-slate-500">Нет вопросов</p>
-              </div>
-              <div v-else class="divide-y divide-slate-100 dark:divide-slate-800 max-h-[500px] overflow-y-auto">
-                <div v-for="(q, idx) in questions" :key="q.id" class="flex items-start gap-3 px-4 py-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                  <span class="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary shrink-0 mt-0.5">
+              <UiEmptyState v-else-if="questions.length === 0" :icon="HelpCircle" title="Нет вопросов" />
+              <div v-else class="max-h-[560px] divide-y divide-gray-100 overflow-y-auto dark:divide-gray-800">
+                <div v-for="(q, idx) in questions" :key="q.id" class="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]">
+                  <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary">
                     {{ (pagination.page - 1) * pagination.limit + idx + 1 }}
                   </span>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-slate-800 dark:text-slate-200 line-clamp-2">{{ q.question_text }}</p>
-                    <div class="flex items-center gap-2 mt-1">
-                      <span :class="['px-1.5 py-0.5 rounded text-[9px] font-bold uppercase', difficultyClasses[q.difficulty]]">
-                        {{ difficultyLabels[q.difficulty] }}
-                      </span>
-                      <span class="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[9px] font-bold">
-                        {{ questionTypeLabels[q.question_type] }}
-                      </span>
-                      <span class="text-[10px] text-slate-400">{{ languageFlags[q.language] }} {{ q.points }}б</span>
+                  <div class="min-w-0 flex-1">
+                    <p class="line-clamp-2 text-sm font-medium text-gray-800 dark:text-gray-200">{{ q.question_text }}</p>
+                    <div class="mt-1 flex flex-wrap items-center gap-2">
+                      <span :class="['rounded px-1.5 py-0.5 text-[11px] font-medium', difficultyClasses[q.difficulty]]">{{ difficultyLabels[q.difficulty] }}</span>
+                      <span class="rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">{{ questionTypeLabels[q.question_type] }}</span>
+                      <span class="text-[11px] text-gray-400">{{ languageFlags[q.language] }} {{ q.points }}б</span>
+                      <span v-if="!q.is_active" class="text-[11px] text-gray-400">· неактивен</span>
                     </div>
                   </div>
-                  <div class="flex items-center gap-1 shrink-0">
-                    <button @click="openEditQuestionModal(q)" class="p-1.5 text-slate-400 hover:text-warning hover:bg-warning/10 rounded-lg transition-all" title="Редактировать">
-                      <Pencil class="w-3.5 h-3.5" />
-                    </button>
-                    <button @click="toggleQuestionActive(q)" :class="['p-1.5 rounded-lg transition-all', q.is_active ? 'text-success hover:bg-success/10' : 'text-slate-400 hover:text-warning hover:bg-warning/10']" :title="q.is_active ? 'Деактивировать' : 'Активировать'">
-                      <component :is="q.is_active ? CheckCircle : XCircle" class="w-3.5 h-3.5" />
-                    </button>
-                    <button @click="confirmDeleteQuestion(q)" class="p-1.5 text-slate-400 hover:text-danger hover:bg-danger/10 rounded-lg transition-all" title="Удалить">
-                      <Trash2 class="w-3.5 h-3.5" />
-                    </button>
+                  <!-- Действия строки только для тех, у кого есть право canManageTestBanks: 1 иконка + «⋯»; на touch видны всегда -->
+                  <div
+                    v-if="canManageTestBanks"
+                    class="flex shrink-0 items-center gap-1 opacity-100 transition-opacity focus-within:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
+                  >
+                    <UiButton variant="ghost" size="xs" icon title="Редактировать" aria-label="Редактировать" @click="openEditQuestionModal(q)">
+                      <Pencil class="h-4 w-4" />
+                    </UiButton>
+                    <UiDropdown icon-only aria-label="Ещё" :groups="questionActions(q)" @select="onQuestionAction(q, $event)" />
                   </div>
                 </div>
               </div>
 
-              <!-- Pagination -->
-              <div v-if="pagination.totalPages > 1" class="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-800">
-                <p class="text-xs text-slate-500">Страница {{ pagination.page }} из {{ pagination.totalPages }}</p>
-                <div class="flex gap-1">
-                  <button @click="pagination.page--; loadQuestions()" :disabled="pagination.page === 1" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 disabled:opacity-50">←</button>
-                  <button v-for="p in paginationRange" :key="p" @click="typeof p === 'number' && (pagination.page = p) && loadQuestions()" :class="['w-8 h-8 rounded-lg text-xs font-bold transition-all', typeof p !== 'number' ? 'text-slate-400' : pagination.page === p ? 'bg-primary text-white' : 'border border-slate-200 dark:border-slate-700']">{{ p }}</button>
-                  <button @click="pagination.page++; loadQuestions()" :disabled="pagination.page >= pagination.totalPages" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 disabled:opacity-50">→</button>
-                </div>
-              </div>
+              <!-- Пагинация внутри карточки (вместо самописной ←/→) -->
+              <UiPagination
+                v-if="pagination.totalPages > 1"
+                :current-page="pagination.page"
+                :total-pages="pagination.totalPages"
+                :total="pagination.total"
+                :limit="pagination.limit"
+                :loading="questionsLoading"
+                hide-limit
+                @update:page="pagination.page = $event; loadQuestions()"
+              />
             </div>
           </div>
 
-          <!-- SETTINGS TAB -->
-          <div v-show="activeTab === 'settings'" class="animate-in fade-in duration-500">
-            <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-              <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                <Settings class="w-4 h-4 text-primary" />
-                <h3 class="text-xs font-black uppercase tracking-widest text-slate-500">Настройки банка</h3>
+          <!-- ВКЛАДКА «НАСТРОЙКИ» -->
+          <div v-show="activeTab === 'settings'">
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+              <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+                <Settings class="h-4 w-4 text-primary" />
+                <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Настройки банка</h3>
               </div>
-              <div class="p-4 space-y-4">
-                <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                  <span class="text-xs font-semibold text-slate-400">Название</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ bank.name }}</span>
+              <div class="space-y-1 p-4">
+                <div class="flex items-center justify-between border-b border-gray-100 py-2 dark:border-gray-800">
+                  <span class="text-sm text-gray-500">Название</span>
+                  <span class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ bank.name }}</span>
                 </div>
-                <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                  <span class="text-xs font-semibold text-slate-400">Код</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200 font-mono">{{ bank.code }}</span>
+                <div class="flex items-center justify-between border-b border-gray-100 py-2 dark:border-gray-800">
+                  <span class="text-sm text-gray-500">Код</span>
+                  <span class="font-mono text-sm font-medium text-gray-800 dark:text-gray-200">{{ bank.code }}</span>
                 </div>
-                <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                  <span class="text-xs font-semibold text-slate-400">Категория</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ bank.category || '—' }}</span>
+                <div class="flex items-center justify-between border-b border-gray-100 py-2 dark:border-gray-800">
+                  <span class="text-sm text-gray-500">Категория</span>
+                  <span class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ bank.category || '—' }}</span>
                 </div>
-                <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                  <span class="text-xs font-semibold text-slate-400">Вопросов</span>
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ bank.questions_count || 0 }}</span>
+                <div class="flex items-center justify-between py-2">
+                  <span class="text-sm text-gray-500">Вопросов</span>
+                  <span class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ bank.questions_count || 0 }}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Sidebar -->
-        <div class="lg:col-span-4 space-y-4">
-          <!-- Quick Actions -->
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <Zap class="w-4 h-4 text-warning" />
-              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Действия</h4>
+        <!-- Сайдбар: только аналитика (блок «Действия» убран — дублировал кнопки в шапке) -->
+        <div class="space-y-4 lg:col-span-4">
+          <!-- Распределение по сложности -->
+          <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+              <BarChart3 class="h-4 w-4 text-info" />
+              <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Распределение</h4>
             </div>
-            <div class="p-4 space-y-2">
-              <UiButton v-if="canManageTestBanks" class="w-full h-10 gap-2 font-bold" @click="openCreateQuestionModal">
-                <Plus class="w-4 h-4" /> Добавить вопрос
-              </UiButton>
-              <UiButton v-if="canManageTestBanks" variant="outline" class="w-full h-10 gap-2 font-bold" @click="showImportModal = true">
-                <Upload class="w-4 h-4" /> Импорт вопросов
-              </UiButton>
-              <UiButton v-if="canManageTestBanks" variant="outline" class="w-full h-10 gap-2 font-bold" @click="openEditBankModal">
-                <Pencil class="w-4 h-4" /> Редактировать банк
-              </UiButton>
-            </div>
-          </div>
-
-          <!-- Difficulty Distribution -->
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <BarChart3 class="w-4 h-4 text-info" />
-              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Распределение</h4>
-            </div>
-            <div class="p-4 space-y-3">
+            <div class="space-y-3 p-4">
               <div class="flex items-center justify-between text-sm">
-                <span class="text-slate-500">Лёгкие</span>
+                <span class="text-gray-500">Лёгкие</span>
                 <div class="flex items-center gap-2">
-                  <div class="w-20 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-success rounded-full" :style="{ width: `${stats.total ? (stats.difficulty.easy / stats.total * 100) : 0}%` }"></div>
+                  <div class="h-2 w-20 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div class="h-full rounded-full bg-success" :style="{ width: `${stats.total ? (stats.difficulty.easy / stats.total * 100) : 0}%` }"></div>
                   </div>
-                  <span class="text-xs font-bold text-slate-600 dark:text-slate-400 w-8">{{ stats.difficulty.easy }}</span>
+                  <span class="w-8 text-xs font-semibold text-gray-600 dark:text-gray-400">{{ stats.difficulty.easy }}</span>
                 </div>
               </div>
               <div class="flex items-center justify-between text-sm">
-                <span class="text-slate-500">Средние</span>
+                <span class="text-gray-500">Средние</span>
                 <div class="flex items-center gap-2">
-                  <div class="w-20 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-warning rounded-full" :style="{ width: `${stats.total ? (stats.difficulty.medium / stats.total * 100) : 0}%` }"></div>
+                  <div class="h-2 w-20 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div class="h-full rounded-full bg-warning" :style="{ width: `${stats.total ? (stats.difficulty.medium / stats.total * 100) : 0}%` }"></div>
                   </div>
-                  <span class="text-xs font-bold text-slate-600 dark:text-slate-400 w-8">{{ stats.difficulty.medium }}</span>
+                  <span class="w-8 text-xs font-semibold text-gray-600 dark:text-gray-400">{{ stats.difficulty.medium }}</span>
                 </div>
               </div>
               <div class="flex items-center justify-between text-sm">
-                <span class="text-slate-500">Сложные</span>
+                <span class="text-gray-500">Сложные</span>
                 <div class="flex items-center gap-2">
-                  <div class="w-20 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-danger rounded-full" :style="{ width: `${stats.total ? (stats.difficulty.hard / stats.total * 100) : 0}%` }"></div>
+                  <div class="h-2 w-20 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div class="h-full rounded-full bg-danger" :style="{ width: `${stats.total ? (stats.difficulty.hard / stats.total * 100) : 0}%` }"></div>
                   </div>
-                  <span class="text-xs font-bold text-slate-600 dark:text-slate-400 w-8">{{ stats.difficulty.hard }}</span>
+                  <span class="w-8 text-xs font-semibold text-gray-600 dark:text-gray-400">{{ stats.difficulty.hard }}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Templates -->
-          <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-            <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-              <FileText class="w-4 h-4 text-primary" />
-              <h4 class="text-xs font-black uppercase tracking-widest text-slate-500">Шаблоны</h4>
+          <!-- Использование в шаблонах -->
+          <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+              <FileText class="h-4 w-4 text-primary" />
+              <h4 class="text-sm font-semibold text-gray-800 dark:text-gray-200">Шаблоны</h4>
             </div>
             <div class="p-4 text-center">
-              <p class="text-2xl font-bold text-primary">{{ bank.templates_count || 0 }}</p>
-              <p class="text-xs text-slate-400">шаблонов используют этот банк</p>
+              <p class="text-2xl font-semibold text-primary">{{ bank.templates_count || 0 }}</p>
+              <p class="text-xs text-gray-500">шаблонов используют этот банк</p>
             </div>
           </div>
         </div>
@@ -346,51 +232,51 @@
       <form @submit.prevent class="space-y-4">
         <div class="grid grid-cols-4 gap-3">
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Тип</label>
-            <select v-model="questionForm.question_type" class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-8 text-sm outline-none focus:border-primary appearance-none">
+            <label class="block text-xs font-bold text-gray-500 mb-1.5">Тип</label>
+            <select v-model="questionForm.question_type" class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-2.5 pl-4 pr-8 text-sm outline-none focus:border-primary appearance-none">
               <option value="single">Один ответ</option>
               <option value="multiple">Несколько</option>
               <option value="text">Текст</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Язык</label>
-            <select v-model="questionForm.language" class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-8 text-sm outline-none focus:border-primary appearance-none">
+            <label class="block text-xs font-bold text-gray-500 mb-1.5">Язык</label>
+            <select v-model="questionForm.language" class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-2.5 pl-4 pr-8 text-sm outline-none focus:border-primary appearance-none">
               <option value="ru">🇷🇺 Русский</option>
               <option value="uz">🇺🇿 Узбекский</option>
               <option value="en">🇬🇧 English</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Сложность</label>
-            <select v-model="questionForm.difficulty" class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-8 text-sm outline-none focus:border-primary appearance-none">
+            <label class="block text-xs font-bold text-gray-500 mb-1.5">Сложность</label>
+            <select v-model="questionForm.difficulty" class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-2.5 pl-4 pr-8 text-sm outline-none focus:border-primary appearance-none">
               <option value="easy">Лёгкий</option>
               <option value="medium">Средний</option>
               <option value="hard">Сложный</option>
             </select>
           </div>
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Баллы</label>
-            <input v-model.number="questionForm.points" type="number" min="1" class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-3 text-sm outline-none focus:border-primary" />
+            <label class="block text-xs font-bold text-gray-500 mb-1.5">Баллы</label>
+            <input v-model.number="questionForm.points" type="number" min="1" class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-2.5 pl-3 text-sm outline-none focus:border-primary" />
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Текст <span class="text-danger">*</span></label>
-          <textarea v-model="questionForm.question_text" rows="2" placeholder="Введите вопрос..." class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 text-sm outline-none focus:border-primary resize-none" :class="{ 'border-danger': questionFormErrors.question_text }"></textarea>
+          <label class="block text-xs font-bold text-gray-500 mb-1.5">Текст <span class="text-danger">*</span></label>
+          <textarea v-model="questionForm.question_text" rows="2" placeholder="Введите вопрос..." class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-2.5 px-3 text-sm outline-none focus:border-primary resize-none" :class="{ 'border-danger': questionFormErrors.question_text }"></textarea>
           <p v-if="questionFormErrors.question_text" class="mt-1 text-xs text-danger">{{ questionFormErrors.question_text }}</p>
         </div>
 
         <div v-if="questionForm.question_type === 'single'" class="space-y-2">
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Варианты <span class="text-danger">*</span></label>
+          <label class="block text-xs font-bold text-gray-500">Варианты <span class="text-danger">*</span></label>
           <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
             <div v-for="(opt, idx) in questionForm.options" :key="opt.id" class="flex items-center gap-2">
-              <button type="button" @click="setCorrectOption(idx)" :class="['w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0', opt.correct ? 'border-success bg-success' : 'border-slate-300']">
+              <button type="button" @click="setCorrectOption(idx)" :class="['w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0', opt.correct ? 'border-success bg-success' : 'border-gray-300']">
                 <Check v-if="opt.correct" class="w-3 h-3 text-white" />
               </button>
-              <span class="w-6 h-6 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500 shrink-0">{{ String.fromCharCode(65 + idx) }}</span>
-              <input v-model="opt.text" type="text" :placeholder="`Вариант ${String.fromCharCode(65 + idx)}`" class="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2 px-3 text-sm outline-none focus:border-primary" :class="{ 'border-success': opt.correct }" />
-              <button v-if="questionForm.options.length > 2" type="button" @click="removeOption(idx)" class="p-1 text-slate-400 hover:text-danger">
+              <span class="w-6 h-6 rounded bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">{{ String.fromCharCode(65 + idx) }}</span>
+              <input v-model="opt.text" type="text" :placeholder="`Вариант ${String.fromCharCode(65 + idx)}`" class="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-2 px-3 text-sm outline-none focus:border-primary" :class="{ 'border-success': opt.correct }" />
+              <button v-if="questionForm.options.length > 2" type="button" @click="removeOption(idx)" class="p-1 text-gray-400 hover:text-danger">
                 <X class="w-4 h-4" />
               </button>
             </div>
@@ -402,16 +288,16 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Объяснение</label>
-          <textarea v-model="questionForm.explanation" rows="1" placeholder="Комментарий к ответу..." class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 text-sm outline-none focus:border-primary resize-none"></textarea>
+          <label class="block text-xs font-bold text-gray-500 mb-1.5">Объяснение</label>
+          <textarea v-model="questionForm.explanation" rows="1" placeholder="Комментарий к ответу..." class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-2.5 px-3 text-sm outline-none focus:border-primary resize-none"></textarea>
         </div>
 
-        <div class="flex items-center gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+        <div class="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
           <label class="relative inline-flex items-center cursor-pointer">
             <input v-model="questionForm.is_active" type="checkbox" class="sr-only peer" />
-            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:trangray-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
           </label>
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Активен</span>
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Активен</span>
         </div>
       </form>
 
@@ -466,6 +352,27 @@ const availableTabs = [
 
 const questionFilters = ref({ search: "", type: "", difficulty: "" });
 const pagination = ref({ page: 1, limit: 20, total: 0, totalPages: 0 });
+
+// Чипы активных фильтров для UiFilterBar (только отображение; значения берутся из прежнего questionFilters)
+const questionFilterChips = computed(() => {
+  const chips: { key: string; label: string }[] = [];
+  const typeLabels: Record<string, string> = { single: "Один", multiple: "Несколько", text: "Текст" };
+  const diffLabels: Record<string, string> = { easy: "Лёгкий", medium: "Средний", hard: "Сложный" };
+  if (questionFilters.value.type) chips.push({ key: "type", label: `Тип: ${typeLabels[questionFilters.value.type] || questionFilters.value.type}` });
+  if (questionFilters.value.difficulty) chips.push({ key: "difficulty", label: `Сложность: ${diffLabels[questionFilters.value.difficulty] || questionFilters.value.difficulty}` });
+  return chips;
+});
+
+// Пункты «⋯» для строки вопроса: переключение активности и удаление (опасное — последним, danger)
+const questionActions = (q: any) => [
+  { items: [{ key: "toggle", label: q.is_active ? "Деактивировать" : "Активировать", icon: q.is_active ? XCircle : CheckCircle }] },
+  { items: [{ key: "delete", label: "Удалить", icon: Trash2, danger: true }] },
+];
+// Маршрутизация выбранного пункта в прежние обработчики (логика toggleQuestionActive / confirmDeleteQuestion не менялась)
+const onQuestionAction = (q: any, key: string) => {
+  if (key === "toggle") toggleQuestionActive(q);
+  else if (key === "delete") confirmDeleteQuestion(q);
+};
 
 const hasActiveQuestionFilters = computed(() => questionFilters.value.search || questionFilters.value.type || questionFilters.value.difficulty);
 

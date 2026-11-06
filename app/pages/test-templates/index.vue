@@ -1,263 +1,143 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-      <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div class="space-y-2">
-          <h1 class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-            Шаблоны тестов
-          </h1>
-          <p class="text-slate-500 font-medium">
-            Управление шаблонами тестирования
-          </p>
-        </div>
+  <!-- Внешний враппер без двойного отступа: отступы даёт layout -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Единый заголовок страницы; главное действие «Создать шаблон» — одно, справа -->
+    <UiPageHeader title="Шаблоны тестов" description="Управление шаблонами тестирования">
+      <template #actions>
+        <UiButton v-if="canManageTestTemplates" variant="primary" :start-icon="Plus" @click="openCreateModal">
+          Создать шаблон
+        </UiButton>
+      </template>
+    </UiPageHeader>
 
-        <div class="flex flex-wrap items-center gap-2">
-          <UiButton
-            v-if="canManageTestTemplates"
-            variant="primary"
-            size="sm"
-            class="h-10 px-4 gap-2 font-bold shadow-sm"
-            @click="openCreateModal"
+    <!-- Метрики одной плоской строкой вместо крупных карточек с hover:rotate -->
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <UiStat label="Всего шаблонов" :value="stats.totalTemplates" :icon="FileText" tone="primary" />
+      <UiStat label="Активных (на странице)" :value="stats.activeTemplates" :icon="CheckCircle" tone="success" />
+      <UiStat label="Банков" :value="stats.totalBanks" :icon="Library" tone="warning" />
+      <UiStat label="Языков" :value="stats.totalLanguages" :icon="Globe" tone="info" />
+    </div>
+
+    <!-- Единый блок фильтров: поиск + быстрый статус на виду, банк и язык — в панели «Фильтры»; «Сбросить всё» доступно из чипов -->
+    <UiFilterBar
+      v-model:search="filters.search"
+      search-placeholder="Поиск по названию, коду шаблона…"
+      :segments="statusSegments"
+      :segment="statusSegment"
+      :chips="filterChips"
+      :active-count="filterChips.length"
+      :total="pagination.total"
+      persist-key="test-templates"
+      @search="handleFilterChange"
+      @update:segment="setStatusSegment"
+      @remove="removeFilterChip"
+      @reset="resetFilters"
+    >
+      <template #filters>
+        <!-- Банк вопросов -->
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Банк вопросов</span>
+          <select
+            v-model="filters.bank_id"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            @change="handleFilterChange"
           >
-            <Plus class="w-4 h-4" />
-            Создать шаблон
-          </UiButton>
-        </div>
-      </div>
-    </div>
+            <option value="">Все банки</option>
+            <option v-for="bank in banks" :key="bank.id" :value="bank.id">{{ bank.name }}</option>
+          </select>
+        </label>
+        <!-- Язык -->
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Язык</span>
+          <select
+            v-model="filters.language"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            @change="handleFilterChange"
+          >
+            <option value="">Все языки</option>
+            <option value="ru">🇷🇺 Русский</option>
+            <option value="uz">🇺🇿 Узбекский</option>
+            <option value="en">🇬🇧 Английский</option>
+          </select>
+        </label>
+      </template>
+    </UiFilterBar>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Всего шаблонов</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.totalTemplates }}</h3>
-          </div>
-          <div class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12">
-            <FileText class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Активных</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.activeTemplates }}</h3>
-          </div>
-          <div class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12">
-            <CheckCircle class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Банков</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.totalBanks }}</h3>
-          </div>
-          <div class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12">
-            <Library class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-
-      <div class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500 dark:text-slate-400">Языков</p>
-            <h3 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{{ stats.totalLanguages }}</h3>
-          </div>
-          <div class="rounded-xl bg-info/10 p-3 text-info transition-transform group-hover:rotate-12">
-            <Globe class="w-6 h-6" />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm p-6 mb-6">
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-3">
-          <div class="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-            <Filter class="w-5 h-5" />
-          </div>
-          <h4 class="text-lg font-bold text-slate-900 dark:text-white">
-            Фильтры
-          </h4>
-        </div>
-        <button
-          v-if="hasActiveFilters"
-          @click="resetFilters"
-          class="text-sm font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/10"
-        >
-          <RotateCcw class="w-4 h-4" />
-          Сбросить фильтры
-        </button>
-      </div>
-
-      <div class="flex flex-col gap-6">
-        <div class="relative max-w-xl">
-          <input
-            v-model="filters.search"
-            type="text"
-            placeholder="Поиск по названию, коду шаблона..."
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50/50 dark:bg-slate-800/50 py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-700 transition-all font-medium"
-            @input="handleFilterChange"
-          />
-          <Search class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="space-y-3">
-            <label class="flex text-xs font-bold text-slate-400 uppercase tracking-widest items-center gap-2">
-              <Library class="w-3.5 h-3.5" />
-              Банк вопросов
-            </label>
-            <div class="relative">
-              <select
-                v-model="filters.bank_id"
-                class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 appearance-none font-medium text-sm"
-                @change="handleFilterChange"
-              >
-                <option value="">Все банки</option>
-                <option v-for="bank in banks" :key="bank.id" :value="bank.id">{{ bank.name }}</option>
-              </select>
-              <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
-
-          <div class="space-y-3">
-            <label class="flex text-xs font-bold text-slate-400 uppercase tracking-widest items-center gap-2">
-              <Activity class="w-3.5 h-3.5" />
-              Статус
-            </label>
-            <div class="flex flex-wrap gap-2">
-              <button
-                @click="filters.isActive = undefined; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                :class="filters.isActive === undefined ? 'bg-slate-800 text-white shadow-md dark:bg-white dark:text-slate-900' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'"
-              >
-                Все
-              </button>
-              <button
-                @click="filters.isActive = true; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5"
-                :class="filters.isActive === true ? 'bg-success text-white shadow-md shadow-success/20' : 'bg-success/5 text-success hover:bg-success/10 border border-success/20'"
-              >
-                <span v-if="filters.isActive === true" class="w-1.5 h-1.5 rounded-full bg-white"></span>
-                Активные
-              </button>
-              <button
-                @click="filters.isActive = false; handleFilterChange()"
-                class="px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5"
-                :class="filters.isActive === false ? 'bg-slate-500 text-white shadow-md dark:bg-slate-400 dark:text-slate-900' : 'bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'"
-              >
-                Неактивные
-              </button>
-            </div>
-          </div>
-
-          <div class="space-y-3">
-            <label class="flex text-xs font-bold text-slate-400 uppercase tracking-widest items-center gap-2">
-              <Globe class="w-3.5 h-3.5" />
-              Язык
-            </label>
-            <div class="relative">
-              <select
-                v-model="filters.language"
-                class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 appearance-none font-medium text-sm"
-                @change="handleFilterChange"
-              >
-                <option value="">Все языки</option>
-                <option value="ru">🇷🇺 Русский</option>
-                <option value="uz">🇺🇿 Узбекский</option>
-                <option value="en">🇬🇧 Английский</option>
-              </select>
-              <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+    <!-- Карточка таблицы: пагинация — футер внутри -->
+    <div id="templates-table" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <!-- Загрузка -->
       <div v-if="loading" class="p-12 text-center">
         <div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-        <p class="mt-4 text-slate-500 font-medium tracking-wide">
-          Загрузка шаблонов...
-        </p>
+        <p class="mt-4 text-sm text-gray-500">Загрузка шаблонов...</p>
       </div>
 
-      <div
+      <!-- Пусто: следующий шаг — создать шаблон или сбросить фильтры -->
+      <UiEmptyState
         v-else-if="templates.length === 0"
-        class="py-20 px-6 text-center text-slate-500 dark:text-slate-400"
+        :icon="FileText"
+        title="Шаблоны тестов не найдены"
+        :description="hasActiveFilters ? 'Измените условия поиска или сбросьте фильтры' : 'Создайте первый шаблон теста'"
       >
-        <div class="bg-slate-50 dark:bg-slate-800/50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-          <FileText class="h-10 w-10 text-slate-400" />
-        </div>
-        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Шаблоны тестов не найдены</h3>
-        <p class="max-w-md mx-auto text-slate-500">
-          Создайте первый шаблон теста, нажав кнопку "Создать шаблон" в правом верхнем углу
-        </p>
-      </div>
+        <template #actions>
+          <UiButton v-if="hasActiveFilters" variant="outline" size="sm" @click="resetFilters">Сбросить фильтры</UiButton>
+          <UiButton v-else-if="canManageTestTemplates" variant="primary" size="sm" :start-icon="Plus" @click="openCreateModal">Создать шаблон</UiButton>
+        </template>
+      </UiEmptyState>
 
-      <div v-else class="overflow-x-auto custom-scrollbar">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Шаблон</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Код</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">Банк</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Проходной балл</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap text-center">Языки</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Статус</th>
-              <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Действия</th>
+      <!-- Таблица: sticky-шапка, кликабельные строки -->
+      <div v-else class="max-h-[70vh] overflow-auto">
+        <table class="w-full border-collapse text-left">
+          <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+            <tr class="border-b border-gray-200 dark:border-gray-800">
+              <th class="whitespace-nowrap px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Шаблон</th>
+              <th class="whitespace-nowrap px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Код</th>
+              <th class="whitespace-nowrap px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Банк</th>
+              <th class="whitespace-nowrap px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Проходной балл</th>
+              <th class="whitespace-nowrap px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Языки</th>
+              <th class="whitespace-nowrap px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400">Статус</th>
+              <th class="whitespace-nowrap px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Действия</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             <tr
               v-for="template in templates"
               :key="template.id"
-              class="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              class="group cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
+              @click="viewTemplate(template)"
             >
-              <td class="px-6 py-4 align-middle">
-                <div class="flex items-center gap-4">
-                  <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold shadow-inner border border-primary/10">
-                    <FileText class="w-5 h-5" />
+              <td class="px-4 py-3 align-middle">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary dark:bg-primary-500/15">
+                    <FileText class="h-5 w-5" />
                   </div>
-                  <div>
-                    <h5 class="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
+                  <div class="min-w-0">
+                    <h5 class="text-sm font-semibold text-gray-900 transition-colors group-hover:text-primary dark:text-white">
                       {{ template.name }}
                     </h5>
-                    <p v-if="template.description" class="text-sm text-slate-500 line-clamp-1 max-w-xs">
+                    <p v-if="template.description" class="line-clamp-1 max-w-xs text-xs text-gray-500">
                       {{ template.description }}
                     </p>
                   </div>
                 </div>
               </td>
-              <td class="px-6 py-4 align-middle">
-                <span class="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-300">
+              <td class="px-4 py-3 align-middle">
+                <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-700 dark:bg-white/[0.06] dark:text-gray-300">
                   {{ template.code }}
                 </span>
               </td>
-              <td class="px-6 py-4 align-middle">
-                <span v-if="template.bank_name" class="inline-flex items-center rounded-full bg-info/10 px-2.5 py-1 text-xs font-bold text-info">
-                  {{ template.bank_name }}
-                </span>
-                <span v-else class="text-slate-400 font-medium">—</span>
+              <td class="px-4 py-3 align-middle">
+                <UiBadge v-if="template.bank_name" color="info" size="sm">{{ template.bank_name }}</UiBadge>
+                <span v-else class="text-gray-400">—</span>
               </td>
-              <td class="px-6 py-4 align-middle text-center">
-                <span class="inline-flex items-center justify-center min-w-10 rounded-full bg-primary/10 px-2.5 py-1 text-sm font-bold text-primary">
-                  {{ template.passing_score }}%
-                </span>
+              <td class="px-4 py-3 text-center align-middle">
+                <span class="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ template.passing_score }}%</span>
               </td>
-              <td class="px-6 py-4 align-middle">
-                <div class="flex items-center gap-1 justify-center">
+              <td class="px-4 py-3 align-middle">
+                <div class="flex items-center justify-center gap-1">
                   <span
                     v-for="lang in (template.allowed_languages || ['ru'])"
                     :key="lang"
-                    class="inline-flex items-center justify-center w-7 h-7 rounded-full text-sm"
+                    class="inline-flex h-7 w-7 items-center justify-center rounded-full text-sm"
                     :class="languageBadgeClasses[lang]"
                     :title="languageLabels[lang]"
                   >
@@ -265,43 +145,24 @@
                   </span>
                 </div>
               </td>
-              <td class="px-6 py-4 align-middle text-right">
-                <span
-                  :class="[
-                    'inline-flex items-center rounded-full px-3 py-1 text-xs font-bold tracking-wide uppercase',
-                    template.is_active
-                      ? 'bg-success/10 text-success'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400',
-                  ]"
-                >
-                  {{ template.is_active ? 'Активен' : 'Неактивен' }}
-                </span>
+              <td class="px-4 py-3 align-middle">
+                <UiBadge :color="template.is_active ? 'success' : 'light'" size="sm">{{ template.is_active ? 'Активен' : 'Неактивен' }}</UiBadge>
               </td>
-              <td class="px-6 py-4 align-middle text-right">
+              <!-- Действия: 1 иконка «Просмотр» + «⋯» (редактировать / удалить); видны всегда -->
+              <td class="px-4 py-3 text-right align-middle" @click.stop>
                 <div class="flex items-center justify-end gap-1">
-                  <button
-                    @click="viewTemplate(template)"
-                    class="p-2 text-slate-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-colors"
-                    title="Просмотр"
-                  >
-                    <Eye class="w-5 h-5" />
-                  </button>
-                  <button
+                  <UiButton variant="ghost" size="sm" icon title="Просмотр" aria-label="Просмотр" @click="viewTemplate(template)">
+                    <Eye class="h-4 w-4" />
+                  </UiButton>
+                  <UiDropdown
                     v-if="canManageTestTemplates"
-                    @click="openEditModal(template)"
-                    class="p-2 text-slate-500 hover:text-warning hover:bg-warning/10 rounded-xl transition-colors"
-                    title="Редактировать"
-                  >
-                    <Pencil class="w-5 h-5" />
-                  </button>
-                  <button
-                    v-if="canManageTestTemplates"
-                    @click="confirmDelete(template)"
-                    class="p-2 text-slate-500 hover:text-danger hover:bg-danger/10 rounded-xl transition-colors"
-                    title="Удалить"
-                  >
-                    <Trash2 class="w-5 h-5" />
-                  </button>
+                    icon-only
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Действия с шаблоном"
+                    :groups="templateMenuGroups"
+                    @select="(key) => onTemplateAction(key, template)"
+                  />
                 </div>
               </td>
             </tr>
@@ -309,39 +170,20 @@
         </table>
       </div>
 
-      <div
-        v-if="pagination.totalPages > 1"
-        class="border-t border-slate-200 dark:border-slate-800 px-6 py-4 bg-slate-50/30 dark:bg-slate-800/30"
-      >
-        <div class="flex items-center justify-between">
-          <div class="text-sm font-medium text-slate-500">
-            Показано
-            <span class="font-bold text-slate-900 dark:text-white">{{ (pagination.page - 1) * pagination.limit + 1 }}</span>
-            -
-            <span class="font-bold text-slate-900 dark:text-white">{{ Math.min(pagination.page * pagination.limit, pagination.total) }}</span>
-            из
-            <span class="font-bold text-slate-900 dark:text-white">{{ pagination.total }}</span>
-          </div>
-          <div class="flex gap-2">
-            <button
-              @click="changePage(pagination.page - 1)"
-              :disabled="pagination.page === 1"
-              class="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all"
-            >
-              Назад
-            </button>
-            <button
-              @click="changePage(pagination.page + 1)"
-              :disabled="pagination.page >= pagination.totalPages"
-              class="rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all"
-            >
-              Вперёд
-            </button>
-          </div>
-        </div>
-      </div>
+      <!-- Единая пагинация; размер страницы у страницы фиксирован — выбор скрыт -->
+      <UiPagination
+        :current-page="pagination.page"
+        :total-pages="pagination.totalPages"
+        :total="pagination.total"
+        :limit="pagination.limit"
+        :loading="loading"
+        hide-limit
+        scroll-target="#templates-table"
+        @update:page="changePage"
+      />
     </div>
 
+    <!-- Модалка создания/редактирования шаблона -->
     <UiModal
       :is-open="modalOpen"
       :title="editingTemplate ? 'Редактировать шаблон' : 'Создать шаблон'"
@@ -350,123 +192,123 @@
     >
       <form @submit.prevent="saveTemplate" class="space-y-6">
         <!-- Basic Info -->
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4">
-          <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/30 dark:bg-white/[0.03] p-4">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
             <FileText class="w-4 h-4" />
             Основная информация
           </h4>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Название <span class="text-danger">*</span>
               </label>
               <input
                 v-model="form.name"
                 type="text"
                 placeholder="Например: Тест по охране труда"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-sm font-medium"
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:text-gray-100 h-9 px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm"
                 :class="{ 'border-danger ring-2 ring-danger/10': formErrors.name }"
               />
               <p v-if="formErrors.name" class="mt-1 text-xs text-danger font-medium">{{ formErrors.name }}</p>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Код <span class="text-danger">*</span>
               </label>
               <input
                 v-model="form.code"
                 type="text"
                 placeholder="Например: OT-TEST-001"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-sm font-medium uppercase"
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:text-gray-100 h-9 px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm uppercase"
                 :class="{ 'border-danger ring-2 ring-danger/10': formErrors.code }"
               />
               <p v-if="formErrors.code" class="mt-1 text-xs text-danger font-medium">{{ formErrors.code }}</p>
             </div>
 
             <div class="col-span-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Банк вопросов <span class="text-danger">*</span>
               </label>
               <div class="relative">
                 <select
                   v-model="form.bank_id"
-                  class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-sm font-medium appearance-none"
+                  class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:bg-gray-900 dark:text-gray-100 h-9 pl-3 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm appearance-none"
                   :class="{ 'border-danger ring-2 ring-danger/10': formErrors.bank_id }"
                 >
                   <option value="">Выберите банк вопросов</option>
                   <option v-for="bank in banks" :key="bank.id" :value="bank.id">{{ bank.name }} ({{ bank.code }})</option>
                 </select>
-                <Library class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <Library class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
               <p v-if="formErrors.bank_id" class="mt-1 text-xs text-danger font-medium">{{ formErrors.bank_id }}</p>
             </div>
 
             <div class="col-span-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Описание
               </label>
               <textarea
                 v-model="form.description"
                 rows="2"
                 placeholder="Краткое описание шаблона теста..."
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all text-sm font-medium resize-none"
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:text-gray-100 py-2 px-3 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-sm resize-none"
               ></textarea>
             </div>
           </div>
         </div>
 
         <!-- Test Settings -->
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4">
-          <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/30 dark:bg-white/[0.03] p-4">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
             <Settings class="w-4 h-4" />
             Настройки теста
           </h4>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Режим вопросов
               </label>
               <div class="relative">
                 <select
                   v-model="form.questions_mode"
-                  class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary transition-all text-sm font-medium appearance-none"
+                  class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:bg-gray-900 dark:text-gray-100 h-9 pl-3 pr-10 outline-none focus:border-primary transition-all text-sm appearance-none"
                 >
                   <option value="all">Все вопросы</option>
                   <option value="random">Случайные</option>
                   <option value="manual">Вручную</option>
                 </select>
-                <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
             <div v-if="form.questions_mode !== 'all'">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Количество
               </label>
               <input
                 v-model.number="form.questions_count"
                 type="number"
                 min="1"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary transition-all text-sm font-medium"
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:text-gray-100 h-9 px-3 outline-none focus:border-primary transition-all text-sm"
               />
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Время (мин)
               </label>
               <input
                 v-model.number="form.time_limit_minutes"
                 type="number"
                 min="0"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary transition-all text-sm font-medium"
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:text-gray-100 h-9 px-3 outline-none focus:border-primary transition-all text-sm"
               />
-              <p class="mt-1 text-[10px] text-slate-400">0 = без лимита</p>
+              <p class="mt-1 text-xs text-gray-400">0 = без лимита</p>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Проходной балл
               </label>
               <div class="relative">
@@ -475,85 +317,85 @@
                   type="number"
                   min="1"
                   max="100"
-                  class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-3 pr-8 outline-none focus:border-primary transition-all text-sm font-medium"
+                  class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:text-gray-100 h-9 pl-3 pr-8 outline-none focus:border-primary transition-all text-sm"
                 />
-                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">%</span>
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Макс попыток
               </label>
               <input
                 v-model.number="form.max_attempts"
                 type="number"
                 min="1"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary transition-all text-sm font-medium"
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:text-gray-100 h-9 px-3 outline-none focus:border-primary transition-all text-sm"
               />
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Вопросов на стр.
               </label>
               <input
                 v-model.number="form.questions_per_page"
                 type="number"
                 min="0"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 px-3 outline-none focus:border-primary transition-all text-sm font-medium"
+                class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:text-gray-100 h-9 px-3 outline-none focus:border-primary transition-all text-sm"
               />
-              <p class="mt-1 text-[10px] text-slate-400">0 = все сразу</p>
+              <p class="mt-1 text-xs text-gray-400">0 = все сразу</p>
             </div>
           </div>
         </div>
 
         <!-- Display & Behavior Settings -->
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4">
-          <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/30 dark:bg-white/[0.03] p-4">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
             <Eye class="w-4 h-4" />
             Отображение и поведение
           </h4>
           <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Показ результатов
               </label>
               <div class="relative">
                 <select
                   v-model="form.show_results"
-                  class="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2.5 pl-4 pr-10 outline-none focus:border-primary transition-all text-sm font-medium appearance-none"
+                  class="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-transparent dark:bg-gray-900 dark:text-gray-100 h-9 pl-3 pr-10 outline-none focus:border-primary transition-all text-sm appearance-none"
                 >
                   <option value="immediately">Сразу</option>
                   <option value="after_deadline">После дедлайна</option>
                   <option value="manual">Вручную</option>
                   <option value="never">Никогда</option>
                 </select>
-                <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Возврат к вопросам
               </label>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input v-model="form.allow_back" type="checkbox" class="sr-only peer" />
-                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                <span class="ml-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">
                   {{ form.allow_back ? 'Разрешён' : 'Запрещён' }}
                 </span>
               </label>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Активен
               </label>
               <label class="relative inline-flex items-center cursor-pointer">
                 <input v-model="form.is_active" type="checkbox" class="sr-only peer" />
-                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                <span class="ml-2 text-xs font-medium text-slate-600 dark:text-slate-400">
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">
                   {{ form.is_active ? 'Да' : 'Нет' }}
                 </span>
               </label>
@@ -562,8 +404,8 @@
         </div>
 
         <!-- Shuffle Settings -->
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4">
-          <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/30 dark:bg-white/[0.03] p-4">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
             <Shuffle class="w-4 h-4" />
             Перемешивание
           </h4>
@@ -571,23 +413,23 @@
             <div class="flex items-center gap-3">
               <label class="relative inline-flex items-center cursor-pointer">
                 <input v-model="form.shuffle_questions" type="checkbox" class="sr-only peer" />
-                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
-              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Перемешивать вопросы</span>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Перемешивать вопросы</span>
             </div>
             <div class="flex items-center gap-3">
               <label class="relative inline-flex items-center cursor-pointer">
                 <input v-model="form.shuffle_options" type="checkbox" class="sr-only peer" />
-                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
-              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Перемешивать варианты</span>
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Перемешивать варианты</span>
             </div>
           </div>
         </div>
 
         <!-- Languages -->
-        <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-800/30 p-4">
-          <h4 class="text-xs font-black uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+        <div class="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/30 dark:bg-white/[0.03] p-4">
+          <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-4 flex items-center gap-2">
             <Globe class="w-4 h-4" />
             Языки тестирования
           </h4>
@@ -598,17 +440,17 @@
               type="button"
               @click="toggleLanguage(lang.value)"
               :class="[
-                'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all border-2',
+                'flex items-center gap-2 px-4 h-9 rounded-lg text-sm font-medium transition-all border',
                 form.allowed_languages?.includes(lang.value)
                   ? 'bg-primary/10 border-primary text-primary dark:bg-primary/20'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-primary/50'
+                  : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-500 hover:border-primary/50'
               ]"
             >
               <span class="text-lg">{{ lang.flag }}</span>
               {{ lang.label }}
             </button>
           </div>
-          <p class="mt-2 text-xs text-slate-400">Выберите языки, доступные для прохождения теста. Если не выбрано - все языки.</p>
+          <p class="mt-2 text-xs text-gray-400">Выберите языки, доступные для прохождения теста. Если не выбрано - все языки.</p>
         </div>
       </form>
 
@@ -624,6 +466,7 @@
       </template>
     </UiModal>
 
+    <!-- Подтверждение удаления (прежний обработчик deleteTemplate) -->
     <UiConfirmModal
       :is-open="deleteModalOpen"
       title="Удалить шаблон?"
@@ -636,6 +479,7 @@
       @cancel="deleteModalOpen = false"
     />
 
+    <!-- Уведомления -->
     <UiNotification
       v-if="notification.show"
       :type="notification.type"
@@ -696,6 +540,47 @@ const hasActiveFilters = computed(() => {
     filters.value.isActive !== undefined ||
     filters.value.language !== '';
 });
+
+// Быстрый сегмент статуса для UiFilterBar поверх прежнего трёхпозиционного filters.isActive
+const statusSegments = [
+  { value: 'all', label: 'Все' },
+  { value: 'active', label: 'Активные' },
+  { value: 'inactive', label: 'Неактивные' },
+];
+const statusSegment = computed(() => (filters.value.isActive === undefined ? 'all' : filters.value.isActive ? 'active' : 'inactive'));
+const setStatusSegment = (v) => {
+  filters.value.isActive = v === 'all' ? undefined : v === 'active';
+  handleFilterChange();
+};
+
+// Чипы применённых фильтров: видно, что отфильтровано, и можно снять по одному
+const filterChips = computed(() => {
+  const chips = [];
+  if (filters.value.bank_id) {
+    const b = banks.value.find(x => x.id === filters.value.bank_id);
+    chips.push({ key: 'bank', label: `Банк: ${b ? b.name : filters.value.bank_id}` });
+  }
+  if (filters.value.language) chips.push({ key: 'language', label: `Язык: ${languageLabels[filters.value.language] || filters.value.language}` });
+  if (filters.value.isActive !== undefined) chips.push({ key: 'status', label: filters.value.isActive ? 'Только активные' : 'Только неактивные' });
+  return chips;
+});
+const removeFilterChip = (key) => {
+  if (key === 'bank') filters.value.bank_id = '';
+  if (key === 'language') filters.value.language = '';
+  if (key === 'status') filters.value.isActive = undefined;
+  handleFilterChange();
+};
+
+// Меню «⋯» строки таблицы: удаление — последним и красным
+const templateMenuGroups = [
+  { items: [{ key: 'edit', label: 'Редактировать', icon: Pencil }] },
+  { items: [{ key: 'delete', label: 'Удалить', icon: Trash2, danger: true }] },
+];
+// Диспетчер меню вызывает прежние обработчики openEditModal / confirmDelete
+const onTemplateAction = (key, template) => {
+  if (key === 'edit') openEditModal(template);
+  else if (key === 'delete') confirmDelete(template);
+};
 
 const modalOpen = ref(false);
 const deleteModalOpen = ref(false);

@@ -29,7 +29,7 @@
             <span
               v-for="item in selectedItems"
               :key="item.id"
-              class="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary"
+              class="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-bold text-primary"
             >
               {{ item.label }}
               <button

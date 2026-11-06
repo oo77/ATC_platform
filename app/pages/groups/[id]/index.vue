@@ -1,545 +1,299 @@
 <template>
-  <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
-    <!-- Загрузка -->
-    <div v-if="loading" class="flex items-center justify-center min-h-[400px]">
+  <!-- Внешний враппер без двойного отступа: отступы уже задаёт layout -->
+  <div class="mx-auto max-w-screen-2xl space-y-4">
+    <!-- Состояние загрузки: спокойный спиннер без лишних декораций -->
+    <div v-if="loading" class="flex min-h-[400px] items-center justify-center">
       <div class="text-center">
         <div
-          class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
+          class="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
         ></div>
-        <p class="mt-4 text-slate-600 dark:text-slate-400 font-medium">
+        <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
           Загрузка информации о группе...
         </p>
       </div>
     </div>
 
-    <!-- Группа не найдена -->
+    <!-- Группа не найдена: единый UiEmptyState с понятным следующим шагом -->
     <div
       v-else-if="!group"
-      class="flex items-center justify-center min-h-[400px]"
+      class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
     >
-      <div class="text-center max-w-md">
-        <div
-          class="bg-slate-100 dark:bg-slate-800 p-6 rounded-full inline-block mb-6"
-        >
-          <CalendarIcon class="w-12 h-12 text-slate-400" />
-        </div>
-        <h3 class="text-2xl font-bold text-slate-900 dark:text-white">
-          Группа не найдена
-        </h3>
-        <p class="mt-2 text-slate-500 dark:text-gray-400">
-          Возможно, группа была удалена или вы используете неверную ссылку.
-        </p>
-        <UiButton class="mt-8 shadow-lg" @click="$router.push('/groups')"
-          >Вернуться к списку групп</UiButton
-        >
-      </div>
+      <UiEmptyState
+        title="Группа не найдена"
+        description="Возможно, группа была удалена или вы используете неверную ссылку."
+        :icon="CalendarIcon"
+      >
+        <template #actions>
+          <UiButton @click="$router.push('/groups')"
+            >Вернуться к списку групп</UiButton
+          >
+        </template>
+      </UiEmptyState>
     </div>
 
     <template v-else>
-      <!-- Header Section -->
-      <div class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
-        <!-- Breadcrumbs / Back Navigation -->
-        <div class="mb-6">
-          <NuxtLink
-            to="/groups"
-            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-primary transition-colors"
-          >
-            <div
-              class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-primary/10 transition-colors"
-            >
-              <ArrowLeft
-                class="w-4 h-4 transition-transform group-hover:-translate-x-1"
-              />
-            </div>
-            Назад к списку групп
-          </NuxtLink>
-        </div>
-
-        <div
-          class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between"
-        >
-          <!-- Left: Title & Info -->
-          <div class="space-y-3">
-            <div class="flex flex-wrap items-center gap-3">
-              <h1
-                class="text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase"
-              >
-                {{ group.code }}
-              </h1>
-              <div
-                class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border"
-                :class="statusClass"
-              >
-                {{ statusText }}
-              </div>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-              <div
-                class="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400"
-              >
-                {{ group.course?.name }}
-              </div>
-              <div
-                class="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400"
-              >
-                <CalendarIcon class="w-4 h-4 text-slate-400" />
-                {{ formatDate(group.startDate) }} —
-                {{ formatDate(group.endDate) }}
-              </div>
-            </div>
-          </div>
-
-          <!-- Right: Action Buttons Group -->
-          <div class="flex flex-wrap items-center gap-2">
-            <NuxtLink
-              v-if="canIssueCertificates && !group.isArchived"
-              :to="`/groups/${group.id}/certificates`"
-            >
-              <UiButton
-                variant="primary"
-                size="sm"
-                class="h-10 px-4 gap-2 font-bold shadow-sm"
-              >
-                <GraduationCap class="w-4 h-4" />
-                Сертификаты
-              </UiButton>
-            </NuxtLink>
-
-            <UiButton
-              v-if="canEditGroups"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold"
-              @click="showEditModal = true"
-            >
-              <Settings class="w-4 h-4" />
-              Редактировать группу
-            </UiButton>
-
-            <UiButton
-              v-if="canArchiveGroups"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold"
-              @click="showArchiveModal = true"
-            >
-              <Clock class="w-4 h-4" v-if="group.isArchived" />
-              <CalendarIcon class="w-4 h-4" v-else />
-              {{ group.isArchived ? "Восстановить" : "В архив" }}
-            </UiButton>
-
-            <UiButton
-              v-if="canDeleteGroups"
-              variant="outline"
-              size="sm"
-              class="h-10 px-4 gap-2 font-bold text-danger border-danger/20 hover:bg-danger/5 hover:border-danger/40"
-              @click="showDeleteModal = true"
-            >
-              <Trash2 class="w-4 h-4" />
-              Удалить
-            </UiButton>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bento Box Metrics -->
-      <div
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8"
+      <!-- Шапка в одну строку: крошки вместо большой ссылки «Назад», код + статус, мета-строка; справа ровно 3 контрола -->
+      <UiPageHeader
+        :title="group.code"
+        :breadcrumbs="[
+          { label: 'Группы', to: '/groups' },
+          { label: group.code },
+        ]"
+        class="!mb-0"
       >
-        <!-- Students Count Card -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Слушатели
-              </p>
-              <h3
-                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
-              >
-                {{ group.students?.length || 0 }} чел.
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12"
-            >
-              <GraduationCap class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="mt-4 flex items-center gap-2">
-            <span class="text-xs text-slate-400 font-medium"
-              >Зачислено в группу</span
-            >
-          </div>
-        </div>
+        <!-- Статус рядом с кодом: один бейдж вместо дублей в карточках -->
+        <template #badge>
+          <UiBadge size="sm" :color="statusBadgeColor">{{ statusText }}</UiBadge>
+        </template>
 
-        <!-- Attendance Card -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Посещаемость
-              </p>
-              <h3
-                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
-              >
-                {{ averageAttendance.toFixed(1) }}%
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-success/10 p-3 text-success transition-transform group-hover:rotate-12"
-            >
-              <Users class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="mt-4 flex items-center gap-2">
-            <span class="text-xs text-slate-400 font-medium"
-              >В среднем по всем слушателям</span
-            >
-          </div>
-        </div>
-
-        <!-- Hours Progress Card -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Прогресс часов
-              </p>
-              <h3
-                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
-              >
-                {{ totalScheduledHours }} / {{ totalProgramHours }}
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-primary/10 p-3 text-primary transition-transform group-hover:rotate-12"
-            >
-              <Clock class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="mt-4">
-            <div
-              class="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800"
-            >
-              <div
-                class="h-full rounded-full transition-all duration-500"
-                :class="hoursProgressColor"
-                :style="{ width: `${hoursProgress}%` }"
-              ></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Disciplines Card -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Дисциплины
-              </p>
-              <h3
-                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
-              >
-                {{ disciplines.length }} предм.
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-warning/10 p-3 text-warning transition-transform group-hover:rotate-12"
-            >
-              <BookOpen class="w-6 h-6" />
-            </div>
-          </div>
-          <div class="mt-4">
-            <p class="text-xs text-slate-400 font-medium whitespace-nowrap">
-              Учебная программа активна
-            </p>
-          </div>
-        </div>
-
-        <!-- Schedule/Timeline Card -->
-        <div
-          class="group relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 transition-all hover:shadow-xl dark:hover:bg-slate-800/50"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">
-                Срок обучения
-              </p>
-              <h3
-                class="mt-1 text-2xl font-bold text-slate-900 dark:text-white"
-              >
-                {{ daysInfo }}
-              </h3>
-            </div>
-            <div
-              class="rounded-xl bg-info/10 p-3 text-info transition-transform group-hover:rotate-12"
-            >
-              <CalendarIcon class="w-6 h-6" />
-            </div>
-          </div>
-          <div
-            class="mt-4 text-xs font-medium text-slate-600 dark:text-slate-400 space-y-1"
+        <!-- Мета-строка: курс · даты · дни · слушатели (здесь единственное место, где эти данные показаны) -->
+        <template #meta>
+          <span v-if="group.course?.name" class="truncate">{{
+            group.course.name
+          }}</span>
+          <span class="text-gray-300 dark:text-gray-600">·</span>
+          <span
+            >{{ formatDate(group.startDate) }} —
+            {{ formatDate(group.endDate) }}</span
           >
-            <div class="flex justify-between">
-              <span>Старт:</span>
-              <span class="text-slate-900 dark:text-white">{{
-                formatDate(group.startDate)
-              }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Конец:</span>
-              <span class="text-slate-900 dark:text-white">{{
-                formatDate(group.endDate)
-              }}</span>
-            </div>
-          </div>
-        </div>
+          <span class="text-gray-300 dark:text-gray-600">·</span>
+          <span>{{ daysInfo }}</span>
+          <span class="text-gray-300 dark:text-gray-600">·</span>
+          <span>{{ group.students?.length || 0 }} слушателей</span>
+        </template>
+
+        <!-- Действия: primary «Сертификаты» + меню «Документы» + меню «Действия» -->
+        <template #actions>
+          <!-- Главное действие экрана; ссылка через UiButton :to, а не кнопка внутри <a> -->
+          <UiButton
+            v-if="canIssueCertificates && !group.isArchived"
+            variant="primary"
+            size="md"
+            :to="`/groups/${group.id}/certificates`"
+            :start-icon="GraduationCap"
+          >
+            Сертификаты
+          </UiButton>
+
+          <!-- 8 генераторов документов, сгруппированных по этапам обучения; пункты вызывают прежнюю логику -->
+          <UiDropdown
+            v-if="group.students && group.students.length > 0"
+            label="Документы"
+            variant="outline"
+            size="md"
+            :trigger-icon="FileText"
+            :groups="documentGroups"
+            @select="handleDocumentSelect"
+          />
+
+          <!-- Меню «Действия»: управление и опасные операции; не рисуется, если нет доступных пунктов -->
+          <UiDropdown
+            v-if="hasGroupActions"
+            label="Действия"
+            variant="outline"
+            size="md"
+            :trigger-icon="Settings"
+            :groups="actionGroups"
+            @select="handleGroupAction"
+          />
+        </template>
+      </UiPageHeader>
+
+      <!-- Одна полоса из 4 метрик вместо 5 «bento»-карточек; срок обучения убран — он в мета-строке -->
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <UiStat
+          label="Слушатели"
+          :value="group.students?.length || 0"
+          :icon="GraduationCap"
+          tone="primary"
+        />
+        <UiStat
+          label="Посещаемость"
+          :value="`${averageAttendance.toFixed(1)}%`"
+          :icon="Users"
+          tone="success"
+        />
+        <UiStat
+          label="Часы"
+          :value="`${totalScheduledHours} / ${totalProgramHours}`"
+          :icon="Clock"
+          tone="info"
+          :progress="hoursProgress"
+        />
+        <UiStat
+          label="Дисциплины"
+          :value="disciplines.length"
+          :icon="BookOpen"
+          tone="warning"
+        />
       </div>
 
-      <!-- Navigation Tabs -->
-      <div class="mb-8 overflow-x-auto custom-scrollbar pb-2">
-        <div
-          class="inline-flex rounded-2xl bg-slate-100 p-1.5 dark:bg-slate-800"
-        >
-          <nav class="flex gap-1" aria-label="Tabs">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              @click="changeTab(tab.id)"
-              :class="[
-                'flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-300 whitespace-nowrap',
-                activeTab === tab.id
-                  ? 'bg-white text-primary shadow-sm dark:bg-slate-700 dark:text-white'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
-              ]"
-            >
-              <component :is="tab.icon" class="h-4 w-4" />
-              {{ tab.label }}
-            </button>
-          </nav>
-        </div>
-      </div>
+      <!-- Вкладки с подчёркиванием и счётчиками; переключение идёт через прежний changeTab (синхронизация с URL) -->
+      <UiTabs :model-value="activeTab" :tabs="tabs" @change="changeTab" />
 
-      <!-- Tab Content Area -->
-      <div class="space-y-6">
-        <!-- OVERVIEW TAB -->
+      <!-- Содержимое вкладок -->
+      <div class="space-y-4">
+        <!-- ВКЛАДКА «ОБЗОР» -->
         <div
           v-show="activeTab === 'overview'"
-          class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500"
+          class="grid grid-cols-1 gap-4 lg:grid-cols-3"
         >
-          <div class="lg:col-span-2 space-y-6">
-            <!-- Group Info Card -->
+          <div class="space-y-4 lg:col-span-2">
+            <!-- Информация о группе: без дублей кода, статуса и дат (они уже в шапке) — остаются программа и описание -->
             <div
-              class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all hover:shadow-md"
+              class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
             >
-              <div
-                class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 p-6"
-              >
+              <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
                 <h3
-                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+                  class="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"
                 >
-                  <LayoutDashboard class="w-5 h-5 text-primary" />
+                  <LayoutDashboard class="h-4 w-4 text-primary" />
                   Информация о группе
                 </h3>
               </div>
-              <div class="p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div class="space-y-1">
-                    <label
-                      class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                      >Код группы</label
-                    >
-                    <p class="text-lg font-bold text-slate-900 dark:text-white">
-                      {{ group.code }}
-                    </p>
-                  </div>
-                  <div class="space-y-1">
-                    <label
-                      class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                      >Статус</label
-                    >
-                    <div>
-                      <span
-                        :class="[
-                          'inline-flex items-center rounded-full px-3 py-1 text-sm font-bold',
-                          statusClass,
-                        ]"
-                      >
-                        {{ statusText }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="space-y-1">
-                    <label
-                      class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                      >Период обучения</label
-                    >
-                    <p
-                      class="text-slate-900 dark:text-white font-semibold flex items-center gap-2"
-                    >
-                      {{ formatDate(group.startDate) }}
-                      <ChevronRight class="w-4 h-4 text-slate-300" />
-                      {{ formatDate(group.endDate) }}
-                    </p>
-                    <p class="text-sm text-slate-500 font-medium">
-                      {{ daysInfo }}
-                    </p>
-                  </div>
-                  <div class="space-y-1" v-if="group.course">
-                    <label
-                      class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                      >Учебная программа</label
-                    >
-                    <NuxtLink
-                      :to="`/programs/${group.courseId}`"
-                      class="text-primary hover:underline font-semibold group flex items-center gap-1"
-                    >
-                      {{ group.course.name }}
-                      <Eye
-                        class="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity"
-                      />
-                    </NuxtLink>
-                  </div>
-                  <div
-                    v-if="group.description"
-                    class="col-span-1 md:col-span-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800"
+              <div class="space-y-4 p-5">
+                <div v-if="group.course" class="space-y-1">
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Учебная программа
+                  </p>
+                  <NuxtLink
+                    :to="`/programs/${group.courseId}`"
+                    class="group inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
                   >
-                    <label
-                      class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1"
-                      >Описание</label
-                    >
-                    <p
-                      class="text-slate-700 dark:text-slate-300 text-sm leading-relaxed"
-                    >
-                      {{ group.description }}
-                    </p>
-                  </div>
+                    {{ group.course.name }}
+                    <!-- Иконка-подсказка видна всегда на touch, по hover — на десктопе -->
+                    <Eye
+                      class="h-4 w-4 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100"
+                    />
+                  </NuxtLink>
                 </div>
+                <div
+                  v-if="group.description"
+                  class="rounded-lg border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-white/[0.03]"
+                >
+                  <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">
+                    Описание
+                  </p>
+                  <p
+                    class="text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+                  >
+                    {{ group.description }}
+                  </p>
+                </div>
+                <p
+                  v-if="!group.course && !group.description"
+                  class="text-sm text-gray-500 dark:text-gray-400"
+                >
+                  Дополнительной информации нет
+                </p>
               </div>
             </div>
 
-            <!-- Organization Breakdown Card -->
+            <!-- Состав по организациям: плоские плитки вместо цветных hover-эффектов -->
             <div
-              class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all hover:shadow-md"
+              class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
             >
-              <div
-                class="border-b border-slate-100 dark:border-slate-800 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-              >
+              <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
                 <h3
-                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+                  class="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"
                 >
-                  <Users class="w-5 h-5 text-success" />
+                  <Users class="h-4 w-4 text-success" />
                   Состав по организациям
                 </h3>
               </div>
-              <div class="p-6">
+              <div class="p-5">
                 <div
                   v-if="studentsByOrganization.length > 0"
-                  class="grid grid-cols-1 md:grid-cols-2 gap-4"
+                  class="grid grid-cols-1 gap-3 md:grid-cols-2"
                 >
                   <div
                     v-for="org in studentsByOrganization"
                     :key="org.name"
-                    class="flex items-center justify-between p-4 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-success/30 hover:bg-success/5 transition-all group"
+                    class="flex items-center justify-between rounded-lg border border-gray-100 px-4 py-3 dark:border-gray-800"
                   >
                     <span
-                      class="text-sm font-bold text-slate-700 dark:text-slate-300 truncate pr-2 group-hover:text-success transition-colors"
+                      class="truncate pr-2 text-sm font-medium text-gray-700 dark:text-gray-300"
                       >{{ org.name }}</span
                     >
                     <span
-                      class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-extrabold group-hover:bg-success group-hover:text-white transition-all"
+                      class="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-gray-900 dark:bg-white/[0.06] dark:text-white"
                     >
                       {{ org.count }}
                     </span>
                   </div>
                 </div>
-                <div
+                <UiEmptyState
                   v-else
-                  class="text-center py-8 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800"
-                >
-                  <p class="text-slate-500 font-medium">
-                    Данные об организациях отсутствуют
-                  </p>
-                </div>
+                  title="Данные об организациях отсутствуют"
+                  :icon="Users"
+                />
               </div>
             </div>
           </div>
 
-          <!-- Right Column of Overview -->
-          <div class="space-y-6">
-            <!-- Instructors Card -->
+          <!-- Правая колонка обзора -->
+          <div class="space-y-4">
+            <!-- Преподаватели: градиентная шапка убрана, карточка в общем стиле -->
             <div
-              class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all hover:shadow-md"
+              class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
             >
-              <div
-                class="bg-linear-to-br from-warning/10 to-transparent p-6 border-b border-slate-100 dark:border-slate-800"
-              >
+              <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
                 <h3
-                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+                  class="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"
                 >
-                  <GraduationCap class="w-5 h-5 text-warning" />
+                  <GraduationCap class="h-4 w-4 text-warning" />
                   Преподаватели
                 </h3>
               </div>
-              <div class="p-4 space-y-3">
+              <div class="space-y-1 p-3">
                 <div
                   v-for="instructor in groupInstructors"
                   :key="instructor.id"
-                  class="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
+                  class="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]"
                 >
                   <div
-                    class="h-10 w-10 shrink-0 rounded-full bg-warning/10 text-warning flex items-center justify-center font-bold text-xs ring-2 ring-white dark:ring-slate-800"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-warning/10 text-xs font-semibold text-warning"
                   >
                     {{ getInitials(instructor.fullName) }}
                   </div>
                   <div class="min-w-0 flex-1">
                     <p
-                      class="text-sm font-bold text-slate-900 dark:text-white truncate"
+                      class="truncate text-sm font-medium text-gray-900 dark:text-white"
                     >
                       {{ instructor.fullName }}
                     </p>
-                    <p class="text-xs text-slate-500 truncate">
+                    <p class="truncate text-xs text-gray-500">
                       {{ instructor.completedHours }} /
                       {{ instructor.totalHours }} ч.
                     </p>
                   </div>
-                  <div class="text-right">
-                    <div
-                      class="text-xs font-extrabold"
-                      :class="
-                        instructor.hoursPercent >= 100
-                          ? 'text-success'
-                          : 'text-warning'
-                      "
-                    >
-                      {{ instructor.hoursPercent }}%
-                    </div>
+                  <div
+                    class="text-xs font-semibold tabular-nums"
+                    :class="
+                      instructor.hoursPercent >= 100
+                        ? 'text-success'
+                        : 'text-warning'
+                    "
+                  >
+                    {{ instructor.hoursPercent }}%
                   </div>
                 </div>
-                <div
+                <p
                   v-if="groupInstructors.length === 0"
-                  class="text-center py-6 text-slate-400 text-sm italic"
+                  class="py-6 text-center text-sm text-gray-500 dark:text-gray-400"
                 >
                   Инструкторы не назначены
-                </div>
+                </p>
               </div>
-              <div class="px-4 pb-4">
+              <div class="px-3 pb-3">
+                <!-- Переход на вкладку расписания через changeTab, чтобы обновлялся URL -->
                 <UiButton
                   variant="outline"
                   size="sm"
-                  class="w-full text-xs font-semibold gap-1"
-                  @click="activeTab = 'schedule'"
+                  block
+                  :start-icon="CalendarDays"
+                  @click="changeTab('schedule')"
                 >
-                  <CalendarDays class="w-3 h-3" />
                   Смотреть расписание
                 </UiButton>
               </div>
@@ -547,239 +301,110 @@
           </div>
         </div>
 
-        <!-- STUDENTS TAB -->
-        <div
-          v-show="activeTab === 'students'"
-          class="animate-in fade-in slide-in-from-bottom-4 duration-500"
-        >
+        <!-- ВКЛАДКА «СЛУШАТЕЛИ»: кнопки документов убраны (они в меню «Документы»), «Управление слушателями» — в меню «Действия» -->
+        <div v-show="activeTab === 'students'">
           <div
-            class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden"
+            class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
           >
-            <div
-              class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-            >
-              <div>
-                <h3
-                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
-                >
-                  <GraduationCap class="w-5 h-5 text-success" />
-                  Список слушателей
-                </h3>
-                <p class="text-xs text-slate-500 font-medium mt-1">
-                  {{ group.students?.length || 0 }} подтвержденных участников
-                </p>
-              </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <UiButton
-                  v-if="canManageGroupStudents && !group.isArchived"
-                  variant="outline"
-                  size="sm"
-                  class="gap-2 font-bold"
-                  @click="showManageStudentsModal = true"
-                >
-                  <Plus class="w-4 h-4" />
-                  Управление слушателями
-                </UiButton>
-
-                <UiButton
-                  v-if="group.students && group.students.length > 0"
-                  variant="outline"
-                  size="sm"
-                  class="gap-2 font-bold"
-                  title="Пустой журнал группы для заполнения на занятиях — PDF или Word"
-                  @click="showEmptyJournalModal = true"
-                  :disabled="generatingEmptyJournal"
-                >
-                  <Download class="w-4 h-4" />
-                  Пустой журнал
-                </UiButton>
-
-                <UiButton
-                  v-if="group.students && group.students.length > 0"
-                  variant="outline"
-                  size="sm"
-                  class="gap-2 font-bold"
-                  title="Оценочные листы (BAHOLASH VARAQASI) на всех слушателей — одним Word-файлом"
-                  @click="showEvaluationSheetsModal = true"
-                  :disabled="generatingEvaluationSheets"
-                >
-                  <Download class="w-4 h-4" />
-                  Оценочные листы
-                </UiButton>
-
-                <UiButton
-                  v-if="group.students && group.students.length > 0"
-                  variant="outline"
-                  size="sm"
-                  class="gap-2 font-bold"
-                  title="Протокол итогового экзамена (Bayonnoma) со списком слушателей — Word-файл"
-                  @click="showFinalExamProtocolModal = true"
-                  :disabled="generatingFinalExamProtocol"
-                >
-                  <Download class="w-4 h-4" />
-                  Протокол экзамена
-                </UiButton>
-
-                <UiButton
-                  v-if="group.students && group.students.length > 0"
-                  variant="outline"
-                  size="sm"
-                  class="gap-2 font-bold"
-                  title="Ведомость проведения контроля знаний по дисциплинам — Word или PDF"
-                  @click="showAssessmentSheetModal = true"
-                  :disabled="generatingAssessmentSheet"
-                >
-                  <Download class="w-4 h-4" />
-                  Ведомость контроля
-                </UiButton>
-
-                <UiButton
-                  v-if="group.students && group.students.length > 0"
-                  variant="outline"
-                  size="sm"
-                  class="gap-2 font-bold"
-                  title="Реестр — лист регистрации слушателей и подтверждения личности, Word-файл"
-                  @click="showRegistryModal = true"
-                  :disabled="generatingRegistry"
-                >
-                  <Download class="w-4 h-4" />
-                  Реестр
-                </UiButton>
-
-                <UiButton
-                  variant="outline"
-                  size="sm"
-                  class="gap-2 font-bold"
-                  title="Лист ознакомления с вводным инструктажем и инструктажем по охране труда — Word-файл"
-                  @click="showAcquaintanceSheetModal = true"
-                  :disabled="generatingAcquaintanceSheet"
-                >
-                  <Download class="w-4 h-4" />
-                  Лист ознакомления
-                </UiButton>
-
-                <UiButton
-                  variant="outline"
-                  size="sm"
-                  class="gap-2 font-bold"
-                  title="Список группы — пустая таблица слушателей с номером группы и датами обучения, Word-файл"
-                  @click="downloadGroupList"
-                  :disabled="generatingGroupList"
-                >
-                  <Download class="w-4 h-4" />
-                  Список группы
-                </UiButton>
-
-                <UiButton
-                  variant="outline"
-                  size="sm"
-                  class="gap-2 font-bold"
-                  title="Обезличенный вопросник — оценка слушателями качества преподавания с реквизитами группы, Word-файл"
-                  @click="showQuestionnaireModal = true"
-                  :disabled="generatingQuestionnaire"
-                >
-                  <Download class="w-4 h-4" />
-                  Вопросник
-                </UiButton>
-              </div>
-            </div>
-
-            <div
-              v-if="!group.students || group.students.length === 0"
-              class="p-16 text-center"
-            >
-              <div
-                class="bg-slate-50 dark:bg-slate-800/50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            <div class="border-b border-gray-100 px-5 py-4 dark:border-gray-800">
+              <h3
+                class="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"
               >
-                <Users class="w-8 h-8 text-slate-300" />
-              </div>
-              <p class="text-slate-500 font-medium">
-                В этой группе пока нет слушателей
+                <GraduationCap class="h-4 w-4 text-success" />
+                Список слушателей
+              </h3>
+              <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                {{ group.students?.length || 0 }} подтвержденных участников
               </p>
             </div>
 
+            <!-- Пустое состояние -->
+            <UiEmptyState
+              v-if="!group.students || group.students.length === 0"
+              title="В этой группе пока нет слушателей"
+              :icon="Users"
+            />
+
             <template v-else>
-              <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                  <thead>
-                    <tr class="bg-slate-50/50 dark:bg-slate-800/50">
+              <!-- Таблица со sticky-шапкой внутри прокручиваемого контейнера -->
+              <div class="max-h-[60vh] overflow-auto">
+                <table class="w-full border-collapse text-left">
+                  <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+                    <tr class="border-b border-gray-100 dark:border-gray-800">
                       <th
-                        class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider"
+                        class="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400"
                       >
                         Слушатель
                       </th>
                       <th
-                        class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider"
+                        class="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400"
                       >
                         Организация
                       </th>
                       <th
-                        class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center"
+                        class="px-5 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400"
                       >
                         Посещаемость
                       </th>
                       <th
-                        class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider"
+                        class="px-5 py-3 text-xs font-medium text-gray-500 dark:text-gray-400"
                       >
                         Дата зачисления
                       </th>
                       <th
-                        class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right"
+                        class="px-5 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400"
                       >
-                        Инфо
+                        Профиль
                       </th>
                     </tr>
                   </thead>
-                  <tbody
-                    class="divide-y divide-slate-100 dark:divide-slate-800"
-                  >
+                  <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     <tr
                       v-for="gs in paginatedStudents"
                       :key="gs.id"
-                      class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group"
+                      class="transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
                     >
-                      <td class="px-6 py-4">
+                      <td class="px-5 py-3">
                         <div class="flex items-center gap-3">
                           <div
-                            class="h-9 w-9 rounded-full bg-linear-to-br from-success/20 to-success/5 text-success flex items-center justify-center font-bold text-xs border border-success/10"
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success/10 text-xs font-semibold text-success"
                           >
                             {{ getInitials(gs.student?.fullName) }}
                           </div>
-                          <div>
+                          <div class="min-w-0">
                             <p
-                              class="font-bold text-slate-900 dark:text-white text-sm tracking-tight"
+                              class="text-sm font-medium text-gray-900 dark:text-white"
                             >
                               {{ gs.student?.fullName }}
                             </p>
                             <p
-                              class="text-xs text-slate-500 truncate max-w-[150px] font-medium"
+                              class="max-w-[200px] truncate text-xs text-gray-500"
                             >
                               {{ gs.student?.position || "Слушатель" }}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td class="px-6 py-4">
+                      <td class="px-5 py-3">
                         <span
-                          class="text-sm font-semibold text-slate-600 dark:text-slate-400 truncate max-w-[200px] block"
+                          class="block max-w-[220px] truncate text-sm text-gray-600 dark:text-gray-400"
                           :title="gs.student?.organization"
                         >
                           {{ gs.student?.organization || "—" }}
                         </span>
                       </td>
-                      <td class="px-6 py-4">
+                      <td class="px-5 py-3">
                         <div class="flex flex-col items-center gap-1">
+                          <!-- Полоса посещаемости: сплошной цвет (раньше заливка была 10% и почти не видна) -->
                           <div
-                            class="w-16 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden"
+                            class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10"
                           >
                             <div
                               class="h-full rounded-full transition-all"
                               :class="
-                                getAttendanceColorClass(
+                                getAttendanceBarClass(
                                   getStudentAttendance(gs.studentId),
                                 )
-                                  .replace('bg-', 'bg-')
-                                  .split(' ')[0]
                               "
                               :style="{
                                 width: `${getStudentAttendance(gs.studentId)}%`,
@@ -787,7 +412,7 @@
                             ></div>
                           </div>
                           <span
-                            class="text-[10px] font-extrabold uppercase tracking-tighter"
+                            class="text-[11px] font-semibold tabular-nums"
                             :class="
                               getAttendanceColorClass(
                                 getStudentAttendance(gs.studentId),
@@ -798,158 +423,108 @@
                           </span>
                         </div>
                       </td>
-                      <td class="px-6 py-4 text-xs font-bold text-slate-500">
+                      <td class="px-5 py-3 text-sm text-gray-500">
                         {{ formatDate(gs.enrolledAt) }}
                       </td>
-                      <td class="px-6 py-4 text-right">
-                        <NuxtLink
+                      <td class="px-5 py-3 text-right">
+                        <!-- Единственное действие строки; видно всегда, в том числе на touch -->
+                        <UiButton
+                          variant="ghost"
+                          size="sm"
+                          icon
                           :to="`/students/${gs.studentId}`"
-                          class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-all"
+                          title="Открыть профиль"
+                          aria-label="Открыть профиль"
                         >
-                          <Eye class="w-4 h-4" />
-                        </NuxtLink>
+                          <Eye class="h-4 w-4" />
+                        </UiButton>
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              <!-- Compact Pagination -->
-              <div
-                class="px-6 py-4 bg-slate-50/30 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"
-              >
-                <span
-                  class="text-xs font-bold text-slate-400 uppercase tracking-widest"
-                  >{{ paginationInfo }}</span
-                >
-                <div class="flex gap-2">
-                  <UiButton
-                    :disabled="currentStudentsPage === 1"
-                    variant="outline"
-                    size="sm"
-                    class="h-8 px-3"
-                    @click="currentStudentsPage--"
-                    >Назад</UiButton
-                  >
-                  <UiButton
-                    :disabled="currentStudentsPage === totalStudentsPages"
-                    variant="outline"
-                    size="sm"
-                    class="h-8 px-3"
-                    @click="currentStudentsPage++"
-                    >Вперед</UiButton
-                  >
-                </div>
-              </div>
+              <!-- Пагинация v2 футером внутри карточки; подключена к прежним currentStudentsPage / studentsPerPage -->
+              <UiPagination
+                :current-page="currentStudentsPage"
+                :total-pages="totalStudentsPages"
+                :total="group.students.length"
+                :limit="studentsPerPage"
+                hide-limit
+                @update:page="currentStudentsPage = $event"
+              />
             </template>
           </div>
         </div>
 
-        <!-- JOURNAL & PROGRAM TAB -->
-        <div
-          v-show="activeTab === 'journal'"
-          class="animate-in fade-in slide-in-from-bottom-4 duration-500"
-        >
+        <!-- ВКЛАДКА «ЖУРНАЛ»: карточки дисциплин в плоском стиле -->
+        <div v-show="activeTab === 'journal'">
           <div
-            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+            class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
           >
             <NuxtLink
               v-for="discipline in disciplines"
               :key="discipline.id"
               :to="`/groups/journal/${group?.id}_${discipline.id}`"
-              class="group relative p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-primary/50 hover:shadow-xl transition-all duration-300 overflow-hidden"
+              class="group flex flex-col rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-primary/50 dark:border-gray-800 dark:bg-white/[0.03]"
             >
               <div
-                class="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity"
+                class="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition-colors group-hover:bg-primary group-hover:text-white dark:bg-white/[0.06]"
               >
-                <div class="bg-primary/10 text-primary p-2 rounded-lg">
-                  <ArrowLeft class="w-4 h-4 rotate-180" />
-                </div>
-              </div>
-              <div
-                class="h-12 w-12 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-500 mb-4 group-hover:bg-primary group-hover:text-white transition-colors"
-              >
-                <BookOpen class="w-6 h-6" />
+                <BookOpen class="h-5 w-5" />
               </div>
               <h4
-                class="font-bold text-slate-900 dark:text-white mb-4 line-clamp-2 leading-snug group-hover:text-primary transition-colors"
+                class="mb-3 line-clamp-2 text-sm font-semibold leading-snug text-gray-900 transition-colors group-hover:text-primary dark:text-white"
               >
                 {{ discipline.name }}
               </h4>
-              <div class="flex items-center gap-3">
-                <div class="flex -space-x-2">
-                  <div
-                    class="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-blue-500/10 text-blue-600 flex items-center justify-center text-[10px] font-bold"
-                    title="Теория"
-                  >
-                    {{ discipline.theoryHours }}ч
-                  </div>
-                  <div
-                    class="w-7 h-7 rounded-full border-2 border-white dark:border-slate-900 bg-green-500/10 text-green-600 flex items-center justify-center text-[10px] font-bold"
-                    title="Практика"
-                  >
-                    {{ discipline.practiceHours }}ч
-                  </div>
-                </div>
-                <span
-                  class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-                  >Перейти к журналу</span
+              <!-- Часы подписаны словами, а не кружками с 10px-текстом -->
+              <div
+                class="mt-auto flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400"
+              >
+                <span title="Теория / практика"
+                  >Теория {{ discipline.theoryHours }} ч · Практика
+                  {{ discipline.practiceHours }} ч</span
                 >
+                <ArrowLeft class="h-4 w-4 shrink-0 rotate-180 text-gray-400" />
               </div>
             </NuxtLink>
-            <div
+            <UiEmptyState
               v-if="disciplines.length === 0"
-              class="col-span-full py-12 text-center text-slate-400 italic"
-            >
-              Дисциплины программы не найдены
-            </div>
+              class="col-span-full"
+              title="Дисциплины программы не найдены"
+              :icon="BookOpen"
+            />
           </div>
         </div>
 
-        <!-- SCHEDULE TAB -->
-        <div
-          v-show="activeTab === 'schedule'"
-          class="animate-in fade-in slide-in-from-bottom-4 duration-500"
-        >
+        <!-- ВКЛАДКА «РАСПИСАНИЕ» -->
+        <div v-show="activeTab === 'schedule'">
           <div
-            class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden"
+            class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
           >
             <div
-              class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              class="flex flex-col justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:flex-row sm:items-center"
             >
               <div>
                 <h3
-                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+                  class="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"
                 >
-                  <CalendarDays class="w-5 h-5 text-primary" />
+                  <CalendarDays class="h-4 w-4 text-primary" />
                   Расписание занятий
                 </h3>
-                <p class="text-xs text-slate-500 font-medium mt-1">
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                   {{ scheduleEvents.length }} запланированных событий
                 </p>
               </div>
+              <!-- Прогресс часов: читаемый текст вместо кружка с 10px-подписью -->
               <div
                 v-if="totalProgramHours > 0"
-                class="flex items-center gap-4 bg-slate-50 dark:bg-slate-800 p-2 px-4 rounded-xl"
+                class="text-sm text-gray-600 dark:text-gray-300"
               >
-                <div class="text-right">
-                  <p
-                    class="text-[10px] font-bold text-slate-400 uppercase leading-none"
-                  >
-                    Прогресс
-                  </p>
-                  <p
-                    class="text-sm font-extrabold text-slate-900 dark:text-white leading-none mt-1"
-                  >
-                    {{ totalScheduledHours }} / {{ totalProgramHours }} ч.
-                  </p>
-                </div>
-                <div
-                  class="w-10 h-10 rounded-full border-4 border-slate-200 dark:border-slate-700 flex items-center justify-center relative"
+                <span class="font-semibold tabular-nums text-gray-900 dark:text-white"
+                  >{{ totalScheduledHours }} / {{ totalProgramHours }} ч.</span
                 >
-                  <span class="text-[10px] font-bold"
-                    >{{ hoursProgress }}%</span
-                  >
-                </div>
+                <span class="ml-2 text-gray-500">{{ hoursProgress }}%</span>
               </div>
             </div>
 
@@ -957,66 +532,53 @@
               <div
                 class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
               ></div>
-              <p class="mt-4 text-slate-500 text-sm">Загрузка расписания...</p>
+              <p class="mt-4 text-sm text-gray-500">Загрузка расписания...</p>
             </div>
 
-            <div
+            <UiEmptyState
               v-else-if="scheduleEvents.length === 0"
-              class="p-16 text-center"
-            >
-              <CalendarIcon class="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p class="text-slate-500 font-medium">
-                Занятия еще не запланированы
-              </p>
-              <p class="text-xs text-slate-400 mt-1">
-                Добавьте занятия через общий календарь планирования
-              </p>
-            </div>
+              title="Занятия еще не запланированы"
+              description="Добавьте занятия через общий календарь планирования"
+              :icon="CalendarIcon"
+            />
 
-            <div v-else class="divide-y divide-slate-100 dark:divide-slate-800">
+            <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
               <div
                 v-for="event in scheduleEvents"
                 :key="event.id"
-                class="p-4 sm:p-6 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all flex flex-col sm:flex-row sm:items-center gap-4"
+                class="flex flex-col gap-3 px-5 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03] sm:flex-row sm:items-center sm:gap-4"
               >
-                <div class="shrink-0 flex items-center gap-4">
-                  <div class="w-14 text-center">
-                    <p
-                      class="text-xs font-extrabold text-slate-400 uppercase tracking-tighter"
-                    >
-                      {{
-                        new Date(event.startTime).toLocaleDateString("ru-RU", {
-                          weekday: "short",
-                        })
-                      }}
-                    </p>
-                    <p
-                      class="text-xl font-black text-slate-900 dark:text-white leading-tight"
-                    >
-                      {{ new Date(event.startTime).getDate() }}
-                    </p>
-                  </div>
-                  <div
-                    class="h-10 w-1 bg-slate-200 dark:bg-slate-700 rounded-full hidden sm:block"
-                  ></div>
+                <!-- Дата занятия -->
+                <div class="w-14 shrink-0 text-center">
+                  <p class="text-xs capitalize text-gray-500">
+                    {{
+                      new Date(event.startTime).toLocaleDateString("ru-RU", {
+                        weekday: "short",
+                      })
+                    }}
+                  </p>
+                  <p
+                    class="text-xl font-semibold leading-tight text-gray-900 dark:text-white"
+                  >
+                    {{ new Date(event.startTime).getDate() }}
+                  </p>
                 </div>
 
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-1">
+                <div class="min-w-0 flex-1">
+                  <div class="mb-1 flex items-center gap-2">
                     <span
-                      class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest"
+                      class="rounded px-2 py-0.5 text-[11px] font-medium"
                       :class="{
-                        'bg-blue-100 text-blue-600':
+                        'bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400':
                           event.eventType === 'theory',
-                        'bg-green-100 text-green-600':
+                        'bg-green-50 text-green-600 dark:bg-green-500/15 dark:text-green-400':
                           event.eventType === 'practice',
-                        'bg-orange-100 text-orange-600':
+                        'bg-orange-50 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400':
                           event.eventType === 'assessment',
-                        'bg-slate-100 text-slate-600': ![
-                          'theory',
-                          'practice',
-                          'assessment',
-                        ].includes(event.eventType),
+                        'bg-gray-100 text-gray-600 dark:bg-white/[0.06] dark:text-gray-300':
+                          !['theory', 'practice', 'assessment'].includes(
+                            event.eventType,
+                          ),
                       }"
                     >
                       {{
@@ -1028,16 +590,16 @@
                       }}
                     </span>
                     <h4
-                      class="font-bold text-slate-900 dark:text-white truncate"
+                      class="truncate text-sm font-medium text-gray-900 dark:text-white"
                     >
                       {{ event.title }}
                     </h4>
                   </div>
                   <div
-                    class="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs font-medium text-slate-500"
+                    class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500"
                   >
                     <div class="flex items-center gap-1.5">
-                      <Clock class="w-3.5 h-3.5" />
+                      <Clock class="h-3.5 w-3.5" />
                       {{ formatTime(event.startTime) }} -
                       {{ formatTime(event.endTime) }}
                     </div>
@@ -1045,11 +607,11 @@
                       v-if="event.instructor"
                       class="flex items-center gap-1.5"
                     >
-                      <Users class="w-3.5 h-3.5" />
+                      <Users class="h-3.5 w-3.5" />
                       {{ event.instructor.fullName }}
                     </div>
                     <div
-                      class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg text-slate-900 dark:text-white tracking-widest"
+                      class="rounded-md bg-gray-100 px-2 py-0.5 text-gray-900 dark:bg-white/[0.06] dark:text-white"
                     >
                       {{ getAcademicHours(event) }} а-ч
                     </div>
@@ -1060,25 +622,22 @@
           </div>
         </div>
 
-        <!-- FILES TAB -->
-        <div
-          v-show="activeTab === 'files'"
-          class="animate-in fade-in slide-in-from-bottom-4 duration-500"
-        >
+        <!-- ВКЛАДКА «ФАЙЛЫ» (бывшие «Документы») -->
+        <div v-show="activeTab === 'files'">
           <div
-            class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden"
+            class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]"
           >
             <div
-              class="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              class="flex flex-col justify-between gap-3 border-b border-gray-100 px-5 py-4 dark:border-gray-800 sm:flex-row sm:items-center"
             >
               <div>
                 <h3
-                  class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"
+                  class="flex items-center gap-2 text-base font-semibold text-gray-900 dark:text-white"
                 >
-                  <FileText class="w-5 h-5 text-primary" />
+                  <FileText class="h-4 w-4 text-primary" />
                   Документация группы
                 </h3>
-                <p class="text-xs text-slate-500 font-medium mt-1">
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                   Отчеты, приказы и учебные материалы
                 </p>
               </div>
@@ -1086,81 +645,85 @@
                 v-if="canEditGroups"
                 variant="outline"
                 size="sm"
-                class="gap-2 font-bold"
+                :start-icon="Plus"
                 @click="showUploadReportModal = true"
               >
-                <Plus class="w-4 h-4" />
                 Загрузить
               </UiButton>
             </div>
 
-            <div v-if="loadingReports" class="p-12 text-center text-slate-400">
+            <div
+              v-if="loadingReports"
+              class="p-12 text-center text-sm text-gray-500"
+            >
               Загрузка документов...
             </div>
-            <div v-else-if="reports.length === 0" class="p-16 text-center">
-              <FileText class="w-12 h-12 text-slate-200 mx-auto mb-4" />
-              <p class="text-slate-500 font-medium">Список документов пуст</p>
-            </div>
+            <UiEmptyState
+              v-else-if="reports.length === 0"
+              title="Список документов пуст"
+              :icon="FileText"
+            />
 
             <div
               v-else
-              class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6"
+              class="grid grid-cols-1 gap-3 p-5 md:grid-cols-2 lg:grid-cols-3"
             >
               <div
                 v-for="report in reports"
                 :key="report.id"
-                class="group flex flex-col p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-white dark:hover:bg-slate-800 hover:shadow-lg transition-all"
+                class="group flex flex-col rounded-xl border border-gray-100 bg-gray-50/50 p-4 transition-colors hover:bg-white dark:border-gray-800 dark:bg-white/[0.02] dark:hover:bg-white/[0.05]"
               >
-                <div class="flex items-start justify-between mb-4">
+                <div class="mb-3 flex items-start justify-between">
                   <div
-                    class="h-10 w-10 rounded-lg bg-danger/10 text-danger flex items-center justify-center"
+                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-danger/10 text-danger"
                   >
-                    <FileText class="w-6 h-6" />
+                    <FileText class="h-5 w-5" />
                   </div>
+                  <!-- Действия файла: на touch видны всегда, на десктопе — по hover и при фокусе -->
                   <div
-                    class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    class="flex gap-1 opacity-100 transition-opacity focus-within:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                   >
                     <button
-                      @click="previewReport(report)"
-                      class="p-2 text-slate-400 hover:text-primary transition-colors"
+                      type="button"
+                      class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-primary dark:hover:bg-white/[0.06]"
                       title="Просмотр"
+                      aria-label="Просмотр"
+                      @click="previewReport(report)"
                     >
-                      <Eye class="w-4 h-4" />
+                      <Eye class="h-4 w-4" />
                     </button>
                     <button
-                      @click="downloadReport(report)"
-                      class="p-2 text-slate-400 hover:text-success transition-colors"
+                      type="button"
+                      class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-success dark:hover:bg-white/[0.06]"
                       title="Скачать"
+                      aria-label="Скачать"
+                      @click="downloadReport(report)"
                     >
-                      <Download class="w-4 h-4" />
+                      <Download class="h-4 w-4" />
                     </button>
                     <button
                       v-if="canEditGroups || isAdmin"
-                      @click="confirmDeleteReport(report)"
-                      class="p-2 text-slate-400 hover:text-danger transition-colors"
+                      type="button"
+                      class="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-danger dark:hover:bg-white/[0.06]"
                       title="Удалить"
+                      aria-label="Удалить"
+                      @click="confirmDeleteReport(report)"
                     >
-                      <Trash2 class="w-4 h-4" />
+                      <Trash2 class="h-4 w-4" />
                     </button>
                   </div>
                 </div>
                 <h4
-                  class="text-sm font-bold text-slate-900 dark:text-white truncate mb-1"
+                  class="mb-1 truncate text-sm font-medium text-gray-900 dark:text-white"
                   :title="report.name"
                 >
                   {{ report.name }}
                 </h4>
-                <div class="flex items-center justify-between mt-auto">
-                  <span
-                    class="text-[10px] font-bold text-slate-400 uppercase"
-                    >{{
-                      new Date(report.uploadedAt).toLocaleDateString()
-                    }}</span
-                  >
-                  <span
-                    class="text-[10px] font-bold text-slate-400 uppercase"
-                    >{{ formatFileSize(report.size) }}</span
-                  >
+                <div
+                  class="mt-auto flex items-center justify-between text-xs text-gray-500"
+                >
+                  <span>{{ new Date(report.uploadedAt).toLocaleDateString() }}</span>
+                  <span>{{ formatFileSize(report.size) }}</span>
                 </div>
               </div>
             </div>
@@ -1250,7 +813,7 @@
       @submit="downloadQuestionnaire"
     />
 
-    <!-- Архив модал -->
+    <!-- Архивация/восстановление: понятная подпись кнопки, жёлтый вариант (не красный «Удалить»), текст во время операции -->
     <UiConfirmModal
       :is-open="showArchiveModal"
       :title="group?.isArchived ? 'Восстановление группы' : 'Архивация группы'"
@@ -1260,17 +823,23 @@
           : 'Вы уверены, что хотите архивировать эту группу? Она будет скрыта из списка активных групп.'
       "
       :item-name="group?.code"
+      :confirm-text="group?.isArchived ? 'Восстановить' : 'В архив'"
+      :loading-text="group?.isArchived ? 'Восстановление...' : 'Архивация...'"
+      variant="warning"
       :loading="isArchiving"
       @confirm="archiveGroup"
       @cancel="showArchiveModal = false"
     />
 
+    <!-- Удаление группы: для необратимой операции требуем ввести код группы -->
     <UiConfirmModal
       :is-open="showDeleteModal"
       title="Удаление группы"
       message="Вы уверены, что хотите удалить эту группу?"
       :item-name="group?.code"
       warning="Все слушатели и отчеты будут удалены. Это действие нельзя отменить."
+      :require-text="group?.code || undefined"
+      loading-text="Удаление..."
       :loading="isDeleting"
       @confirm="deleteGroup"
       @cancel="showDeleteModal = false"
@@ -1347,13 +916,14 @@
       </div>
     </UiModal>
 
-    <!-- Модальное окно подтверждения удаления документа -->
+    <!-- Подтверждение удаления документа -->
     <UiConfirmModal
       :is-open="showDeleteReportModal"
       title="Удаление документа"
       message="Вы уверены, что хотите удалить этот документ?"
       :item-name="reportToDelete?.name"
       warning="Это действие нельзя отменить."
+      loading-text="Удаление..."
       :loading="isDeletingReport"
       @confirm="deleteReport"
       @cancel="showDeleteReportModal = false"
@@ -1380,6 +950,10 @@ import {
   Trash2,
   Plus,
   ArrowLeft,
+  Pencil, // иконка «Редактировать» в меню «Действия»
+  Upload, // иконка «Загрузить документ» в меню «Действия»
+  Archive, // иконка «В архив» в меню «Действия»
+  ArchiveRestore, // иконка «Восстановить» в меню «Действия»
 } from "lucide-vue-next";
 import type { StudyGroup } from "~/types/group";
 import type { EvaluationSheetsCommission } from "../../../../shared/utils/evaluationSheets";
@@ -1467,13 +1041,30 @@ const studentsPerPage = ref(10);
 
 // Вкладки
 const activeTab = ref("overview");
-const tabs = [
+// Вкладки стали computed, чтобы показывать счётчики (слушатели, дисциплины, занятия, файлы);
+// ярлыки сокращены: «Программа и Журнал» -> «Журнал», «Документы» -> «Файлы»
+const tabs = computed(() => [
   { id: "overview", label: "Обзор", icon: LayoutDashboard },
-  { id: "students", label: "Слушатели", icon: GraduationCap },
-  { id: "journal", label: "Программа и Журнал", icon: BookOpen },
-  { id: "schedule", label: "Расписание", icon: CalendarDays },
-  { id: "files", label: "Документы", icon: FileText },
-];
+  {
+    id: "students",
+    label: "Слушатели",
+    icon: GraduationCap,
+    count: group.value?.students?.length || 0,
+  },
+  {
+    id: "journal",
+    label: "Журнал",
+    icon: BookOpen,
+    count: disciplines.value.length,
+  },
+  {
+    id: "schedule",
+    label: "Расписание",
+    icon: CalendarDays,
+    count: scheduleEvents.value.length,
+  },
+  { id: "files", label: "Файлы", icon: FileText, count: reports.value.length },
+]);
 
 const changeTab = (tabId: string) => {
   activeTab.value = tabId;
@@ -1482,7 +1073,7 @@ const changeTab = (tabId: string) => {
 
 const syncTabWithUrl = () => {
   const tab = route.query.tab as string;
-  if (tab && tabs.some((t) => t.id === tab)) {
+  if (tab && tabs.value.some((t) => t.id === tab)) {
     activeTab.value = tab;
   }
 };
@@ -1620,17 +1211,36 @@ const loadStudentAttendance = async () => {
   studentAttendanceData.value = newData;
 };
 
+// Цвет UiBadge для статуса в шапке (вместо ручных классов statusClass): светлый/серый для архива и неактивной
+const statusBadgeColor = computed<
+  "primary" | "success" | "error" | "warning" | "info" | "light" | "dark"
+>(() => {
+  if (!group.value) return "light";
+  if (group.value.isArchived || !group.value.isActive) return "light";
+  const today = new Date();
+  if (new Date(group.value.endDate) < today) return "warning";
+  if (new Date(group.value.startDate) > today) return "info";
+  return "success";
+});
+
+// Сплошной цвет заливки полосы посещаемости (прежняя заливка брала класс bg-*/10 и была почти невидима)
+const getAttendanceBarClass = (percent: number): string => {
+  if (percent >= 75) return "bg-success";
+  if (percent >= 50) return "bg-warning";
+  return "bg-danger";
+};
+
 // ... status computed ...
 const statusClass = computed(() => {
   if (!group.value) return "";
   if (group.value.isArchived)
-    return "bg-slate-100 text-slate-500 border-slate-200";
+    return "bg-gray-100 text-gray-500 border-gray-200";
   const today = new Date();
   const endDate = new Date(group.value.endDate);
   const startDate = new Date(group.value.startDate);
 
   if (!group.value.isActive)
-    return "bg-slate-100 text-slate-500 border-slate-200";
+    return "bg-gray-100 text-gray-500 border-gray-200";
   if (endDate < today) return "bg-warning/10 text-warning border-warning/20";
   if (startDate > today) return "bg-info/10 text-info border-info/20";
   return "bg-success/10 text-success border-success/20";
@@ -2602,6 +2212,123 @@ const handleReportUploaded = () => {
   // Перезагружаем список документов
   if (group.value?.id) {
     loadReports(group.value.id);
+  }
+};
+
+// Меню «Документы»: 8 генераторов, сгруппированных по этапам обучения.
+// Каждый пункт открывает ту же модалку / вызывает ту же функцию, что и прежние кнопки на вкладке «Слушатели»
+const documentGroups = computed(() => [
+  {
+    label: "Начало обучения",
+    items: [
+      { key: "groupList", label: "Список группы", icon: FileText, loading: generatingGroupList.value },
+      { key: "registry", label: "Реестр", icon: FileText, loading: generatingRegistry.value },
+      { key: "acquaintance", label: "Лист ознакомления", icon: FileText, loading: generatingAcquaintanceSheet.value },
+    ],
+  },
+  {
+    label: "Ход обучения",
+    items: [
+      { key: "emptyJournal", label: "Пустой журнал", icon: FileText, loading: generatingEmptyJournal.value },
+    ],
+  },
+  {
+    label: "Аттестация",
+    items: [
+      { key: "assessment", label: "Ведомость контроля", icon: FileText, loading: generatingAssessmentSheet.value },
+      { key: "evaluation", label: "Оценочные листы", icon: FileText, loading: generatingEvaluationSheets.value },
+      { key: "protocol", label: "Протокол экзамена", icon: FileText, loading: generatingFinalExamProtocol.value },
+    ],
+  },
+  {
+    label: "Завершение",
+    items: [
+      { key: "questionnaire", label: "Вопросник", icon: FileText, loading: generatingQuestionnaire.value },
+    ],
+  },
+]);
+
+// Обработчик выбора пункта меню «Документы»: делегирует прежней логике (модалки/скачивание)
+const handleDocumentSelect = (key: string) => {
+  switch (key) {
+    case "groupList":
+      downloadGroupList();
+      break;
+    case "registry":
+      showRegistryModal.value = true;
+      break;
+    case "acquaintance":
+      showAcquaintanceSheetModal.value = true;
+      break;
+    case "emptyJournal":
+      showEmptyJournalModal.value = true;
+      break;
+    case "assessment":
+      showAssessmentSheetModal.value = true;
+      break;
+    case "evaluation":
+      showEvaluationSheetsModal.value = true;
+      break;
+    case "protocol":
+      showFinalExamProtocolModal.value = true;
+      break;
+    case "questionnaire":
+      showQuestionnaireModal.value = true;
+      break;
+  }
+};
+
+// Меню «Действия»: «Управление» + отдельная группа опасных операций (архив/удаление) — права проверяются через hidden
+const actionGroups = computed(() => [
+  {
+    label: "Управление",
+    items: [
+      { key: "edit", label: "Редактировать", icon: Pencil, hidden: !canEditGroups.value },
+      {
+        key: "students",
+        label: "Управление слушателями",
+        icon: Users,
+        hidden: !(canManageGroupStudents.value && !group.value?.isArchived),
+      },
+      { key: "upload", label: "Загрузить документ", icon: Upload, hidden: !canEditGroups.value },
+    ],
+  },
+  {
+    items: [
+      {
+        key: "archive",
+        label: group.value?.isArchived ? "Восстановить" : "В архив",
+        icon: group.value?.isArchived ? ArchiveRestore : Archive,
+        hidden: !canArchiveGroups.value,
+      },
+      { key: "delete", label: "Удалить группу", icon: Trash2, danger: true, hidden: !canDeleteGroups.value },
+    ],
+  },
+]);
+
+// Показываем меню «Действия» только если есть хотя бы один доступный пункт
+const hasGroupActions = computed(() =>
+  actionGroups.value.some((g) => g.items.some((i) => !i.hidden)),
+);
+
+// Обработчик выбора пункта меню «Действия» — открывает те же модалки, что и прежние кнопки в шапке
+const handleGroupAction = (key: string) => {
+  switch (key) {
+    case "edit":
+      showEditModal.value = true;
+      break;
+    case "students":
+      showManageStudentsModal.value = true;
+      break;
+    case "upload":
+      showUploadReportModal.value = true;
+      break;
+    case "archive":
+      showArchiveModal.value = true;
+      break;
+    case "delete":
+      showDeleteModal.value = true;
+      break;
   }
 };
 

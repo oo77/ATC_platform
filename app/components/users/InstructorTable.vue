@@ -1,48 +1,34 @@
 <template>
-  <div class="overflow-x-auto">
-    <table class="w-full text-left border-collapse">
-      <thead>
-        <tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider xl:pl-11">
-            ФИО
-          </th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Email
-          </th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Телефон
-          </th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Прием на работу
-          </th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Часы (Отраб./Макс.)
-          </th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">
-            Действия
-          </th>
+  <!-- Контейнер со скроллом: sticky-шапка не пропадает при длинном списке -->
+  <div class="max-h-[calc(100vh-16rem)] min-h-[200px] overflow-auto">
+    <table class="w-full border-collapse text-left text-sm">
+      <!-- Шапка без uppercase; добавлена пропущенная колонка «Статус» (раньше 6 заголовков на 7 ячеек — всё съезжало) -->
+      <thead class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+        <tr class="border-b border-gray-200 dark:border-gray-800">
+          <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">ФИО</th>
+          <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Email</th>
+          <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Телефон</th>
+          <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Приём на работу</th>
+          <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Часы (отраб./макс.)</th>
+          <th class="px-4 py-2.5 text-xs font-medium text-gray-500 dark:text-gray-400">Статус</th>
+          <th class="w-24 px-4 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400">Действия</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+      <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
         <!-- Загрузка -->
         <tr v-if="loading">
-          <td colspan="6" class="text-center py-12">
-            <div class="flex justify-center items-center">
-              <div class="h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
-              <span class="ml-3 text-gray-600 dark:text-gray-400">Загрузка...</span>
+          <td colspan="7" class="py-12 text-center">
+            <div class="flex items-center justify-center">
+              <div class="h-6 w-6 animate-spin rounded-full border-2 border-solid border-primary border-t-transparent"></div>
+              <span class="ml-3 text-sm text-gray-500 dark:text-gray-400">Загрузка...</span>
             </div>
           </td>
         </tr>
 
-        <!-- Нет данных -->
+        <!-- Нет данных: единое пустое состояние -->
         <tr v-else-if="instructors.length === 0">
-          <td colspan="6" class="text-center py-16">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-50 text-slate-400 mb-4 dark:bg-slate-800/50">
-              <Users class="w-8 h-8" />
-            </div>
-            <p class="text-slate-500 dark:text-slate-400 font-medium">
-              Инструкторы не найдены
-            </p>
+          <td colspan="7">
+            <UiEmptyState title="Инструкторы не найдены" description="Измените запрос поиска или статус" :icon="Users" />
           </td>
         </tr>
 
@@ -50,76 +36,44 @@
         <tr
           v-for="instructor in instructors"
           :key="instructor.id"
-          class="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group"
+          class="group transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
         >
-          <td class="px-6 py-4 xl:pl-11">
-            <NuxtLink 
-              :to="`/instructors/${instructor.id}`"
-              class="flex items-center gap-3 group"
-            >
-              <div class="shrink-0">
-                <div class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center transition-colors group-hover:bg-primary/20">
-                  <span class="text-primary font-bold text-sm">
-                    {{ getInitials(instructor.fullName) }}
-                  </span>
-                </div>
+          <td class="px-4 py-3">
+            <NuxtLink :to="`/instructors/${instructor.id}`" class="flex items-center gap-3">
+              <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-50 text-sm font-semibold text-primary-700 dark:bg-primary-500/15 dark:text-primary-300">
+                {{ getInitials(instructor.fullName) }}
               </div>
-              <div>
-                <h5 class="font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
-                  {{ instructor.fullName }}
-                </h5>
-                <p class="text-xs font-bold text-slate-500 mt-0.5">
-                  ID: {{ instructor.id.substring(0, 8) }}...
-                </p>
+              <div class="min-w-0">
+                <p class="truncate font-medium text-gray-900 transition-colors group-hover:text-primary dark:text-white">{{ instructor.fullName }}</p>
+                <p class="mt-0.5 text-[11px] text-gray-400">ID: {{ instructor.id.substring(0, 8) }}...</p>
               </div>
             </NuxtLink>
           </td>
-          <td class="px-6 py-4">
-            <p class="font-medium text-slate-700 dark:text-slate-300">{{ instructor.email || '—' }}</p>
+          <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ instructor.email || '—' }}</td>
+          <td class="px-4 py-3 font-mono text-gray-700 dark:text-gray-300">{{ instructor.phone || '—' }}</td>
+          <td class="px-4 py-3 text-gray-700 dark:text-gray-300">{{ instructor.hireDate ? formatDate(instructor.hireDate) : '—' }}</td>
+          <td class="px-4 py-3 font-medium tabular-nums text-gray-700 dark:text-gray-300">
+            {{ instructor.usedHours !== undefined ? Math.round(instructor.usedHours) : 0 }} / {{ instructor.maxHours }}
           </td>
-          <td class="px-6 py-4">
-            <p class="font-medium text-slate-700 dark:text-slate-300 font-mono">
-              {{ instructor.phone || '—' }}
-            </p>
-          </td>
-          <td class="px-6 py-4">
-            <p class="font-medium text-slate-700 dark:text-slate-300">
-              {{ instructor.hireDate ? formatDate(instructor.hireDate) : '—' }}
-            </p>
-          </td>
-          <td class="px-6 py-4">
-            <p class="font-bold text-slate-700 dark:text-slate-300">
-              {{ instructor.usedHours !== undefined ? Math.round(instructor.usedHours) : 0 }} / {{ instructor.maxHours }}
-            </p>
-          </td>
-          <td class="px-6 py-4">
-            <span
-              :class="[
-                'inline-flex items-center rounded-lg px-3 py-1 text-xs font-black uppercase tracking-widest border',
-                instructor.isActive
-                  ? 'bg-success/5 text-success border-success/20'
-                  : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
-              ]"
-            >
+          <!-- Статус: единый UiBadge вместо самописной плашки uppercase -->
+          <td class="px-4 py-3">
+            <UiBadge :color="instructor.isActive ? 'success' : 'light'">
               {{ instructor.isActive ? 'Активен' : 'Неактивен' }}
-            </span>
+            </UiBadge>
           </td>
-          <td class="px-6 py-4">
-            <div class="flex items-center justify-center gap-2">
-              <NuxtLink :to="`/instructors/${instructor.id}`">
-                <UiButton variant="outline" size="sm" title="Просмотр профиля" class="h-8 w-8 p-0! flex items-center justify-center rounded-lg">
-                  <Eye class="w-4 h-4 text-slate-500" />
-                </UiButton>
-              </NuxtLink>
-              <UiButton 
-                variant="outline" 
-                size="sm" 
-                @click="$emit('edit', instructor)" 
-                title="Редактировать" 
-                class="h-8 w-8 p-0! flex items-center justify-center rounded-lg"
-              >
-                <Edit2 class="w-4 h-4 text-slate-500" />
+          <!-- Действия: одна иконка (редактировать) + «⋯» с просмотром профиля -->
+          <td class="px-4 py-3">
+            <div class="flex items-center justify-end gap-1">
+              <UiButton variant="ghost" size="sm" icon title="Редактировать" aria-label="Редактировать" @click="$emit('edit', instructor)">
+                <Edit2 class="h-4 w-4" />
               </UiButton>
+              <UiDropdown
+                :groups="rowMenu(instructor)"
+                icon-only
+                variant="ghost"
+                size="sm"
+                aria-label="Ещё действия"
+              />
             </div>
           </td>
         </tr>
@@ -141,6 +95,11 @@ const props = withDefaults(defineProps<Props>(), {
   instructors: () => [],
   loading: false,
 });
+
+// Меню «⋯» строки: сейчас единственный пункт — переход в профиль (ссылка, без эмитов)
+const rowMenu = (instructor: Instructor) => [
+  { items: [{ key: 'view', label: 'Просмотр профиля', icon: Eye, to: `/instructors/${instructor.id}` }] },
+];
 
 // Утилиты
 const getInitials = (name: string): string => {
