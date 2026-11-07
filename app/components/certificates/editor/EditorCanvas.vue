@@ -110,16 +110,25 @@
           <div
             class="text-content"
             :style="getTextStyle(element as TextElement)"
-            :contenteditable="editingId === element.id"
-            @blur="handleTextBlur($event, element)"
-            @keydown.enter.prevent="handleTextEnter"
-            ref="textEditorRef"
+            :data-text-id="element.id"
           >
-            <!-- Список показываем только вне режима редактирования,
-                 чтобы contenteditable работал с исходным текстом -->
+            <!-- Редактор: отдельный узел без дочерних vnode — его содержимым
+                 управляет только браузер (текст задаётся при входе в режим).
+                 plaintext-only: Enter = новая строка, вставка — только текст. -->
             <div
-              v-if="isList(element as TextElement) && editingId !== element.id"
-              class="text-list"
+              v-if="editingId === element.id"
+              class="text-body text-editor"
+              contenteditable="plaintext-only"
+              spellcheck="false"
+              @input="handleTextInput(element as TextElement)"
+              @paste="handleTextPaste"
+              @keydown="handleTextKeydown"
+              @blur="handleTextBlur(element as TextElement)"
+            ></div>
+            <!-- Список -->
+            <div
+              v-else-if="isList(element as TextElement)"
+              class="text-body text-list"
             ><div
                 v-for="(item, idx) in getListItems(element as TextElement)"
                 :key="idx"
@@ -128,7 +137,7 @@
                   class="list-marker"
                   :style="{ width: getListIndent(element as TextElement) }"
                 >{{ item.marker }}</span><span class="list-text">{{ item.text || " " }}</span></div></div>
-            <template v-else>{{ (element as TextElement).content }}</template>
+            <div v-else class="text-body">{{ (element as TextElement).content }}</div>
           </div>
         </template>
 
@@ -307,7 +316,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, watch, onBeforeUnmount } from "vue";
 import { AVAILABLE_VARIABLES } from "~/composables/useCertificateEditor";
 import type {
   CertificateTemplateData,
@@ -387,7 +396,25 @@ function snapValue(value: number): number {
 }
 
 const editingId = ref<string | null>(null);
-const textEditorRef = ref<HTMLElement | null>(null);
+
+// Редактируемый элемент исчез без blur (удалён, смена страницы, Undo) —
+// выходим из режима и закрываем шаг истории, иначе Undo «зависнет».
+function abortTextEditing() {
+  if (editingId.value === null) return;
+  editingId.value = null;
+  emit("transform-end");
+}
+
+watch(
+  () =>
+    editingId.value !== null &&
+    !props.activePage.elements.some((el) => el.id === editingId.value),
+  (gone) => {
+    if (gone) abortTextEditing();
+  },
+);
+
+onBeforeUnmount(abortTextEditing);
 
 // Состояние для drag & drop
 const isDragging = ref(false);
@@ -1000,45 +1027,124 @@ function handleResize(e: MouseEvent) {
   });
 }
 
+// ── Редактирование текста прямо на холсте ─────────────────────
+// Высота блока на момент входа в редактирование: при удалении строк
+// блок сжимается не ниже неё, при добавлении — растёт по содержимому.
+let editStartHeight = 0;
+
+function getTextContainer(id: string): HTMLElement | null {
+  return document.querySelector(
+    `.text-content[data-text-id="${CSS.escape(id)}"]`,
+  ) as HTMLElement | null;
+}
+
+function getEditor(id: string): HTMLElement | null {
+  return getTextContainer(id)?.querySelector(".text-editor") as HTMLElement | null;
+}
+
+/** Высота, нужная тексту элемента (в px шаблона, без учёта зума) */
+function measureTextHeight(id: string): number | null {
+  const container = getTextContainer(id);
+  const body = container?.querySelector(".text-body") as HTMLElement | null;
+  if (!container || !body) return null;
+  const cs = getComputedStyle(container);
+  const padding = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  // offsetHeight не зависит от transform: scale(zoom) холста
+  return Math.ceil(body.offsetHeight + padding);
+}
+
+/**
+ * Подогнать высоту текстового блока под содержимое.
+ * minHeight — нижняя граница (по умолчанию: только рост, без сжатия).
+ */
+function fitTextHeight(id: string, minHeight?: number) {
+  const element = props.activePage.elements.find((el) => el.id === id);
+  if (!element || element.type !== "text" || element.locked) return;
+  const needed = measureTextHeight(id);
+  if (!needed) return;
+  const target = Math.max(needed, minHeight ?? element.height);
+  if (Math.abs(target - element.height) >= 1) {
+    emit("update-element", id, { height: target });
+  }
+}
+
+defineExpose({ fitTextHeight });
+
+/** Текст редактора: innerText сохраняет переносы строк (br / \n) */
+function readEditorText(editor: HTMLElement): string {
+  return editor.innerText
+    .replace(/\r\n?/g, "\n")
+    .replace(/ /g, " ")
+    // браузер добавляет служебный перенос в конце после Enter
+    .replace(/\n$/, "");
+}
+
 // Двойной клик для редактирования текста
 function handleDoubleClick(element: TemplateElement) {
-  if (element.type === "text" && !element.locked) {
-    editingId.value = element.id;
-    nextTick(() => {
-      const editors = document.querySelectorAll(
-        '.text-content[contenteditable="true"]',
-      );
-      const editor = editors[editors.length - 1] as HTMLElement;
-      if (editor) {
-        editor.focus();
-        const range = document.createRange();
-        range.selectNodeContents(editor);
-        const selection = window.getSelection();
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      }
-    });
+  if (element.type !== "text" || element.locked) return;
+  // Двойной клик внутри уже открытого редактора — выделение слова, а не перезапуск
+  if (editingId.value === element.id) return;
+  // Всё редактирование (текст + авто-высота) — один шаг Undo
+  emit("transform-start");
+  editStartHeight = element.height;
+  editingId.value = element.id;
+  nextTick(() => {
+    const editor = getEditor(element.id);
+    if (!editor) return;
+    // Текст задаём вручную: Vue не управляет содержимым редактора
+    editor.textContent = (element as TextElement).content || "";
+    editor.focus();
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+  });
+}
+
+// Ввод: блок растёт вместе с текстом, сжимается не ниже исходной высоты
+function handleTextInput(element: TextElement) {
+  fitTextHeight(element.id, editStartHeight);
+}
+
+// Вставка из буфера — только простой текст, с сохранением переносов строк
+function handleTextPaste(e: ClipboardEvent) {
+  e.preventDefault();
+  const text = (e.clipboardData?.getData("text/plain") || "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/\t/g, " ");
+  if (!text) return;
+  // insertText сохраняет нативную историю Ctrl+Z браузера и вызывает input
+  if (!document.execCommand("insertText", false, text)) {
+    const selection = window.getSelection();
+    if (!selection?.rangeCount) return;
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(document.createTextNode(text));
+    range.collapse(false);
+    (e.target as HTMLElement).dispatchEvent(new Event("input", { bubbles: true }));
   }
 }
 
-// Завершение редактирования текста
-function handleTextBlur(e: FocusEvent, element: TemplateElement) {
-  if (element.type === "text") {
-    const target = e.target as HTMLElement;
-    const newContent = target.textContent || "";
+// Enter — новая строка (по умолчанию браузера); Esc или Ctrl+Enter — завершить
+function handleTextKeydown(e: KeyboardEvent) {
+  if (e.key === "Escape" || (e.key === "Enter" && (e.ctrlKey || e.metaKey))) {
+    e.preventDefault();
+    (e.target as HTMLElement).blur();
+  }
+}
+
+// Завершение редактирования: сохраняем текст и подгоняем высоту
+function handleTextBlur(element: TextElement) {
+  if (editingId.value !== element.id) return;
+  const editor = getEditor(element.id);
+  const newContent = editor ? readEditorText(editor) : element.content;
+  if (newContent !== element.content) {
     emit("update-element", element.id, { content: newContent });
-    editingId.value = null;
   }
-}
-
-// Enter завершает редактирование
-function handleTextEnter() {
-  const editor = document.querySelector(
-    '.text-content[contenteditable="true"]',
-  ) as HTMLElement;
-  if (editor) {
-    editor.blur();
-  }
+  fitTextHeight(element.id, editStartHeight);
+  editingId.value = null;
+  emit("transform-end");
 }
 </script>
 
@@ -1213,9 +1319,19 @@ function handleTextEnter() {
   word-break: break-word;
 }
 
-.text-list {
-  flex: 1;
+/* Тело текста — единственный flex-потомок: блоки внутри идут строками,
+   а не колонками, выравнивание задаёт text-align */
+.text-body {
+  flex: 1 1 auto;
   min-width: 0;
+  min-height: 1em;
+}
+
+.text-editor {
+  outline: none;
+  cursor: text;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 2px;
 }
 
 .list-item {
@@ -1232,10 +1348,6 @@ function handleTextEnter() {
   min-width: 0;
 }
 
-.text-content[contenteditable="true"] {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 2px;
-}
 
 /* Переменная */
 .variable-content {

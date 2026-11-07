@@ -372,6 +372,7 @@
             <div class="canvas-stage">
               <div class="canvas-frame" ref="canvasFrameRef">
                 <EditorCanvas
+                  ref="canvasRef"
                   v-if="activePage"
                   :template-data="templateData"
                   :active-page="activePage"
@@ -1318,8 +1319,38 @@ function handleAddShape(shapeType: ShapeType) {
   addElement(element);
 }
 
+const canvasRef = ref<InstanceType<typeof EditorCanvas> | null>(null);
+
+// Свойства, от которых зависит высота текста
+const TEXT_LAYOUT_PROPS = [
+  "content",
+  "fontSize",
+  "fontFamily",
+  "fontWeight",
+  "fontStyle",
+  "lineHeight",
+  "listStyle",
+  "width",
+];
+
 function handleElementUpdate(id: string, updates: Partial<TemplateElement>) {
+  const affectsTextLayout = Object.keys(updates).some((k) =>
+    TEXT_LAYOUT_PROPS.includes(k),
+  );
+  if (!affectsTextLayout) {
+    updateElement(id, updates);
+    return;
+  }
+  // Изменение + авто-высота текстового блока — один шаг Undo
+  beginHistoryBatch();
   updateElement(id, updates);
+  nextTick(() => {
+    try {
+      canvasRef.value?.fitTextHeight(id);
+    } finally {
+      endHistoryBatch();
+    }
+  });
 }
 
 function handleToggleLock() {

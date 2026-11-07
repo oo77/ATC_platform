@@ -609,7 +609,8 @@
               :value="(selectedElement as TextElement).content"
               @input="updateTextProp('content', $event)"
               :disabled="selectedElement.locked"
-              rows="2"
+              rows="4"
+              placeholder="Enter — новая строка"
             ></textarea>
           </div>
 
