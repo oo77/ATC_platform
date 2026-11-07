@@ -206,6 +206,8 @@ export interface TextElement extends BaseElement {
   textAlign: "left" | "center" | "right" | "justify";
   color: string;
   lineHeight: number;
+  /** Заливка фона блока (transparent / отсутствует — без заливки) */
+  backgroundColor?: string;
   /** Список: каждая непустая строка — пункт (по умолчанию нет) */
   listStyle?: "none" | "bullet" | "number";
 }
@@ -227,6 +229,8 @@ export interface VariableElement extends BaseElement {
   textAlign: "left" | "center" | "right" | "justify";
   color: string;
   lineHeight: number;
+  /** Заливка фона блока (transparent / отсутствует — без заливки) */
+  backgroundColor?: string;
 }
 
 /**

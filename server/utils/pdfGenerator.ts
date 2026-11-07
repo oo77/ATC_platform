@@ -837,6 +837,22 @@ async function drawElement(
           ? resolveVariable((el as VariableElement).variableKey, context)
           : (el as TextElement).content;
 
+      // ── Заливка фона блока (как в редакторе) — под текстом ──
+      if (el.backgroundColor && el.backgroundColor !== "transparent") {
+        const bgC = parseCssColor(el.backgroundColor);
+        const rot = element.rotation ?? 0;
+        const { drawX, drawY } =
+          rot !== 0 ? rotatedOrigin(x, y, w, h, rot) : { drawX: x, drawY: y };
+        page.drawRectangle({
+          x: drawX,
+          y: drawY,
+          width: w,
+          height: h,
+          color: rgb(bgC.r, bgC.g, bgC.b),
+          ...(rot !== 0 ? { rotate: degrees(-rot) } : {}),
+        });
+      }
+
       if (!text) break;
 
       const font = await getEmbeddedFont(
@@ -1083,6 +1099,12 @@ async function drawElement(
           : null;
       const strokeC = parseCssColor(el.strokeColor || "#000000");
       const shapeRotDeg = element.rotation ?? 0;
+      // Толщина 0 — без обводки (lineWidth 0 в PDF рисует тончайшую линию)
+      const strokeW = el.strokeWidth ?? 1;
+      const border =
+        strokeW > 0
+          ? { borderColor: rgb(strokeC.r, strokeC.g, strokeC.b), borderWidth: strokeW }
+          : {};
 
       if (el.shapeType === "rectangle") {
         // Компенсируем pivot: pdf-lib поворачивает вокруг (x,y), а нужно — вокруг центра
@@ -1099,8 +1121,7 @@ async function drawElement(
           ...(fillC
             ? { color: rgb(fillC.r, fillC.g, fillC.b) }
             : { color: undefined }),
-          borderColor: rgb(strokeC.r, strokeC.g, strokeC.b),
-          borderWidth: el.strokeWidth || 1,
+          ...border,
           ...(shapeRotDeg !== 0 ? { rotate: degrees(-shapeRotDeg) } : {}),
         });
       } else if (el.shapeType === "circle") {
@@ -1113,11 +1134,10 @@ async function drawElement(
           ...(fillC
             ? { color: rgb(fillC.r, fillC.g, fillC.b) }
             : { color: undefined }),
-          borderColor: rgb(strokeC.r, strokeC.g, strokeC.b),
-          borderWidth: el.strokeWidth || 1,
+          ...border,
           ...(shapeRotDeg !== 0 ? { rotate: degrees(-shapeRotDeg) } : {}),
         });
-      } else if (el.shapeType === "line") {
+      } else if (el.shapeType === "line" && strokeW > 0) {
         // Для линии не используем rotate pdf-lib (она поворачивает вокруг start-точки).
         // Вместо этого поворачиваем конечные точки математически вокруг центра bbox.
         if (shapeRotDeg !== 0) {
@@ -1144,14 +1164,14 @@ async function drawElement(
             start: { x: startX, y: startY },
             end: { x: endX, y: endY },
             color: rgb(strokeC.r, strokeC.g, strokeC.b),
-            thickness: el.strokeWidth || 1,
+            thickness: el.strokeWidth ?? 1,
           });
         } else {
           page.drawLine({
             start: { x, y: y + h },
             end: { x: x + w, y },
             color: rgb(strokeC.r, strokeC.g, strokeC.b),
-            thickness: el.strokeWidth || 1,
+            thickness: el.strokeWidth ?? 1,
           });
         }
       }
@@ -1274,7 +1294,12 @@ async function elementToHtml(
           : el.textAlign === "right"
             ? "flex-end"
             : "center";
-      const style = `font-family:'${el.fontFamily}',sans-serif;font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-style:${el.fontStyle};text-align:${el.textAlign};color:${el.color};line-height:${el.lineHeight};display:flex;align-items:center;justify-content:${justify};white-space:pre-wrap;word-break:break-word;`;
+      // Заливка фона текста — как в редакторе
+      const bg =
+        el.backgroundColor && el.backgroundColor !== "transparent"
+          ? `background-color:${el.backgroundColor};`
+          : "";
+      const style = `font-family:'${el.fontFamily}',sans-serif;font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-style:${el.fontStyle};text-align:${el.textAlign};color:${el.color};line-height:${el.lineHeight};display:flex;align-items:center;justify-content:${justify};white-space:pre-wrap;word-break:break-word;${bg}`;
       const listStyle =
         element.type === "text" ? (el as TextElement).listStyle || "none" : "none";
       if (listStyle !== "none") {
@@ -1292,7 +1317,8 @@ async function elementToHtml(
           .join("");
         return `<div style="${base}${style}"><div style="flex:1;min-width:0;">${items}</div></div>`;
       }
-      return `<div style="${base}${style}">${escapeHtml(text)}</div>`;
+      // Текст в отдельном блоке — единственный flex-потомок, как на холсте
+      return `<div style="${base}${style}"><div style="flex:1 1 auto;min-width:0;">${escapeHtml(text)}</div></div>`;
     }
     case "image": {
       const el = element as ImageElement;
@@ -1320,14 +1346,19 @@ async function elementToHtml(
     }
     case "shape": {
       const el = element as ShapeElement;
+      // Та же SVG-разметка, что на холсте: обводка по краю фигуры
+      // (половина снаружи, overflow:visible) — так же рисует и PDF
       const fill =
-        el.fillColor === "transparent" ? "transparent" : el.fillColor;
+        !el.fillColor || el.fillColor === "transparent" ? "none" : el.fillColor;
+      const sw = el.strokeWidth || 0;
+      const stroke = sw > 0 ? el.strokeColor || "#000000" : "none";
+      const svgOpen = `<svg style="${base}overflow:visible;" width="${el.width}" height="${el.height}">`;
       if (el.shapeType === "rectangle")
-        return `<div style="${base}background:${fill};border:${el.strokeWidth}px solid ${el.strokeColor};box-sizing:border-box;"></div>`;
+        return `${svgOpen}<rect x="0" y="0" width="${el.width}" height="${el.height}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/></svg>`;
       if (el.shapeType === "circle")
-        return `<div style="${base}background:${fill};border:${el.strokeWidth}px solid ${el.strokeColor};border-radius:50%;box-sizing:border-box;"></div>`;
+        return `${svgOpen}<ellipse cx="${el.width / 2}" cy="${el.height / 2}" rx="${el.width / 2}" ry="${el.height / 2}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"/></svg>`;
       if (el.shapeType === "line")
-        return `<svg style="${base}" viewBox="0 0 ${el.width} ${el.height}"><line x1="0" y1="0" x2="${el.width}" y2="${el.height}" stroke="${el.strokeColor}" stroke-width="${el.strokeWidth}"/></svg>`;
+        return `${svgOpen}<line x1="0" y1="0" x2="${el.width}" y2="${el.height}" stroke="${stroke}" stroke-width="${sw}"/></svg>`;
       return "";
     }
     default:

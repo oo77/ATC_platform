@@ -168,7 +168,7 @@
             <span class="variable-badge">{{
               getVariableLabel((element as VariableElement).variableKey)
             }}</span>
-            {{ (element as VariableElement).placeholder }}
+            <div class="variable-value">{{ (element as VariableElement).placeholder }}</div>
           </div>
         </template>
 
@@ -239,12 +239,8 @@
               v-else-if="(element as ShapeElement).shapeType === 'circle'"
               :cx="element.width / 2"
               :cy="element.height / 2"
-              :rx="
-                element.width / 2 - (element as ShapeElement).strokeWidth / 2
-              "
-              :ry="
-                element.height / 2 - (element as ShapeElement).strokeWidth / 2
-              "
+              :rx="element.width / 2"
+              :ry="element.height / 2"
               :fill="(element as ShapeElement).fillColor"
               :stroke="(element as ShapeElement).strokeColor"
               :stroke-width="(element as ShapeElement).strokeWidth"
@@ -564,7 +560,8 @@ function getTextStyle(element: TextElement | VariableElement) {
   };
 
   return {
-    fontFamily: element.fontFamily,
+    // тот же стек шрифтов, что в предпросмотре
+    fontFamily: `'${element.fontFamily}', sans-serif`,
     fontSize: `${element.fontSize}px`,
     fontWeight: element.fontWeight,
     fontStyle: element.fontStyle,
@@ -1213,6 +1210,15 @@ function handleTextBlur(element: TextElement) {
 .canvas-content {
   position: relative;
   background: white;
+  /* Холст должен рисовать текст как предпросмотр/PDF: не наследуем
+     стилистические наборы (ss01, cv11) и сглаживание интерфейса */
+  font-feature-settings: normal;
+  font-variant: normal;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-transform: none;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
 }
 
 /*
@@ -1334,21 +1340,24 @@ function handleTextBlur(element: TextElement) {
   z-index: 9998;
 }
 
+/* Рамка выделения — outline, а не border: border (box-sizing: border-box)
+   съедал 4 px ширины и сдвигал содержимое на 2 px, из-за чего текст
+   переносился иначе, чем в предпросмотре и PDF */
 .canvas-element {
   position: absolute;
   cursor: move;
   user-select: none;
-  border: 2px solid transparent;
-  transition: border-color 0.15s;
+  outline: 2px solid transparent;
+  outline-offset: 0;
+  transition: outline-color 0.15s;
 }
 
 .canvas-element:hover:not(.locked) {
-  border-color: rgba(59, 130, 246, 0.3);
+  outline-color: rgba(59, 130, 246, 0.3);
 }
 
 .canvas-element.selected {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 1px #3b82f6;
+  outline-color: #3b82f6;
 }
 
 .canvas-element.locked {
@@ -1357,8 +1366,8 @@ function handleTextBlur(element: TextElement) {
 }
 
 .canvas-element.locked.selected {
-  border-color: #9ca3af;
-  border-style: dashed;
+  outline-color: #9ca3af;
+  outline-style: dashed;
 }
 
 /* Текст */
@@ -1367,7 +1376,8 @@ function handleTextBlur(element: TextElement) {
   height: 100%;
   display: flex;
   align-items: center;
-  padding: 0.25rem;
+  /* без внутренних отступов — как в предпросмотре и PDF */
+  padding: 0;
   outline: none;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1430,9 +1440,17 @@ function handleTextBlur(element: TextElement) {
   height: 100%;
   display: flex;
   align-items: center;
-  padding: 0.25rem;
-  border-radius: 4px;
+  /* без отступов и скруглений — как в предпросмотре и PDF */
+  padding: 0;
   position: relative;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Значение переменной — единственный flex-потомок, выравнивание через text-align */
+.variable-value {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .variable-badge {
@@ -1468,8 +1486,10 @@ function handleTextBlur(element: TextElement) {
 }
 
 /* Фигуры */
+/* Обводка рисуется по краю фигуры (половина снаружи) — как в PDF */
 .shape-svg {
   display: block;
+  overflow: visible;
 }
 
 /* Ручки изменения размера */
