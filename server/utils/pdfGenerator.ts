@@ -854,40 +854,65 @@ async function drawElement(
       // pdf-lib при maxWidth переносит текст, но дополнительные строки
       // всегда рисует от исходного x. Поэтому выравнивание (center/right)
       // для многострочных текстов работает только с ручным разбиением.
-      const words = text.split(" ");
-      const lines: string[] = [];
-      // Индексы строк, завершающих абзац (их не растягиваем при justify)
-      const paragraphEnds = new Set<number>();
-      let currentLine = "";
+      const measure = (s: string) => {
+        try {
+          return font.widthOfTextAtSize(s, fontSize);
+        } catch {
+          return Infinity; // символ отсутствует в шрифте
+        }
+      };
 
-      for (const word of words) {
-        // Обработка явных переносов строк в тексте
-        const parts = word.split("\n");
-        for (let i = 0; i < parts.length; i++) {
-          const part = parts[i];
-          const testLine = currentLine ? currentLine + " " + part : part;
-          let testWidth = 0;
-          try {
-            testWidth = font.widthOfTextAtSize(testLine, fontSize);
-          } catch {
-            testWidth = w + 1;
-          }
-          if (testWidth > w && currentLine) {
-            lines.push(currentLine);
-            currentLine = part;
+      // Список: каждая непустая строка — пункт с маркером и отступом.
+      // Отступы совпадают с редактором (1.1em — маркеры, 1.6em — номера).
+      const listStyle =
+        element.type === "text" ? (el as TextElement).listStyle || "none" : "none";
+      const listIndent =
+        listStyle === "bullet"
+          ? fontSize * 1.1
+          : listStyle === "number"
+            ? fontSize * 1.6
+            : 0;
+      const bulletChar = measure("•") === Infinity ? "-" : "•";
+
+      type Line = {
+        text: string;
+        /** Последняя строка абзаца — не растягивается при justify */
+        last: boolean;
+        /** Смещение текста от левого края (отступ пункта списка) */
+        indent: number;
+        /** Маркер пункта — только у первой строки пункта */
+        marker?: string;
+      };
+      const lines: Line[] = [];
+      const paragraphs = text.split("\n");
+      // Перенос в конце текста не добавляет пустую строку
+      if (paragraphs.length > 1 && paragraphs[paragraphs.length - 1] === "") {
+        paragraphs.pop();
+      }
+      let itemNumber = 0;
+
+      for (const paragraph of paragraphs) {
+        const isItem = listStyle !== "none" && paragraph.trim() !== "";
+        const indent = isItem ? listIndent : 0;
+        const avail = w - indent;
+        let marker: string | undefined;
+        if (isItem) {
+          marker = listStyle === "number" ? `${++itemNumber}.` : bulletChar;
+        }
+
+        let currentLine = "";
+        for (const word of paragraph.split(" ")) {
+          const testLine = currentLine ? currentLine + " " + word : word;
+          if (measure(testLine) > avail && currentLine) {
+            lines.push({ text: currentLine, last: false, indent, marker });
+            marker = undefined;
+            currentLine = word;
           } else {
             currentLine = testLine;
           }
-          // Явный перенос строки (не последняя часть)
-          if (i < parts.length - 1) {
-            lines.push(currentLine);
-            paragraphEnds.add(lines.length - 1);
-            currentLine = "";
-          }
         }
+        lines.push({ text: currentLine, last: true, indent, marker });
       }
-      if (currentLine) lines.push(currentLine);
-      paragraphEnds.add(lines.length - 1);
 
       // ── Вычисляем стартовую Y с учётом количества строк ───────
       // Вертикально центрируем весь блок текста внутри элемента
@@ -895,10 +920,29 @@ async function drawElement(
       let currentY = y + h / 2 + totalTextHeight / 2 - fontSize;
 
       // ── Рисуем каждую строку с правильным x ───────────────────
-      for (let li = 0; li < lines.length; li++) {
-        const line = lines[li]!;
+      for (const lineInfo of lines) {
+        const line = lineInfo.text;
+        const lx = x + lineInfo.indent;
+        const lw = w - lineInfo.indent;
+
+        // ── Маркер пункта списка — у левого края элемента ───────
+        if (lineInfo.marker) {
+          try {
+            page.drawText(lineInfo.marker, {
+              x,
+              y: currentY,
+              size: fontSize,
+              font,
+              color: rgb(c.r, c.g, c.b),
+              ...(element.rotation ? { rotate: degrees(-element.rotation) } : {}),
+            });
+          } catch {
+            // маркер не отрисовался — продолжаем без него
+          }
+        }
+
         // ── По ширине: растягиваем пробелы между словами ────────
-        if (textAlign === "justify" && !paragraphEnds.has(li)) {
+        if (textAlign === "justify" && !lineInfo.last) {
           const lineWords = line.split(" ").filter((wd) => wd.length > 0);
           if (lineWords.length > 1) {
             try {
@@ -906,8 +950,8 @@ async function drawElement(
                 (sum, wd) => sum + font.widthOfTextAtSize(wd, fontSize),
                 0,
               );
-              const gap = (w - wordsWidth) / (lineWords.length - 1);
-              let wx = x;
+              const gap = (lw - wordsWidth) / (lineWords.length - 1);
+              let wx = lx;
               for (const wd of lineWords) {
                 page.drawText(wd, {
                   x: wx,
@@ -928,11 +972,15 @@ async function drawElement(
             }
           }
         }
-        let lineX = x;
+        if (!line) {
+          currentY -= lineH;
+          continue;
+        }
+        let lineX = lx;
         try {
           const lineWidth = font.widthOfTextAtSize(line, fontSize);
-          if (textAlign === "center") lineX = x + (w - lineWidth) / 2;
-          else if (textAlign === "right") lineX = x + w - lineWidth;
+          if (textAlign === "center") lineX = lx + (lw - lineWidth) / 2;
+          else if (textAlign === "right") lineX = lx + lw - lineWidth;
         } catch {
           // Оставляем x
         }
@@ -1227,6 +1275,23 @@ async function elementToHtml(
             ? "flex-end"
             : "center";
       const style = `font-family:'${el.fontFamily}',sans-serif;font-size:${el.fontSize}px;font-weight:${el.fontWeight};font-style:${el.fontStyle};text-align:${el.textAlign};color:${el.color};line-height:${el.lineHeight};display:flex;align-items:center;justify-content:${justify};white-space:pre-wrap;word-break:break-word;`;
+      const listStyle =
+        element.type === "text" ? (el as TextElement).listStyle || "none" : "none";
+      if (listStyle !== "none") {
+        // Список: каждая непустая строка — пункт (как в редакторе)
+        const indent = listStyle === "number" ? "1.6em" : "1.1em";
+        let n = 0;
+        const items = (text || "")
+          .split("\n")
+          .map((line) => {
+            if (!line.trim()) return `<div> </div>`;
+            n++;
+            const marker = listStyle === "number" ? `${n}.` : "•";
+            return `<div style="display:flex;"><span style="flex-shrink:0;width:${indent};text-align:left;">${marker}</span><span style="flex:1;min-width:0;">${escapeHtml(line)}</span></div>`;
+          })
+          .join("");
+        return `<div style="${base}${style}"><div style="flex:1;min-width:0;">${items}</div></div>`;
+      }
       return `<div style="${base}${style}">${escapeHtml(text)}</div>`;
     }
     case "image": {

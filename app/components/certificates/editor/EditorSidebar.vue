@@ -613,6 +613,45 @@
             ></textarea>
           </div>
 
+          <!-- Список (только для text): каждая строка — пункт -->
+          <div v-if="selectedElement.type === 'text'" class="list-row">
+            <div class="button-group list-buttons">
+              <button
+                class="style-btn"
+                :class="{ active: getTextProp('listStyle') === 'bullet' }"
+                @click="toggleListStyle('bullet')"
+                :disabled="selectedElement.locked"
+                title="Маркированный список"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <line x1="9" y1="6" x2="21" y2="6" />
+                  <line x1="9" y1="12" x2="21" y2="12" />
+                  <line x1="9" y1="18" x2="21" y2="18" />
+                  <circle cx="4" cy="6" r="1.2" fill="currentColor" />
+                  <circle cx="4" cy="12" r="1.2" fill="currentColor" />
+                  <circle cx="4" cy="18" r="1.2" fill="currentColor" />
+                </svg>
+              </button>
+              <button
+                class="style-btn"
+                :class="{ active: getTextProp('listStyle') === 'number' }"
+                @click="toggleListStyle('number')"
+                :disabled="selectedElement.locked"
+                title="Нумерованный список"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                  <line x1="10" y1="6" x2="21" y2="6" />
+                  <line x1="10" y1="12" x2="21" y2="12" />
+                  <line x1="10" y1="18" x2="21" y2="18" />
+                  <path d="M4 6h1v4" />
+                  <path d="M4 10h2" />
+                  <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />
+                </svg>
+              </button>
+            </div>
+            <span class="list-hint">Каждая строка — отдельный пункт</span>
+          </div>
+
           <!-- Переменная (только для variable) -->
           <div
             v-if="selectedElement.type === 'variable'"
@@ -1284,6 +1323,11 @@ function setTextAlign(align: "left" | "center" | "right" | "justify") {
   updateProp("textAlign", align);
 }
 
+// Повторный клик по активному типу списка выключает список
+function toggleListStyle(style: "bullet" | "number") {
+  updateProp("listStyle", getTextProp("listStyle") === style ? "none" : style);
+}
+
 // Функции для работы с заливкой фона текста
 function getBackgroundColor(): string {
   if (!props.selectedElement) return "#ffffff";
@@ -1635,6 +1679,23 @@ async function onImageSelected(e: Event) {
   display: flex;
   gap: 0.25rem;
   margin-bottom: 0.75rem;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.list-row .list-buttons {
+  margin-bottom: 0;
+}
+
+.list-hint {
+  font-size: 0.6875rem;
+  color: var(--color-gray-500);
+  line-height: 1.2;
 }
 
 .style-btn {

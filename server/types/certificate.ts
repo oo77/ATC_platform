@@ -204,6 +204,8 @@ export interface TextElement extends BaseElement {
   textAlign: "left" | "center" | "right" | "justify";
   color: string;
   lineHeight: number;
+  /** Список: каждая непустая строка — пункт (по умолчанию нет) */
+  listStyle?: "none" | "bullet" | "number";
 }
 
 /**

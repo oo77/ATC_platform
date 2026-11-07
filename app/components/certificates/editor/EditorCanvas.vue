@@ -115,7 +115,20 @@
             @keydown.enter.prevent="handleTextEnter"
             ref="textEditorRef"
           >
-            {{ (element as TextElement).content }}
+            <!-- Список показываем только вне режима редактирования,
+                 чтобы contenteditable работал с исходным текстом -->
+            <div
+              v-if="isList(element as TextElement) && editingId !== element.id"
+              class="text-list"
+            ><div
+                v-for="(item, idx) in getListItems(element as TextElement)"
+                :key="idx"
+                class="list-item"
+              ><span
+                  class="list-marker"
+                  :style="{ width: getListIndent(element as TextElement) }"
+                >{{ item.marker }}</span><span class="list-text">{{ item.text || " " }}</span></div></div>
+            <template v-else>{{ (element as TextElement).content }}</template>
           </div>
         </template>
 
@@ -483,6 +496,25 @@ function getTextStyle(element: TextElement | VariableElement) {
     lineHeight: element.lineHeight,
     backgroundColor: element.backgroundColor || "transparent",
   };
+}
+
+// ── Списки в текстовом элементе: каждая непустая строка — пункт ──
+function isList(element: TextElement) {
+  return !!element.listStyle && element.listStyle !== "none";
+}
+
+function getListItems(element: TextElement) {
+  let n = 0;
+  return (element.content || "").split("\n").map((line) => {
+    if (!line.trim()) return { marker: "", text: "" };
+    n++;
+    return { marker: element.listStyle === "number" ? `${n}.` : "•", text: line };
+  });
+}
+
+// Отступ под маркер (те же значения использует генератор PDF/HTML)
+function getListIndent(element: TextElement) {
+  return element.listStyle === "number" ? "1.6em" : "1.1em";
 }
 
 // Получение метки переменной
@@ -1179,6 +1211,25 @@ function handleTextEnter() {
   outline: none;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.text-list {
+  flex: 1;
+  min-width: 0;
+}
+
+.list-item {
+  display: flex;
+}
+
+.list-marker {
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.list-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .text-content[contenteditable="true"] {

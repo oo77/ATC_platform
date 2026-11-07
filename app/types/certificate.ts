@@ -142,7 +142,11 @@ export interface TextElement extends BaseElement {
   lineHeight: number;
   /** Цвет заливки фона (опционально, transparent по умолчанию) */
   backgroundColor?: string;
+  /** Список: каждая непустая строка — пункт (по умолчанию нет) */
+  listStyle?: TextListStyle;
 }
+
+export type TextListStyle = "none" | "bullet" | "number";
 
 /**
  * Элемент переменной (динамические данные)
