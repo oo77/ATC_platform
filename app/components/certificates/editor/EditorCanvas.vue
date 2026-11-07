@@ -80,6 +80,24 @@
         </div>
       </div>
 
+      <!-- Рамки выделенных групп -->
+      <div
+        v-for="box in selectedGroupBoxes"
+        :key="box.groupId"
+        class="group-box"
+        :style="{
+          left: `${box.left}px`,
+          top: `${box.top}px`,
+          width: `${box.right - box.left}px`,
+          height: `${box.bottom - box.top}px`,
+          borderWidth: `${1.5 / zoom}px`,
+        }"
+      >
+        <span class="group-label" :style="{ fontSize: `${11 / zoom}px` }">
+          Группа · {{ box.count }}
+        </span>
+      </div>
+
       <!-- Рамка выделения -->
       <div
         v-if="selectionBox"
@@ -343,7 +361,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: "select", id: string | null, multiSelect: boolean): void;
+  /** ignoreGroup — Alt+клик: выбрать один элемент внутри группы */
+  (e: "select", id: string | null, multiSelect: boolean, ignoreGroup?: boolean): void;
   (e: "select-multiple", ids: string[]): void;
   (e: "update-element", id: string, updates: Partial<TemplateElement>): void;
   (
@@ -396,6 +415,38 @@ function snapValue(value: number): number {
 }
 
 const editingId = ref<string | null>(null);
+
+/** Рамки групп, у которых выделен хотя бы один участник */
+const selectedGroupBoxes = computed(() => {
+  const groups = new Map<string, TemplateElement[]>();
+  for (const el of props.activePage.elements) {
+    if (!el.groupId) continue;
+    if (!groups.has(el.groupId)) groups.set(el.groupId, []);
+    groups.get(el.groupId)!.push(el);
+  }
+  const pad = 4;
+  const boxes: {
+    groupId: string;
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+    count: number;
+  }[] = [];
+  groups.forEach((members, groupId) => {
+    if (members.length < 2) return;
+    if (!members.some((el) => props.selectedElementIds.has(el.id))) return;
+    boxes.push({
+      groupId,
+      left: Math.min(...members.map((el) => el.x)) - pad,
+      top: Math.min(...members.map((el) => el.y)) - pad,
+      right: Math.max(...members.map((el) => el.x + el.width)) + pad,
+      bottom: Math.max(...members.map((el) => el.y + el.height)) + pad,
+      count: members.length,
+    });
+  });
+  return boxes;
+});
 
 // Редактируемый элемент исчез без blur (удалён, смена страницы, Undo) —
 // выходим из режима и закрываем шаг истории, иначе Undo «зависнет».
@@ -765,15 +816,18 @@ function handleMouseDown(e: MouseEvent, element: TemplateElement) {
   // Во время редактирования текста клики внутри него ставят курсор, а не тащат блок
   if (editingId.value === element.id) return;
   if (element.locked) {
-    emit("select", element.id, e.ctrlKey || e.metaKey);
+    emit("select", element.id, e.ctrlKey || e.metaKey, e.altKey);
     return;
   }
 
   const isMultiSelect = e.ctrlKey || e.metaKey;
 
-  // Если элемент не выбран, выбираем его
-  if (!props.selectedElementIds.has(element.id)) {
-    emit("select", element.id, isMultiSelect);
+  // Alt+клик по участнику группы — выбрать только его (даже если группа выделена)
+  if (e.altKey && element.groupId && !isMultiSelect) {
+    emit("select", element.id, false, true);
+  } else if (!props.selectedElementIds.has(element.id)) {
+    // Если элемент не выбран, выбираем его (вместе с группой)
+    emit("select", element.id, isMultiSelect, e.altKey);
   }
 
   isDragging.value = true;
@@ -1317,6 +1371,27 @@ function handleTextBlur(element: TextElement) {
   outline: none;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* Рамка группы */
+.group-box {
+  position: absolute;
+  border: 1.5px dashed #8b5cf6;
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.group-label {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  padding: 0 0.35em;
+  line-height: 1.5;
+  white-space: nowrap;
+  color: #fff;
+  background: #8b5cf6;
+  border-radius: 2px 2px 0 0;
 }
 
 /* Тело текста — единственный flex-потомок: блоки внутри идут строками,

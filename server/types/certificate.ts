@@ -189,6 +189,8 @@ export interface BaseElement {
   rotation: number;
   zIndex: number;
   locked: boolean;
+  /** Группа (Ctrl+G): элементы с одинаковым groupId выделяются и двигаются вместе */
+  groupId?: string;
 }
 
 /**

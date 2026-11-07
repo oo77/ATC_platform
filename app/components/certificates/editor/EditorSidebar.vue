@@ -69,6 +69,46 @@
         </div>
       </div>
 
+      <!-- Группировка -->
+      <div class="sidebar-section group-section">
+        <p v-if="groupState?.isOneWholeGroup" class="group-status">
+          <span class="group-dot"></span>
+          Группа из {{ selectedElements.length }} элементов
+        </p>
+        <div class="group-buttons">
+          <button
+            class="group-btn"
+            :disabled="!groupState?.canGroup"
+            @click="$emit('group')"
+            title="Сгруппировать (Ctrl+G)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3" />
+              <rect x="7" y="7" width="5" height="5" rx="1" />
+              <rect x="12" y="12" width="5" height="5" rx="1" />
+            </svg>
+            Сгруппировать
+            <kbd>Ctrl+G</kbd>
+          </button>
+          <button
+            class="group-btn"
+            :disabled="!groupState?.canUngroup"
+            @click="$emit('ungroup')"
+            title="Разгруппировать (Ctrl+Shift+G)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="8" height="8" rx="1" />
+              <rect x="13" y="13" width="8" height="8" rx="1" />
+            </svg>
+            Разгруппировать
+            <kbd>Ctrl+Shift+G</kbd>
+          </button>
+        </div>
+        <p v-if="groupState?.canUngroup" class="mixed-note">
+          Alt+клик — выбрать один элемент внутри группы
+        </p>
+      </div>
+
       <!-- Состав выделения по типам: клик оставляет в выделении только этот тип -->
       <div class="sidebar-section type-section">
         <div class="type-chips">
@@ -1605,6 +1645,19 @@
             </svg>
             Выделить все «{{ getElementTypeLabel(selectedElement.type) }}»
           </button>
+          <!-- Элемент выбран Alt+кликом внутри группы -->
+          <button
+            v-if="selectedElement.groupId"
+            class="action-button"
+            @click="$emit('ungroup')"
+            title="Разгруппировать группу этого элемента (Ctrl+Shift+G)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="8" height="8" rx="1" />
+              <rect x="13" y="13" width="8" height="8" rx="1" />
+            </svg>
+            Разгруппировать
+          </button>
           <button class="action-button" @click="$emit('bring-to-front')">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -1665,6 +1718,7 @@ const props = defineProps<{
   selectedElement: TemplateElement | null;
   selectedElements: TemplateElement[];
   templateId: string;
+  groupState?: { canGroup: boolean; canUngroup: boolean; isOneWholeGroup: boolean };
 }>();
 
 const emit = defineEmits<{
@@ -1692,6 +1746,8 @@ const emit = defineEmits<{
   ): void;
   (e: "select-ids", ids: string[]): void;
   (e: "select-same-type", type: TemplateElement["type"]): void;
+  (e: "group"): void;
+  (e: "ungroup"): void;
 }>();
 
 // ── Мультивыделение: общие свойства ───────────────────────────
@@ -2481,6 +2537,75 @@ async function onImageSelected(e: Event) {
   font-size: 0.6875rem;
   color: var(--color-gray-500);
   line-height: 1.3;
+}
+
+/* ── Группы ──────────────────────────────────────────────── */
+.group-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.group-status {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6d28d9;
+}
+
+.group-dot {
+  width: 8px;
+  height: 8px;
+  border: 1.5px dashed #8b5cf6;
+  border-radius: 2px;
+}
+
+.group-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.375rem;
+}
+
+.group-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-gray-700);
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.group-btn:hover:not(:disabled) {
+  border-color: #8b5cf6;
+  color: #6d28d9;
+  background: #f5f3ff;
+}
+
+.group-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.group-btn kbd {
+  font-family: inherit;
+  font-size: 0.625rem;
+  color: var(--color-gray-400);
+}
+
+:root.dark .group-btn {
+  background: var(--color-gray-700);
+  border-color: var(--color-gray-600);
+  color: var(--color-gray-200);
 }
 
 /* ── Мультивыделение ─────────────────────────────────────── */

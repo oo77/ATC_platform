@@ -788,31 +788,116 @@ export function useCertificateEditor() {
     if (element) updateElement(id, { locked: !element.locked });
   }
 
-  // Выбор элемента/элементов
-  function selectElement(id: string | null, multiSelect: boolean = false) {
+  // ── Группы (Ctrl+G) ─────────────────────────────────────────
+
+  /** id элемента + все участники его группы на текущей странице */
+  function withGroup(id: string): string[] {
+    const els = getActivePageElements();
+    const groupId = els.find((el: TemplateElement) => el.id === id)?.groupId;
+    if (!groupId) return [id];
+    return els
+      .filter((el: TemplateElement) => el.groupId === groupId)
+      .map((el: TemplateElement) => el.id);
+  }
+
+  function expandToGroups(ids: string[]): string[] {
+    const result = new Set<string>();
+    ids.forEach((id) => withGroup(id).forEach((gid) => result.add(gid)));
+    return Array.from(result);
+  }
+
+  /**
+   * Объединить элементы в группу (минимум 2). Если среди них есть
+   * участники других групп, эти группы целиком вливаются в новую.
+   */
+  function groupElements(ids: string[]): boolean {
+    const memberIds = expandToGroups(ids);
+    if (memberIds.length < 2) return false;
+    const groupId = `grp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    beginHistoryBatch();
+    memberIds.forEach((id) => updateElement(id, { groupId }));
+    endHistoryBatch();
+    selectMultipleElements(memberIds, false);
+    return true;
+  }
+
+  /** Разгруппировать все группы, затронутые выделением */
+  function ungroupElements(ids: string[]): boolean {
+    const els = getActivePageElements();
+    const groupIds = new Set(
+      els
+        .filter((el: TemplateElement) => ids.includes(el.id) && el.groupId)
+        .map((el: TemplateElement) => el.groupId as string),
+    );
+    if (groupIds.size === 0) return false;
+    const members = els.filter(
+      (el: TemplateElement) => el.groupId && groupIds.has(el.groupId),
+    );
+    beginHistoryBatch();
+    members.forEach((el: TemplateElement) =>
+      updateElement(el.id, { groupId: undefined }),
+    );
+    endHistoryBatch();
+    // Элементы остаются выделенными — уже по отдельности
+    selectMultipleElements(
+      members.map((el: TemplateElement) => el.id),
+      false,
+    );
+    return true;
+  }
+
+  /** Состояние выделения для кнопок «Сгруппировать / Разгруппировать» */
+  const selectionGroupState = computed(() => {
+    const sel = selectedElements.value;
+    const groupIds = new Set(sel.map((el) => el.groupId).filter(Boolean));
+    const isOneWholeGroup =
+      sel.length > 1 &&
+      groupIds.size === 1 &&
+      sel.every((el) => el.groupId) &&
+      activePageElements.value.filter(
+        (el: TemplateElement) => el.groupId === [...groupIds][0],
+      ).length === sel.length;
+    return {
+      canGroup: sel.length > 1 && !isOneWholeGroup,
+      canUngroup: groupIds.size > 0,
+      isOneWholeGroup,
+    };
+  });
+
+  // Выбор элемента/элементов.
+  // Клик по участнику группы выделяет всю группу; ignoreGroup (Alt+клик) — только его.
+  function selectElement(
+    id: string | null,
+    multiSelect: boolean = false,
+    ignoreGroup: boolean = false,
+  ) {
     if (id === null) {
       selectedElementIds.value.clear();
       return;
     }
 
+    const ids = ignoreGroup ? [id] : withGroup(id);
+
     if (multiSelect) {
-      // Множественный выбор с Ctrl/Cmd
+      // Множественный выбор с Ctrl/Cmd — группа добавляется/убирается целиком
       if (selectedElementIds.value.has(id)) {
-        selectedElementIds.value.delete(id);
+        ids.forEach((gid) => selectedElementIds.value.delete(gid));
       } else {
-        selectedElementIds.value.add(id);
+        ids.forEach((gid) => selectedElementIds.value.add(gid));
       }
     } else {
       // Одиночный выбор
       selectedElementIds.value.clear();
-      selectedElementIds.value.add(id);
+      ids.forEach((gid) => selectedElementIds.value.add(gid));
     }
   }
 
-  // Выбор нескольких элементов (например, при выделении рамкой)
-  function selectMultipleElements(ids: string[]) {
+  // Выбор нескольких элементов (например, при выделении рамкой).
+  // По умолчанию задетые группы выделяются целиком.
+  function selectMultipleElements(ids: string[], includeGroups: boolean = true) {
+    const finalIds = includeGroups ? expandToGroups(ids) : ids;
     selectedElementIds.value.clear();
-    ids.forEach((id) => selectedElementIds.value.add(id));
+    finalIds.forEach((id) => selectedElementIds.value.add(id));
   }
 
   // Добавить элементы к текущему выбору
@@ -1150,6 +1235,9 @@ export function useCertificateEditor() {
     alignElement,
     alignMultipleElements,
     alignSelectionToCanvas,
+    groupElements,
+    ungroupElements,
+    selectionGroupState,
     distributeElements,
 
     // Методы масштаба

@@ -508,6 +508,9 @@
         @update-many="handleUpdateMany"
         @select-ids="handleSelectIds"
         @select-same-type="handleSelectSameType"
+        :group-state="selectionGroupState"
+        @group="handleGroup"
+        @ungroup="handleUngroup"
       />
     </div>
 
@@ -666,6 +669,9 @@ const {
   alignElement,
   alignMultipleElements,
   alignSelectionToCanvas,
+  groupElements,
+  ungroupElements,
+  selectionGroupState,
   distributeElements,
   setZoom,
   ZOOM_PRESETS,
@@ -1065,6 +1071,14 @@ function insertCopies(elements: TemplateElement[], offset: number) {
   if (elements.length === 0) return;
   const { width, height } = templateData.value;
   const newIds: string[] = [];
+  // Копии группы образуют свою новую группу, а не вливаются в исходную
+  const groupMap = new Map<string, string>();
+  const copyGroupId = (old: string) => {
+    if (!groupMap.has(old)) {
+      groupMap.set(old, `grp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+    }
+    return groupMap.get(old)!;
+  };
   beginHistoryBatch();
   // Сохраняем исходный порядок слоёв
   [...elements]
@@ -1073,6 +1087,7 @@ function insertCopies(elements: TemplateElement[], offset: number) {
       const copy = JSON.parse(JSON.stringify(source)) as TemplateElement;
       copy.id = newElementId();
       copy.locked = false;
+      if (copy.groupId) copy.groupId = copyGroupId(copy.groupId);
       copy.x = Math.max(0, Math.min(width - copy.width, source.x + offset));
       copy.y = Math.max(0, Math.min(height - copy.height, source.y + offset));
       addElement(copy);
@@ -1116,6 +1131,9 @@ const SHORTCUT_GROUPS = [
       { label: "Сдвиг на 10 px", keys: ["Shift", "Стрелки"] },
       { label: "Копировать / вставить", keys: ["Ctrl", "C / V"] },
       { label: "Дублировать", keys: ["Ctrl", "D"] },
+      { label: "Сгруппировать", keys: ["Ctrl", "G"] },
+      { label: "Разгруппировать", keys: ["Ctrl", "Shift", "G"] },
+      { label: "Элемент внутри группы", keys: ["Alt", "Клик"] },
       { label: "Удалить", keys: ["Delete"] },
       { label: "Снять выделение", keys: ["Esc"] },
       { label: "Редактировать текст", keys: ["Двойной клик"] },
@@ -1188,6 +1206,12 @@ function handleKeydown(e: KeyboardEvent) {
       case "KeyD":
         e.preventDefault();
         duplicateSelected();
+        return;
+      case "KeyG":
+        // Ctrl+G — сгруппировать, Ctrl+Shift+G — разгруппировать
+        e.preventDefault();
+        if (e.shiftKey) handleUngroup();
+        else handleGroup();
         return;
       case "KeyC":
         if (selectedElements.value.length > 0) {
@@ -1399,8 +1423,9 @@ function handleUpdateMany(
   });
 }
 
+// Выбор по типу — без расширения до групп, иначе в выделение попадут другие типы
 function handleSelectIds(ids: string[]) {
-  selectMultipleElements(ids);
+  selectMultipleElements(ids, false);
 }
 
 // Выделить все элементы того же типа на текущей странице
@@ -1408,7 +1433,18 @@ function handleSelectSameType(type: TemplateElement["type"]) {
   const ids = (activePage.value?.elements ?? [])
     .filter((el) => el.type === type)
     .map((el) => el.id);
-  if (ids.length) selectMultipleElements(ids);
+  if (ids.length) selectMultipleElements(ids, false);
+}
+
+// ── Группы ──
+function handleGroup() {
+  if (!selectionGroupState.value.canGroup) return;
+  groupElements(Array.from(selectedElementIds.value));
+}
+
+function handleUngroup() {
+  if (!selectionGroupState.value.canUngroup) return;
+  ungroupElements(Array.from(selectedElementIds.value));
 }
 
 function handleApplyPreset(presetData: CertificateTemplateData) {
