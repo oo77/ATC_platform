@@ -89,15 +89,24 @@
               v-else-if="previewHtml"
               class="preview-certificate"
               :style="{
-                width: `${(previewData?.width || 1123) * previewScale}px`,
-                height: `${(previewData?.height || 794) * previewScale}px`,
+                width: `${previewWidth * previewScale}px`,
+                height: `${previewContentHeight * previewScale}px`,
               }"
             >
+              <!-- iframe рендерится в натуральном размере и масштабируется transform-ом,
+                   иначе содержимое обрезается и появляются полосы прокрутки -->
               <iframe
                 ref="previewIframeRef"
-                :srcdoc="previewHtml"
+                :srcdoc="previewSrcdoc"
                 class="preview-iframe"
                 sandbox="allow-same-origin"
+                scrolling="no"
+                :style="{
+                  width: `${previewWidth}px`,
+                  height: `${previewContentHeight}px`,
+                  transform: `scale(${previewScale})`,
+                }"
+                @load="measurePreviewHeight"
               ></iframe>
             </div>
             <div v-else class="preview-empty">
@@ -246,6 +255,34 @@ const previewData = ref<{
 } | null>(null);
 const previewScale = ref(0.75);
 const previewIframeRef = ref<HTMLIFrameElement | null>(null);
+// Высота содержимого iframe (все страницы), измеряется после загрузки
+const previewMeasuredHeight = ref<number | null>(null);
+
+const previewWidth = computed(() => previewData.value?.width || 1123);
+const previewContentHeight = computed(
+  () => previewMeasuredHeight.value || previewData.value?.height || 794,
+);
+
+// Серверный HTML рассчитан на отдельную страницу (отступы, серый фон, центрирование).
+// Внутри модалки убираем их, чтобы лист занимал iframe целиком.
+const PREVIEW_RESET_STYLE =
+  "<style>html,body{padding:0!important;margin:0!important;min-height:0!important;background:transparent!important;overflow:hidden!important;}body{align-items:flex-start!important;}</style>";
+const previewSrcdoc = computed(() => {
+  const html = previewHtml.value || "";
+  return html.includes("</head>")
+    ? html.replace("</head>", `${PREVIEW_RESET_STYLE}</head>`)
+    : PREVIEW_RESET_STYLE + html;
+});
+
+function measurePreviewHeight() {
+  try {
+    const doc = previewIframeRef.value?.contentDocument;
+    const h = doc?.body?.scrollHeight;
+    if (h && h > 0) previewMeasuredHeight.value = h;
+  } catch {
+    // нет доступа к документу — остаёмся на высоте шаблона
+  }
+}
 
 // Загрузка шаблона
 async function loadTemplate() {
@@ -403,6 +440,7 @@ function closePreview() {
   previewHtml.value = null;
   previewData.value = null;
   previewError.value = null;
+  previewMeasuredHeight.value = null;
 }
 
 // Показ уведомления
@@ -608,9 +646,12 @@ onMounted(() => {
   padding: 2rem;
   background: var(--color-gray-100);
   display: flex;
-  align-items: center;
-  justify-content: center;
   min-height: 400px;
+}
+
+/* margin:auto центрирует, но при переполнении не обрезает верх/левый край */
+.preview-body > * {
+  margin: auto;
 }
 
 :root.dark .preview-body {
@@ -649,12 +690,11 @@ onMounted(() => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   border-radius: 4px;
   overflow: hidden;
-  transition: all 0.3s ease;
+  flex-shrink: 0;
+  transition: width 0.3s ease, height 0.3s ease;
 }
 
 .preview-iframe {
-  width: 100%;
-  height: 100%;
   border: none;
   display: block;
   transform-origin: top left;
