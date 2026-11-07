@@ -762,6 +762,27 @@
                 <line x1="21" y1="18" x2="7" y2="18" />
               </svg>
             </button>
+            <button
+              class="style-btn"
+              :class="{ active: getTextProp('textAlign') === 'justify' }"
+              @click="setTextAlign('justify')"
+              :disabled="selectedElement.locked"
+              title="По ширине"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <line x1="21" y1="6" x2="3" y2="6" />
+                <line x1="21" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="18" x2="3" y2="18" />
+              </svg>
+            </button>
           </div>
 
           <div class="input-group full">
@@ -1259,7 +1280,7 @@ function toggleFontStyle() {
   updateProp("fontStyle", current === "italic" ? "normal" : "italic");
 }
 
-function setTextAlign(align: "left" | "center" | "right") {
+function setTextAlign(align: "left" | "center" | "right" | "justify") {
   updateProp("textAlign", align);
 }
 

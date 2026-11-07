@@ -1,7 +1,21 @@
 <template>
-  <div class="editor-toolbar">
+  <div class="editor-toolbar" :class="{ collapsed }">
     <div class="toolbar-section">
-      <h3 class="section-title">Элементы</h3>
+      <div class="toolbar-head">
+        <h3 v-if="!collapsed" class="section-title">Элементы</h3>
+        <button
+          class="collapse-btn"
+          @click="toggleCollapsed"
+          :title="collapsed ? 'Развернуть панель' : 'Свернуть панель'"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M9 3v18" />
+            <path v-if="collapsed" d="m14 9 3 3-3 3" />
+            <path v-else d="m16 15-3-3 3-3" />
+          </svg>
+        </button>
+      </div>
 
       <button
         class="tool-btn"
@@ -240,8 +254,12 @@
       </div>
     </div>
 
-    <div class="toolbar-section">
-      <h3 class="section-title">Макет</h3>
+    <div v-show="!collapsed" class="toolbar-section">
+      <button class="section-toggle" @click="toggleSection('layout')">
+        <span class="section-title">Макет</span>
+        <svg class="section-chevron" :class="{ open: openSections.layout }" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      <div v-show="openSections.layout" class="section-body">
 
       <div class="layout-options">
         <button
@@ -310,10 +328,15 @@
           <p class="size-hint">Мин: 200px, Макс: 5000px</p>
         </div>
       </div>
+      </div>
     </div>
 
-    <div class="toolbar-section">
-      <h3 class="section-title">Фон</h3>
+    <div v-show="!collapsed" class="toolbar-section">
+      <button class="section-toggle" @click="toggleSection('background')">
+        <span class="section-title">Фон</span>
+        <svg class="section-chevron" :class="{ open: openSections.background }" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      <div v-show="openSections.background" class="section-body">
 
       <div class="background-options">
         <button
@@ -374,10 +397,15 @@
         class="hidden-input"
         @change="onBackgroundSelected"
       />
+      </div>
     </div>
 
-    <div class="toolbar-section presets-section">
-      <h3 class="section-title">Библиотека шаблонов</h3>
+    <div v-show="!collapsed" class="toolbar-section presets-section">
+      <button class="section-toggle" @click="toggleSection('library')">
+        <span class="section-title">Библиотека шаблонов</span>
+        <svg class="section-chevron" :class="{ open: openSections.library }" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      <div v-show="openSections.library" class="section-body">
 
       <div v-if="isTemplatesLoading" class="loading-templates">
         <div class="h-4 w-4 animate-spin rounded-full border-2 border-solid border-primary border-t-transparent mx-auto mb-1"></div>
@@ -397,6 +425,7 @@
           <div class="saved-template-preview" :style="getTemplatePreviewStyle(tpl)"></div>
           <span class="template-name">{{ tpl.name }}</span>
         </button>
+      </div>
       </div>
     </div>
   </div>
@@ -519,11 +548,13 @@ const variableGroups = computed(() => [
 ]);
 
 function toggleVariableMenu() {
+  if (collapsed.value) setCollapsed(false);
   showVariableMenu.value = !showVariableMenu.value;
   showShapeMenu.value = false;
 }
 
 function toggleShapeMenu() {
+  if (collapsed.value) setCollapsed(false);
   showShapeMenu.value = !showShapeMenu.value;
   showVariableMenu.value = false;
 }
@@ -644,6 +675,52 @@ function applyCustomSize() {
   showSuccess("Размер холста успешно изменен");
 }
 
+// ── Сворачивание панели и разделов (запоминается в localStorage) ──
+const STORAGE_KEY = "cert-editor-toolbar";
+const collapsed = ref(false);
+const openSections = ref({ layout: true, background: true, library: false });
+
+function persistUiState() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ collapsed: collapsed.value, sections: openSections.value }),
+    );
+  } catch {
+    // localStorage недоступен — просто не запоминаем
+  }
+}
+
+function setCollapsed(value: boolean) {
+  collapsed.value = value;
+  if (value) {
+    showVariableMenu.value = false;
+    showShapeMenu.value = false;
+  }
+  persistUiState();
+}
+
+function toggleCollapsed() {
+  setCollapsed(!collapsed.value);
+}
+
+function toggleSection(key: "layout" | "background" | "library") {
+  openSections.value[key] = !openSections.value[key];
+  persistUiState();
+}
+
+function restoreUiState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    collapsed.value = !!saved.collapsed;
+    if (saved.sections) Object.assign(openSections.value, saved.sections);
+  } catch {
+    // игнорируем повреждённое/недоступное хранилище
+  }
+}
+
 // Закрытие меню при клике вне
 function handleClickOutside(e: MouseEvent) {
   const target = e.target as HTMLElement;
@@ -697,6 +774,7 @@ const getTemplatePreviewStyle = (template: CertificateTemplate) => {
 };
 
 onMounted(() => {
+  restoreUiState();
   document.addEventListener("click", handleClickOutside);
   loadSavedTemplates();
 });
@@ -708,15 +786,104 @@ onUnmounted(() => {
 
 <style scoped>
 .editor-toolbar {
-  width: 260px;
+  width: 216px;
   flex-shrink: 0;
   background: white;
   border-right: 1px solid var(--color-gray-200);
-  padding: 1rem;
+  padding: 0.625rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0.5rem;
   overflow-y: auto;
+  transition: width 0.2s;
+}
+
+/* Свёрнутая панель — только иконки элементов */
+.editor-toolbar.collapsed {
+  width: 56px;
+  padding: 0.5rem 0.375rem;
+}
+
+.editor-toolbar.collapsed .tool-label,
+.editor-toolbar.collapsed .dropdown-arrow {
+  display: none;
+}
+
+.editor-toolbar.collapsed .tool-btn {
+  justify-content: center;
+  padding: 0.25rem;
+}
+
+.toolbar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.125rem;
+}
+
+.editor-toolbar.collapsed .toolbar-head {
+  justify-content: center;
+}
+
+.collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 0.375rem;
+  color: var(--color-gray-500);
+  cursor: pointer;
+}
+
+.collapse-btn:hover {
+  background: var(--color-gray-100);
+  color: var(--color-gray-800);
+}
+
+:root.dark .collapse-btn:hover {
+  background: var(--color-gray-700);
+  color: var(--color-gray-200);
+}
+
+.section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.5rem 0 0.25rem;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--color-gray-100);
+  cursor: pointer;
+}
+
+:root.dark .section-toggle {
+  border-color: var(--color-gray-700);
+}
+
+.section-toggle:hover .section-title,
+.section-toggle:hover .section-chevron {
+  color: var(--color-gray-800);
+}
+
+.section-chevron {
+  color: var(--color-gray-400);
+  transform: rotate(-90deg);
+  transition: transform 0.2s;
+}
+
+.section-chevron.open {
+  transform: rotate(0deg);
+}
+
+.section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-bottom: 0.25rem;
 }
 
 :root.dark .editor-toolbar {
@@ -727,24 +894,24 @@ onUnmounted(() => {
 .toolbar-section {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.125rem;
 }
 
 .section-title {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
   color: var(--color-gray-500);
-  margin: 0 0 0.25rem 0;
+  margin: 0;
   letter-spacing: 0.05em;
 }
 
 .tool-btn {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   width: 100%;
-  padding: 0.625rem 0.75rem;
+  padding: 0.3125rem 0.375rem;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 0.5rem;
@@ -767,8 +934,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
   background: var(--color-gray-100);
   border-radius: 0.375rem;
   color: var(--color-gray-600);
@@ -791,7 +959,7 @@ onUnmounted(() => {
 
 .tool-label {
   flex: 1;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   color: var(--color-gray-700);
 }
@@ -931,8 +1099,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.5rem;
+  gap: 0.25rem;
+  padding: 0.375rem;
   background: transparent;
   border: 2px solid var(--color-gray-200);
   border-radius: 0.5rem;
@@ -964,13 +1132,13 @@ onUnmounted(() => {
 }
 
 .layout-preview.landscape {
-  width: 40px;
-  height: 28px;
+  width: 30px;
+  height: 21px;
 }
 
 .layout-preview.portrait {
-  width: 28px;
-  height: 40px;
+  width: 21px;
+  height: 30px;
 }
 
 .layout-btn span {
@@ -985,9 +1153,7 @@ onUnmounted(() => {
 
 /* Custom size section */
 .custom-size-section {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-gray-200);
+  margin-top: 0.125rem;
 }
 
 :root.dark .custom-size-section {
@@ -1124,8 +1290,8 @@ onUnmounted(() => {
 }
 
 .color-swatch {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 0.25rem;
 }
 
@@ -1142,9 +1308,6 @@ onUnmounted(() => {
 }
 
 /* Presets */
-.presets-section {
-  margin-top: auto;
-}
 
 .preset-btn {
   display: flex;
@@ -1266,7 +1429,7 @@ onUnmounted(() => {
 .templates-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.125rem;
 }
 
 .saved-template-btn {
@@ -1293,8 +1456,8 @@ onUnmounted(() => {
 }
 
 .saved-template-preview {
-  width: 36px;
-  height: 24px;
+  width: 28px;
+  height: 18px;
   border-radius: 0.125rem;
   border: 1px solid var(--color-gray-200);
   flex-shrink: 0;

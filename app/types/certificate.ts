@@ -137,7 +137,7 @@ export interface TextElement extends BaseElement {
   fontSize: number;
   fontWeight: "normal" | "bold";
   fontStyle: "normal" | "italic";
-  textAlign: "left" | "center" | "right";
+  textAlign: "left" | "center" | "right" | "justify";
   color: string;
   lineHeight: number;
   /** Цвет заливки фона (опционально, transparent по умолчанию) */
@@ -158,7 +158,7 @@ export interface VariableElement extends BaseElement {
   fontSize: number;
   fontWeight: "normal" | "bold";
   fontStyle: "normal" | "italic";
-  textAlign: "left" | "center" | "right";
+  textAlign: "left" | "center" | "right" | "justify";
   color: string;
   lineHeight: number;
   /** Цвет заливки фона (опционально, transparent по умолчанию) */

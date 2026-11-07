@@ -856,6 +856,8 @@ async function drawElement(
       // для многострочных текстов работает только с ручным разбиением.
       const words = text.split(" ");
       const lines: string[] = [];
+      // Индексы строк, завершающих абзац (их не растягиваем при justify)
+      const paragraphEnds = new Set<number>();
       let currentLine = "";
 
       for (const word of words) {
@@ -879,11 +881,13 @@ async function drawElement(
           // Явный перенос строки (не последняя часть)
           if (i < parts.length - 1) {
             lines.push(currentLine);
+            paragraphEnds.add(lines.length - 1);
             currentLine = "";
           }
         }
       }
       if (currentLine) lines.push(currentLine);
+      paragraphEnds.add(lines.length - 1);
 
       // ── Вычисляем стартовую Y с учётом количества строк ───────
       // Вертикально центрируем весь блок текста внутри элемента
@@ -891,7 +895,39 @@ async function drawElement(
       let currentY = y + h / 2 + totalTextHeight / 2 - fontSize;
 
       // ── Рисуем каждую строку с правильным x ───────────────────
-      for (const line of lines) {
+      for (let li = 0; li < lines.length; li++) {
+        const line = lines[li]!;
+        // ── По ширине: растягиваем пробелы между словами ────────
+        if (textAlign === "justify" && !paragraphEnds.has(li)) {
+          const lineWords = line.split(" ").filter((wd) => wd.length > 0);
+          if (lineWords.length > 1) {
+            try {
+              const wordsWidth = lineWords.reduce(
+                (sum, wd) => sum + font.widthOfTextAtSize(wd, fontSize),
+                0,
+              );
+              const gap = (w - wordsWidth) / (lineWords.length - 1);
+              let wx = x;
+              for (const wd of lineWords) {
+                page.drawText(wd, {
+                  x: wx,
+                  y: currentY,
+                  size: fontSize,
+                  font,
+                  color: rgb(c.r, c.g, c.b),
+                  ...(element.rotation
+                    ? { rotate: degrees(-element.rotation) }
+                    : {}),
+                });
+                wx += font.widthOfTextAtSize(wd, fontSize) + gap;
+              }
+              currentY -= lineH;
+              continue;
+            } catch {
+              // fallthrough — рисуем обычной строкой
+            }
+          }
+        }
         let lineX = x;
         try {
           const lineWidth = font.widthOfTextAtSize(line, fontSize);
@@ -1185,7 +1221,7 @@ async function elementToHtml(
           ? resolveVariable((el as VariableElement).variableKey, context)
           : (el as TextElement).content;
       const justify =
-        el.textAlign === "left"
+        el.textAlign === "left" || el.textAlign === "justify"
           ? "flex-start"
           : el.textAlign === "right"
             ? "flex-end"

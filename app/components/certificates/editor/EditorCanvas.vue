@@ -469,6 +469,7 @@ function getTextStyle(element: TextElement | VariableElement) {
     left: "flex-start",
     center: "center",
     right: "flex-end",
+    justify: "flex-start",
   };
 
   return {
