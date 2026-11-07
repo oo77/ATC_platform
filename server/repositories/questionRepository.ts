@@ -456,8 +456,8 @@ export async function bulkCreateQuestions(
                     `INSERT INTO questions (
             id, bank_id, question_type, question_text, question_media, options,
             points, explanation, difficulty, language, tags, order_index, is_active,
-            created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            translation_group_id, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [
                         id,
                         data.bank_id,
@@ -472,6 +472,7 @@ export async function bulkCreateQuestions(
                         data.tags ? JSON.stringify(data.tags) : null,
                         data.order_index || i,
                         data.is_active !== false,
+                        data.translation_group_id || null,
                         now,
                         now,
                     ]

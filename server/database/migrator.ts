@@ -55,6 +55,8 @@ import * as addNameUzToCoursesAndShortNameToDisciplines from "./migrations/20260
 import * as aiChatSystem from "./migrations/20260922_045_ai_chat_system";
 import * as courseNamesWithoutLengthLimit from "./migrations/20261012_046_course_names_without_length_limit";
 import * as addInstructorMultilingualNames from "./migrations/20261029_047_add_instructor_multilingual_names";
+import * as testTemplatesFivePointScale from "./migrations/20261106_048_test_templates_five_point_scale";
+import * as questionsTranslationGroup from "./migrations/20261106_049_questions_translation_group";
 
 /**
  * ============================================================================
@@ -498,6 +500,18 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: addInstructorMultilingualNames.up,
     down: addInstructorMultilingualNames.down,
     description: addInstructorMultilingualNames.description,
+  },
+  {
+    name: "20261106_048_test_templates_five_point_scale",
+    up: testTemplatesFivePointScale.up,
+    down: testTemplatesFivePointScale.down,
+    description: testTemplatesFivePointScale.description,
+  },
+  {
+    name: "20261106_049_questions_translation_group",
+    up: questionsTranslationGroup.up,
+    down: questionsTranslationGroup.down,
+    description: questionsTranslationGroup.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

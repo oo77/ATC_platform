@@ -37,6 +37,11 @@ export interface FinalExamProtocolForm {
   videoRecorded: boolean;
   /** Краткое название курса для «Imtihon tartibi» (в документе — в кавычках): «Aviatsiya xavfsizligi» */
   courseTitle: string;
+  /**
+   * Свой текст «Imtihon tartibi» целиком (вместо предложения «Курс» oʻquv kursi boʻyicha …);
+   * пусто или не задан — предложение собирается из названия курса
+   */
+  examOrderText?: string | null;
   /** Перечень под «Imtihon tartibi» (в документе — в скобках): «Kashayev R.D., Yunusov X.M.» */
   commissionList: string;
   /** Приказ о составе комиссии: «2026-yil 2-oktabrdagi 43-son» (дальше в документе — «buyrugʻi») */

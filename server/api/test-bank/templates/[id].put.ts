@@ -46,6 +46,7 @@ export default defineEventHandler(async (event) => {
         if (body.questions_count !== undefined) updateData.questions_count = body.questions_count;
         if (body.time_limit_minutes !== undefined) updateData.time_limit_minutes = body.time_limit_minutes;
         if (body.passing_score !== undefined) updateData.passing_score = body.passing_score;
+        if (body.use_five_point_scale !== undefined) updateData.use_five_point_scale = !!body.use_five_point_scale;
         if (body.max_attempts !== undefined) updateData.max_attempts = body.max_attempts;
         if (body.shuffle_questions !== undefined) updateData.shuffle_questions = body.shuffle_questions;
         if (body.shuffle_options !== undefined) updateData.shuffle_options = body.shuffle_options;

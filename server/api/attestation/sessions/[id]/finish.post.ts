@@ -41,7 +41,7 @@ export default defineEventHandler(async (event) => {
     const template = group?.testTemplateId ? await getTestTemplateById(group.testTemplateId) : null;
     const passingScore = template?.passing_score ?? 60;
 
-    const results = await calculateSessionResults(id, passingScore);
+    const results = await calculateSessionResults(id, passingScore, !!template?.use_five_point_scale);
 
     await finishSession(id, {
       totalPoints: results.totalPoints,

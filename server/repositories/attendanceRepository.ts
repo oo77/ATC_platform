@@ -51,6 +51,11 @@ interface Grade {
   isModified: boolean;
   modifiedBy: string | null;
   modifiedAt: Date | null;
+  // Результат теста, из которого взята оценка (только в журнале группы)
+  testScorePercent?: number | null;
+  testTotalPoints?: number | null;
+  testMaxPoints?: number | null;
+  testFivePointScale?: boolean;
   // Joined fields
   studentName?: string;
   eventTitle?: string;
@@ -197,6 +202,11 @@ interface GradeRow extends RowDataPacket {
   is_modified: boolean;
   modified_by: string | null;
   modified_at: Date | null;
+  // Результат теста (JOIN в журнале группы)
+  test_score_percent?: number | string | null;
+  test_total_points?: number | string | null;
+  test_max_points?: number | string | null;
+  test_five_point_scale?: number | boolean | null;
   // Joined fields
   student_name?: string;
   event_title?: string;
@@ -269,6 +279,13 @@ function mapRowToGrade(row: GradeRow): Grade {
     isModified: row.is_modified || false,
     modifiedBy: row.modified_by || null,
     modifiedAt: row.modified_at || null,
+    testScorePercent:
+      row.test_score_percent != null ? Number(row.test_score_percent) : null,
+    testTotalPoints:
+      row.test_total_points != null ? Number(row.test_total_points) : null,
+    testMaxPoints:
+      row.test_max_points != null ? Number(row.test_max_points) : null,
+    testFivePointScale: Boolean(row.test_five_point_scale),
     // Joined fields
     studentName: row.student_name,
     eventTitle: row.event_title,
@@ -1101,7 +1118,15 @@ export async function getJournalData(
 
   // Оценки
   const gradesSql = `
-    SELECT g.* FROM grades g
+    SELECT g.*,
+           ts.score_percent AS test_score_percent,
+           ts.total_points AS test_total_points,
+           ts.max_points AS test_max_points,
+           tt.use_five_point_scale AS test_five_point_scale
+    FROM grades g
+    LEFT JOIN test_sessions ts ON ts.id = g.test_session_id
+    LEFT JOIN test_assignments ta ON ta.id = ts.assignment_id
+    LEFT JOIN test_templates tt ON tt.id = ta.test_template_id
     WHERE g.schedule_event_id IN (${eventIds.map(() => "?").join(",")})
   `;
   const gradeRows = await executeQuery<GradeRow[]>(gradesSql, eventIds);

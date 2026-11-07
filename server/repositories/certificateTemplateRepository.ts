@@ -1306,3 +1306,16 @@ export async function checkStudentEligibility(
     certificateStatus: existingCert?.status,
   };
 }
+
+/**
+ * Обновить снимок переменных сертификата (после перегенерации PDF)
+ */
+export async function updateCertificateVariablesData(
+  id: string,
+  variablesData: Record<string, string>,
+): Promise<void> {
+  await executeQuery<ResultSetHeader>(
+    `UPDATE issued_certificates SET variables_data = ?, updated_at = ? WHERE id = ?`,
+    [JSON.stringify(variablesData), new Date(), id],
+  );
+}

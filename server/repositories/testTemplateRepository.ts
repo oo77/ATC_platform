@@ -35,6 +35,7 @@ interface TestTemplateRow extends RowDataPacket {
     questions_count: number | null;
     time_limit_minutes: number | null;
     passing_score: number;
+    use_five_point_scale: number | boolean;
     max_attempts: number;
     shuffle_questions: boolean;
     shuffle_options: boolean;
@@ -91,6 +92,7 @@ function mapRowToTestTemplate(row: TestTemplateRow): TestTemplate {
         questions_count: row.questions_count,
         time_limit_minutes: row.time_limit_minutes,
         passing_score: row.passing_score,
+        use_five_point_scale: Boolean(row.use_five_point_scale),
         max_attempts: row.max_attempts,
         shuffle_questions: Boolean(row.shuffle_questions),
         shuffle_options: Boolean(row.shuffle_options),
@@ -286,11 +288,11 @@ export async function createTestTemplate(
     await executeQuery(
         `INSERT INTO test_templates (
       id, bank_id, name, code, description, questions_mode, questions_count,
-      time_limit_minutes, passing_score, max_attempts, shuffle_questions,
+      time_limit_minutes, passing_score, use_five_point_scale, max_attempts, shuffle_questions,
       shuffle_options, questions_per_page, show_results, allow_back,
       proctoring_enabled, proctoring_settings, allowed_languages, is_active, created_by,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             id,
             data.bank_id,
@@ -301,6 +303,7 @@ export async function createTestTemplate(
             data.questions_count || null,
             data.time_limit_minutes || null,
             data.passing_score || 60,
+            data.use_five_point_scale ? 1 : 0,
             data.max_attempts || 1,
             data.shuffle_questions !== false,
             data.shuffle_options !== false,
@@ -371,6 +374,10 @@ export async function updateTestTemplate(
     if (data.passing_score !== undefined) {
         updates.push('passing_score = ?');
         params.push(data.passing_score);
+    }
+    if (data.use_five_point_scale !== undefined) {
+        updates.push('use_five_point_scale = ?');
+        params.push(data.use_five_point_scale ? 1 : 0);
     }
     if (data.max_attempts !== undefined) {
         updates.push('max_attempts = ?');

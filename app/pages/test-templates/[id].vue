@@ -72,7 +72,7 @@
         <UiStat label="Вопросов в банке" :value="template.questions_total" :icon="HelpCircleIcon" tone="primary" />
         <UiStat label="Вопросов в тесте" :value="template.questions_mode === 'all' ? template.questions_total : template.questions_count" :icon="ListIcon" tone="info" />
         <UiStat label="Макс. баллов" :value="totalPoints" :icon="AwardIcon" tone="success" />
-        <UiStat label="Проходной балл" :value="`${template.passing_score}%`" :icon="TargetIcon" tone="warning" />
+        <UiStat label="Проходной балл" :value="template.use_five_point_scale ? 'Оценка 4+' : `${template.passing_score}%`" :icon="TargetIcon" tone="warning" />
       </div>
 
       <!-- Вкладки: UiTabs (availableTabs уже содержит id/label/icon) -->

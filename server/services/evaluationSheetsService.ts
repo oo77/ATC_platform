@@ -71,7 +71,7 @@ interface StudentRow extends RowDataPacket {
   position_uz: string | null;
 }
 
-const collapseSpaces = (text: string | null | undefined) =>
+export const collapseSpaces = (text: string | null | undefined) =>
   (text ?? "").replace(/\s+/g, " ").trim();
 
 /**
@@ -138,19 +138,19 @@ export async function loadEvaluationSheetsModel(
 // колонок, кегли, пустые строки между блоками) её нужно перепроверить.
 
 /** Ширина текста (pt) в колонке «Fan (modul) nomi» и в строках ФИО/должности — без полей ячейки */
-const COURSE_TEXT_WIDTH_PT = (4003 - 2 * 108) / 20;
-const PERSON_TEXT_WIDTH_PT = (9496 - 2 * 108) / 20;
+export const COURSE_TEXT_WIDTH_PT = (4003 - 2 * 108) / 20;
+export const PERSON_TEXT_WIDTH_PT = (9496 - 2 * 108) / 20;
 /** Кегли шаблона в полупунктах (как w:sz): название курса — 10 pt, ФИО и должность — 12 pt */
-const COURSE_HALF_PT = 20;
-const PERSON_HALF_PT = 24;
+export const COURSE_HALF_PT = 20;
+export const PERSON_HALF_PT = 24;
 /** Меньше 6 pt название курса не делается — дальше лист просто перейдёт на вторую страницу */
-const MIN_COURSE_HALF_PT = 12;
+export const MIN_COURSE_HALF_PT = 12;
 /** Высота строки в шаблоне — 1,3 кегля (метрики Montserrat × межстрочный интервал стиля) */
-const LINE_HEIGHT = 1.3;
+export const LINE_HEIGHT = 1.3;
 /** Название курса в образце занимает 9 строк */
 const TEMPLATE_COURSE_LINES = 9;
 /** Свободная высота до конца страницы (pt): в Word — 30, здесь с небольшим запасом */
-const PAGE_SLACK_PT = 28;
+export const PAGE_SLACK_PT = 28;
 
 /** Число строк, на которые Word разобьёт текст в колонке данной ширины */
 export function countWrappedLines(text: string, sizePt: number, widthPt: number): number {
@@ -206,15 +206,15 @@ export function fitCourseHalfPt(
 // WORD ПО ШАБЛОНУ
 // ============================================================================
 
-const RUN_RE = /<w:r(?: [^>]*)?>[\s\S]*?<\/w:r>/g;
+export const RUN_RE = /<w:r(?: [^>]*)?>[\s\S]*?<\/w:r>/g;
 
-function templateError(problem: string): Error {
+export function templateError(problem: string): Error {
   return new Error(
     `Шаблон оценочных листов (evaluation-sheets-template.docx) не соответствует ожидаемой структуре: ${problem}`,
   );
 }
 
-function escapeXml(text: string): string {
+export function escapeXml(text: string): string {
   return text
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "")
     .replace(/&/g, "&amp;")
@@ -222,12 +222,12 @@ function escapeXml(text: string): string {
     .replace(/>/g, "&gt;");
 }
 
-const rPrOf = (run: string) => /<w:rPr>[\s\S]*?<\/w:rPr>/.exec(run)?.[0] ?? "";
+export const rPrOf = (run: string) => /<w:rPr>[\s\S]*?<\/w:rPr>/.exec(run)?.[0] ?? "";
 const withoutHighlight = (rPr: string) => rPr.replace(/<w:highlight [^>]*\/>/g, "");
-const makeRun = (rPr: string, text: string) =>
+export const makeRun = (rPr: string, text: string) =>
   `<w:r>${rPr}<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`;
 
-const withFontSize = (rPr: string, halfPt: number) =>
+export const withFontSize = (rPr: string, halfPt: number) =>
   rPr.replace(/(<w:sz(?:Cs)? w:val=")\d+("\/>)/g, `$1${halfPt}$2`);
 
 interface FieldValue {
@@ -268,7 +268,7 @@ function fillMarkedFields(xml: string, values: FieldValue[]): string {
 }
 
 /** Первый абзац листа (заголовок «BAHOLASH VARAQASI») — с новой страницы */
-function startOnNewPage(sheetXml: string): string {
+export function startOnNewPage(sheetXml: string): string {
   const paragraphOpen = /^<w:p(?: [^>]*)?>/.exec(sheetXml)?.[0];
   if (!paragraphOpen) {
     throw templateError("лист должен начинаться с абзаца-заголовка, а не с таблицы");
@@ -303,10 +303,10 @@ function startOnNewPage(sheetXml: string): string {
 //
 // Геометрия снята с шаблона и сверена с вёрсткой Word, как и в разделе «ЛИСТ НА ОДНОЙ СТРАНИЦЕ».
 
-const TABLE_RE = /<w:tbl>[\s\S]*?<\/w:tbl>/g;
-const ROW_RE = /<w:tr(?: [^>]*)?>[\s\S]*?<\/w:tr>/g;
-const CELL_RE = /<w:tc>[\s\S]*?<\/w:tc>/g;
-const PARAGRAPH_RE = /<w:p(?: [^>]*)?>[\s\S]*?<\/w:p>/g;
+export const TABLE_RE = /<w:tbl>[\s\S]*?<\/w:tbl>/g;
+export const ROW_RE = /<w:tr(?: [^>]*)?>[\s\S]*?<\/w:tr>/g;
+export const CELL_RE = /<w:tc>[\s\S]*?<\/w:tc>/g;
+export const PARAGRAPH_RE = /<w:p(?: [^>]*)?>[\s\S]*?<\/w:p>/g;
 const EMPTY_PARAGRAPH = "<w:p(?: [^>]*)?>(?:<w:pPr>(?:(?!</w:pPr>)[\\s\\S])*</w:pPr>)?</w:p>";
 const LEADING_EMPTY_PARAGRAPH_RE = new RegExp(`^${EMPTY_PARAGRAPH}`);
 const TRAILING_EMPTY_PARAGRAPH_RE = new RegExp(`${EMPTY_PARAGRAPH}$`);
@@ -315,17 +315,17 @@ const TRAILING_EMPTY_PARAGRAPH_RE = new RegExp(`${EMPTY_PARAGRAPH}$`);
  * Ширина текста (pt) в колонке «Komissiya raisining F.I.Sh.» и в колонке ФИО таблицы подписей —
  * без полей ячейки и с запасом в 1 pt на расхождение с вёрсткой Word
  */
-const CHAIRMAN_TEXT_WIDTH_PT = (1938 - 2 * 108) / 20 - 1;
+export const CHAIRMAN_TEXT_WIDTH_PT = (1938 - 2 * 108) / 20 - 1;
 const SIGNER_TEXT_WIDTH_PT = (2835 - 2 * 108) / 20 - 1;
 /** Кегли в полупунктах: ФИО председателя в таблице оценок — 10 pt, мельче 7 pt не делается */
-const CHAIRMAN_HALF_PT = 20;
-const MIN_CHAIRMAN_HALF_PT = 14;
+export const CHAIRMAN_HALF_PT = 20;
+export const MIN_CHAIRMAN_HALF_PT = 14;
 /** ФИО в таблице подписей — 12 pt; чтобы остаться в одну строку, уменьшается не более чем до 10 pt */
 const SIGNER_HALF_PT = 24;
 const MIN_SIGNER_HALF_PT = 20;
 /** В таблице подписей образца четыре пары «ФИО — (imzo)» — восемь строк, каждая ~16 pt */
 const TEMPLATE_SIGNER_LINES = 8;
-const SIGNER_LINE_PT = 16;
+export const SIGNER_LINE_PT = 16;
 /**
  * Пустые строки-отступы вокруг таблицы подписей: в образце их две над таблицей и три под ней,
  * каждая ~15,4 pt. Убрать можно три — первую под таблицей, вторую над ней, вторую под ней
@@ -335,7 +335,7 @@ const SIGNER_SPACER_PT = 15;
 const MAX_REMOVED_SIGNER_SPACERS = 3;
 
 /** Подпись без пробелов, апострофов и регистра: «Komissiya a’zolari:» → «komissiyaazolari:» */
-const labelKey = (xml: string) =>
+export const labelKey = (xml: string) =>
   Array.from(xml.matchAll(/<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g), (m) => m[1])
     .join("")
     .replace(/[^a-z:]/gi, "")
@@ -366,7 +366,7 @@ const signerNames = (commission: EvaluationSheetsCommission) => [
  * Наибольший кегль (полупункты, от base до min), при котором каждая из частей текста
  * помещается в строку шириной widthPt; null — не помещается и при min.
  */
-function fitHalfPt(
+export function fitHalfPt(
   parts: string[],
   baseHalfPt: number,
   minHalfPt: number,
@@ -382,7 +382,7 @@ function fitHalfPt(
  * ФИО в таблице подписей: чуть длиннее колонки — кегль уменьшается, чтобы инициалы не
  * оторвались от фамилии; намного длиннее (ФИО полностью) — переносится шаблонным кеглем.
  */
-function fitSignerName(name: string): { halfPt: number; lines: number } {
+export function fitSignerName(name: string): { halfPt: number; lines: number } {
   const halfPt = fitHalfPt([name], SIGNER_HALF_PT, MIN_SIGNER_HALF_PT, SIGNER_TEXT_WIDTH_PT);
   return halfPt
     ? { halfPt, lines: 1 }
@@ -428,7 +428,7 @@ function fitCommissionLayout(
  * Заменяет текст абзаца одним раном в формате прежнего текста. Если в абзаце есть
  * табуляции, заменяется только текст после последней из них.
  */
-function setParagraphText(paragraph: string, text: string, halfPt?: number): string {
+export function setParagraphText(paragraph: string, text: string, halfPt?: number): string {
   const runs = Array.from(paragraph.matchAll(RUN_RE));
   let from = 0;
   runs.forEach((run, i) => {
@@ -448,7 +448,7 @@ function setParagraphText(paragraph: string, text: string, halfPt?: number): str
 }
 
 /** Заменяет текст в ячейке строки таблицы (cellIndex — с нуля) */
-function setCellText(row: string, cellIndex: number, text: string, halfPt?: number): string {
+export function setCellText(row: string, cellIndex: number, text: string, halfPt?: number): string {
   let i = -1;
   return row.replace(CELL_RE, (cell) => {
     i += 1;
@@ -459,7 +459,7 @@ function setCellText(row: string, cellIndex: number, text: string, halfPt?: numb
 }
 
 /** Заменяет строки таблицы (все подряд, от первой до последней) новыми */
-function replaceRows(table: string, rows: string[], newRows: string[]): string {
+export function replaceRows(table: string, rows: string[], newRows: string[]): string {
   const start = table.indexOf(rows[0]!);
   const lastRow = rows[rows.length - 1]!;
   const end = table.lastIndexOf(lastRow) + lastRow.length;

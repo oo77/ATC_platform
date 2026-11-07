@@ -9,6 +9,7 @@
 
 import { bulkCreateQuestions } from '../../../repositories/questionRepository';
 import { getQuestionBankById } from '../../../repositories/questionBankRepository';
+import { executeQuery } from '../../../utils/db';
 import { QuestionType, QuestionLanguage } from '../../../types/testing';
 import type { CreateQuestionDTO, SingleChoiceOptions } from '../../../types/testing';
 
@@ -37,6 +38,7 @@ interface NewImportedQuestion {
     explanation?: string;
     language?: QuestionLanguage;
     is_active?: boolean;
+    group?: string | number | null; // номер группы переводов (из Excel)
 }
 
 type ImportedQuestion = LegacyImportedQuestion | NewImportedQuestion;
@@ -83,6 +85,7 @@ export default defineEventHandler(async (event) => {
         }
 
         let questionsToCreate: CreateQuestionDTO[];
+        let linkedCount = 0;
 
         if (isNew) {
             // Новый формат - просто приводим к CreateQuestionDTO
@@ -98,6 +101,40 @@ export default defineEventHandler(async (event) => {
                 order_index: index,
                 is_active: q.is_active !== false,
             }));
+
+            // Связываем переводы: номер группы + банк определяют общую группу переводов,
+            // поэтому языки можно загружать разными файлами с одинаковыми номерами групп
+            const members = new Map<string, number[]>();
+            (body.questions as NewImportedQuestion[]).forEach((q, index) => {
+                const key = q.group === undefined || q.group === null ? '' : String(q.group).trim();
+                if (!key) return;
+                if (!members.has(key)) members.set(key, []);
+                members.get(key)!.push(index);
+            });
+            const sigOf = (opts: any): string => {
+                const o: any[] = (typeof opts === 'string' ? JSON.parse(opts) : opts)?.options || [];
+                return o.map(x => x.id).join(',') + '|' + o.filter(x => x.correct).map(x => x.id).join(',');
+            };
+            for (const [key, indexes] of members) {
+                const gid = `grp:${bankId}:${key}`;
+                // Уже существующие вопросы этой группы (загруженные раньше)
+                const existing: any[] = await executeQuery(
+                    'SELECT language, options FROM questions WHERE translation_group_id = ?',
+                    [gid]
+                );
+                const usedLangs = new Set(existing.map(e => e.language));
+                let reference = existing.length ? sigOf(existing[0].options) : null;
+                for (const i of indexes) {
+                    const lang = questionsToCreate[i].language || 'ru';
+                    const sig = sigOf(questionsToCreate[i].options);
+                    if (usedLangs.has(lang)) continue; // язык уже есть в группе
+                    if (reference !== null && reference !== sig) continue; // варианты/ответ не совпадают
+                    if (reference === null) reference = sig;
+                    usedLangs.add(lang);
+                    questionsToCreate[i].translation_group_id = gid;
+                }
+            }
+            linkedCount = questionsToCreate.filter(q => q.translation_group_id).length;
         } else {
             // Старый формат - конвертируем
             questionsToCreate = (body.questions as LegacyImportedQuestion[]).map((q, index) => {
@@ -137,6 +174,7 @@ export default defineEventHandler(async (event) => {
             success: true,
             message: `Импортировано ${result.created} вопросов`,
             imported: result.created,
+            linked: linkedCount,
             errors: result.errors,
         };
     } catch (error) {

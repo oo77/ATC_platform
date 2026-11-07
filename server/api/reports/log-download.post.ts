@@ -36,10 +36,14 @@ export default defineEventHandler(async (event: H3Event) => {
     certificate_report: "Ведомость выдачи сертификатов",
     assessment_sheet: "Ведомость контроля знаний",
     evaluation_sheets: "Оценочные листы",
+    evaluation_sheets_test: "Оценочные листы (тест)",
     final_exam_protocol: "Протокол итогового экзамена",
+    final_exam_protocol_test: "Протокол итогового экзамена (тест)",
+    practical_skills_sheet: "Ведомость практических работ",
     registry: "Реестр",
     acquaintance_sheet: "Лист ознакомления",
     group_list: "Список группы",
+    group_schedule: "Расписание группы",
     questionnaire: "Обезличенный вопросник",
   };
 

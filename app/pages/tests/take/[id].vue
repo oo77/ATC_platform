@@ -164,6 +164,13 @@
             <div class="text-sm text-gray-500 dark:text-gray-400">
               {{ isPreviewMode ? "Результат" : "Ваш результат" }}
             </div>
+            <div
+              v-if="templateInfo?.use_five_point_scale && session?.grade"
+              class="mt-3 text-lg font-semibold text-gray-900 dark:text-white"
+            >
+              Оценка: {{ session.grade }}
+              ({{ gradeLabel(session.grade) }})
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4 text-center">
@@ -308,9 +315,32 @@
             </div>
 
             <div class="flex items-center gap-3">
+              <!-- Переключатель языка (если вопросы переведены) -->
+              <div
+                v-if="switchableLanguages.length > 1 && !isCompleted"
+                class="flex items-center gap-1 p-1 rounded-lg bg-gray-100 dark:bg-meta-4"
+              >
+                <button
+                  v-for="lang in switchableLanguages"
+                  :key="lang"
+                  type="button"
+                  :disabled="switchingLanguage"
+                  :class="[
+                    'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors',
+                    displayLanguage === lang
+                      ? 'bg-white dark:bg-boxdark text-primary shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white',
+                  ]"
+                  @click="switchLanguage(lang)"
+                >
+                  <span>{{ getLanguageFlag(lang) }}</span>
+                  <span>{{ lang.toUpperCase() }}</span>
+                </button>
+              </div>
+
               <!-- Бейдж языка -->
               <div
-                v-if="sessionLanguage"
+                v-else-if="sessionLanguage"
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-meta-4 text-sm"
               >
                 <span class="text-lg">{{
@@ -388,7 +418,7 @@
                 </div>
                 <div class="flex-1">
                   <h2
-                    class="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed"
+                    class="text-lg font-semibold text-gray-900 dark:text-white leading-relaxed whitespace-pre-line"
                   >
                     {{ currentQuestion?.question_text }}
                   </h2>
@@ -454,7 +484,7 @@
                     ></div>
                   </div>
                   <div class="flex-1">
-                    <span class="block text-gray-900 dark:text-white">{{
+                    <span class="block whitespace-pre-line text-gray-900 dark:text-white">{{
                       option.text
                     }}</span>
                   </div>
@@ -685,6 +715,8 @@ const questions = ref([]);
 const answers = ref({});
 const templateInfo = ref(null);
 const currentQuestionIndex = ref(0);
+const gradeLabel = (g) =>
+  ({ 5: "отлично", 4: "хорошо", 3: "удовлетворительно", 2: "неудовлетворительно" })[g] || "";
 const finishing = ref(false);
 
 // Текущий выбранный вариант (для реактивности v-model)
@@ -807,6 +839,35 @@ const getLanguageFlag = (lang) => {
   return LANGUAGE_DATA[lang]?.flag || "";
 };
 
+// Переключение языка во время теста
+const availableLanguages = ref([]);
+const displayLanguage = ref(null);
+const switchingLanguage = ref(false);
+
+const switchableLanguages = computed(() => {
+  const langs = new Set(availableLanguages.value);
+  if (sessionLanguage.value) langs.add(sessionLanguage.value);
+  return langs.size > 1 ? [...langs] : [];
+});
+
+const switchLanguage = async (lang) => {
+  if (lang === displayLanguage.value || switchingLanguage.value) return;
+  switchingLanguage.value = true;
+  try {
+    const response = await authFetch(
+      `/api/tests/sessions/${sessionId.value}?include_questions=true&language=${lang}`
+    );
+    if (response.success && response.questions) {
+      questions.value = response.questions;
+      displayLanguage.value = lang;
+    }
+  } catch (err) {
+    console.error("Ошибка смены языка:", err);
+  } finally {
+    switchingLanguage.value = false;
+  }
+};
+
 // Загрузка данных
 const loadSession = async () => {
   loading.value = true;
@@ -824,6 +885,8 @@ const loadSession = async () => {
 
     session.value = response.session;
     questions.value = response.questions || [];
+    availableLanguages.value = response.available_languages || [];
+    displayLanguage.value = session.value?.language || null;
 
     // Восстанавливаем ответы
     if (response.answers) {
@@ -890,6 +953,7 @@ const loadTemplateInfo = async (apiTemplateSettings = null) => {
         name:
           apiTemplateSettings.name || session.value?.template_name || "Тест",
         allow_back: apiTemplateSettings.allow_back !== false,
+        use_five_point_scale: !!apiTemplateSettings.use_five_point_scale,
         time_limit_minutes: apiTemplateSettings.time_limit_minutes || null,
         proctoring_enabled: apiTemplateSettings.proctoring_enabled || false,
         proctoring_settings: apiTemplateSettings.proctoring_settings || null,

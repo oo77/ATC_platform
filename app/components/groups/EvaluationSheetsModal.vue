@@ -1,7 +1,7 @@
 <template>
   <UiModal
     :is-open="isOpen"
-    title="Оценочные листы — состав комиссии"
+    :title="title || 'Оценочные листы — состав комиссии'"
     size="md"
     @close="$emit('close')"
   >
@@ -31,7 +31,7 @@
       </div>
 
       <!-- Заместитель председателя -->
-      <div>
+      <div v-if="showDeputy">
         <label class="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">
           <input
             v-model="form.hasDeputy"
@@ -128,11 +128,15 @@ import {
   type EvaluationSheetsCommission,
 } from "../../../shared/utils/evaluationSheets";
 
-defineProps<{
+const props = withDefaults(defineProps<{
   isOpen: boolean;
+  /** Заголовок окна; по умолчанию — «Оценочные листы — состав комиссии» */
+  title?: string;
+  /** Показывать ли заместителя председателя (в тестовых листах его нет) */
+  showDeputy?: boolean;
   /** Идёт формирование файла */
   loading?: boolean;
-}>();
+}>(), { showDeputy: true });
 
 const emit = defineEmits<{
   close: [];
@@ -155,7 +159,7 @@ const chairmanShort = computed(() => abbreviateFullName(form.value.chairman));
 
 const handleSubmit = () => {
   const chairman = clean(form.value.chairman);
-  const deputy = form.value.hasDeputy ? clean(form.value.deputy) : null;
+  const deputy = props.showDeputy && form.value.hasDeputy ? clean(form.value.deputy) : null;
   // Пустые строки членов комиссии пропускаются
   const members = form.value.members.map(clean).filter(Boolean);
 

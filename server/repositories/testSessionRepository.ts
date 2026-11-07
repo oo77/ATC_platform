@@ -602,6 +602,17 @@ function validateSingleChoice(
 // ============================================================================
 
 /**
+ * Перевод процента правильных ответов в оценку по пятибалльной шкале
+ * (при 100 вопросах по 1 баллу процент равен количеству баллов)
+ */
+export function percentToFivePointGrade(percent: number): number {
+    if (percent >= 86) return 5;
+    if (percent >= 71) return 4;
+    if (percent >= 56) return 3;
+    return 2;
+}
+
+/**
  * Подсчитать результаты сессии
  */
 export async function calculateSessionResults(sessionId: string): Promise<TestResultDTO> {
@@ -616,7 +627,8 @@ export async function calculateSessionResults(sessionId: string): Promise<TestRe
     const assignmentRows = await executeQuery<RowDataPacket[]>(
         `SELECT 
       ta.passing_score_override,
-      tt.passing_score
+      tt.passing_score,
+      tt.use_five_point_scale
     FROM test_assignments ta
     LEFT JOIN test_templates tt ON ta.test_template_id = tt.id
     WHERE ta.id = ?`,
@@ -651,8 +663,10 @@ export async function calculateSessionResults(sessionId: string): Promise<TestRe
     }
 
     const scorePercent = maxPoints > 0 ? (totalPoints / maxPoints) * 100 : 0;
-    const passed = scorePercent >= passingScore;
-    const grade = Math.round(scorePercent);
+    // Пятибалльная шкала: 86–100 → 5, 71–85 → 4, 56–70 → 3, ≤55 → 2
+    const useFivePoint = Boolean(assignmentRows[0]?.use_five_point_scale);
+    const grade = useFivePoint ? percentToFivePointGrade(scorePercent) : Math.round(scorePercent);
+    const passed = useFivePoint ? grade >= 4 : scorePercent >= passingScore;
 
     // Время прохождения
     const timeSpentSeconds = session.started_at

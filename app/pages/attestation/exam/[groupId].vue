@@ -99,6 +99,9 @@
             {{ session?.score_percent !== null ? Math.round(session.score_percent) : 0 }}%
           </div>
           <div class="text-sm text-slate-400 font-bold uppercase tracking-wider">Ваш результат</div>
+          <div v-if="session?.use_five_point_scale && session?.grade" class="mt-3 text-lg font-bold text-slate-800 dark:text-white">
+            Оценка: {{ session.grade }} ({{ gradeLabel(session.grade) }})
+          </div>
 
           <div class="grid grid-cols-3 gap-3 mt-6">
             <div class="bg-white dark:bg-slate-900 rounded-xl p-3">
@@ -191,7 +194,7 @@
           </div>
 
           <div class="bg-white dark:bg-slate-900 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-800 p-6 md:p-8">
-            <p class="text-xl font-bold text-slate-900 dark:text-white leading-relaxed mb-8">{{ currentQuestion.question_text }}</p>
+            <p class="text-xl font-bold text-slate-900 dark:text-white leading-relaxed mb-8 whitespace-pre-line">{{ currentQuestion.question_text }}</p>
 
             <div class="space-y-3">
               <label
@@ -213,7 +216,7 @@
                   <div v-if="selectedOption === opt.id" class="h-2 w-2 rounded-full bg-white"></div>
                 </div>
                 <input type="radio" :name="currentQuestion.id" :value="opt.id" v-model="selectedOption" @change="submitAnswer" class="sr-only" />
-                <span class="font-semibold text-slate-800 dark:text-slate-200">{{ opt.text }}</span>
+                <span class="whitespace-pre-line font-semibold text-slate-800 dark:text-slate-200">{{ opt.text }}</span>
               </label>
             </div>
           </div>
@@ -286,6 +289,7 @@ const showFinishConfirm = ref(false);
 const brief = ref({});
 const sessionId = ref(sessionIdFromQuery);
 const session = ref(null);
+const gradeLabel = (g) => ({ 5: "отлично", 4: "хорошо", 3: "удовлетворительно", 2: "неудовлетворительно" }[g] || "");
 const questions = ref([]);
 const answers = ref({});
 const currentIndex = ref(0);

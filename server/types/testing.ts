@@ -245,6 +245,7 @@ export interface TestTemplate {
   questions_count: number | null;
   time_limit_minutes: number | null;
   passing_score: number;
+  use_five_point_scale: boolean; // Пятибалльная шкала (86-100→5, 71-85→4, 56-70→3, ≤55→2)
   max_attempts: number;
   shuffle_questions: boolean;
   shuffle_options: boolean;
@@ -400,6 +401,7 @@ export interface UpdateQuestionBankDTO {
 }
 
 export interface CreateQuestionDTO {
+  translation_group_id?: string | null; // Общий id для переводов одного вопроса
   bank_id: string;
   question_type: QuestionType;
   question_text: string;
@@ -437,6 +439,7 @@ export interface CreateTestTemplateDTO {
   questions_count?: number;
   time_limit_minutes?: number;
   passing_score?: number;
+  use_five_point_scale?: boolean;
   max_attempts?: number;
   shuffle_questions?: boolean;
   shuffle_options?: boolean;
@@ -458,6 +461,7 @@ export interface UpdateTestTemplateDTO {
   questions_count?: number;
   time_limit_minutes?: number;
   passing_score?: number;
+  use_five_point_scale?: boolean;
   max_attempts?: number;
   shuffle_questions?: boolean;
   shuffle_options?: boolean;

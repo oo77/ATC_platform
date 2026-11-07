@@ -113,7 +113,7 @@ const UZ_MONTHS = [
 ];
 
 /** «2026-10-08» → день «8-oktabr» и год «2026-yil» (в документе они стоят в разном порядке) */
-function uzbekDate(ymd: string): { day: string; year: string } {
+export function uzbekDate(ymd: string): { day: string; year: string } {
   const [year, month, day] = ymd.split("-").map(Number);
   return { day: `${day}-${UZ_MONTHS[(month ?? 1) - 1]}`, year: `${year}-yil` };
 }
@@ -122,22 +122,22 @@ function uzbekDate(ymd: string): { day: string; year: string } {
 // ПРАВКА XML
 // ============================================================================
 
-const TABLE_RE = /<w:tbl>[\s\S]*?<\/w:tbl>/g;
-const ROW_RE = /<w:tr(?: [^>]*)?>[\s\S]*?<\/w:tr>/g;
-const CELL_RE = /<w:tc>[\s\S]*?<\/w:tc>/g;
-const PARA_RE = /<w:p(?: [^>]*)?>[\s\S]*?<\/w:p>/g;
-const RUN_RE = /<w:r(?: [^>]*)?>[\s\S]*?<\/w:r>/g;
-const TEXT_RE = /<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g;
+export const TABLE_RE = /<w:tbl>[\s\S]*?<\/w:tbl>/g;
+export const ROW_RE = /<w:tr(?: [^>]*)?>[\s\S]*?<\/w:tr>/g;
+export const CELL_RE = /<w:tc>[\s\S]*?<\/w:tc>/g;
+export const PARA_RE = /<w:p(?: [^>]*)?>[\s\S]*?<\/w:p>/g;
+export const RUN_RE = /<w:r(?: [^>]*)?>[\s\S]*?<\/w:r>/g;
+export const TEXT_RE = /<w:t(?: [^>]*)?>([^<]*)<\/w:t>/g;
 /** Верхнего уровня: таблица целиком или абзац вне таблицы */
 const BLOCK_RE = /<w:tbl>[\s\S]*?<\/w:tbl>|<w:p(?: [^>]*)?>[\s\S]*?<\/w:p>/g;
 
-function templateError(problem: string): Error {
+export function templateError(problem: string): Error {
   return new Error(
     `Шаблон протокола (final-exam-protocol-template.docx) не соответствует ожидаемой структуре: ${problem}`,
   );
 }
 
-function escapeXml(text: string): string {
+export function escapeXml(text: string): string {
   return text
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "")
     .replace(/&/g, "&amp;")
@@ -153,18 +153,18 @@ const unescapeXml = (text: string) =>
     .replace(/&apos;/g, "'")
     .replace(/&amp;/g, "&");
 
-const textOf = (xml: string) =>
+export const textOf = (xml: string) =>
   Array.from(xml.matchAll(TEXT_RE), (m) => unescapeXml(m[1]!)).join("");
 
 /** Подпись без пробелов, знаков и регистра: «Komissiya aʼzosi,» → «komissiyaazosi» */
-const labelKey = (text: string) => text.replace(/[^a-z]/gi, "").toLowerCase();
+export const labelKey = (text: string) => text.replace(/[^a-z]/gi, "").toLowerCase();
 
 /**
  * Заменяет в абзаце фрагмент текста, найденный регулярным выражением по тексту всего
  * абзаца (в шаблоне он разбит на раны). Замена получает формат рана, в котором фрагмент
  * начинается; остальные раны и их формат не меняются.
  */
-function replaceText(p: string, pattern: RegExp, replacement: string, where: string): string {
+export function replaceText(p: string, pattern: RegExp, replacement: string, where: string): string {
   const texts = Array.from(p.matchAll(TEXT_RE), (m) => unescapeXml(m[1]!));
   const match = pattern.exec(texts.join(""));
   if (!match) throw templateError(`в «${where}» не найден текст образца`);
@@ -188,14 +188,14 @@ function replaceText(p: string, pattern: RegExp, replacement: string, where: str
 }
 
 /** Заменяет весь текст абзаца (формат — первого рана) */
-const setText = (p: string, text: string, where: string) =>
+export const setText = (p: string, text: string, where: string) =>
   replaceText(p, /^[\s\S]+$/, text, where);
 
 /**
  * Правит абзацы, текст которых подходит под test; таких абзацев должно быть ровно expected —
  * иначе шаблон изменился и подстановка попала бы не туда.
  */
-function editParagraphs(
+export function editParagraphs(
   xml: string,
   where: string,
   test: (text: string) => boolean,
@@ -215,13 +215,13 @@ function editParagraphs(
 }
 
 /** Заменяет ячейки строки (по порядку) результатом fn */
-function mapCells(row: string, fn: (cell: string, index: number) => string): string {
+export function mapCells(row: string, fn: (cell: string, index: number) => string): string {
   let i = -1;
   return row.replace(CELL_RE, (cell) => fn(cell, ++i));
 }
 
 /** Заменяет абзацы фрагмента (по порядку) результатом fn */
-function mapParagraphs(xml: string, fn: (p: string, index: number) => string): string {
+export function mapParagraphs(xml: string, fn: (p: string, index: number) => string): string {
   let i = -1;
   return xml.replace(PARA_RE, (p) => fn(p, ++i));
 }
@@ -231,7 +231,7 @@ function mapParagraphs(xml: string, fn: (p: string, index: number) => string): s
 // ============================================================================
 
 /** Шапка: подпись председателя под «TASDIQLAYMAN», дата, номер протокола, место */
-function fillHead(xml: string, form: FinalExamProtocolForm): string {
+export function fillHead(xml: string, form: FinalExamProtocolForm): string {
   const { day, year } = uzbekDate(form.date);
   const placeDateRe = /\d{4}-yil \d{1,2}-\p{L}+$/u;
 
@@ -275,7 +275,7 @@ function fillHead(xml: string, form: FinalExamProtocolForm): string {
 }
 
 /** Таблица сведений: «Raislik qiluvchi:», «Ishtirok etdilar:», «Oʻquv kursi:», «Guruh:», «Imtihon …» */
-function fillInfoTable(
+export function fillInfoTable(
   table: string,
   model: FinalExamProtocolModel,
   form: FinalExamProtocolForm,
@@ -335,10 +335,10 @@ function fillInfoTable(
   return result;
 }
 
-const COMMISSION_ROLES = ["komissiyaraisi", "komissiyaraisiorinbosari", "komissiyaazosi"];
+export const COMMISSION_ROLES = ["komissiyaraisi", "komissiyaraisiorinbosari", "komissiyaazosi"];
 
 /** Состав комиссии сверху вниз: председатель, заместитель (если есть), члены комиссии */
-function commissionOf(
+export function commissionOf(
   form: FinalExamProtocolForm,
 ): { role: string; person: FinalExamProtocolPerson }[] {
   return [
@@ -352,7 +352,7 @@ function commissionOf(
  * Текст между таблицей сведений и таблицей результатов: «Imtihon tartibi», приказ и состав
  * комиссии — по строке «роль — ФИО, должность;» на каждого (последняя заканчивается точкой).
  */
-function fillOrderOfExam(
+export function fillOrderOfExam(
   xml: string,
   model: FinalExamProtocolModel,
   form: FinalExamProtocolForm,
@@ -368,12 +368,15 @@ function fillOrderOfExam(
     "тема под «IMTIHON TARTIBI:»",
     (text) => /^«[^»]*» .* guruhi /.test(text),
     (p) =>
-      replaceText(
-        replaceText(p, /\S+(?= guruhi )/, model.groupCode, "Imtihon tartibi"),
-        /^«[^»]*»/,
-        `«${courseTitle}»`,
-        "Imtihon tartibi",
-      ),
+      form.examOrderText
+        ? // пользователь вписал текст сам — он заменяет предложение целиком
+          setText(p, form.examOrderText, "Imtihon tartibi")
+        : replaceText(
+            replaceText(p, /\S+(?= guruhi )/, model.groupCode, "Imtihon tartibi"),
+            /^«[^»]*»/,
+            `«${courseTitle}»`,
+            "Imtihon tartibi",
+          ),
   );
   middle = editParagraphs(
     middle,
@@ -400,7 +403,7 @@ function fillOrderOfExam(
     !first ||
     !last ||
     lines.map((m) => m[0]).join("") !== middle.slice(first.index, last.index + last[0].length) ||
-    COMMISSION_ROLES.some((role) => !protoOf(role))
+    commissionOf(form).some(({ role }) => !protoOf(role))
   ) {
     throw templateError(
       "ожидались идущие подряд строки «komissiya raisi —», «komissiya raisi oʻrinbosari —», «komissiya aʼzosi —»",
@@ -425,7 +428,7 @@ function fillOrderOfExam(
 }
 
 /** Таблица подписей: строка «роль, должность — (imzo) — ФИО» на каждого участника комиссии */
-function fillSignersTable(table: string, form: FinalExamProtocolForm): string {
+export function fillSignersTable(table: string, form: FinalExamProtocolForm): string {
   const rows = table.match(ROW_RE) ?? [];
   const roleOf = (row: string) => labelKey(textOf(row.match(PARA_RE)?.[0] ?? ""));
   const protoOf = (role: string) => rows.find((row) => roleOf(row) === role);
@@ -435,7 +438,7 @@ function fillSignersTable(table: string, form: FinalExamProtocolForm): string {
     !firstRow ||
     !lastRow ||
     rows.some((row) => !COMMISSION_ROLES.includes(roleOf(row))) ||
-    COMMISSION_ROLES.some((role) => !protoOf(role))
+    commissionOf(form).some(({ role }) => !protoOf(role))
   ) {
     throw templateError(
       "в таблице подписей ожидались строки «Komissiya raisi,», «Komissiya raisi oʻrinbosari,», «Komissiya aʼzosi,»",
@@ -736,7 +739,7 @@ function withBodySize(xml: string, halfPt: number): string {
  * свободное место образца, её основной кегль уменьшается. Высоты считаются одним и тем же
  * способом для образца и для результата, так что его погрешность на сравнении не сказывается.
  */
-function fitFirstPage(templateXml: string, filledXml: string): string {
+export function fitFirstPage(templateXml: string, filledXml: string): string {
   const roomPt = blocksHeight(templateXml, BODY_HALF_PT) + FIRST_PAGE_SLACK_PT;
   const halfPt =
     FIRST_PAGE_HALF_PTS.find((size) => blocksHeight(filledXml, size) <= roomPt) ??
@@ -755,7 +758,7 @@ const isSecondPageStart = (text: string) => text.startsWith("Imtihon tasdiqlanga
  * Начало второй страницы: «…Tinglovchilarning shaxsi … aniqlandi; imtihon jarayoni videoyozuvga
  * olindi.» — слова о видеозаписи остаются, только если она велась
  */
-function fillSecondPageStart(xml: string, form: FinalExamProtocolForm): string {
+export function fillSecondPageStart(xml: string, form: FinalExamProtocolForm): string {
   if (form.videoRecorded) return xml;
   return editParagraphs(xml, "Imtihon tasdiqlangan jadval…", isSecondPageStart, (p) =>
     replaceText(
@@ -768,7 +771,7 @@ function fillSecondPageStart(xml: string, form: FinalExamProtocolForm): string {
 }
 
 /** Делит текст между таблицами сведений и результатов на конец первой страницы и начало второй */
-function splitAtSecondPage(xml: string): [firstPage: string, secondPage: string] {
+export function splitAtSecondPage(xml: string): [firstPage: string, secondPage: string] {
   const start = Array.from(xml.matchAll(PARA_RE)).find((m) => isSecondPageStart(textOf(m[0])));
   if (!start) throw templateError("не найден абзац «Imtihon tasdiqlangan jadval…»");
   return [xml.slice(0, start.index), xml.slice(start.index)];

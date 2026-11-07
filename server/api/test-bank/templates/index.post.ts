@@ -34,6 +34,7 @@ export default defineEventHandler(async (event) => {
             questions_count: body.questions_count || null,
             time_limit_minutes: body.time_limit_minutes || 0,
             passing_score: body.passing_score || 70,
+            use_five_point_scale: body.use_five_point_scale ?? false,
             max_attempts: body.max_attempts || 3,
             shuffle_questions: body.shuffle_questions ?? false,
             shuffle_options: body.shuffle_options ?? false,

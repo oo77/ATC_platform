@@ -27,6 +27,7 @@ export default defineEventHandler(async (event) => {
           time_limit_minutes: template.time_limit_minutes,
           passing_score: template.passing_score,
           allow_back: template.allow_back,
+          use_five_point_scale: template.use_five_point_scale,
         };
       }
     }
@@ -88,6 +89,7 @@ export default defineEventHandler(async (event) => {
         completed_at: session.completedAt,
         time_spent_seconds: session.timeSpentSeconds,
         template_name: templateSettings?.name,
+        use_five_point_scale: templateSettings?.use_five_point_scale ?? false,
         ...(session.status === "completed"
           ? {
               total_points: session.totalPoints,

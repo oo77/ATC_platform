@@ -765,6 +765,16 @@
       @submit="downloadEvaluationSheets"
     />
 
+    <!-- Состав комиссии для оценочных листов (тест): председатель и члены, без заместителя -->
+    <GroupsEvaluationSheetsModal
+      :is-open="showEvaluationSheetsTestModal"
+      title="Оценочные листы (тест) — состав комиссии"
+      :show-deputy="false"
+      :loading="generatingEvaluationSheetsTest"
+      @close="showEvaluationSheetsTestModal = false"
+      @submit="downloadEvaluationSheetsTest"
+    />
+
     <!-- Данные протокола итогового экзамена -->
     <GroupsFinalExamProtocolModal
       v-if="group"
@@ -773,6 +783,25 @@
       :loading="generatingFinalExamProtocol"
       @close="showFinalExamProtocolModal = false"
       @submit="downloadFinalExamProtocol"
+    />
+
+    <!-- Данные протокола итогового экзамена (тест) -->
+    <GroupsFinalExamProtocolTestModal
+      v-if="group"
+      :is-open="showFinalExamProtocolTestModal"
+      :group-id="group.id"
+      :loading="generatingFinalExamProtocolTest"
+      @close="showFinalExamProtocolTestModal = false"
+      @submit="downloadFinalExamProtocolTest"
+    />
+
+    <!-- Данные ведомости практических работ -->
+    <GroupsPracticalSkillsSheetModal
+      v-if="group"
+      :is-open="showPracticalSkillsModal"
+      :loading="generatingPracticalSkills"
+      @close="showPracticalSkillsModal = false"
+      @submit="downloadPracticalSkillsSheet"
     />
 
     <!-- Блок подписей ведомости контроля знаний: шаблон или экзаменатор-инструктор -->
@@ -957,6 +986,7 @@ import {
 } from "lucide-vue-next";
 import type { StudyGroup } from "~/types/group";
 import type { EvaluationSheetsCommission } from "../../../../shared/utils/evaluationSheets";
+import type { PracticalSkillsSheetForm } from "../../../../shared/utils/practicalSkillsSheet";
 import type { FinalExamProtocolForm } from "../../../../shared/utils/finalExamProtocol";
 import type { RegistryForm } from "../../../../shared/utils/registry";
 
@@ -1014,8 +1044,14 @@ const generatingEmptyJournal = ref(false); // Состояние генерац�
 const showEmptyJournalModal = ref(false); // Форма выбора инструкторов и формата журнала
 const generatingEvaluationSheets = ref(false); // Состояние генерации оценочных листов
 const showEvaluationSheetsModal = ref(false); // Форма состава комиссии перед скачиванием листов
+const generatingEvaluationSheetsTest = ref(false); // Состояние генерации оценочных листов (тест)
+const showEvaluationSheetsTestModal = ref(false); // Форма состава комиссии для листов (тест)
 const generatingFinalExamProtocol = ref(false); // Состояние генерации протокола экзамена
+const generatingPracticalSkills = ref(false); // Состояние генерации ведомости практических работ
+const showPracticalSkillsModal = ref(false); // Форма данных ведомости практических работ
 const showFinalExamProtocolModal = ref(false); // Форма данных протокола перед скачиванием
+const generatingFinalExamProtocolTest = ref(false); // Состояние генерации протокола экзамена (тест)
+const showFinalExamProtocolTestModal = ref(false); // Форма данных протокола (тест) перед скачиванием
 const generatingAssessmentSheet = ref(false); // Состояние генерации ведомости контроля знаний
 const showAssessmentSheetModal = ref(false); // Форма блока подписей и формата ведомости
 const generatingRegistry = ref(false); // Состояние генерации реестра
@@ -1025,6 +1061,7 @@ const showAcquaintanceSheetModal = ref(false); // Выбор инструкто�
 const generatingQuestionnaire = ref(false); // Состояние генерации обезличенного вопросника
 const showQuestionnaireModal = ref(false); // Форма вопросника: место, дата, инструктор
 const generatingGroupList = ref(false); // Состояние генерации списка группы
+const generatingGroupSchedule = ref(false); // Состояние генерации расписания группы
 
 // Состояния для просмотра и удаления документов
 const showPreviewModal = ref(false);
@@ -1711,6 +1748,67 @@ const downloadEvaluationSheets = async (
   }
 };
 
+// Оценочные листы (тест): оценка и дата сдачи подставляются сервером из результатов тестов группы,
+// состав комиссии (председатель и члены) пользователь заполняет в форме
+const downloadEvaluationSheetsTest = async (
+  commission: EvaluationSheetsCommission,
+) => {
+  if (generatingEvaluationSheetsTest.value || !group.value) return;
+
+  try {
+    generatingEvaluationSheetsTest.value = true;
+
+    if (!group.value.students?.length) {
+      toast.error("В группе нет студентов");
+      return;
+    }
+
+    const blob = await authFetch<Blob>(
+      `/api/groups/${group.value.id}/evaluation-sheets-test`,
+      {
+        method: "POST",
+        body: { chairman: commission.chairman, members: commission.members },
+        responseType: "blob",
+      },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${group.value.code} Оценочные листы (тест).docx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "evaluation_sheets_test",
+          format: "docx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+    }
+
+    showEvaluationSheetsTestModal.value = false;
+    toast.success("Оценочные листы (тест) успешно сформированы (DOCX)");
+  } catch (error: any) {
+    console.error("Error generating evaluation sheets (test):", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания оценочных листов"
+        : "Ошибка при формировании оценочных листов (тест)",
+    );
+  } finally {
+    generatingEvaluationSheetsTest.value = false;
+  }
+};
+
 // Функция для скачивания протокола итогового экзамена (Bayonnoma) со списком слушателей.
 // Дату, номер, сведения об экзамене и состав комиссии пользователь заполняет в форме
 // (GroupsFinalExamProtocolModal)
@@ -1768,6 +1866,119 @@ const downloadFinalExamProtocol = async (protocol: FinalExamProtocolForm) => {
     );
   } finally {
     generatingFinalExamProtocol.value = false;
+  }
+};
+
+// Ведомость практических работ (Amaliy koʻnikmalarni tekshirish QAYDNOMASI): по странице на
+// слушателя. Службу, дату, время и комиссию пользователь заполняет в форме
+// (GroupsPracticalSkillsSheetModal)
+const downloadPracticalSkillsSheet = async (sheet: PracticalSkillsSheetForm) => {
+  if (generatingPracticalSkills.value || !group.value) return;
+
+  try {
+    generatingPracticalSkills.value = true;
+
+    if (!group.value.students?.length) {
+      toast.error("В группе нет студентов");
+      return;
+    }
+
+    const blob = await authFetch<Blob>(
+      `/api/groups/${group.value.id}/practical-skills-sheet`,
+      { method: "POST", body: sheet, responseType: "blob" },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Amaliy_qaydnoma_${group.value.code}.docx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "practical_skills_sheet",
+          format: "docx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+    }
+
+    showPracticalSkillsModal.value = false;
+    toast.success("Ведомость практических работ успешно сформирована (DOCX)");
+  } catch (error: any) {
+    console.error("Error generating practical skills sheet:", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания ведомости практических работ"
+        : "Ошибка при формировании ведомости практических работ",
+    );
+  } finally {
+    generatingPracticalSkills.value = false;
+  }
+};
+
+// Протокол итогового экзамена-теста (Bayonnoma): баллы, оценки и итоговые числа сервер берёт
+// из результатов тестов группы, остальное пользователь заполняет в форме
+// (GroupsFinalExamProtocolTestModal)
+const downloadFinalExamProtocolTest = async (protocol: FinalExamProtocolForm) => {
+  if (generatingFinalExamProtocolTest.value || !group.value) return;
+
+  try {
+    generatingFinalExamProtocolTest.value = true;
+
+    if (!group.value.students?.length) {
+      toast.error("В группе нет студентов");
+      return;
+    }
+
+    const blob = await authFetch<Blob>(
+      `/api/groups/${group.value.id}/final-exam-protocol-test`,
+      { method: "POST", body: protocol, responseType: "blob" },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    // Как у образца: «Bayonnoma_AX-26-18_AB-SAB-01PK_test.docx»
+    link.download = `Bayonnoma_${protocol.number.replace(/[\\/:*?"<>|]/g, "_")}_${group.value.code}_test.docx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "final_exam_protocol_test",
+          format: "docx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+    }
+
+    showFinalExamProtocolTestModal.value = false;
+    toast.success("Протокол экзамена (тест) успешно сформирован (DOCX)");
+  } catch (error: any) {
+    console.error("Error generating final exam protocol (test):", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания протокола экзамена"
+        : "Ошибка при формировании протокола экзамена (тест)",
+    );
+  } finally {
+    generatingFinalExamProtocolTest.value = false;
   }
 };
 
@@ -1994,6 +2205,57 @@ const downloadGroupList = async () => {
     );
   } finally {
     generatingGroupList.value = false;
+  }
+};
+
+// «Расписание группы» — Excel со всеми занятиями группы (все инструкторы), как расписание
+// инструктора, но без фильтра по нему
+const downloadGroupSchedule = async () => {
+  if (generatingGroupSchedule.value || !group.value) return;
+
+  try {
+    generatingGroupSchedule.value = true;
+
+    const blob = await authFetch<Blob>(
+      `/api/groups/${group.value.id}/schedule-export`,
+      { responseType: "blob" },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Расписание ${group.value.code}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "group_schedule",
+          format: "xlsx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+    }
+
+    toast.success("Расписание группы успешно сформировано (XLSX)");
+  } catch (error: any) {
+    console.error("Error generating group schedule:", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания расписания группы"
+        : error?.statusCode === 404
+          ? "В расписании группы нет занятий"
+          : "Ошибка при формировании расписания группы",
+    );
+  } finally {
+    generatingGroupSchedule.value = false;
   }
 };
 
@@ -2229,6 +2491,7 @@ const documentGroups = computed(() => [
   {
     label: "Ход обучения",
     items: [
+      { key: "groupSchedule", label: "Расписание группы", icon: FileText, loading: generatingGroupSchedule.value },
       { key: "emptyJournal", label: "Пустой журнал", icon: FileText, loading: generatingEmptyJournal.value },
     ],
   },
@@ -2236,8 +2499,11 @@ const documentGroups = computed(() => [
     label: "Аттестация",
     items: [
       { key: "assessment", label: "Ведомость контроля", icon: FileText, loading: generatingAssessmentSheet.value },
-      { key: "evaluation", label: "Оценочные листы", icon: FileText, loading: generatingEvaluationSheets.value },
-      { key: "protocol", label: "Протокол экзамена", icon: FileText, loading: generatingFinalExamProtocol.value },
+      { key: "practical", label: "Ведомость практ. работ", icon: FileText, loading: generatingPracticalSkills.value },
+      { key: "evaluation", label: "Оценочные листы (устный)", icon: FileText, loading: generatingEvaluationSheets.value },
+      { key: "evaluationTest", label: "Оценочные листы (тест)", icon: FileText, loading: generatingEvaluationSheetsTest.value },
+      { key: "protocol", label: "Протокол экзамена (устный)", icon: FileText, loading: generatingFinalExamProtocol.value },
+      { key: "protocolTest", label: "Протокол экзамена (тест)", icon: FileText, loading: generatingFinalExamProtocolTest.value },
     ],
   },
   {
@@ -2260,17 +2526,29 @@ const handleDocumentSelect = (key: string) => {
     case "acquaintance":
       showAcquaintanceSheetModal.value = true;
       break;
+    case "groupSchedule":
+      downloadGroupSchedule();
+      break;
     case "emptyJournal":
       showEmptyJournalModal.value = true;
       break;
     case "assessment":
       showAssessmentSheetModal.value = true;
       break;
+    case "practical":
+      showPracticalSkillsModal.value = true;
+      break;
     case "evaluation":
       showEvaluationSheetsModal.value = true;
       break;
+    case "evaluationTest":
+      showEvaluationSheetsTestModal.value = true;
+      break;
     case "protocol":
       showFinalExamProtocolModal.value = true;
+      break;
+    case "protocolTest":
+      showFinalExamProtocolTestModal.value = true;
       break;
     case "questionnaire":
       showQuestionnaireModal.value = true;

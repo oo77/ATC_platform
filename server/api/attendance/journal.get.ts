@@ -43,6 +43,11 @@ interface JournalCell {
     isFromTest: boolean;
     isModified: boolean;
     originalGrade: number | null;
+    // Результат теста, из которого взята оценка
+    testScorePercent?: number | null;
+    testTotalPoints?: number | null;
+    testMaxPoints?: number | null;
+    fivePointScale?: boolean;
   };
   isHidden?: boolean;
 }
@@ -179,6 +184,10 @@ export default defineEventHandler(async (event) => {
                 isFromTest: grade.isFromTest,
                 isModified: grade.isModified,
                 originalGrade: grade.originalGrade,
+                testScorePercent: grade.testScorePercent ?? null,
+                testTotalPoints: grade.testTotalPoints ?? null,
+                testMaxPoints: grade.testMaxPoints ?? null,
+                fivePointScale: grade.testFivePointScale ?? false,
               }
             : undefined,
           isHidden: false,

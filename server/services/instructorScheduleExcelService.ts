@@ -3,6 +3,9 @@
  * которые инструктор ведёт в этой группе. Оформление повторяет лист группы из эталонной книги
  * (шапка курса, таблица «Дата / День недели / Пара / Время / Название дисциплины / Тип /
  * Аудитория / Инструктор», подпись специалиста), шрифт Montserrat.
+ *
+ * Тот же лист строится и для всей группы (без фильтра по инструктору) — «Расписание группы»
+ * на странице группы: instructorId = null в loadInstructorScheduleModel.
  */
 
 import ExcelJS from "exceljs";
@@ -116,8 +119,9 @@ interface GroupMetaRow extends RowDataPacket {
   instructor_name: string | null;
 }
 
+/** instructorId = null — расписание всей группы: занятия всех инструкторов */
 export async function loadInstructorScheduleModel(
-  instructorId: string,
+  instructorId: string | null,
   groupId: string,
 ): Promise<InstructorScheduleModel | null> {
   const [meta] = await executeQuery<GroupMetaRow[]>(
@@ -132,12 +136,34 @@ export async function loadInstructorScheduleModel(
   if (!meta) return null;
 
   const [events, periods] = await Promise.all([
-    getScheduleEvents({ groupId, instructorId }),
+    getScheduleEvents(instructorId ? { groupId, instructorId } : { groupId }),
     getSchedulePeriods(true),
   ]);
 
-  const timed = events.filter((e) => !e.isAllDay);
+  // Расписание всей группы: без пересдач (занятий, открытых только отдельным слушателям),
+  // инструктор — русское сокращённое ФИО (instructors.short_name_ru), если оно задано
+  const groupWide = instructorId === null;
+  const timed = events.filter(
+    (e) => !e.isAllDay && !(groupWide && e.allowedStudentIds && e.allowedStudentIds.length > 0),
+  );
   periods.sort((a, b) => a.periodNumber - b.periodNumber);
+
+  const shortNamesRu = new Map<string, string>();
+  const instructorIds = [
+    ...new Set(timed.map((e) => e.instructorId).filter((id): id is string => !!id)),
+  ];
+  if (groupWide && instructorIds.length > 0) {
+    const rows = await executeQuery<(RowDataPacket & { id: string; short_name_ru: string | null })[]>(
+      `SELECT id, short_name_ru FROM instructors WHERE id IN (${instructorIds.map(() => "?").join(",")})`,
+      instructorIds,
+    );
+    for (const row of rows) {
+      const name = row.short_name_ru?.replace(/\s+/g, " ").trim();
+      if (name) shortNamesRu.set(row.id, name);
+    }
+  }
+  const instructorLabel = (ev: ScheduleEvent) =>
+    (ev.instructorId && shortNamesRu.get(ev.instructorId)) || shortName(ev.instructor?.fullName);
 
   // Событие → номера академических часов, которые оно занимает
   const placed = timed.map((event) => {
@@ -173,7 +199,12 @@ export async function loadInstructorScheduleModel(
   const days: InstructorScheduleDay[] = [...byDay.keys()].sort().map((key) => {
     const dayEvents = byDay.get(key)!;
     const first = dayEvents[0]!.start;
-    const rows: InstructorScheduleRow[] = grid.map((period) => {
+    // У группы сетка дня — до последней занятой пары этого дня (в день три пары — четвёртой
+    // пустой нет); у инструктора — общая, как раньше
+    const dayMax = dayEvents.reduce((m, p) => Math.max(m, ...p.periodNumbers, 0), 0);
+    const dayLimit = dayMax % 2 === 0 ? dayMax : dayMax + 1;
+    const dayGrid = groupWide ? periods.filter((p) => p.periodNumber <= dayLimit) : grid;
+    const rows: InstructorScheduleRow[] = dayGrid.map((period) => {
       const hit = dayEvents.find((p) => p.periodNumbers.includes(period.periodNumber));
       const ev: ScheduleEvent | undefined = hit?.event;
       return {
@@ -182,7 +213,7 @@ export async function loadInstructorScheduleModel(
         discipline: ev ? ev.discipline?.name || ev.title : "",
         type: ev ? TYPE_LABELS[ev.eventType] || "" : "",
         classroom: ev?.classroom?.name || "",
-        instructor: ev ? shortName(ev.instructor?.fullName) : "",
+        instructor: ev ? (groupWide ? instructorLabel(ev) : shortName(ev.instructor?.fullName)) : "",
       };
     });
     return {
@@ -256,7 +287,7 @@ export async function buildInstructorScheduleWorkbook(
   model: InstructorScheduleModel,
 ): Promise<Buffer> {
   if (model.days.length === 0) {
-    throw new Error("У инструктора нет занятий в этой группе");
+    throw new Error("В расписании нет занятий");
   }
 
   const wb = new ExcelJS.Workbook();

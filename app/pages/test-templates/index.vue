@@ -130,7 +130,7 @@
                 <span v-else class="text-gray-400">—</span>
               </td>
               <td class="px-4 py-3 text-center align-middle">
-                <span class="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ template.passing_score }}%</span>
+                <span class="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ template.use_five_point_scale ? 'оценка 4+' : template.passing_score + '%' }}</span>
               </td>
               <td class="px-4 py-3 align-middle">
                 <div class="flex items-center justify-center gap-1">
@@ -307,7 +307,7 @@
               <p class="mt-1 text-xs text-gray-400">0 = без лимита</p>
             </div>
 
-            <div>
+            <div v-if="!form.use_five_point_scale">
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Проходной балл
               </label>
@@ -373,6 +373,22 @@
                 </select>
                 <ChevronDown class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Пятибалльная шкала оценок
+              </label>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input v-model="form.use_five_point_scale" type="checkbox" class="sr-only peer" />
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                  {{ form.use_five_point_scale ? 'Включена' : 'Выключена' }}
+                </span>
+              </label>
+              <p v-if="form.use_five_point_scale" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                1 балл за правильный ответ. 86–100 → 5 (отлично), 71–85 → 4 (хорошо), 56–70 → 3 (удовлетворительно), 55 и менее → 2 (неудовлетворительно). Тест сдан при оценке 4 и выше; «Проходной балл» игнорируется.
+              </p>
             </div>
 
             <div>
@@ -600,6 +616,7 @@ const form = ref({
   description: '',
   time_limit_minutes: 0,
   passing_score: 70,
+  use_five_point_scale: false,
   max_attempts: 3,
   is_active: true,
   questions_mode: 'all',
@@ -711,6 +728,7 @@ const openCreateModal = () => {
     description: '',
     time_limit_minutes: 0,
     passing_score: 70,
+    use_five_point_scale: false,
     max_attempts: 3,
     is_active: true,
     questions_mode: 'all',
@@ -735,6 +753,7 @@ const openEditModal = (template) => {
     description: template.description || '',
     time_limit_minutes: template.time_limit_minutes || 0,
     passing_score: template.passing_score || 70,
+    use_five_point_scale: !!template.use_five_point_scale,
     max_attempts: template.max_attempts || 3,
     is_active: template.is_active,
     questions_mode: template.questions_mode || 'all',
@@ -797,6 +816,7 @@ const saveTemplate = async () => {
       description: form.value.description.trim() || undefined,
       time_limit_minutes: form.value.time_limit_minutes || 0,
       passing_score: form.value.passing_score || 70,
+      use_five_point_scale: !!form.value.use_five_point_scale,
       max_attempts: form.value.max_attempts || 3,
       is_active: form.value.is_active,
       questions_mode: form.value.questions_mode || 'all',

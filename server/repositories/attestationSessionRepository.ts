@@ -359,7 +359,7 @@ export async function saveAnswer(
   };
 }
 
-export async function calculateSessionResults(sessionId: string, passingScore: number) {
+export async function calculateSessionResults(sessionId: string, passingScore: number, useFivePointScale = false) {
   const session = await getSessionById(sessionId);
   if (!session) throw new Error("Session not found");
 
@@ -386,8 +386,11 @@ export async function calculateSessionResults(sessionId: string, passingScore: n
   }
 
   const scorePercent = maxPoints > 0 ? (totalPoints / maxPoints) * 100 : 0;
-  const passed = scorePercent >= passingScore;
-  const grade = Math.round(scorePercent);
+  // Пятибалльная шкала: 86–100 → 5, 71–85 → 4, 56–70 → 3, ≤55 → 2
+  const grade = useFivePointScale
+    ? (scorePercent >= 86 ? 5 : scorePercent >= 71 ? 4 : scorePercent >= 56 ? 3 : 2)
+    : Math.round(scorePercent);
+  const passed = useFivePointScale ? grade >= 4 : scorePercent >= passingScore;
   const timeSpentSeconds = session.startedAt
     ? Math.floor((new Date().getTime() - new Date(session.startedAt).getTime()) / 1000)
     : 0;

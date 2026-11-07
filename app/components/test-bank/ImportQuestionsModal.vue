@@ -26,6 +26,8 @@
                   <th class="px-2 py-1 text-left font-medium text-gray-600 dark:text-gray-400">Правильный</th>
                   <th class="px-2 py-1 text-left font-medium text-gray-600 dark:text-gray-400">Баллы</th>
                   <th class="px-2 py-1 text-left font-medium text-gray-600 dark:text-gray-400">Сложность</th>
+                  <th class="px-2 py-1 text-left font-medium text-gray-600 dark:text-gray-400">Язык</th>
+                  <th class="px-2 py-1 text-left font-medium text-gray-600 dark:text-gray-400">Группа</th>
                 </tr>
               </thead>
               <tbody class="text-gray-500 dark:text-gray-400">
@@ -38,6 +40,8 @@
                   <td class="px-2 py-1">A</td>
                   <td class="px-2 py-1">1</td>
                   <td class="px-2 py-1">easy</td>
+                  <td class="px-2 py-1">ru</td>
+                  <td class="px-2 py-1">1</td>
                 </tr>
               </tbody>
             </table>
@@ -48,6 +52,7 @@
             <p><strong>Сложность:</strong> easy, medium или hard (необязательно, по умолчанию medium)</p>
             <p><strong>Баллы:</strong> число от 1 до 100 (необязательно, по умолчанию 1)</p>
             <p><strong>Язык:</strong> ru, uz или en (необязательно, по умолчанию язык, выбранный ниже)</p>
+            <p><strong>Группа:</strong> номер (1, 2, 3…), необязательно. Вопросы с одним номером на разных языках связываются как переводы друг друга, и студент сможет переключать язык во время теста. Номера действуют в пределах банка: языки можно загружать разными файлами, главное — одинаковые номера групп. Порядок вариантов и правильный ответ в связанных вопросах должны совпадать.</p>
           </div>
 
           <!-- Язык по умолчанию -->
@@ -169,6 +174,7 @@
                 <th class="px-4 py-2 text-left font-medium text-gray-600 dark:text-gray-400 w-8">#</th>
                 <th class="px-4 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Вопрос</th>
                 <th class="px-4 py-2 text-center font-medium text-gray-600 dark:text-gray-400 w-16">Язык</th>
+                <th class="px-4 py-2 text-center font-medium text-gray-600 dark:text-gray-400 w-16">Группа</th>
                 <th class="px-4 py-2 text-center font-medium text-gray-600 dark:text-gray-400 w-24">Вариантов</th>
                 <th class="px-4 py-2 text-center font-medium text-gray-600 dark:text-gray-400 w-20">Ответ</th>
                 <th class="px-4 py-2 text-center font-medium text-gray-600 dark:text-gray-400 w-20">Статус</th>
@@ -190,6 +196,7 @@
                     {{ languageFlags[q.language] }}
                   </span>
                 </td>
+                <td class="px-4 py-2 text-center text-gray-600 dark:text-gray-400">{{ q.group || '—' }}</td>
                 <td class="px-4 py-2 text-center text-gray-600 dark:text-gray-400">
                   {{ q.optionsCount || 0 }}
                 </td>
@@ -428,9 +435,10 @@ const parseFile = async () => {
     // Пропускаем заголовок
     const dataRows = rows.slice(1);
     
-    parsedQuestions.value = dataRows.map((row, index) => {
-      return parseRow(row, index + 2);
-    });
+    parsedQuestions.value = dataRows
+      .map((row, index) => parseRow(row, index + 2))
+      .filter((q) => q.question_text || q.optionA || q.optionB); // пропускаем пустые строки
+    validateGroups(parsedQuestions.value);
 
     if (parsedQuestions.value.length === 0) {
       fileError.value = 'Не найдено вопросов для импорта';
@@ -443,6 +451,32 @@ const parseFile = async () => {
     fileError.value = 'Ошибка чтения файла. Убедитесь, что файл не повреждён';
   } finally {
     parsing.value = false;
+  }
+};
+
+// Проверка групп переводов: один язык на группу и совпадающие варианты/правильный ответ
+const validateGroups = (list) => {
+  const groups = new Map();
+  for (const q of list) {
+    if (!q.valid || !q.group) continue;
+    if (!groups.has(q.group)) groups.set(q.group, []);
+    groups.get(q.group).push(q);
+  }
+  for (const [group, items] of groups) {
+    const first = items[0];
+    const seen = new Set();
+    for (const q of items) {
+      if (seen.has(q.language)) {
+        q.valid = false;
+        q.error = `В группе ${group} уже есть вопрос на языке ${q.language.toUpperCase()}`;
+        continue;
+      }
+      seen.add(q.language);
+      if (q !== first && (q.correctAnswer !== first.correctAnswer || q.optionsCount !== first.optionsCount)) {
+        q.valid = false;
+        q.error = `Группа ${group}: число вариантов или правильный ответ не совпадает с первым вопросом группы (строка ${first.rowNumber})`;
+      }
+    }
   }
 };
 
@@ -472,6 +506,7 @@ const parseRow = (row, rowNumber) => {
     points: parseInt(row[6]) || 1,
     difficulty: String(row[7] || 'medium').trim().toLowerCase(),
     language: lang,
+    group: String(row[9] ?? '').trim(),
     valid: true,
     error: '',
     optionsCount: 0,
@@ -542,6 +577,7 @@ const importQuestions = async () => {
         question_text: q.question_text,
         options: { options },
         language: q.language,
+        group: q.group || null,
         points: q.points,
         difficulty: q.difficulty,
         is_active: true,
@@ -587,10 +623,10 @@ const importQuestions = async () => {
 // Скачивание шаблона
 const downloadTemplate = () => {
   const templateData = [
-    ['Вопрос', 'Вариант A', 'Вариант B', 'Вариант C', 'Вариант D', 'Правильный', 'Баллы', 'Сложность', 'Язык'],
-    ['Что такое СИЗ?', 'Средства индивидуальной защиты', 'Система измерения защиты', 'Специальная инструкция защиты', 'Стандарт измерения защиты', 'A', 1, 'easy', 'ru'],
+    ['Вопрос', 'Вариант A', 'Вариант B', 'Вариант C', 'Вариант D', 'Правильный', 'Баллы', 'Сложность', 'Язык', 'Группа'],
+    ['Что такое СИЗ?', 'Средства индивидуальной защиты', 'Система измерения защиты', 'Специальная инструкция защиты', 'Стандарт измерения защиты', 'A', 1, 'easy', 'ru', 1],
     ['Какой огнетушитель используется при пожаре класса E?', 'Водный', 'Порошковый', 'Углекислотный', 'Пенный', 'C', 2, 'medium', 'ru'],
-    ['Xavfsizlik texnikasi nima?', 'Ishlab chiqarishda xavfsizlik qoidalari', 'Texnik xizmat ko\'rsatish', 'Sifat nazorati', 'Ishlab chiqarish rejasi', 'A', 1, 'easy', 'uz'],
+    ['Xavfsizlik texnikasi nima?', 'Ishlab chiqarishda xavfsizlik qoidalari', 'Texnik xizmat ko\'rsatish', 'Sifat nazorati', 'Ishlab chiqarish rejasi', 'A', 1, 'easy', 'uz', 1],
   ];
 
   const ws = XLSX.utils.aoa_to_sheet(templateData);
@@ -608,6 +644,7 @@ const downloadTemplate = () => {
     { wch: 8 },  // Баллы
     { wch: 12 }, // Сложность
     { wch: 8 },  // Язык
+    { wch: 8 },  // Группа
   ];
 
   XLSX.writeFile(wb, 'questions_template.xlsx');

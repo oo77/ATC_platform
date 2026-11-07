@@ -177,6 +177,23 @@
             Скачать все ({{ issuedCertificateIds.length }})
           </UiButton>
 
+          <!-- Перерисовать выданные PDF по текущей версии их шаблонов (номер и дата не меняются) -->
+          <UiButton
+            @click="regenerateAllCertificates"
+            :disabled="issuedCertificateIds.length === 0 || regenerating || certIssueStore.isIssuing.value"
+            variant="outline"
+            :loading="regenerating"
+            :start-icon="RefreshCw"
+            title="Перерисовать PDF выданных сертификатов по текущей версии их шаблонов. Номер, дата выдачи и срок не меняются."
+          >
+            <template v-if="regenerating">
+              Обновление {{ regenerateProgress }}/{{ issuedCertificateIds.length }}
+            </template>
+            <template v-else>
+              Обновить по шаблонам ({{ issuedCertificateIds.length }})
+            </template>
+          </UiButton>
+
           <!-- Ведомость: UiDropdown вместо самописного меню (клик-вне, Esc, клавиатура); пункты блокируются, пока нет данных или идёт генерация -->
           <UiDropdown
             :label="generatingPdf ? 'Генерация...' : 'Ведомость'"
@@ -452,6 +469,7 @@ import {
   XCircle as XCircleIcon,
   Loader2,
   Play,
+  RefreshCw,
 } from "lucide-vue-next";
 import type {
   CertificateTemplate,
@@ -981,6 +999,58 @@ const downloadAllCertificates = async () => {
     );
   } finally {
     downloadingArchive.value = false;
+  }
+};
+
+// Перегенерация PDF всех выданных сертификатов группы по текущей версии их
+// шаблонов (шаблон каждого сертификата — тот, что выбрали при выдаче).
+// По одному запросу на сертификат, чтобы не упереться в таймаут
+const regenerating = ref(false);
+const regenerateProgress = ref(0);
+
+const regenerateAllCertificates = async () => {
+  const ids = [...issuedCertificateIds.value];
+  if (regenerating.value || ids.length === 0) return;
+
+  const ok = window.confirm(
+    `Перерисовать ${ids.length} выданных сертификатов по текущей версии их шаблонов?\n\n` +
+      "Номера, даты выдачи и сроки действия не изменятся, PDF-файлы будут заменены. " +
+      "Данные слушателей (ФИО, организация) возьмутся актуальные.",
+  );
+  if (!ok) return;
+
+  regenerating.value = true;
+  regenerateProgress.value = 0;
+  const failed: string[] = [];
+
+  try {
+    for (const id of ids) {
+      try {
+        await authFetch(`/api/certificates/${id}/regenerate`, {
+          method: "POST",
+          // Для старых сертификатов, где инструктор не сохранён
+          body: { instructorId: selectedInstructorId.value },
+        });
+      } catch (error: any) {
+        const row = journal.value.find((r) => r.certificate?.id === id);
+        failed.push(
+          `${row?.student.fullName || id}: ${error?.data?.message || error.message || "ошибка"}`,
+        );
+      }
+      regenerateProgress.value++;
+    }
+
+    if (failed.length === 0) {
+      showSuccess(`Обновлено сертификатов: ${ids.length}`);
+    } else {
+      console.error("[Regenerate] Ошибки:", failed);
+      showError(
+        `Обновлено ${ids.length - failed.length} из ${ids.length}. Ошибки: ${failed.slice(0, 3).join("; ")}${failed.length > 3 ? "…" : ""}`,
+      );
+    }
+    await loadData();
+  } finally {
+    regenerating.value = false;
   }
 };
 

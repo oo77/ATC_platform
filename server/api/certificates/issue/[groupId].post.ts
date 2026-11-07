@@ -333,6 +333,7 @@ export default defineEventHandler(async (event) => {
             issueDateEn: resolveVariable("certificate.issueDateEn", context),
             theoryDate: resolveVariable("certificate.theoryDate", context),
             practiceDate: resolveVariable("certificate.practiceDate", context),
+            instructorId: instructor?.id || "",
           },
           warnings:
             eligibility.warnings.length > 0 ? eligibility.warnings : undefined,

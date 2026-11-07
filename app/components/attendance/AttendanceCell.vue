@@ -60,6 +60,16 @@
           title="Оценка была изменена"
         ></span>
       </button>
+
+      <!-- Баллы, на которые сдан тест (под оценкой по пятибалльной шкале) -->
+      <span
+        v-if="testPointsDisplay"
+        class="text-[10px] leading-none font-medium tabular-nums"
+        :class="gradeTextClass"
+        :title="testPointsTooltip"
+      >
+        {{ testPointsDisplay }}
+      </span>
     </div>
 
     <!-- Ячейка только для посещаемости -->
@@ -337,6 +347,11 @@ interface JournalCell {
     isFromTest?: boolean;
     isModified?: boolean;
     originalGrade?: number | null;
+    // Результат теста, из которого взята оценка
+    testScorePercent?: number | null;
+    testTotalPoints?: number | null;
+    testMaxPoints?: number | null;
+    fivePointScale?: boolean;
   };
   isHidden?: boolean;
 }
@@ -450,15 +465,52 @@ const gradeButtonClass = computed(() => {
     return "bg-purple-200 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 hover:bg-purple-300 dark:hover:bg-purple-800/50 ring-1 ring-purple-400";
   }
 
+  // Пятибалльная шкала: 4 и выше — сдано (зелёный), 3 — предупреждение, 2 — красный
+  if (props.cell.grade.fivePointScale) {
+    if (grade >= 4) return "bg-success/20 text-success hover:bg-success/30";
+    if (grade >= 3) return "bg-warning/20 text-warning hover:bg-warning/30";
+    return "bg-danger/20 text-danger hover:bg-danger/30";
+  }
+
   if (grade >= 60) return "bg-success/20 text-success hover:bg-success/30";
   if (grade >= 40) return "bg-warning/20 text-warning hover:bg-warning/30";
   return "bg-danger/20 text-danger hover:bg-danger/30";
+});
+
+// Цвет текста баллов — как у оценки (для изменённой вручную оценки баллы теста серые)
+const gradeTextClass = computed(() => {
+  const g = props.cell.grade;
+  if (!g || g.isModified) return "text-gray-400";
+  if (g.fivePointScale) {
+    if (g.grade >= 4) return "text-success";
+    if (g.grade >= 3) return "text-warning";
+    return "text-danger";
+  }
+  return "text-gray-500";
+});
+
+// Баллы теста («78/100») — только для оценок по пятибалльной шкале из теста
+const testPointsDisplay = computed(() => {
+  const g = props.cell.grade;
+  if (!g?.fivePointScale || !g.isFromTest || g.isModified) return "";
+  if (g.testTotalPoints == null || g.testMaxPoints == null) return "";
+  return `${g.testTotalPoints}/${g.testMaxPoints}`;
+});
+
+const testPointsTooltip = computed(() => {
+  const g = props.cell.grade;
+  if (!g || !testPointsDisplay.value) return "";
+  const percent =
+    g.testScorePercent != null ? ` (${Math.round(g.testScorePercent)}%)` : "";
+  return `Набрано ${g.testTotalPoints} из ${g.testMaxPoints} баллов${percent}`;
 });
 
 const gradeTooltip = computed(() => {
   if (!props.cell.grade) return "Выставить оценку";
   const g = props.cell.grade;
   let text = `Оценка: ${g.grade}`;
+  if (testPointsDisplay.value) text += `
+${testPointsTooltip.value}`;
 
   if (
     props.isRetakeTarget &&
