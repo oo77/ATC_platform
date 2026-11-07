@@ -505,6 +505,9 @@
         @align="handleAlign"
         @align-group="handleAlignGroup"
         @distribute="handleDistribute"
+        @update-many="handleUpdateMany"
+        @select-ids="handleSelectIds"
+        @select-same-type="handleSelectSameType"
       />
     </div>
 
@@ -662,6 +665,7 @@ const {
   clearSelection,
   alignElement,
   alignMultipleElements,
+  alignSelectionToCanvas,
   distributeElements,
   setZoom,
   ZOOM_PRESETS,
@@ -1362,9 +1366,49 @@ function handleToggleLock() {
 function handleAlign(
   direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
 ) {
-  if (selectedElementId.value) {
+  // Несколько выбранных — двигаем всё выделение целиком (раньше двигался
+  // только первый элемент)
+  if (selectedElementIds.value.size > 1) {
+    alignSelectionToCanvas(Array.from(selectedElementIds.value), direction);
+  } else if (selectedElementId.value) {
     alignElement(selectedElementId.value, direction);
   }
+}
+
+// Изменения нескольких элементов из панели — один шаг Undo
+function handleUpdateMany(
+  changes: { id: string; updates: Partial<TemplateElement> }[],
+) {
+  if (changes.length === 0) return;
+  const textIds = changes
+    .filter((c) => Object.keys(c.updates).some((k) => TEXT_LAYOUT_PROPS.includes(k)))
+    .map((c) => c.id);
+  beginHistoryBatch();
+  changes.forEach((c) => updateElement(c.id, c.updates));
+  if (textIds.length === 0) {
+    endHistoryBatch();
+    return;
+  }
+  // Текст стал крупнее/длиннее — подгоняем высоту блоков
+  nextTick(() => {
+    try {
+      textIds.forEach((id) => canvasRef.value?.fitTextHeight(id));
+    } finally {
+      endHistoryBatch();
+    }
+  });
+}
+
+function handleSelectIds(ids: string[]) {
+  selectMultipleElements(ids);
+}
+
+// Выделить все элементы того же типа на текущей странице
+function handleSelectSameType(type: TemplateElement["type"]) {
+  const ids = (activePage.value?.elements ?? [])
+    .filter((el) => el.type === type)
+    .map((el) => el.id);
+  if (ids.length) selectMultipleElements(ids);
 }
 
 function handleApplyPreset(presetData: CertificateTemplateData) {

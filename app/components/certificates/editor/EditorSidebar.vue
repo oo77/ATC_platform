@@ -33,6 +33,21 @@
         </span>
         <div class="header-actions">
           <button
+            class="action-btn"
+            :class="{ active: allLocked }"
+            @click="toggleLockAll"
+            :title="allLocked ? 'Разблокировать все' : 'Заблокировать все'"
+          >
+            <svg v-if="allLocked" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+            </svg>
+          </button>
+          <button
             class="action-btn delete"
             @click="$emit('delete-multiple')"
             title="Удалить все"
@@ -54,12 +69,400 @@
         </div>
       </div>
 
+      <!-- Состав выделения по типам: клик оставляет в выделении только этот тип -->
+      <div class="sidebar-section type-section">
+        <div class="type-chips">
+          <button
+            v-for="group in typeGroups"
+            :key="group.type"
+            class="type-chip"
+            :class="[group.type, { only: typeGroups.length === 1 }]"
+            @click="selectOnlyType(group.type)"
+            :disabled="typeGroups.length === 1"
+            :title="
+              typeGroups.length === 1
+                ? 'Все выбранные элементы одного типа'
+                : `Оставить в выделении только: ${getElementTypeLabel(group.type)}`
+            "
+          >
+            {{ getElementTypeLabel(group.type) }}
+            <span class="chip-count">{{ group.ids.length }}</span>
+          </button>
+        </div>
+        <button
+          v-if="commonType"
+          class="select-same-btn"
+          @click="$emit('select-same-type', commonType)"
+          :title="`Выделить все элементы типа «${getElementTypeLabel(commonType)}» на странице`"
+        >
+          Выделить все «{{ getElementTypeLabel(commonType) }}» на странице
+        </button>
+        <p v-if="lockedCount > 0" class="mixed-note">
+          Заблокировано {{ lockedCount }} — изменения их не затронут
+        </p>
+        <p v-if="!commonType && !isTextLikeSelection" class="mixed-note">
+          Разные типы — доступны только общие свойства. Нажмите на тип выше,
+          чтобы редактировать его свойства.
+        </p>
+      </div>
+
+      <!-- Общие: размер и поворот -->
+      <div class="sidebar-section">
+        <h4 class="section-title">Размер</h4>
+        <div class="input-grid">
+          <div class="input-group">
+            <label>Ширина</label>
+            <input
+              type="number"
+              :value="roundOrEmpty(common('width'))"
+              :placeholder="MIXED_LABEL"
+              @change="setAllNumber('width', $event)"
+              :disabled="!hasEditable"
+              min="20"
+            />
+          </div>
+          <div class="input-group">
+            <label>Высота</label>
+            <input
+              type="number"
+              :value="roundOrEmpty(common('height'))"
+              :placeholder="MIXED_LABEL"
+              @change="setAllNumber('height', $event)"
+              :disabled="!hasEditable"
+              min="20"
+            />
+          </div>
+        </div>
+        <div class="input-group full">
+          <label>Поворот (°)</label>
+          <input
+            type="number"
+            :value="common('rotation') ?? ''"
+            :placeholder="MIXED_LABEL"
+            @change="setAllNumber('rotation', $event)"
+            :disabled="!hasEditable"
+            min="0"
+            max="360"
+          />
+        </div>
+      </div>
+
+      <!-- Текст и переменные: общие текстовые свойства -->
+      <div v-if="isTextLikeSelection" class="sidebar-section">
+        <h4 class="section-title">
+          Текст
+          <span class="section-count">· {{ selectedElements.length }}</span>
+        </h4>
+
+        <div class="input-group full">
+          <label>Шрифт</label>
+          <select
+            :value="common('fontFamily') ?? ''"
+            @change="setAll('fontFamily', ($event.target as HTMLSelectElement).value)"
+            :disabled="!hasEditable"
+          >
+            <option v-if="common('fontFamily') === null" value="" disabled>
+              {{ MIXED_LABEL }}
+            </option>
+            <option v-for="font in AVAILABLE_FONTS" :key="font" :value="font">
+              {{ font }}
+            </option>
+          </select>
+        </div>
+
+        <div class="input-grid">
+          <div class="input-group">
+            <label>Размер</label>
+            <div class="size-stepper">
+              <button
+                class="style-btn"
+                @click="stepAll('fontSize', -1, 8, 200)"
+                :disabled="!hasEditable"
+                title="Уменьшить у всех на 1 (разница сохраняется)"
+              >A−</button>
+              <input
+                type="number"
+                :value="common('fontSize') ?? ''"
+                :placeholder="MIXED_LABEL"
+                @change="setAllNumber('fontSize', $event)"
+                :disabled="!hasEditable"
+                min="8"
+                max="200"
+              />
+              <button
+                class="style-btn"
+                @click="stepAll('fontSize', 1, 8, 200)"
+                :disabled="!hasEditable"
+                title="Увеличить у всех на 1 (разница сохраняется)"
+              >A+</button>
+            </div>
+          </div>
+          <div class="input-group">
+            <label>Межстрочный</label>
+            <input
+              type="number"
+              :value="common('lineHeight') ?? ''"
+              :placeholder="MIXED_LABEL"
+              @change="setAllNumber('lineHeight', $event)"
+              :disabled="!hasEditable"
+              min="0.5"
+              max="3"
+              step="0.1"
+            />
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button
+            class="style-btn"
+            :class="{ active: common('fontWeight') === 'bold', mixed: common('fontWeight') === null }"
+            @click="toggleAll('fontWeight', 'bold', 'normal')"
+            :disabled="!hasEditable"
+            title="Жирный"
+          >
+            <strong>B</strong>
+          </button>
+          <button
+            class="style-btn"
+            :class="{ active: common('fontStyle') === 'italic', mixed: common('fontStyle') === null }"
+            @click="toggleAll('fontStyle', 'italic', 'normal')"
+            :disabled="!hasEditable"
+            title="Курсив"
+          >
+            <em>I</em>
+          </button>
+          <div class="separator"></div>
+          <button
+            v-for="opt in TEXT_ALIGN_OPTIONS"
+            :key="opt.value"
+            class="style-btn"
+            :class="{ active: common('textAlign') === opt.value }"
+            @click="setAll('textAlign', opt.value)"
+            :disabled="!hasEditable"
+            :title="opt.title"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line v-for="(l, i) in opt.lines" :key="i" :x1="l[0]" :y1="6 + i * 6" :x2="l[1]" :y2="6 + i * 6" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Списки — только если выбраны одни тексты -->
+        <div v-if="commonType === 'text'" class="list-row">
+          <div class="button-group list-buttons">
+            <button
+              class="style-btn"
+              :class="{ active: common('listStyle') === 'bullet' }"
+              @click="toggleAll('listStyle', 'bullet', 'none')"
+              :disabled="!hasEditable"
+              title="Маркированный список"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="9" y1="6" x2="21" y2="6" />
+                <line x1="9" y1="12" x2="21" y2="12" />
+                <line x1="9" y1="18" x2="21" y2="18" />
+                <circle cx="4" cy="6" r="1.2" fill="currentColor" />
+                <circle cx="4" cy="12" r="1.2" fill="currentColor" />
+                <circle cx="4" cy="18" r="1.2" fill="currentColor" />
+              </svg>
+            </button>
+            <button
+              class="style-btn"
+              :class="{ active: common('listStyle') === 'number' }"
+              @click="toggleAll('listStyle', 'number', 'none')"
+              :disabled="!hasEditable"
+              title="Нумерованный список"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="10" y1="6" x2="21" y2="6" />
+                <line x1="10" y1="12" x2="21" y2="12" />
+                <line x1="10" y1="18" x2="21" y2="18" />
+                <path d="M4 6h1v4" />
+                <path d="M4 10h2" />
+                <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />
+              </svg>
+            </button>
+          </div>
+          <span class="list-hint">Списки для всех выбранных</span>
+        </div>
+
+        <div class="input-group full">
+          <label>Цвет</label>
+          <div class="color-picker">
+            <input
+              type="color"
+              :value="common('color') ?? '#000000'"
+              @input="setAll('color', ($event.target as HTMLInputElement).value)"
+              :disabled="!hasEditable"
+            />
+            <input
+              type="text"
+              :value="common('color') ?? ''"
+              :placeholder="MIXED_LABEL"
+              @change="setAll('color', ($event.target as HTMLInputElement).value)"
+              :disabled="!hasEditable"
+              class="color-text"
+            />
+          </div>
+        </div>
+
+        <div class="input-group full">
+          <label>Заливка фона</label>
+          <div class="color-picker">
+            <input
+              type="color"
+              :value="commonFill ?? '#ffffff'"
+              @input="setAll('backgroundColor', ($event.target as HTMLInputElement).value)"
+              :disabled="!hasEditable || commonFill === 'transparent'"
+            />
+            <input
+              type="text"
+              :value="commonFill === 'transparent' ? '' : commonFill ?? ''"
+              :placeholder="commonFill === 'transparent' ? 'нет' : MIXED_LABEL"
+              @change="setAll('backgroundColor', ($event.target as HTMLInputElement).value)"
+              :disabled="!hasEditable || commonFill === 'transparent'"
+              class="color-text"
+            />
+          </div>
+          <div class="checkbox-group mt-1">
+            <label>
+              <input
+                type="checkbox"
+                :checked="commonFill === 'transparent'"
+                :indeterminate.prop="commonFill === null"
+                @change="setAll('backgroundColor', ($event.target as HTMLInputElement).checked ? 'transparent' : '#ffffff')"
+                :disabled="!hasEditable"
+              />
+              Без заливки
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Изображения -->
+      <div v-if="commonType === 'image'" class="sidebar-section">
+        <h4 class="section-title">
+          Изображение
+          <span class="section-count">· {{ selectedElements.length }}</span>
+        </h4>
+        <div class="input-group full">
+          <label>Подгонка</label>
+          <select
+            :value="common('objectFit') ?? ''"
+            @change="setAll('objectFit', ($event.target as HTMLSelectElement).value)"
+            :disabled="!hasEditable"
+          >
+            <option v-if="common('objectFit') === null" value="" disabled>{{ MIXED_LABEL }}</option>
+            <option value="contain">Вместить</option>
+            <option value="cover">Заполнить</option>
+            <option value="fill">Растянуть</option>
+          </select>
+        </div>
+        <div class="input-group full">
+          <label>Прозрачность</label>
+          <input
+            type="range"
+            :value="common('opacity') ?? 1"
+            @change="setAllNumber('opacity', $event)"
+            :disabled="!hasEditable"
+            min="0"
+            max="1"
+            step="0.05"
+          />
+          <span class="range-value">{{
+            common('opacity') === null ? MIXED_LABEL : `${Math.round((common('opacity') ?? 1) * 100)}%`
+          }}</span>
+        </div>
+      </div>
+
+      <!-- QR-коды -->
+      <div v-if="commonType === 'qr'" class="sidebar-section">
+        <h4 class="section-title">
+          QR-код
+          <span class="section-count">· {{ selectedElements.length }}</span>
+        </h4>
+        <div class="input-grid">
+          <div class="input-group">
+            <label>Цвет</label>
+            <input
+              type="color"
+              :value="common('color') ?? '#000000'"
+              @input="setAll('color', ($event.target as HTMLInputElement).value)"
+              :disabled="!hasEditable"
+            />
+          </div>
+          <div class="input-group">
+            <label>Фон</label>
+            <input
+              type="color"
+              :value="common('backgroundColor') ?? '#ffffff'"
+              @input="setAll('backgroundColor', ($event.target as HTMLInputElement).value)"
+              :disabled="!hasEditable"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Фигуры -->
+      <div v-if="commonType === 'shape'" class="sidebar-section">
+        <h4 class="section-title">
+          Фигура
+          <span class="section-count">· {{ selectedElements.length }}</span>
+        </h4>
+        <div class="input-grid">
+          <div class="input-group">
+            <label>Заливка</label>
+            <input
+              type="color"
+              :value="common('fillColor') && common('fillColor') !== 'transparent' ? common('fillColor') : '#ffffff'"
+              @input="setAll('fillColor', ($event.target as HTMLInputElement).value)"
+              :disabled="!hasEditable || common('fillColor') === 'transparent'"
+            />
+          </div>
+          <div class="input-group">
+            <label>Обводка</label>
+            <input
+              type="color"
+              :value="common('strokeColor') ?? '#000000'"
+              @input="setAll('strokeColor', ($event.target as HTMLInputElement).value)"
+              :disabled="!hasEditable"
+            />
+          </div>
+        </div>
+        <div class="input-group full">
+          <label>Толщина обводки</label>
+          <input
+            type="range"
+            :value="common('strokeWidth') ?? 1"
+            @change="setAllNumber('strokeWidth', $event)"
+            :disabled="!hasEditable"
+            min="0"
+            max="20"
+          />
+          <span class="range-value">{{
+            common('strokeWidth') === null ? MIXED_LABEL : `${common('strokeWidth')}px`
+          }}</span>
+        </div>
+        <div class="checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              :checked="common('fillColor') === 'transparent'"
+              :indeterminate.prop="common('fillColor') === null"
+              @change="setAll('fillColor', ($event.target as HTMLInputElement).checked ? 'transparent' : '#ffffff')"
+              :disabled="!hasEditable"
+            />
+            Без заливки
+          </label>
+        </div>
+      </div>
+
       <!-- Выравнивание группы -->
       <div class="sidebar-section">
         <h4 class="section-title">Выравнивание</h4>
 
         <div class="align-section">
-          <p class="align-label">Относительно холста</p>
+          <p class="align-label">Относительно холста <span class="align-sub">(всё выделение целиком)</span></p>
           <div class="align-buttons">
             <button
               class="align-btn"
@@ -236,7 +639,43 @@
                 <rect x="15" y="17" width="6" height="4" rx="1" />
               </svg>
             </button>
+            <button
+              class="align-btn"
+              @click="$emit('align-group', 'top')"
+              title="Выровнять верхние края"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="3" width="4" height="8" rx="1" />
+                <rect x="11" y="3" width="4" height="12" rx="1" />
+                <rect x="17" y="3" width="4" height="6" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="align-btn"
+              @click="$emit('align-group', 'center-v')"
+              title="Выровнять середины по вертикали"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="8" width="4" height="8" rx="1" />
+                <rect x="11" y="6" width="4" height="12" rx="1" />
+                <rect x="17" y="9" width="4" height="6" rx="1" />
+              </svg>
+            </button>
+            <button
+              class="align-btn"
+              @click="$emit('align-group', 'bottom')"
+              title="Выровнять нижние края"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="13" width="4" height="8" rx="1" />
+                <rect x="11" y="9" width="4" height="12" rx="1" />
+                <rect x="17" y="15" width="4" height="6" rx="1" />
+              </svg>
+            </button>
           </div>
+          <p class="align-hint">
+            Заблокированные элементы служат опорой — остальные выравниваются по ним
+          </p>
 
           <p class="align-label mt-3" v-if="selectedElements.length >= 3">
             Распределение
@@ -1153,6 +1592,19 @@
             </svg>
             Дублировать
           </button>
+          <button
+            class="action-button"
+            @click="$emit('select-same-type', selectedElement.type)"
+            :title="`Выделить все элементы типа «${getElementTypeLabel(selectedElement.type)}» на странице, чтобы изменить их вместе`"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            Выделить все «{{ getElementTypeLabel(selectedElement.type) }}»
+          </button>
           <button class="action-button" @click="$emit('bring-to-front')">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -1233,7 +1685,152 @@ const emit = defineEmits<{
     direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
   ): void;
   (e: "distribute", direction: "horizontal" | "vertical"): void;
+  /** Набор изменений для нескольких элементов — один шаг Undo */
+  (
+    e: "update-many",
+    changes: { id: string; updates: Partial<TemplateElement> }[],
+  ): void;
+  (e: "select-ids", ids: string[]): void;
+  (e: "select-same-type", type: TemplateElement["type"]): void;
 }>();
+
+// ── Мультивыделение: общие свойства ───────────────────────────
+const MIXED_LABEL = "разные";
+
+const TEXT_ALIGN_OPTIONS = [
+  { value: "left", title: "По левому краю", lines: [[21, 3], [15, 3], [17, 3]] },
+  { value: "center", title: "По центру", lines: [[21, 3], [17, 7], [19, 5]] },
+  { value: "right", title: "По правому краю", lines: [[21, 3], [21, 9], [21, 7]] },
+  { value: "justify", title: "По ширине", lines: [[21, 3], [21, 3], [21, 3]] },
+] as const;
+
+/** Незаблокированные элементы — только их меняем */
+const editableElements = computed(() =>
+  props.selectedElements.filter((el) => !el.locked),
+);
+const hasEditable = computed(() => editableElements.value.length > 0);
+const lockedCount = computed(
+  () => props.selectedElements.length - editableElements.value.length,
+);
+const allLocked = computed(
+  () =>
+    props.selectedElements.length > 0 &&
+    props.selectedElements.every((el) => el.locked),
+);
+
+/** Выделение по типам в порядке первого появления */
+const typeGroups = computed(() => {
+  const groups = new Map<TemplateElement["type"], string[]>();
+  for (const el of props.selectedElements) {
+    if (!groups.has(el.type)) groups.set(el.type, []);
+    groups.get(el.type)!.push(el.id);
+  }
+  return Array.from(groups, ([type, ids]) => ({ type, ids }));
+});
+
+const commonType = computed(() =>
+  typeGroups.value.length === 1 ? typeGroups.value[0]!.type : null,
+);
+
+/** Только тексты и переменные — у них одинаковые текстовые свойства */
+const isTextLikeSelection = computed(
+  () =>
+    props.selectedElements.length > 0 &&
+    props.selectedElements.every(
+      (el) => el.type === "text" || el.type === "variable",
+    ),
+);
+
+/**
+ * Общее значение свойства у выбранных элементов, либо null, если разное.
+ * Пустое значение listStyle считается "none".
+ */
+function common(prop: string): any {
+  const els = props.selectedElements;
+  if (els.length === 0) return null;
+  const norm = (el: TemplateElement) => {
+    const v = (el as any)[prop];
+    if (prop === "listStyle") return v || "none";
+    return v;
+  };
+  const first = norm(els[0]!);
+  return els.every((el) => norm(el) === first) ? first : null;
+}
+
+/** Заливка текста: отсутствие значения = transparent */
+const commonFill = computed(() => {
+  const els = props.selectedElements;
+  if (els.length === 0) return null;
+  const norm = (el: TemplateElement) => {
+    const bg = (el as any).backgroundColor;
+    return !bg || bg === "transparent" ? "transparent" : bg;
+  };
+  const first = norm(els[0]!);
+  return els.every((el) => norm(el) === first) ? first : null;
+});
+
+function roundOrEmpty(v: any) {
+  return typeof v === "number" ? Math.round(v) : "";
+}
+
+function emitMany(build: (el: TemplateElement) => Partial<TemplateElement> | null) {
+  const changes = editableElements.value
+    .map((el) => ({ id: el.id, updates: build(el) }))
+    .filter(
+      (c): c is { id: string; updates: Partial<TemplateElement> } =>
+        !!c.updates && Object.keys(c.updates).length > 0,
+    );
+  if (changes.length) emit("update-many", changes);
+}
+
+/** Одно значение для всех незаблокированных элементов */
+function setAll(prop: string, value: any) {
+  if (value === "" || value === undefined || value === null) return;
+  emitMany((el) =>
+    (el as any)[prop] === value ? null : ({ [prop]: value } as any),
+  );
+}
+
+function setAllNumber(prop: string, event: Event) {
+  const raw = (event.target as HTMLInputElement).value;
+  if (raw === "") return; // поле «разные» оставили пустым — ничего не меняем
+  const value = parseFloat(raw);
+  if (!isNaN(value)) setAll(prop, value);
+}
+
+/** Относительный шаг: у каждого своё значение ± delta, разница сохраняется */
+function stepAll(prop: string, delta: number, min: number, max: number) {
+  emitMany((el) => {
+    const cur = Number((el as any)[prop]);
+    if (isNaN(cur)) return null;
+    const next = Math.min(max, Math.max(min, cur + delta));
+    return next === cur ? null : ({ [prop]: next } as any);
+  });
+}
+
+/** Переключатель: если у всех включено — выключить, иначе включить всем */
+function toggleAll(prop: string, onValue: string, offValue: string) {
+  const next = common(prop) === onValue ? offValue : onValue;
+  emitMany((el) =>
+    ((prop === "listStyle" ? (el as any)[prop] || "none" : (el as any)[prop]) === next
+      ? null
+      : ({ [prop]: next } as any)),
+  );
+}
+
+function selectOnlyType(type: TemplateElement["type"]) {
+  const group = typeGroups.value.find((g) => g.type === type);
+  if (group && typeGroups.value.length > 1) emit("select-ids", group.ids);
+}
+
+/** Блокировка: если все заблокированы — разблокировать, иначе заблокировать все */
+function toggleLockAll() {
+  const lock = !allLocked.value;
+  const changes = props.selectedElements
+    .filter((el) => !!el.locked !== lock)
+    .map((el) => ({ id: el.id, updates: { locked: lock } as Partial<TemplateElement> }));
+  if (changes.length) emit("update-many", changes);
+}
 
 const { authFetch } = useAuthFetch();
 const { error: showError } = useNotification();
@@ -1870,6 +2467,142 @@ async function onImageSelected(e: Event) {
 /* Выравнивание */
 .align-section {
   margin-bottom: 0.75rem;
+}
+
+.align-sub {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  color: var(--color-gray-400);
+}
+
+.align-hint {
+  margin: 0.375rem 0 0;
+  font-size: 0.6875rem;
+  color: var(--color-gray-500);
+  line-height: 1.3;
+}
+
+/* ── Мультивыделение ─────────────────────────────────────── */
+.type-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.type-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-gray-700);
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.type-chip:hover:not(:disabled) {
+  border-color: #3b82f6;
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.type-chip:disabled,
+.type-chip.only {
+  cursor: default;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.chip-count {
+  min-width: 1.25rem;
+  padding: 0 0.3rem;
+  font-size: 0.6875rem;
+  line-height: 1.1rem;
+  text-align: center;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+}
+
+:root.dark .type-chip {
+  background: var(--color-gray-700);
+  border-color: var(--color-gray-600);
+  color: var(--color-gray-200);
+}
+
+.select-same-btn {
+  align-self: flex-start;
+  padding: 0;
+  font-size: 0.75rem;
+  color: #2563eb;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.select-same-btn:hover {
+  text-decoration: underline;
+}
+
+.mixed-note {
+  margin: 0;
+  font-size: 0.6875rem;
+  line-height: 1.35;
+  color: var(--color-gray-500);
+}
+
+.section-count {
+  font-weight: 400;
+  color: var(--color-gray-400);
+  text-transform: none;
+}
+
+.size-stepper {
+  display: flex;
+  align-items: stretch;
+  gap: 0.25rem;
+}
+
+.size-stepper input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
+.size-stepper .style-btn {
+  width: 30px;
+  height: auto;
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+/* Значение различается у выбранных элементов */
+.style-btn.mixed {
+  background-image: linear-gradient(
+    135deg,
+    transparent 45%,
+    var(--color-gray-300) 45%,
+    var(--color-gray-300) 55%,
+    transparent 55%
+  );
+}
+
+input::placeholder {
+  font-style: italic;
 }
 
 .align-label {

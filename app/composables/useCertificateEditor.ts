@@ -845,39 +845,90 @@ export function useCertificateEditor() {
     direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
   ) {
     if (ids.length < 2) return;
-    const elements = getActivePageElements().filter(
-      (el: TemplateElement) => ids.includes(el.id) && !el.locked,
+    const all = getActivePageElements().filter((el: TemplateElement) =>
+      ids.includes(el.id),
     );
-    if (elements.length < 2) return;
+    const movable = all.filter((el) => !el.locked);
+    if (all.length < 2 || movable.length === 0) return;
+
+    // Опорная линия: если среди выбранных есть заблокированные — они служат
+    // неподвижным якорем, иначе берём рамку всего выделения.
+    const locked = all.filter((el) => el.locked);
+    const ref = locked.length > 0 ? locked : all;
+    const box = getBounds(ref);
+
     beginHistoryBatch();
-    let referenceValue: number;
+    for (const el of movable) {
+      switch (direction) {
+        case "left":
+          updateElement(el.id, { x: box.left });
+          break;
+        case "center-h":
+          // центр рамки выделения, а не среднее центров
+          updateElement(el.id, { x: (box.left + box.right) / 2 - el.width / 2 });
+          break;
+        case "right":
+          updateElement(el.id, { x: box.right - el.width });
+          break;
+        case "top":
+          updateElement(el.id, { y: box.top });
+          break;
+        case "center-v":
+          updateElement(el.id, { y: (box.top + box.bottom) / 2 - el.height / 2 });
+          break;
+        case "bottom":
+          updateElement(el.id, { y: box.bottom - el.height });
+          break;
+      }
+    }
+    endHistoryBatch();
+  }
+
+  /** Рамка, охватывающая элементы */
+  function getBounds(elements: TemplateElement[]) {
+    return {
+      left: Math.min(...elements.map((el) => el.x)),
+      top: Math.min(...elements.map((el) => el.y)),
+      right: Math.max(...elements.map((el) => el.x + el.width)),
+      bottom: Math.max(...elements.map((el) => el.y + el.height)),
+    };
+  }
+
+  /**
+   * Выравнивание выделения относительно холста: всё выделение двигается
+   * как единое целое — взаимное расположение элементов сохраняется.
+   * Заблокированные элементы не двигаются.
+   */
+  function alignSelectionToCanvas(
+    ids: string[],
+    direction: "left" | "center-h" | "right" | "top" | "center-v" | "bottom",
+  ) {
+    const all = getActivePageElements().filter((el: TemplateElement) =>
+      ids.includes(el.id),
+    );
+    const movable = all.filter((el) => !el.locked);
+    if (movable.length === 0) return;
+    if (movable.length === 1) {
+      alignElement(movable[0]!.id, direction);
+      return;
+    }
+    const box = getBounds(movable);
+    const canvasWidth = templateData.value.width;
+    const canvasHeight = templateData.value.height;
+    let dx = 0;
+    let dy = 0;
     switch (direction) {
-      case "left":
-        referenceValue = Math.min(...elements.map((el) => el.x));
-        elements.forEach((el) => updateElement(el.id, { x: referenceValue }));
-        break;
-      case "center-h":
-        const avgCenterX =
-          elements.reduce((sum, el) => sum + el.x + el.width / 2, 0) / elements.length;
-        elements.forEach((el) => updateElement(el.id, { x: avgCenterX - el.width / 2 }));
-        break;
-      case "right":
-        referenceValue = Math.max(...elements.map((el) => el.x + el.width));
-        elements.forEach((el) => updateElement(el.id, { x: referenceValue - el.width }));
-        break;
-      case "top":
-        referenceValue = Math.min(...elements.map((el) => el.y));
-        elements.forEach((el) => updateElement(el.id, { y: referenceValue }));
-        break;
-      case "center-v":
-        const avgCenterY =
-          elements.reduce((sum, el) => sum + el.y + el.height / 2, 0) / elements.length;
-        elements.forEach((el) => updateElement(el.id, { y: avgCenterY - el.height / 2 }));
-        break;
-      case "bottom":
-        referenceValue = Math.max(...elements.map((el) => el.y + el.height));
-        elements.forEach((el) => updateElement(el.id, { y: referenceValue - el.height }));
-        break;
+      case "left": dx = -box.left; break;
+      case "center-h": dx = Math.max(0, (canvasWidth - (box.right - box.left)) / 2) - box.left; break;
+      case "right": dx = canvasWidth - box.right; break;
+      case "top": dy = -box.top; break;
+      case "center-v": dy = Math.max(0, (canvasHeight - (box.bottom - box.top)) / 2) - box.top; break;
+      case "bottom": dy = canvasHeight - box.bottom; break;
+    }
+    if (dx === 0 && dy === 0) return;
+    beginHistoryBatch();
+    for (const el of movable) {
+      updateElement(el.id, { x: el.x + dx, y: el.y + dy });
     }
     endHistoryBatch();
   }
@@ -893,9 +944,13 @@ export function useCertificateEditor() {
     const first = elements[0];
     const last = elements[elements.length - 1];
     if (elements.length < 3 || !first || !last) return;
+    // Равные промежутки между элементами: свободное место между крайними
+    // минус размеры средних элементов, делённое на число промежутков.
+    const middle = elements.slice(1, -1);
     beginHistoryBatch();
     if (direction === "horizontal") {
-      const totalSpace = last.x - (first.x + first.width);
+      const middleSize = middle.reduce((s, el) => s + el.width, 0);
+      const totalSpace = last.x - (first.x + first.width) - middleSize;
       const gap = totalSpace / (elements.length - 1);
       let currentX = first.x + first.width + gap;
       for (let i = 1; i < elements.length - 1; i++) {
@@ -906,7 +961,8 @@ export function useCertificateEditor() {
         }
       }
     } else {
-      const totalSpace = last.y - (first.y + first.height);
+      const middleSize = middle.reduce((s, el) => s + el.height, 0);
+      const totalSpace = last.y - (first.y + first.height) - middleSize;
       const gap = totalSpace / (elements.length - 1);
       let currentY = first.y + first.height + gap;
       for (let i = 1; i < elements.length - 1; i++) {
@@ -1093,6 +1149,7 @@ export function useCertificateEditor() {
     clearSelection,
     alignElement,
     alignMultipleElements,
+    alignSelectionToCanvas,
     distributeElements,
 
     // Методы масштаба
