@@ -1,12 +1,16 @@
 import { defineEventHandler, createError } from 'h3';
 import { deleteRepresentative, getRepresentativeById } from '../../repositories/representativeRepository';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 /**
  * DELETE /api/representatives/:id
  * Удаление представителя
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_MANAGE);
+
   try {
     const id = event.context.params?.id;
 

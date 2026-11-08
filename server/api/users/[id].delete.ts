@@ -1,6 +1,7 @@
 import { executeQuery } from '../../utils/db';
 import { logActivity } from '../../utils/activityLogger';
 import type { User } from '../../types/auth';
+import { Permission, roleHasAnyPermission, roleHasPermission } from "../../utils/permissions";
 
 /**
  * API endpoint для удаления пользователя
@@ -67,8 +68,9 @@ export default defineEventHandler(async (event) => {
 
     // Проверка прав доступа
     const canDelete = 
-      currentUser.role === 'ADMIN' || // Админ может удалять всех (кроме себя)
-      (currentUser.role === 'MANAGER' && userToDelete.role !== 'ADMIN'); // Модератор может удалять всех кроме админов
+      // users:delete — всех, кроме администраторов; администраторов — только с users:manage_roles
+      roleHasPermission(currentUser, Permission.USERS_DELETE) &&
+      (userToDelete.role !== 'ADMIN' || roleHasPermission(currentUser, Permission.USERS_MANAGE_ROLES));
 
     if (!canDelete) {
       throw createError({

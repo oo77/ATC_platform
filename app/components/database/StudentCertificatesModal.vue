@@ -9,6 +9,7 @@
       <!-- Кнопка добавления сертификата -->
       <div class="flex justify-end">
         <UiButton
+          v-if="hasPermission(Permission.CERTIFICATES_ISSUE)"
           variant="primary"
           @click="openAddCertificateForm"
           class="flex items-center gap-2"
@@ -98,6 +99,7 @@
             <!-- Кнопки действий -->
             <div class="flex items-center gap-2 ml-4">
               <UiButton
+                v-if="hasPermission(Permission.CERTIFICATES_REVOKE)"
                 variant="danger"
                 size="sm"
                 @click="handleDeleteCertificate(certificate.id)"
@@ -170,11 +172,14 @@
 </template>
 
 <script setup lang="ts">
+import { Permission } from "~/types/permissions";
 import { ref } from 'vue';
 import type { Student } from '~/types/student';
 
 // Используем authFetch для авторизованных запросов
 const { authFetch } = useAuthFetch();
+// Выдача и удаление сертификатов — только при соответствующих правах (иначе 403 от сервера)
+const { hasPermission } = usePermissions();
 const notification = useNotification();
 
 interface Props {

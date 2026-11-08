@@ -236,6 +236,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+const tgFetch = useTgFetch(); // заголовок X-Telegram-Init-Data для /api/tg-app/*
 
 const props = defineProps({
   organizationId: {
@@ -334,7 +335,7 @@ async function sendCertificateToBot(cert) {
   sendingCertId.value = cert.id;
 
   try {
-    const response = await $fetch("/api/tg-app/send-certificate", {
+    const response = await tgFetch("/api/tg-app/send-certificate", {
       method: "POST",
       body: {
         certificateId: cert.id,
@@ -368,7 +369,7 @@ async function downloadGroupZip() {
   downloadingZip.value = true;
 
   try {
-    const response = await $fetch("/api/tg-app/download-group-certificates", {
+    const response = await tgFetch("/api/tg-app/download-group-certificates", {
       method: "POST",
       body: {
         groupCode: selectedGroup.value,
@@ -398,7 +399,7 @@ async function loadCertificates() {
   error.value = null;
 
   try {
-    const data = await $fetch("/api/tg-app/certificates", {
+    const data = await tgFetch("/api/tg-app/certificates", {
       params: {
         organizationId: props.organizationId,
       },

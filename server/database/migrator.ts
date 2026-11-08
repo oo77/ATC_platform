@@ -57,6 +57,11 @@ import * as courseNamesWithoutLengthLimit from "./migrations/20261012_046_course
 import * as addInstructorMultilingualNames from "./migrations/20261029_047_add_instructor_multilingual_names";
 import * as testTemplatesFivePointScale from "./migrations/20261106_048_test_templates_five_point_scale";
 import * as questionsTranslationGroup from "./migrations/20261106_049_questions_translation_group";
+import * as issuedCertificatesIndexes from "./migrations/20261108_050_issued_certificates_indexes";
+import * as issuedCertificatesRenderHash from "./migrations/20261108_051_issued_certificates_render_hash";
+import * as publicDashboards from "./migrations/20261108_052_public_dashboards";
+import * as libraryAnalytics from "./migrations/20261108_053_library_analytics";
+import * as rolesAndAudit from "./migrations/20261109_054_roles_and_audit";
 
 /**
  * ============================================================================
@@ -512,6 +517,36 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: questionsTranslationGroup.up,
     down: questionsTranslationGroup.down,
     description: questionsTranslationGroup.description,
+  },
+  {
+    name: "20261108_050_issued_certificates_indexes",
+    up: issuedCertificatesIndexes.up,
+    down: issuedCertificatesIndexes.down,
+    description: issuedCertificatesIndexes.description,
+  },
+  {
+    name: "20261108_051_issued_certificates_render_hash",
+    up: issuedCertificatesRenderHash.up,
+    down: issuedCertificatesRenderHash.down,
+    description: issuedCertificatesRenderHash.description,
+  },
+  {
+    name: "20261108_052_public_dashboards",
+    up: publicDashboards.up,
+    down: publicDashboards.down,
+    description: publicDashboards.description,
+  },
+  {
+    name: "20261108_053_library_analytics",
+    up: libraryAnalytics.up,
+    down: libraryAnalytics.down,
+    description: libraryAnalytics.description,
+  },
+  {
+    name: "20261109_054_roles_and_audit",
+    up: rolesAndAudit.up,
+    down: rolesAndAudit.down,
+    description: rolesAndAudit.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

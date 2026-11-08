@@ -8,6 +8,7 @@ import {
   getCourseById,
 } from "../../repositories/courseRepository";
 import { logActivity } from "../../utils/activityLogger";
+import { Permission, roleHasPermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -30,7 +31,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Проверка прав доступа - только ADMIN может удалять курсы
-    if (user.role !== "ADMIN") {
+    if (!roleHasPermission(user, Permission.COURSES_DELETE)) {
       throw createError({
         statusCode: 403,
         message:

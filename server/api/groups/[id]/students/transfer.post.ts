@@ -9,6 +9,7 @@ import {
   transferStudent,
   checkStudentConflicts,
 } from "../../../../repositories/groupRepository";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 const transferSchema = z.object({
   studentId: z.string().min(1, "ID слушателя обязателен"),
@@ -16,6 +17,9 @@ const transferSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.GROUPS_MANAGE_STUDENTS);
+
   try {
     const fromGroupId = getRouterParam(event, "id");
 

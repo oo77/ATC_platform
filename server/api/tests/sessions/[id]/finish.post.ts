@@ -11,8 +11,12 @@ import {
 import { getTestAssignmentById } from '../../../../repositories/testAssignmentRepository';
 import { executeQuery } from '../../../../utils/db';
 import { v4 as uuidv4 } from 'uuid';
+import { requireTestSessionAccess } from "../../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireTestSessionAccess(event, getRouterParam(event, "id") || "", "owner");
+
     try {
         const id = getRouterParam(event, 'id');
 

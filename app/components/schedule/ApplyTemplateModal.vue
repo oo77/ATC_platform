@@ -131,6 +131,7 @@
 
             <!-- Delete button -->
             <button
+              v-if="canDeleteSchedule"
               @click.stop="handleDeleteTemplate(template)"
               class="absolute right-2 top-2 p-2 text-gray-400 hover:text-danger hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
               title="Удалить шаблон"
@@ -292,6 +293,8 @@
 </template>
 
 <script setup lang="ts">
+// Удаление шаблона расписания — только с правом schedule:delete
+const { canDeleteSchedule } = usePermissions();
 import type { ScheduleTemplate } from "~/types/scheduleTemplate";
 
 interface Group {

@@ -393,6 +393,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+const tgFetch = useTgFetch(); // заголовок X-Telegram-Init-Data для /api/tg-app/*
 
 const props = defineProps({
   telegramData: {
@@ -548,7 +549,7 @@ async function loadOrganizations() {
 
   loadingOrgs.value = true;
   try {
-    const data = await $fetch("/api/tg-app/organizations", {
+    const data = await tgFetch("/api/tg-app/organizations", {
       query: { limit: 1000 },
     });
     organizations.value = data.data || [];
@@ -588,7 +589,7 @@ async function handleSubmit() {
   generalError.value = "";
 
   try {
-    const response = await $fetch("/api/tg-app/register", {
+    const response = await tgFetch("/api/tg-app/register", {
       method: "POST",
       body: {
         initData: props.telegramData.initData,

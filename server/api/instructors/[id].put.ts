@@ -23,6 +23,8 @@ import {
 } from '../../repositories/userRepository';
 import { logActivity } from '../../utils/activityLogger';
 import { z } from 'zod';
+import { Permission, requirePermission } from "../../utils/permissions";
+import { recordChanges } from "../../utils/audit";
 
 const updateInstructorSchema = z.object({
   fullName: z.string().min(1).optional(),
@@ -77,6 +79,9 @@ const updateInstructorSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.INSTRUCTORS_UPDATE);
+
   try {
     const id = getRouterParam(event, 'id');
 
@@ -230,6 +235,8 @@ export default defineEventHandler(async (event) => {
     if (data.additional_files !== undefined) updateData.additional_files = data.additional_files;
 
     const instructor = await updateInstructor(id, updateData);
+    // Журнал аудита: что именно изменилось (было → стало)
+    recordChanges(event, existingInstructor as any, updateData as any);
 
     // Логируем действие обновления
     await logActivity(

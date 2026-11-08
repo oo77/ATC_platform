@@ -8,6 +8,7 @@ import { z } from "zod";
 import { executeQuery } from "../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
 import { logActivity } from "../../utils/activityLogger";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 const querySchema = z.object({
   page: z
@@ -82,6 +83,9 @@ interface CountRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CERTIFICATES_VIEW_ALL);
+
   try {
     const query = getQuery(event);
     const params = querySchema.parse(query);
@@ -98,11 +102,11 @@ export default defineEventHandler(async (event) => {
     `;
 
     const queryParams: any[] = [];
-
-    // Фильтр по статусу
+    let statusClause = "";
+    const statusParams: any[] = [];
     if (params.status && params.status !== "all") {
-      baseQuery += " AND ic.status = ?";
-      queryParams.push(params.status);
+      statusClause = " AND ic.status = ?";
+      statusParams.push(params.status);
     }
 
     // Фильтр по типу источника
@@ -167,13 +171,30 @@ export default defineEventHandler(async (event) => {
       queryParams.push(params.dateTo);
     }
 
-    // Получаем общее количество записей
-    const countQuery = `SELECT COUNT(*) as total ${baseQuery}`;
-    const [countResult] = await executeQuery<CountRow[]>(
-      countQuery,
+    // Статистика считается по тем же фильтрам, кроме статуса, поэтому
+    // «Выдано + Отозвано = Всего» всегда совпадает с таблицей
+    const statsFrom = baseQuery;
+    const statsParams = [...queryParams];
+    baseQuery += statusClause;
+    queryParams.push(...statusParams);
+
+    const statsPromise = executeQuery<any[]>(
+      `SELECT
+        COUNT(*) as total,
+        COALESCE(SUM(ic.status = 'issued'), 0) as issued,
+        COALESCE(SUM(ic.status = 'revoked'), 0) as revoked,
+        COUNT(DISTINCT NULLIF(TRIM(s.organization), '')) as organizations,
+        COUNT(DISTINCT COALESCE(ic.group_id, NULLIF(ic.group_code, ''))) as \`groups\`,
+        COALESCE(SUM(ic.source_type = 'group_journal'), 0) as from_journal,
+        COALESCE(SUM(ic.source_type = 'import'), 0) as from_import,
+        COALESCE(SUM(ic.source_type = 'manual'), 0) as from_manual
+      ${statsFrom}`,
+      statsParams,
+    );
+    const countPromise = executeQuery<CountRow[]>(
+      `SELECT COUNT(*) as total ${baseQuery}`,
       queryParams,
     );
-    const total = countResult?.total || 0;
 
     // Формируем сортировку (с учётом standalone полей)
     let orderBy = "ic.issue_date";
@@ -289,21 +310,9 @@ export default defineEventHandler(async (event) => {
       createdAt: row.created_at,
     }));
 
-    // Получаем статистику (с учётом всех сертификатов)
-    const statsQuery = `
-      SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN ic.status = 'issued' THEN 1 ELSE 0 END) as issued,
-        SUM(CASE WHEN ic.status = 'revoked' THEN 1 ELSE 0 END) as revoked,
-        COUNT(DISTINCT s.organization) as organizations,
-        COUNT(DISTINCT COALESCE(ic.group_id, ic.group_code)) as groups,
-        SUM(CASE WHEN ic.source_type = 'group_journal' THEN 1 ELSE 0 END) as from_journal,
-        SUM(CASE WHEN ic.source_type = 'import' THEN 1 ELSE 0 END) as from_import,
-        SUM(CASE WHEN ic.source_type = 'manual' THEN 1 ELSE 0 END) as from_manual
-      FROM issued_certificates ic
-      JOIN students s ON ic.student_id = s.id
-    `;
-    const [stats] = await executeQuery<any[]>(statsQuery);
+    const [countRows, statsRows] = await Promise.all([countPromise, statsPromise]);
+    const total = Number(countRows[0]?.total) || 0;
+    const stats = statsRows[0];
 
     // Логируем просмотр
     await logActivity(
@@ -338,14 +347,14 @@ export default defineEventHandler(async (event) => {
           totalPages: Math.ceil(total / params.limit),
         },
         stats: {
-          total: stats?.total || 0,
-          issued: stats?.issued || 0,
-          revoked: stats?.revoked || 0,
-          organizations: stats?.organizations || 0,
-          groups: stats?.groups || 0,
-          fromJournal: stats?.from_journal || 0,
-          fromImport: stats?.from_import || 0,
-          fromManual: stats?.from_manual || 0,
+          total: Number(stats?.total) || 0,
+          issued: Number(stats?.issued) || 0,
+          revoked: Number(stats?.revoked) || 0,
+          organizations: Number(stats?.organizations) || 0,
+          groups: Number(stats?.groups) || 0,
+          fromJournal: Number(stats?.from_journal) || 0,
+          fromImport: Number(stats?.from_import) || 0,
+          fromManual: Number(stats?.from_manual) || 0,
         },
       },
     };

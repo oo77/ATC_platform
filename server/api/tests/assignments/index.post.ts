@@ -6,8 +6,13 @@
 import { createTestAssignment, testAssignmentExistsForEventAndTemplate } from '../../../repositories/testAssignmentRepository';
 import { getTestTemplateById } from '../../../repositories/testTemplateRepository';
 import type { CreateTestAssignmentDTO } from '../../../types/testing';
+import { Permission, requirePermission } from "../../../utils/permissions";
+import { requireGroupPermission } from "../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: право + доступ к группе назначения
+  await requireGroupPermission(event, (await readBody(event))?.group_id, [Permission.TESTS_ASSIGN]);
+
     try {
         const body = await readBody<CreateTestAssignmentDTO>(event);
 

@@ -1,7 +1,11 @@
 import { executeQuery } from '../../utils/db';
 import type { RowDataPacket } from 'mysql2/promise';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.DASHBOARD_STATS);
+
   const user = event.context.user;
 
   if (!user) {

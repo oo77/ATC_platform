@@ -561,7 +561,7 @@
 
             <!-- Batch Certificates ZIP Download (if available in artifact) -->
             <button
-              v-if="currentArtifact.certificates && currentArtifact.certificates.length > 0"
+              v-if="currentArtifact.certificates && currentArtifact.certificates.length > 0 && canDownloadCertificateArchive"
               @click="downloadCertificatesZip(currentArtifact.certificates.map(c => c.id))"
               class="p-1.5 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               title="Скачать все сертификаты в ZIP"
@@ -797,6 +797,10 @@
 </template>
 
 <script setup lang="ts">
+import { Permission as ChatPermission } from "~/types/permissions";
+// Архив ZIP сервер отдаёт только с certificates:view_all
+const { hasPermission: hasChatPermission } = usePermissions();
+const canDownloadCertificateArchive = computed(() => hasChatPermission(ChatPermission.CERTIFICATES_VIEW_ALL));
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import {
   Sparkles,

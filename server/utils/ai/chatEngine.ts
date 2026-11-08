@@ -1,3 +1,4 @@
+import { notInLockedFolderSql } from "../folderAccess";
 import OpenAI from "openai";
 import { executeQuery } from "../db";
 import { aiSettingsRepository } from "../../repositories/aiSettingsRepository";
@@ -230,13 +231,13 @@ async function readFileContentTool(params: { fileUuid?: string; filename?: strin
     let fileRecord: any = null;
     if (params.fileUuid) {
       const rows = await executeQuery<any[]>(
-        "SELECT uuid, filename, extension, size_bytes, category FROM files WHERE uuid = ? AND deleted_at IS NULL LIMIT 1",
+        "SELECT uuid, filename, extension, size_bytes, category FROM files WHERE uuid = ? AND deleted_at IS NULL" + (await notInLockedFolderSql()) + " LIMIT 1",
         [params.fileUuid],
       );
       fileRecord = rows[0];
     } else if (params.filename) {
       const rows = await executeQuery<any[]>(
-        "SELECT uuid, filename, extension, size_bytes, category FROM files WHERE filename LIKE ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 1",
+        "SELECT uuid, filename, extension, size_bytes, category FROM files WHERE filename LIKE ? AND deleted_at IS NULL" + (await notInLockedFolderSql()) + " ORDER BY id DESC LIMIT 1",
         [`%${params.filename}%`],
       );
       fileRecord = rows[0];

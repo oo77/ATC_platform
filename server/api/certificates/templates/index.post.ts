@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { createTemplate } from '../../../repositories/certificateTemplateRepository';
 import { logActivity } from '../../../utils/activityLogger';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 const createTemplateSchema = z.object({
   name: z.string().min(1, 'Название обязательно').max(255),
@@ -14,6 +15,9 @@ const createTemplateSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEMPLATES_CREATE);
+
   try {
     const body = await readBody(event);
     const validated = createTemplateSchema.parse(body);

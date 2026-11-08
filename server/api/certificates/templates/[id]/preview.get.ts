@@ -11,8 +11,12 @@ import {
   type VariableContext,
 } from "../../../../utils/pdfGenerator";
 import type { CertificateTemplateData } from "../../../../types/certificate";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEMPLATES_VIEW);
+
   try {
     const id = getRouterParam(event, "id");
 

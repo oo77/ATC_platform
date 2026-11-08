@@ -412,6 +412,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+const tgFetch = useTgFetch(); // заголовок X-Telegram-Init-Data для /api/tg-app/*
 
 const props = defineProps({
   organizationId: {
@@ -573,7 +574,7 @@ async function uploadFiles() {
       formData.append("files", f.file);
     }
 
-    const response = await $fetch("/api/tg-app/certificates/ai-batch/upload", {
+    const response = await tgFetch("/api/tg-app/certificates/ai-batch/upload", {
       method: "POST",
       body: formData,
     });
@@ -603,7 +604,7 @@ async function runAnalysis() {
   analyzing.value = true;
 
   try {
-    const response = await $fetch("/api/tg-app/certificates/ai-batch/analyze", {
+    const response = await tgFetch("/api/tg-app/certificates/ai-batch/analyze", {
       method: "POST",
       body: {
         fileIds: uploadedFileIds.value,
@@ -674,7 +675,7 @@ async function confirmImport() {
         extractedData: r.extractedData,
       }));
 
-    const response = await $fetch("/api/tg-app/certificates/ai-batch/confirm", {
+    const response = await tgFetch("/api/tg-app/certificates/ai-batch/confirm", {
       method: "POST",
       body: {
         items,

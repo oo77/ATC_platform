@@ -5,11 +5,22 @@
 
 import { upsertFinalGrade } from '../../repositories/attendanceRepository';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission } from "../../utils/permissions";
+import { assertGradeTargets, requireGroupPermission } from "../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  const gradeBody = await readBody(event);
+  const accessCtx = await requireGroupPermission(event, gradeBody?.groupId, [Permission.GRADES_MANAGE]);
+  await assertGradeTargets(accessCtx, {
+    groupId: gradeBody.groupId,
+    disciplineId: gradeBody?.disciplineId,
+    studentIds: [gradeBody?.studentId],
+  });
+
   try {
     const body = await readBody(event);
-    const userId = event.context.auth?.userId;
+    const userId = event.context.user?.id; // было context.auth — его никто не заполнял, автор терялся
     
     if (!body.studentId || !body.groupId || !body.disciplineId) {
       throw createError({

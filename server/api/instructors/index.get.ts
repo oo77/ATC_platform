@@ -4,8 +4,12 @@
  */
 
 import { getInstructorsPaginated, type InstructorFilters } from '../../repositories/instructorRepository';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.INSTRUCTORS_VIEW);
+
   try {
     const query = getQuery(event);
 

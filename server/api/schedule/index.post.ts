@@ -20,6 +20,7 @@ import {
   formatDateForDisplay,
 } from "../../utils/timeUtils";
 import type { RowDataPacket } from "mysql2/promise";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 interface GroupRow extends RowDataPacket {
   id: string;
@@ -40,6 +41,9 @@ interface UsedHoursRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.SCHEDULE_CREATE);
+
   try {
     const body = await readBody<CreateScheduleEventInput>(event);
 

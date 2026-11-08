@@ -5,8 +5,12 @@
 
 import { getSchedulePeriods } from '../../../repositories/scheduleRepository';
 import type { H3Event } from 'h3';
+import { requireAuthContext } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event: H3Event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAuthContext(event);
+
   try {
     const query = getQuery(event);
     const activeOnly = query.activeOnly !== 'false';

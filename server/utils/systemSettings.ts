@@ -56,6 +56,18 @@ const KEY_METADATA: Record<string, { category: string; description: string; isSe
 };
 
 /**
+ * Секретный ли ключ. Решается по метаданным И по имени — чтобы секрет
+ * не утёк, даже если кэш настроек пуст или ключа нет в KEY_METADATA.
+ */
+export function isSecretKey(key: string, cachedIsSecret?: boolean): boolean {
+  return (
+    !!cachedIsSecret ||
+    !!KEY_METADATA[key]?.isSecret ||
+    /(SECRET|TOKEN|PASSWORD|API_KEY|PRIVATE_KEY)/i.test(key)
+  );
+}
+
+/**
  * Инициализирует таблицу настроек и загружает их в in-memory кэш
  */
 export async function initSystemSettings(): Promise<void> {
@@ -133,6 +145,8 @@ export async function initSystemSettings(): Promise<void> {
       console.log(`✅ [SystemSettings] Loaded ${settingsCache.size} settings from database into memory`);
     } catch (error: any) {
       console.error("❌ [SystemSettings] Failed to initialize settings from database:", error.message);
+      // Не кэшируем неудачу: следующая попытка снова попробует загрузить настройки
+      initPromise = null;
     }
   })();
 
@@ -188,7 +202,7 @@ export async function saveSettings(
     };
 
     // Если секрет передан как '••••••••' или пустая строка при существующем секрете, не перезаписываем его
-    if (meta.isSecret && (strValue.includes("••") || strValue.trim() === "")) {
+    if (isSecretKey(key, meta.isSecret) && (strValue.includes("••") || strValue.trim() === "")) {
       continue;
     }
 
@@ -239,7 +253,7 @@ export async function getAllSettingsGrouped(maskSecrets = true): Promise<{
   const getValue = (key: string, defaultVal = ""): string => {
     const item = settingsCache.get(key);
     const val = item?.value ?? process.env[key] ?? defaultVal;
-    if (maskSecrets && item?.isSecret && val) {
+    if (maskSecrets && isSecretKey(key, item?.isSecret) && val) {
       return "••••••••";
     }
     return String(val);

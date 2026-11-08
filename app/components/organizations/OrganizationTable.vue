@@ -169,6 +169,8 @@ const emit = defineEmits<{
 }>();
 
 // Меню строки «⋯»: скачивание ZIP, затем отдельной группой — удаление (опасное, последним).
+const { canDeleteOrganizations } = usePermissions();
+
 // Удаление по-прежнему недоступно, пока у организации есть слушатели (то же условие, что было у кнопки)
 const rowMenu = (org: Organization) => [
   { items: [{ key: 'download', label: 'Скачать сертификаты (ZIP)', icon: Download }] },
@@ -181,6 +183,8 @@ const rowMenu = (org: Organization) => [
         icon: Trash2,
         danger: true,
         disabled: org.studentsCount > 0,
+        // Удаление — только с правом organizations:delete (иначе сервер ответит 403)
+        hidden: !canDeleteOrganizations.value,
       },
     ],
   },

@@ -5,8 +5,12 @@
 
 import { deleteScheduleEvent, getScheduleEventById } from '../../repositories/scheduleRepository';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.SCHEDULE_DELETE);
+
   try {
     const id = getRouterParam(event, 'id');
     

@@ -8,8 +8,12 @@ import { getQuestionsByIds } from '../../../repositories/questionRepository';
 import { getTestAssignmentById } from '../../../repositories/testAssignmentRepository';
 import { getTestTemplateById } from '../../../repositories/testTemplateRepository';
 import { executeQuery } from '../../../utils/db';
+import { requireTestSessionAccess } from "../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireTestSessionAccess(event, getRouterParam(event, "id") || "", "read");
+
     try {
         const id = getRouterParam(event, 'id');
         const query = getQuery(event);

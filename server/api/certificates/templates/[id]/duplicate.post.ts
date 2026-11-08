@@ -9,8 +9,12 @@ import {
   updateTemplate,
 } from "../../../../repositories/certificateTemplateRepository";
 import { logActivity } from "../../../../utils/activityLogger";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEMPLATES_CREATE);
+
   try {
     const id = getRouterParam(event, "id");
 

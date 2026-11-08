@@ -5,6 +5,8 @@
 
 import { getFileByUuid } from "../../repositories/fileRepository";
 import { storage } from "../../utils/storage";
+import { Permission, requireAuthContext, roleHasPermission } from "../../utils/permissions";
+import { isSafeInlineMime, requireFolderUnlocked } from "../../utils/folderAccess";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -31,8 +33,6 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // TODO: Проверка прав доступа
-    // Пока что разрешаем доступ только авторизованным пользователям
     const user = event.context.user;
 
     if (!fileRecord.isPublic && !user) {
@@ -40,6 +40,19 @@ export default defineEventHandler(async (event) => {
         statusCode: 401,
         message: "Требуется авторизация",
       });
+    }
+
+    // P0-ACCESS: файл видит загрузивший/владелец или пользователь с правом просмотра файлов;
+    // плюс пароль папки по всей цепочке (раньше не проверялся на сервере вовсе)
+    if (!fileRecord.isPublic) {
+      const accessCtx = await requireAuthContext(event);
+      const isOwner =
+        String(fileRecord.uploadedBy) === accessCtx.userId ||
+        (fileRecord.userId !== null && String(fileRecord.userId) === accessCtx.userId);
+      if (!isOwner && !roleHasPermission(accessCtx, Permission.FILES_VIEW)) {
+        throw createError({ statusCode: 403, message: "Доступ запрещён" });
+      }
+      await requireFolderUnlocked(event, accessCtx, fileRecord.folderId);
     }
 
     // Проверка уровня доступа
@@ -57,7 +70,7 @@ export default defineEventHandler(async (event) => {
           }
           break;
         case "admin":
-          if (!user || user.role !== "ADMIN") {
+          if (!user || !roleHasPermission(user, Permission.FILES_MANAGE)) {
             throw createError({
               statusCode: 403,
               message: "Доступ запрещён",
@@ -76,13 +89,21 @@ export default defineEventHandler(async (event) => {
     // Получение файла из storage
     const fileData = await storage.get(fileRecord.fullPath);
 
-    // Установка headers
-    setHeader(event, "Content-Type", fileRecord.mimeType);
+    // Установка headers.
+    // MIME-тип пришёл от загрузившего и ему нельзя доверять: HTML/SVG/XML, открытые
+    // inline, выполнились бы в контексте сайта (хранимый XSS с кражей токена).
+    // Безопасные типы показываем в браузере, остальные — только скачиванием в песочнице.
+    const inline = isSafeInlineMime(fileRecord.mimeType);
+    setHeader(event, "Content-Type", inline ? fileRecord.mimeType : "application/octet-stream");
     setHeader(event, "Content-Length", fileRecord.sizeBytes);
+    setHeader(event, "X-Content-Type-Options", "nosniff");
+    if (!inline) {
+      setHeader(event, "Content-Security-Policy", "sandbox");
+    }
     setHeader(
       event,
       "Content-Disposition",
-      `inline; filename="${encodeURIComponent(fileRecord.filename)}"`
+      `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(fileRecord.filename)}`
     );
 
     // Кэширование для публичных файлов

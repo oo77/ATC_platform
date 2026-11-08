@@ -1,12 +1,16 @@
 import { defineEventHandler, createError } from 'h3';
 import { getOrganizationById } from '../../repositories/organizationRepository';
 import { createActivityLog } from '../../repositories/activityLogRepository';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 /**
  * GET /api/organizations/:id
  * Получение детальной информации об организации
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.ORGANIZATIONS_VIEW);
+
   try {
     const id = event.context.params?.id;
 

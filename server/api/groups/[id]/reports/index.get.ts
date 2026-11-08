@@ -6,8 +6,13 @@
 import { defineEventHandler, createError, getRouterParam } from "h3";
 import { executeQuery } from "../../../../utils/db";
 import { getGroupById } from "../../../../repositories/groupRepository";
+import { Permission } from "../../../../utils/permissions";
+import { requireGroupPermission } from "../../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireGroupPermission(event, getRouterParam(event, "id"), [Permission.GROUPS_VIEW_ALL, Permission.GROUPS_VIEW_OWN]);
+
   const user = event.context.user;
   if (!user) {
     throw createError({ statusCode: 401, message: "Требуется авторизация" });

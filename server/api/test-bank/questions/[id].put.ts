@@ -6,6 +6,7 @@
 import { updateQuestion } from "../../../repositories/questionRepository";
 import { logActivity } from "../../../utils/activityLogger";
 import type { UpdateQuestionDTO } from "../../../types/testing";
+import { Permission, roleHasPermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -20,7 +21,7 @@ export default defineEventHandler(async (event) => {
 
     // Проверка прав доступа (только ADMIN, MANAGER)
     const allowedRoles = ["ADMIN", "MANAGER"];
-    if (!allowedRoles.includes(user.role)) {
+    if (!roleHasPermission(user, Permission.TEST_BANKS_MANAGE)) {
       throw createError({
         statusCode: 403,
         message: "Недостаточно прав для редактирования вопроса",

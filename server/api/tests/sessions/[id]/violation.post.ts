@@ -14,8 +14,12 @@ import {
   TestSessionStatus,
   type ViolationRecord,
 } from "../../../../types/testing";
+import { requireTestSessionAccess } from "../../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireTestSessionAccess(event, getRouterParam(event, "id") || "", "owner");
+
   try {
     const id = getRouterParam(event, "id");
     const body = await readBody<{

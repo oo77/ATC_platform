@@ -294,6 +294,7 @@ import {
   Trophy,
   Award,
   History,
+  MonitorPlay,
   Settings,
   BookOpen,
   ClipboardList,
@@ -301,6 +302,7 @@ import {
   UserCheck,
   UserSquare2,
   Sparkles,
+  KeyRound,
 } from "lucide-vue-next";
 import type { Component } from "vue";
 
@@ -435,10 +437,10 @@ const allMenuGroups: MenuGroup[] = [
       {
         icon: FileCheck,
         name: "База тестов",
-        hideForRoles: ["STUDENT"],
+        anyPermissions: [Permission.TEST_BANKS_VIEW, Permission.TEST_TEMPLATES_VIEW],
         subItems: [
-          { name: "Вопросы", path: "/test-bank" },
-          { name: "Шаблоны", path: "/test-templates" },
+          { name: "Вопросы", path: "/test-bank", permission: Permission.TEST_BANKS_VIEW },
+          { name: "Шаблоны", path: "/test-templates", permission: Permission.TEST_TEMPLATES_VIEW },
         ],
       },
       {
@@ -473,14 +475,15 @@ const allMenuGroups: MenuGroup[] = [
       {
         icon: Award,
         name: "Сертификаты",
-        hideForRoles: ["STUDENT"],
+        anyPermissions: [Permission.CERTIFICATES_VIEW_ALL, Permission.TEMPLATES_VIEW],
         subItems: [
           {
             name: "База сертификатов",
             path: "/certificates",
             excludePaths: ["/certificates/templates"],
+            permission: Permission.CERTIFICATES_VIEW_ALL,
           },
-          { name: "Шаблоны", path: "/certificates/templates" },
+          { name: "Шаблоны", path: "/certificates/templates", permission: Permission.TEMPLATES_VIEW },
         ],
       },
       {
@@ -506,7 +509,7 @@ const allMenuGroups: MenuGroup[] = [
         icon: FolderTree,
         name: "Файлы",
         path: "/files",
-        hideForRoles: ["STUDENT"],
+        permission: Permission.FILES_VIEW,
       },
     ],
   },
@@ -517,13 +520,19 @@ const allMenuGroups: MenuGroup[] = [
         icon: Building2,
         name: "Организации",
         path: "/organizations",
-        hideForRoles: ["STUDENT"],
+        permission: Permission.ORGANIZATIONS_VIEW,
       },
       {
         icon: Users,
         name: "Пользователи",
         path: "/users",
         permission: Permission.USERS_VIEW,
+      },
+      {
+        icon: KeyRound,
+        name: "Роли и права",
+        path: "/admin/roles",
+        permission: Permission.ROLES_VIEW,
       },
       {
         icon: ClipboardList,
@@ -535,18 +544,24 @@ const allMenuGroups: MenuGroup[] = [
         icon: BarChart3,
         name: "Аналитика",
         path: "/reports",
-        hideForRoles: ["STUDENT", "TEACHER"],
+        permission: Permission.DASHBOARD_STATS,
+      },
+      {
+        icon: MonitorPlay,
+        name: "Публичные дашборды",
+        path: "/public-dashboards",
+        permission: Permission.DASHBOARD_STATS,
       },
       {
         icon: Sparkles,
         name: "ИИ Ассистент",
         path: "/chat",
-        hideForRoles: ["STUDENT"],
+        permission: Permission.AI_CHAT_USE,
       },
       {
         icon: History,
         name: "Журнал аудита",
-        path: "/activity-logs",
+        path: "/admin/audit",
         permission: Permission.LOGS_VIEW,
       },
     ],
@@ -579,7 +594,19 @@ const menuGroups = computed(() => {
         if (item.anyPermissions && !hasAnyPermission(item.anyPermissions))
           return false;
         return true;
-      });
+      })
+        // Подпункты тоже фильтруем по праву; пункт без видимых подпунктов скрываем
+        .map((item) =>
+          item.subItems
+            ? {
+                ...item,
+                subItems: item.subItems.filter(
+                  (sub) => !sub.permission || hasPermission(sub.permission),
+                ),
+              }
+            : item,
+        )
+        .filter((item) => !item.subItems || item.subItems.length > 0);
       return { ...group, items };
     })
     .filter((g) => g.items.length > 0);

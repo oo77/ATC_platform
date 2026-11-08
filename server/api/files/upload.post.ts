@@ -7,8 +7,13 @@ import { storage, validateFile, type FileCategory } from '../../utils/storage';
 import { createFile } from '../../repositories/fileRepository';
 import { logActivity } from '../../utils/activityLogger';
 import type { MultiPartData } from 'h3';
+import { Permission, requireAuthContext, requirePermission } from "../../utils/permissions";
+import { requireFolderUnlocked } from "../../utils/folderAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.FILES_UPLOAD);
+
   try {
     // Получение текущего пользователя
     const user = event.context.user;
@@ -45,6 +50,8 @@ export default defineEventHandler(async (event) => {
     // Извлечение folderId (опционально)
     const folderIdData = formData.find((item) => item.name === 'folderId');
     const folderId = folderIdData?.data?.toString() ? parseInt(folderIdData.data.toString()) : null;
+    // Загружать в папку, закрытую паролем, можно только после её разблокировки
+    await requireFolderUnlocked(event, await requireAuthContext(event), folderId);
 
     // Извлечение relatedId (опционально)
     const relatedIdData = formData.find((item) => item.name === 'relatedId');

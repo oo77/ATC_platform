@@ -1,6 +1,7 @@
 import { executeQuery } from "../../utils/db";
 import { toPublicUser } from "../../utils/auth";
 import type { User, UserPublic } from "../../types/auth";
+import { Permission, roleHasAnyPermission, roleHasPermission } from "../../utils/permissions";
 
 /**
  * API endpoint для поиска пользователей
@@ -28,7 +29,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Проверка прав доступа (только ADMIN и MANAGER)
-    if (!["ADMIN", "MANAGER"].includes(currentUser.role)) {
+    if (!roleHasPermission(currentUser, Permission.USERS_VIEW)) {
       console.error(
         `❌ [User Search] Access denied for role: ${currentUser.role}`
       );
@@ -70,7 +71,7 @@ export default defineEventHandler(async (event) => {
     const params: any[] = [`%${searchQuery}%`, `%${searchQuery}%`];
 
     // Ограничение доступа для MANAGER - не может видеть ADMIN
-    if (currentUser.role === "MANAGER") {
+    if (!roleHasPermission(currentUser, Permission.USERS_MANAGE_ROLES)) {
       sql += " AND role != ?";
       params.push("ADMIN");
     }

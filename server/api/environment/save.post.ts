@@ -1,3 +1,4 @@
+import { requireSetupModeOrPermission, Permission } from "../../utils/permissions";
 import { defineEventHandler, readBody, createError } from "h3";
 import { saveSettings } from "../../utils/systemSettings";
 
@@ -6,6 +7,9 @@ import { saveSettings } from "../../utils/systemSettings";
  * POST /api/environment/save
  */
 export default defineEventHandler(async (event) => {
+  // До настройки системы — без входа; после — только с правом управления настройками
+  await requireSetupModeOrPermission(event, Permission.SETTINGS_MANAGE);
+
   const body = await readBody(event);
 
   console.log("[SETTINGS] Saving platform settings to database...");

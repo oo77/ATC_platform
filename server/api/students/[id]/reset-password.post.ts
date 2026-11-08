@@ -11,6 +11,7 @@ import { executeQuery } from '../../../utils/db';
 import { hashPassword } from '../../../utils/auth';
 import { logActivity } from '../../../utils/activityLogger';
 import type { RowDataPacket } from 'mysql2/promise';
+import { Permission, roleHasPermission } from "../../../utils/permissions";
 
 const resetPasswordSchema = z.object({
     newPassword: z.string().min(8, 'Пароль должен быть минимум 8 символов').optional(),
@@ -30,7 +31,7 @@ export default defineEventHandler(async (event) => {
 
         // Проверяем права доступа (только ADMIN и MANAGER)
         const user = event.context.user;
-        if (!user || !['ADMIN', 'MANAGER'].includes(user.role)) {
+        if (!user || !roleHasPermission(user, Permission.STUDENTS_UPDATE)) {
             throw createError({
                 statusCode: 403,
                 message: 'Недостаточно прав для сброса пароля',

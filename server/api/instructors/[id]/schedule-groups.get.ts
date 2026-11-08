@@ -5,6 +5,8 @@
 
 import type { RowDataPacket } from "mysql2/promise";
 import { executeQuery } from "../../../utils/db";
+import { Permission } from "../../../utils/permissions";
+import { requireInstructorSelfOrPermission } from "../../../utils/resourceAccess";
 
 interface GroupRow extends RowDataPacket {
   group_id: string;
@@ -25,6 +27,9 @@ const toYmd = (value: Date | string) => {
 };
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireInstructorSelfOrPermission(event, getRouterParam(event, "id"), Permission.INSTRUCTORS_VIEW);
+
   try {
     const instructorId = getRouterParam(event, "id");
     if (!instructorId) {

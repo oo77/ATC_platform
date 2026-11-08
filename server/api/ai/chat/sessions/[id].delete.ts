@@ -1,6 +1,10 @@
 import { executeQuery } from "../../../../utils/db";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.AI_CHAT_USE);
+
   const user = event.context.user;
   if (!user?.id) {
     throw createError({

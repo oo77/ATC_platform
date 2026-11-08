@@ -89,6 +89,7 @@
       <!-- Действия: одно главное (primary) + «⋯» с вторичными (импорт, обновление) -->
       <template #actions>
         <UiDropdown
+          v-if="canImportStudents"
           icon-only
           variant="outline"
           size="md"
@@ -96,7 +97,7 @@
           :groups="toolbarMenu"
           @select="onToolbarSelect"
         />
-        <UiButton variant="primary" size="md" :start-icon="Plus" @click="openCreateModal">
+        <UiButton v-if="canCreateStudents" variant="primary" size="md" :start-icon="Plus" @click="openCreateModal">
           Добавить слушателя
         </UiButton>
       </template>
@@ -173,6 +174,8 @@ import { Plus, Upload, CreditCard, Building2, Briefcase, RefreshCw } from "lucid
 
 // Используем authFetch для авторизованных запросов
 const { authFetch } = useAuthFetch();
+// Кнопки показываем только при наличии прав — иначе сервер ответит 403
+const { canCreateStudents, canImportStudents } = usePermissions();
 
 // Тип ответа от API
 interface StudentsResponse {

@@ -1,10 +1,14 @@
 import { executeQuery } from "../../../utils/db";
+import { requireStudentAccess } from "../../../utils/permissions";
 
 /**
  * GET /api/students/[id]/courses
  * Получение списка курсов конкретного студента (для администраторов/модераторов)
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: сотрудник со всеми слушателями, преподаватель — слушатели своих групп, слушатель — только себя
+  await requireStudentAccess(event, getRouterParam(event, "id") || "");
+
   const user = event.context.user;
   const studentId = event.context.params?.id;
 
@@ -22,16 +26,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Проверка прав доступа (только администраторы и модераторы)
-  if (!["ADMIN", "MANAGER"].includes(user.role)) {
-    console.error(
-      `[API] Access denied for user ${user.id} with role ${user.role}`,
-    );
-    throw createError({
-      statusCode: 403,
-      statusMessage: "Forbidden",
-    });
-  }
+  // Доступ проверен в начале обработчика (requireStudentAccess)
 
   if (!studentId) {
     console.error("[API] Student ID is required");

@@ -1,3 +1,4 @@
+import { getClientIp } from "../../../utils/clientIp";
 import { executeQuery } from "../../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
 
@@ -72,7 +73,7 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const ip        = getRequestIP(event, { xForwardedFor: true }) ?? "unknown";
+  const ip        = getClientIp(event) ?? "unknown";
   const userAgent = getHeader(event, "user-agent") ?? "";
 
   try {

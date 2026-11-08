@@ -2,12 +2,16 @@ import { defineEventHandler, createError } from "h3";
 import { requireAuth } from "../../../../utils/auth";
 import { useDatabase } from "../../../../utils/useDatabase";
 import { logActivity } from "../../../../utils/activityLogger";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 /**
  * GET /api/reports/builder/meta/lookup
  * Возвращает справочники для фильтров (курсы, организации, инструкторы, группы)
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.DASHBOARD_STATS);
+
   try {
     requireAuth(event);
     const db = useDatabase();

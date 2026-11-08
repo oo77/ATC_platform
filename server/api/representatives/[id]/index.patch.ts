@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { updateRepresentative } from '../../../repositories/representativeRepository';
 import { logActivity } from '../../../utils/activityLogger';
+import { Permission, requireAnyPermission } from "../../../utils/permissions";
 
 const updateSchema = z.object({
   fullName: z.string().min(1).max(255).optional(),
@@ -22,6 +23,9 @@ const updateSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAnyPermission(event, [Permission.REPRESENTATIVES_MANAGE, Permission.REPRESENTATIVES_APPROVE]);
+
   try {
     const id = getRouterParam(event, 'id');
 

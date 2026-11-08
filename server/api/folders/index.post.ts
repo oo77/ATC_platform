@@ -5,8 +5,14 @@
 
 import { createFolder, getFolderByPath, getFolderById } from '../../repositories/folderRepository';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission, requirePermission } from "../../utils/permissions";
+import { requireFolderUnlocked } from "../../utils/folderAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  const accessCtx = await requirePermission(event, Permission.FILES_UPLOAD);
+  await requireFolderUnlocked(event, accessCtx, Number((await readBody(event))?.parentId) || null);
+
   try {
     const user = event.context.user;
     if (!user) {

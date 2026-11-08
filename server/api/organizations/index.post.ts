@@ -5,12 +5,16 @@ import {
   organizationInnExists,
 } from "../../repositories/organizationRepository";
 import { createActivityLog } from "../../repositories/activityLogRepository";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 /**
  * POST /api/organizations
  * Создание новой организации
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.ORGANIZATIONS_CREATE);
+
   try {
     const body = await readBody(event);
 

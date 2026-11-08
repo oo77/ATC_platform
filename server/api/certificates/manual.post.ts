@@ -7,6 +7,7 @@ import { createStandaloneCertificate, getCertificateByNumber } from '../../repos
 import { getStudentById, getStudentByPinfl, createStudent } from '../../repositories/studentRepository';
 import { defineEventHandler, readBody, createError } from 'h3';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 interface ManualCertificateInput {
     // Данные слушателя - либо ID существующего, либо данные для создания нового
@@ -42,6 +43,9 @@ interface ValidationError {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CERTIFICATES_ISSUE);
+
     try {
         const body = await readBody<ManualCertificateInput>(event);
 

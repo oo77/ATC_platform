@@ -4,8 +4,13 @@
  */
 
 import { deleteTestAssignment, getTestAssignmentById } from '../../../repositories/testAssignmentRepository';
+import { Permission, requirePermission } from "../../../utils/permissions";
+import { requireTestAssignmentAccess } from "../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: право + доступ к группе назначения
+  await requireTestAssignmentAccess(event, getRouterParam(event, "id"), "manage");
+
     try {
         const id = getRouterParam(event, 'id');
 

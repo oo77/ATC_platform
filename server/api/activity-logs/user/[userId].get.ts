@@ -6,6 +6,7 @@
  */
 
 import { getActivityLogsByUserId, getUserActivityStats } from '../../../repositories/activityLogRepository';
+import { Permission, roleHasPermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -18,8 +19,8 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Только ADMIN может просматривать журнал других пользователей
-    if (user.role !== 'ADMIN') {
+    // Проверка по праву, а не по названию роли
+    if (!roleHasPermission(user, Permission.LOGS_VIEW)) {
       throw createError({
         statusCode: 403,
         message: 'Недостаточно прав для просмотра журнала действий',

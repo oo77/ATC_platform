@@ -6,6 +6,9 @@ import { executeQuery } from "../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
 import { sendDocument } from "../../utils/telegramBot";
 import AdmZip from "adm-zip";
+import { readFileSync } from "fs";
+import { findCertificateFile } from "../../utils/certificateFile";
+import { requireTgRepresentative, assertTgMatches } from "../../utils/tgAppAuth";
 
 interface CertificateRow extends RowDataPacket {
   id: string;
@@ -18,6 +21,10 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
     const { groupCode, organizationId, chatId } = body;
+    // TG-ACCESS: подпись Telegram + представитель и организация только из БД
+    const tg = await requireTgRepresentative(event, "can_view_certificates");
+    assertTgMatches(organizationId, tg.organizationId, "organizationId");
+    assertTgMatches(chatId, tg.chatId, "chatId");
 
     if (!groupCode || !organizationId || !chatId) {
       throw createError({
@@ -62,23 +69,17 @@ export default defineEventHandler(async (event) => {
     // Скачиваем и добавляем каждый PDF в архив
     for (const cert of certificates) {
       try {
-        // Получаем файл локально через внутренний API
-        let buffer: Buffer;
-        try {
-          const response = await $fetch(
-            `/api/certificates/download/${cert.id}`,
-            {
-              responseType: "arrayBuffer",
-            },
-          );
-          buffer = Buffer.from(response as any);
-        } catch (downloadErr) {
-          console.warn(
-            `[TG-App] Не удалось скачать сертификат ${cert.id} через API:`,
-            downloadErr,
-          );
+        // Читаем файл с диска напрямую. Раньше здесь был внутренний $fetch к
+        // /api/certificates/download без токена — он всегда получал 401.
+        const filePath = findCertificateFile(
+          { pdfFileUrl: cert.pdfFileUrl, certificateNumber: cert.certificateNumber },
+          "pdf",
+        );
+        if (!filePath) {
+          console.warn(`[TG-App] Файл сертификата ${cert.id} не найден на диске`);
           continue;
         }
+        const buffer: Buffer = readFileSync(filePath);
 
         // Формируем имя файла: ФИО_НомерСертификата.pdf
         const fileName = `${cert.studentName.replace(/[^a-zA-Zа-яА-ЯёЁ0-9\s]/g, "_")}_${cert.certificateNumber}.pdf`;

@@ -2,6 +2,8 @@
  * Утилита для логирования действий пользователей
  */
 
+import { getClientIp } from "./clientIp";
+import { audit } from "./audit";
 import type { H3Event } from "h3";
 import { getHeader, getRequestIP } from "h3";
 import { createActivityLog } from "../repositories/activityLogRepository";
@@ -39,7 +41,7 @@ export async function logActivity(
     }
 
     // Получаем IP адрес
-    const ipAddress = getRequestIP(event, { xForwardedFor: true }) || null;
+    const ipAddress = getClientIp(event) || null;
 
     // Получаем User Agent
     const userAgent = getHeader(event, "user-agent") || null;
@@ -54,6 +56,16 @@ export async function logActivity(
       ipAddress: ipAddress || undefined,
       userAgent: userAgent || undefined,
     };
+
+    // Дублируем в новый журнал аудита (роль на момент действия, IP, request_id, изменения)
+    await audit(event, {
+      action: `${entityType}.${actionType}`.toLowerCase(),
+      category: actionType === "LOGIN" || actionType === "LOGOUT" ? "auth" : actionType === "VIEW" || actionType === "DOWNLOAD" || actionType === "EXPORT" ? "access" : "data",
+      summary: formatActivityDescription(actionType, entityType, entityName),
+      entity: { type: entityType, id: entityId ?? null, label: entityName ?? null },
+      changes: Array.isArray((details as any)?.changes) ? (details as any).changes : undefined,
+      metadata: details || null,
+    });
 
     await createActivityLog(logData);
 
@@ -78,6 +90,16 @@ export async function logActivityDirect(
   details?: Record<string, any>,
 ): Promise<void> {
   try {
+    await audit(null, {
+      action: `${entityType}.${actionType}`.toLowerCase(),
+      category: actionType === "LOGIN" || actionType === "LOGOUT" ? "auth" : "data",
+      summary: formatActivityDescription(actionType, entityType, entityName),
+      entity: { type: entityType, id: entityId ?? null, label: entityName ?? null },
+      metadata: details || null,
+      actor: { id: userId },
+      source: (details as any)?.platform === "telegram_mini_app" ? "telegram" : "system",
+    });
+
     await createActivityLog({
       userId,
       actionType,
@@ -145,6 +167,10 @@ export function formatActivityDescription(
     GRADE: "оценку",
     SYSTEM: "системные настройки",
     GROUP_REPORT: "отчет группы",
+    CERTIFICATE_TEMPLATE_BACKGROUND: "фон шаблона сертификата",
+    CERTIFICATE_TEMPLATE_IMAGE: "изображение шаблона сертификата",
+    TRAINING_REQUEST: "заявку на обучение",
+    LIBRARY_BOOK: "книгу",
   };
 
   const action = actionLabels[actionType] || actionType;

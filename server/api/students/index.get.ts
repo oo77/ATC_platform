@@ -4,8 +4,18 @@
  */
 
 import { getStudentsPaginated, type PaginationParams } from '../../repositories/studentRepository';
+import { Permission, getTeacherGroups, requireAnyPermission, roleHasPermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: все слушатели — только с STUDENTS_VIEW_ALL;
+  // иначе (преподаватель) — только слушатели его групп
+  const accessCtx = await requireAnyPermission(event, [Permission.STUDENTS_VIEW_ALL, Permission.STUDENTS_VIEW]);
+  const restrictToGroupIds = roleHasPermission(accessCtx, Permission.STUDENTS_VIEW_ALL)
+    ? undefined
+    : accessCtx.instructorId
+      ? await getTeacherGroups(accessCtx.instructorId)
+      : [];
+
   try {
     const query = getQuery(event);
 
@@ -21,6 +31,7 @@ export default defineEventHandler(async (event) => {
       hasCertificates: query.hasCertificates === 'true',
       noCertificates: query.noCertificates === 'true',
       compact: query.compact === 'true',
+      restrictToGroupIds,
     };
 
     // Ограничиваем limit для предотвращения злоупотреблений

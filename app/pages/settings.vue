@@ -634,12 +634,13 @@ const allTabs = computed(() => [
   {
     id: 'schedule', label: 'Расписание', description: 'Параметры расписания',
     icon: Calendar, bgClass: 'bg-indigo-100 dark:bg-indigo-900/20',
-    permission: null,
+    // Сохранение настроек расписания сервер разрешает только с settings:manage
+    permission: Permission.SETTINGS_MANAGE,
   },
   {
     id: 'classrooms', label: 'Аудитории', description: 'Управление аудиториями',
     icon: DoorOpen, bgClass: 'bg-green-100 dark:bg-green-900/20',
-    permission: null,
+    permission: Permission.CLASSROOMS_MANAGE,
   },
   {
     id: 'ai', label: 'AI Настройки', description: 'API ключи, модели',
@@ -674,7 +675,7 @@ const allTabs = computed(() => [
 ]);
 
 const tabs = computed(() =>
-  allTabs.value.filter(t => !t.permission || (user.value && roleHasPermission(user.value.role, t.permission)))
+  allTabs.value.filter(t => !t.permission || (user.value && roleHasPermission(user.value as any, t.permission)))
 );
 
 // ============================================================================
@@ -710,6 +711,9 @@ const securityFields = [
 // ============================================================================
 onMounted(async () => {
   await fetchSettings();
-  await fetchEnvData();
+  // Системные настройки читает только администратор настроек (остальным сервер ответит 403)
+  if (user.value && roleHasPermission(user.value as any, Permission.SETTINGS_MANAGE)) {
+    await fetchEnvData();
+  }
 });
 </script>

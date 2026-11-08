@@ -5,18 +5,20 @@
 
 import { reviewMarkingRequest, getMarkingRequestById } from '../../../../repositories/attendanceMarkingRepository';
 import { logActivity } from '../../../../utils/activityLogger';
+import { attendanceActorRole } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   try {
     const requestId = getRouterParam(event, 'id');
     const body = await readBody(event);
     const userId = event.context.user?.id;
-    const role = event.context.user?.role;
+    // Роль для логики отметки — из права attendance:manage, а не из названия роли
+    const role = attendanceActorRole(event.context.user);
 
     console.log(`[Attendance Marking] PUT /api/attendance/marking/requests/${requestId} - User: ${userId}, Role: ${role}`);
 
     // Только для админов и менеджеров
-    if (role !== 'ADMIN' && role !== 'MANAGER') {
+    if (role !== 'ADMIN') {
       throw createError({
         statusCode: 403,
         message: 'Доступ запрещён. Требуется роль администратора или менеджера',

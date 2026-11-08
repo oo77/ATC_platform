@@ -5,6 +5,7 @@
 
 import { updateAllSchedulePeriods } from '../../../repositories/scheduleRepository';
 import type { H3Event } from 'h3';
+import { Permission, roleHasPermission } from "../../../utils/permissions";
 
 interface UpdatePeriodData {
   periodNumber: number;
@@ -19,7 +20,7 @@ export default defineEventHandler(async (event: H3Event) => {
     const role = event.context.auth?.role || event.context.user?.role;
 
     // Только администратор может менять настройки
-    if (role !== 'ADMIN') {
+    if (!roleHasPermission(event.context.user, Permission.SETTINGS_MANAGE)) {
       throw createError({
         statusCode: 403,
         statusMessage: 'Доступ запрещен. Только администратор может изменять пары.',

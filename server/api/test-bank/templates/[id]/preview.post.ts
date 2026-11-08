@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { executeQuery } from '../../../../utils/db';
 import type { RowDataPacket } from 'mysql2/promise';
 import { getTestTemplateById } from '../../../../repositories/testTemplateRepository';
+import { Permission, requireAnyPermission } from "../../../../utils/permissions";
 
 interface QuestionRow extends RowDataPacket {
     id: string;
@@ -22,6 +23,9 @@ interface QuestionRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAnyPermission(event, [Permission.TEST_TEMPLATES_VIEW, Permission.TEST_TEMPLATES_MANAGE]);
+
     try {
         const id = getRouterParam(event, 'id');
         const body = await readBody(event);

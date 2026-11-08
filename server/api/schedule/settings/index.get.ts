@@ -5,8 +5,12 @@
 
 import { getSchedulePeriods, getScheduleSettingsAsObject } from '../../../repositories/scheduleRepository';
 import type { H3Event } from 'h3';
+import { requireAuthContext } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event: H3Event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAuthContext(event);
+
   try {
     const [periods, settings] = await Promise.all([
       getSchedulePeriods(),

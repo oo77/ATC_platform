@@ -1,128 +1,89 @@
-﻿import { defineEventHandler, createError } from "h3";
+import { getClientIp } from "../../../../utils/clientIp";
+﻿import { defineEventHandler, createError, getRequestIP, getHeader } from "h3";
 import { requireAuth } from "../../../../utils/auth";
 import * as libraryRepository from "../../../../repositories/libraryRepository";
-import { getDbPool } from "../../../../utils/db";
-
-const db = getDbPool();
+import { executeQuery } from "../../../../utils/db";
+import { logActivity } from "../../../../utils/activityLogger";
+import {
+  requireBookAccess,
+  closeStaleSessions,
+  activeSessionSql,
+} from "../../../../utils/libraryAccess";
 
 /**
  * POST /api/library/reading/[bookId]/start
- * Начало сессии чтения книги
+ * Начало (или продолжение) сессии чтения.
  *
- * Создает новую сессию чтения и возвращает информацию для начала чтения
+ * Возвращает токен сессии: без него нельзя получить PDF и сохранить прогресс,
+ * поэтому файл книги нельзя открыть прямой ссылкой в обход сессии.
  */
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event);
-
   const bookId = event.context.params?.bookId;
   if (!bookId) {
+    throw createError({ statusCode: 400, message: "Некорректный ID книги" });
+  }
+
+  await requireBookAccess(user, bookId);
+
+  const book = await libraryRepository.getBookById(bookId);
+  if (!book) {
+    throw createError({ statusCode: 404, message: "Книга не найдена" });
+  }
+  if (book.status !== "ready") {
     throw createError({
-      statusCode: 400,
-      message: "Некорректный ID книги",
+      statusCode: 409,
+      message: book.status === "processing" ? "Книга ещё обрабатывается" : "Книга недоступна из-за ошибки обработки",
     });
   }
 
-  console.log(
-    `[Library] Reading session start requested for book ${bookId} by user ${user.id} (${user.username})`,
+  await closeStaleSessions(bookId);
+
+  const progress = await libraryRepository.getReadingProgress(user.id, bookId);
+  const lastPage = Math.min(Math.max(progress?.last_page || 1, 1), Math.max(book.total_pages, 1));
+
+  const bookPayload = {
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    language: book.language,
+    total_pages: book.total_pages,
+  };
+
+  // Активная сессия (например, вторая вкладка) переиспользуется
+  const active = await executeQuery<any[]>(
+    `SELECT s.id, s.session_token FROM book_reading_sessions s
+     WHERE s.book_id = ? AND s.user_id = ? AND ${activeSessionSql("s")}
+     ORDER BY s.started_at DESC LIMIT 1`,
+    [bookId, user.id],
   );
-
-  try {
-    // Проверка доступа
-    const hasAccess = await libraryRepository.checkUserBookAccess(
-      user.id,
-      bookId,
-    );
-    if (!hasAccess) {
-      console.warn(
-        `[Library] Access denied for user ${user.id} to book ${bookId}`,
-      );
-      throw createError({
-        statusCode: 403,
-        message: "У вас нет доступа к этой книге",
-      });
-    }
-
-    // Получение книги
-    const book = await libraryRepository.getBookById(bookId);
-    if (!book) {
-      console.warn(`[Library] Book not found: ID ${bookId}`);
-      throw createError({
-        statusCode: 404,
-        message: "Книга не найдена",
-      });
-    }
-
-    // Проверка статуса обработки
-    if (book.status !== "ready") {
-      console.warn(
-        `[Library] Book ${bookId} is not ready: status ${book.status}`,
-      );
-      throw createError({
-        statusCode: 409,
-        message: "Книга еще не готова для чтения",
-      });
-    }
-
-    // Проверка активной сессии
-    const [sessions] = await db.execute<any[]>(
-      "SELECT * FROM book_reading_sessions WHERE book_id = ? AND user_id = ? AND ended_at IS NULL LIMIT 1",
-      [bookId, user.id],
-    );
-    const activeSession = sessions[0];
-
-    // Получаем прогресс чтения
-    const progress = await libraryRepository.getReadingProgress(
-      user.id,
-      bookId,
-    );
-    const lastPage = progress?.last_page || 1;
-
-    if (activeSession) {
-      console.log(
-        `[Library] User ${user.id} already has active session ${activeSession.id} for book ${bookId}`,
-      );
-
-      return {
-        sessionId: activeSession.id,
-        book: {
-          id: book.id,
-          title: book.title,
-          author: book.author,
-          total_pages: book.total_pages,
-        },
-        lastPage,
-      };
-    }
-
-    // Создание новой сессии
-    const sessionResult = await libraryRepository.createReadingSession({
-      book_id: bookId,
-      user_id: user.id,
-    });
-
-    console.log(
-      `[Library] New reading session ${sessionResult.id} started for user ${user.id}, book ${bookId}`,
-    );
-
+  if (active[0]) {
     return {
-      sessionId: sessionResult.id,
-      book: {
-        id: book.id,
-        title: book.title,
-        author: book.author,
-        total_pages: book.total_pages,
-      },
+      sessionId: active[0].id,
+      token: active[0].session_token,
+      book: bookPayload,
       lastPage,
+      maxPage: (progress as any)?.max_page || 0,
     };
-  } catch (error: any) {
-    console.error(
-      `[Library] Failed to start reading session for book ${bookId}, user ${user.id}:`,
-      error,
-    );
-    if (error.statusCode) throw error;
-    throw createError({
-      statusCode: 500,
-      message: "Ошибка при начале сессии чтения",
-    });
   }
+
+  const session = await libraryRepository.createReadingSession({
+    book_id: bookId,
+    user_id: user.id,
+    ip_address: getClientIp(event) || undefined,
+    user_agent: (getHeader(event, "user-agent") || "").slice(0, 500) || undefined,
+  });
+
+  await logActivity(event, "VIEW", "LIBRARY_BOOK", bookId, book.title, {
+    action: "open_book",
+    page: lastPage,
+  });
+
+  return {
+    sessionId: session.id,
+    token: session.session_token,
+    book: bookPayload,
+    lastPage,
+    maxPage: (progress as any)?.max_page || 0,
+  };
 });

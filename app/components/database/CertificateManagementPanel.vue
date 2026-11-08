@@ -354,6 +354,7 @@
 
 
 <script setup lang="ts">
+import { Permission } from "~/types/permissions";
 import { ref, computed, onMounted, defineComponent, h } from 'vue';
 import * as XLSX from 'xlsx';
 // Убраны иконки Filter/RotateCcw/Search/Layers/CalendarRange (фильтры рисует UiFilterBar)
@@ -363,6 +364,8 @@ import {
 } from 'lucide-vue-next';
 
 const { authFetch } = useAuthFetch();
+const { hasPermission: hasPerm } = usePermissions();
+const canRevokeCertificates = computed(() => hasPerm(Permission.CERTIFICATES_REVOKE));
 const notification = useNotification();
 
 // Sort icon inline component
@@ -532,8 +535,9 @@ function rowMenu(cert: any) {
     { items: [{ key: 'details', label: 'Подробнее', icon: Eye }] },
     {
       items: [
-        { key: 'revoke', label: 'Отозвать сертификат', icon: XCircle, danger: true, hidden: cert.status !== 'issued' },
-        { key: 'delete', label: 'Удалить полностью', icon: Trash2, danger: true, hidden: cert.status !== 'revoked' },
+        // Отзыв и удаление — только с правом certificates:revoke (иначе сервер ответит 403)
+        { key: 'revoke', label: 'Отозвать сертификат', icon: XCircle, danger: true, hidden: cert.status !== 'issued' || !canRevokeCertificates.value },
+        { key: 'delete', label: 'Удалить полностью', icon: Trash2, danger: true, hidden: cert.status !== 'revoked' || !canRevokeCertificates.value },
       ],
     },
   ];

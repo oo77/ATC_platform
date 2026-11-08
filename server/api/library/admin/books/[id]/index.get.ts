@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const user = requireAuth(event);
 
   // Проверка прав доступа
-  if (!roleHasPermission(user.role, Permission.LIBRARY_MANAGE)) {
+  if (!roleHasPermission(user, Permission.LIBRARY_MANAGE)) {
     console.error(
       `[Library] Unauthorized book details access by user ${user.id} (${user.role})`,
     );

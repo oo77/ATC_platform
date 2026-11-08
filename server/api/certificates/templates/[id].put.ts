@@ -9,6 +9,7 @@ import {
   updateTemplate,
 } from "../../../repositories/certificateTemplateRepository";
 import { logActivity } from "../../../utils/activityLogger";
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 const variableMappingSchema = z.object({
   placeholder: z.string(),
@@ -40,6 +41,9 @@ const updateTemplateSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEMPLATES_UPDATE);
+
   try {
     const id = getRouterParam(event, "id");
 

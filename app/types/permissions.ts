@@ -25,6 +25,10 @@ export enum Permission {
   USERS_DELETE = "users:delete",
   USERS_MANAGE_ROLES = "users:manage_roles",
 
+  // ========== ROLES (гибкие роли) ==========
+  ROLES_VIEW = "roles:view", // Просмотр ролей и их прав
+  ROLES_MANAGE = "roles:manage", // Создание, изменение, удаление ролей
+
   // ========== STUDENTS ==========
   STUDENTS_VIEW = "students:view",
   STUDENTS_VIEW_OWN = "students:view_own", // Только свои данные
@@ -73,6 +77,7 @@ export enum Permission {
   GROUPS_UPDATE = "groups:update",
   GROUPS_DELETE = "groups:delete",
   GROUPS_ARCHIVE = "groups:archive",
+  GROUPS_EDIT_LOCKED = "groups:edit_locked", // Менять даты начавшейся/завершённой группы
   GROUPS_MANAGE_STUDENTS = "groups:manage_students",
 
   // ========== SCHEDULE ==========
@@ -82,6 +87,9 @@ export enum Permission {
   SCHEDULE_CREATE = "schedule:create",
   SCHEDULE_UPDATE = "schedule:update",
   SCHEDULE_DELETE = "schedule:delete",
+
+  // ========== CLASSROOMS ==========
+  CLASSROOMS_MANAGE = "classrooms:manage", // Создание, изменение, удаление аудиторий
 
   // ========== ATTENDANCE ==========
   ATTENDANCE_VIEW = "attendance:view",
@@ -96,6 +104,7 @@ export enum Permission {
   // ========== CERTIFICATES ==========
   CERTIFICATES_VIEW = "certificates:view",
   CERTIFICATES_VIEW_OWN = "certificates:view_own",
+  CERTIFICATES_VIEW_ALL = "certificates:view_all", // Все сертификаты (реестр, аналитика)
   CERTIFICATES_ISSUE = "certificates:issue",
   CERTIFICATES_REVOKE = "certificates:revoke",
   CERTIFICATES_DOWNLOAD = "certificates:download",
@@ -121,7 +130,10 @@ export enum Permission {
 
   // ========== LIBRARY ==========
   LIBRARY_VIEW = "library:view",
+  LIBRARY_READ = "library:read", // Чтение книг
+  LIBRARY_UPLOAD = "library:upload", // Загрузка новых книг
   LIBRARY_MANAGE = "library:manage",
+  LIBRARY_ACCESS_MANAGE = "library:access_manage", // Выдача и отзыв доступа к книгам
 
   // ========== TEST BANKS ==========
   TEST_BANKS_VIEW = "test_banks:view",
@@ -135,6 +147,9 @@ export enum Permission {
   TESTS_ASSIGN = "tests:assign",
   TESTS_TAKE = "tests:take",
   TESTS_VIEW_RESULTS = "tests:view_results",
+
+  // ========== AI ==========
+  AI_CHAT_USE = "ai_chat:use", // AI-ассистент (чат с данными платформы)
 
   // ========== ATTESTATION (Аттестация инструкторов) ==========
   ATTESTATION_VIEW = "attestation:view",
@@ -213,7 +228,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.SCHEDULE_VIEW_ALL,
     Permission.SCHEDULE_CREATE,
     Permission.SCHEDULE_UPDATE,
-    // НЕ может удалять события
+    Permission.CLASSROOMS_MANAGE,
+    Permission.SCHEDULE_DELETE, // удаление занятий (как и массовое удаление)
 
     // Attendance
     Permission.ATTENDANCE_VIEW,
@@ -227,6 +243,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
     // Certificates
     Permission.CERTIFICATES_VIEW,
+    Permission.CERTIFICATES_VIEW_ALL,
     Permission.CERTIFICATES_ISSUE,
     Permission.CERTIFICATES_DOWNLOAD,
     // НЕ может отзывать сертификаты
@@ -264,6 +281,19 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Attestation
     Permission.ATTESTATION_VIEW,
     Permission.ATTESTATION_MANAGE,
+
+    // Синхронизировано с server/types/permissions.ts
+    Permission.LIBRARY_READ,
+    Permission.LIBRARY_UPLOAD,
+    Permission.LIBRARY_ACCESS_MANAGE,
+
+    // AI-ассистент
+    Permission.AI_CHAT_USE,
+
+    // Пользователи (кроме администраторов — для них нужен users:manage_roles)
+    Permission.USERS_CREATE,
+    Permission.USERS_UPDATE,
+    Permission.USERS_DELETE,
   ],
 
   // =========================================================
@@ -319,6 +349,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     // Attestation (своя аттестация)
     Permission.ATTESTATION_VIEW_OWN,
     Permission.ATTESTATION_CONDUCT,
+
+    // Синхронизировано с server/types/permissions.ts
+    Permission.LIBRARY_READ,
+
+    // AI-ассистент
+    Permission.AI_CHAT_USE,
   ],
 
   // =========================================================
@@ -354,6 +390,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
     // Tests (прохождение тестов)
     Permission.TESTS_TAKE,
+
+    // Синхронизировано с server/types/permissions.ts
+    Permission.LIBRARY_READ,
   ],
 };
 
@@ -523,6 +562,38 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
   // Settings
   { path: "/settings", requiredPermissions: [Permission.SETTINGS_VIEW] },
 
+  // Public dashboards (management; the public view /d/<token> needs no login)
+  { path: "/public-dashboards", requiredPermissions: [Permission.DASHBOARD_STATS] },
+  { path: "/public-dashboards/[id]", requiredPermissions: [Permission.DASHBOARD_STATS] },
+
+  // Добавлено при аудите прав: страницы, которые открывались прямой ссылкой без проверки
+  { path: "/organizations", requiredPermissions: [Permission.ORGANIZATIONS_VIEW] },
+  { path: "/certificates", requiredPermissions: [Permission.CERTIFICATES_VIEW_ALL] },
+  {
+    path: "/certificates/templates/[id]/editor",
+    requiredPermissions: [Permission.TEMPLATES_UPDATE],
+  },
+  { path: "/reports", requiredPermissions: [Permission.DASHBOARD_STATS] },
+  { path: "/reports/builder", requiredPermissions: [Permission.DASHBOARD_STATS] },
+  { path: "/chat", requiredPermissions: [Permission.AI_CHAT_USE] },
+  { path: "/training-requests", requiredPermissions: [Permission.REPRESENTATIVES_VIEW] },
+  {
+    path: "/test-templates",
+    anyPermissions: [Permission.TEST_TEMPLATES_VIEW, Permission.TEST_TEMPLATES_MANAGE],
+  },
+  {
+    path: "/test-templates/[id]",
+    anyPermissions: [Permission.TEST_TEMPLATES_VIEW, Permission.TEST_TEMPLATES_MANAGE],
+  },
+  { path: "/admin/attendance-requests", requiredPermissions: [Permission.ATTENDANCE_MANAGE] },
+  {
+    path: "/database/import-certificates",
+    requiredPermissions: [Permission.CERTIFICATES_ISSUE],
+  },
+  { path: "/users/[id]", requiredPermissions: [Permission.USERS_VIEW] },
+  { path: "/admin/roles", requiredPermissions: [Permission.ROLES_VIEW] },
+  { path: "/admin/audit", requiredPermissions: [Permission.LOGS_VIEW] },
+
   // Activity Logs
   { path: "/activity-logs", requiredPermissions: [Permission.LOGS_VIEW] },
 
@@ -603,38 +674,56 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
 // ========================================
 
 /**
- * Проверяет, есть ли у роли указанное разрешение
+ * Кого проверяем: пользователь с правами из сервера (user.permissions — права его роли,
+ * гибкие роли) или строка роли (статическая таблица ROLE_PERMISSIONS — запасной вариант).
+ */
+export type PermissionSubject =
+  | UserRole
+  | string
+  | { permissions?: string[] | null; role?: string | null }
+  | null
+  | undefined;
+
+function permissionListOf(subject: PermissionSubject): string[] | null {
+  if (!subject) return null;
+  if (typeof subject === "string") return (ROLE_PERMISSIONS[subject as UserRole] as string[]) || null;
+  if (Array.isArray(subject.permissions)) return subject.permissions;
+  if (subject.role) return (ROLE_PERMISSIONS[subject.role as UserRole] as string[]) || null;
+  return null;
+}
+
+/**
+ * Есть ли у субъекта право
  */
 export function roleHasPermission(
-  role: UserRole,
+  subject: PermissionSubject,
   permission: Permission,
 ): boolean {
-  const permissions = ROLE_PERMISSIONS[role];
-  return permissions?.includes(permission) ?? false;
+  return permissionListOf(subject)?.includes(permission) ?? false;
 }
 
 /**
- * Проверяет, есть ли у роли все указанные разрешения (AND)
+ * Все права (AND)
  */
 export function roleHasAllPermissions(
-  role: UserRole,
+  subject: PermissionSubject,
   permissions: Permission[],
 ): boolean {
-  return permissions.every((p) => roleHasPermission(role, p));
+  return permissions.every((p) => roleHasPermission(subject, p));
 }
 
 /**
- * Проверяет, есть ли у роли хотя бы одно из указанных разрешений (OR)
+ * Хотя бы одно право (OR)
  */
 export function roleHasAnyPermission(
-  role: UserRole,
+  subject: PermissionSubject,
   permissions: Permission[],
 ): boolean {
-  return permissions.some((p) => roleHasPermission(role, p));
+  return permissions.some((p) => roleHasPermission(subject, p));
 }
 
 /**
- * Получает все разрешения для роли
+ * Статические права роли по умолчанию
  */
 export function getRolePermissions(role: UserRole): Permission[] {
   return ROLE_PERMISSIONS[role] || [];

@@ -6,6 +6,8 @@
 import { executeQuery } from "../../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
 import { getAcademicHourMinutes } from "../../../utils/academicHours";
+import { Permission } from "../../../utils/permissions";
+import { requireInstructorSelfOrPermission } from "../../../utils/resourceAccess";
 
 interface CourseHistoryRow extends RowDataPacket {
   event_id: string;
@@ -53,6 +55,9 @@ interface CourseHistoryEvent {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireInstructorSelfOrPermission(event, getRouterParam(event, "id"), Permission.INSTRUCTORS_VIEW);
+
   try {
     const instructorId = getRouterParam(event, "id");
     const query = getQuery(event);

@@ -2,6 +2,7 @@ import { defineEventHandler, createError } from 'h3';
 import { getOrganizationById } from '../../../repositories/organizationRepository';
 import { executeQuery } from '../../../utils/db';
 import type { RowDataPacket } from 'mysql2/promise';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 interface StatsRow extends RowDataPacket {
     total_students: number;
@@ -35,6 +36,9 @@ interface RecentCertificateRow extends RowDataPacket {
  * - Последние выданные сертификаты
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.ORGANIZATIONS_VIEW);
+
     try {
         const id = event.context.params?.id;
 

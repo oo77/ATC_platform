@@ -348,6 +348,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import StudentDetailModal from "./StudentDetailModal.vue";
+const tgFetch = useTgFetch(); // заголовок X-Telegram-Init-Data для /api/tg-app/*
 
 const props = defineProps({
   organizationId: {
@@ -400,10 +401,10 @@ async function loadData() {
   try {
     // Загружаем оба типа данных параллельно
     const [allResponse, groupsResponse] = await Promise.all([
-      $fetch("/api/tg-app/students", {
+      tgFetch("/api/tg-app/students", {
         params: { organizationId: props.organizationId, mode: "all" },
       }),
-      $fetch("/api/tg-app/students", {
+      tgFetch("/api/tg-app/students", {
         params: { organizationId: props.organizationId, mode: "groups" },
       }).catch(() => ({ students: [] })), // Fallback если нет данных
     ]);

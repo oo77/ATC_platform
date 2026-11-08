@@ -16,12 +16,23 @@ import {
 } from "../../repositories/attendanceMarkingRepository";
 import { getInstructorByUserId } from "../../repositories/instructorRepository";
 import { logActivity } from "../../utils/activityLogger";
+import { Permission } from "../../utils/permissions";
+import { requireScheduleEventPermission } from "../../utils/resourceAccess";
+import { attendanceActorRole } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: только тот, кто может отмечать посещаемость, и только по доступной группе.
+  // Раньше эндпоинт не проверял права, и отметить посещаемость мог даже слушатель.
+  await requireScheduleEventPermission(event, (await readBody(event))?.scheduleEventId, [
+    Permission.ATTENDANCE_MARK,
+    Permission.ATTENDANCE_MANAGE,
+  ]);
+
   try {
     const body = await readBody(event);
     const userId = event.context.user?.id;
-    const role = event.context.user?.role;
+    // Роль для логики отметки — из права attendance:manage, а не из названия роли
+    const role = attendanceActorRole(event.context.user);
 
     const scheduleEventId = body.scheduleEventId;
 

@@ -1,3 +1,4 @@
+import { requireDevOnly } from "../../utils/permissions";
 /**
  * Endpoint для проверки подключения к БД и данных
  * GET /api/test/db-check
@@ -6,6 +7,9 @@
 import { executeQuery } from "../../utils/db";
 
 export default defineEventHandler(async (event) => {
+  // Отладочный эндпоинт: в production недоступен, в разработке — только администратору настроек
+  await requireDevOnly(event);
+
   try {
     // 1. Проверяем подключение к БД
     const [dbInfo] = await executeQuery<any[]>(

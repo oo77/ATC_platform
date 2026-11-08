@@ -7,6 +7,7 @@ import { getFolderById, getSubFolders } from '../../../repositories/folderReposi
 import { executeQuery } from '../../../utils/db';
 import type { RowDataPacket } from 'mysql2/promise';
 import { storage } from '../../../utils/storage';
+import { requireFolderRead } from "../../../utils/folderAccess";
 
 interface FileRow extends RowDataPacket {
   id: number;
@@ -21,6 +22,9 @@ interface FileRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireFolderRead(event, getRouterParam(event, "id") === "root" ? null : Number(getRouterParam(event, "id")) || null);
+
   try {
     const user = event.context.user;
     
@@ -76,7 +80,8 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      folders,
+      // Хеш пароля клиенту не нужен — достаточно признака блокировки
+      folders: folders.map((f) => ({ ...f, passwordHash: f.passwordHash ? 'locked' : null })),
       files,
     };
   } catch (error: any) {

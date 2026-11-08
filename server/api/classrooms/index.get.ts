@@ -4,8 +4,12 @@
  */
 
 import { getClassrooms } from '../../repositories/scheduleRepository';
+import { requireAuthContext } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAuthContext(event);
+
   try {
     const query = getQuery(event);
     const activeOnly = query.activeOnly !== 'false';

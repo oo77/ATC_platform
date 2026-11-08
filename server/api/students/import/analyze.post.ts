@@ -5,8 +5,12 @@
 
 import { defineEventHandler, readMultipartFormData } from 'h3';
 import { parseExcelFile, analyzeImportData } from '../../../utils/importUtils';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.STUDENTS_IMPORT);
+
   try {
     // Читаем multipart form data
     const formData = await readMultipartFormData(event);

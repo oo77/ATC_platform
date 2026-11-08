@@ -17,6 +17,7 @@ import { v4 as uuidv4 } from "uuid";
 import { executeQuery, executeTransaction } from "../../utils/db";
 import { logActivity } from "../../utils/activityLogger";
 import type { RowDataPacket, PoolConnection } from "mysql2/promise";
+import { Permission, roleHasPermission } from "../../utils/permissions";
 
 interface OriginalEventRow extends RowDataPacket {
   id: string;
@@ -43,7 +44,7 @@ export default defineEventHandler(async (event) => {
 
   // Проверка роли
   const allowedRoles = ["ADMIN", "MANAGER", "MODERATOR"];
-  if (!allowedRoles.includes(user.role)) {
+  if (!roleHasPermission(user, Permission.SCHEDULE_CREATE)) {
     throw createError({
       statusCode: 403,
       message: "Недостаточно прав для создания пересдачи",

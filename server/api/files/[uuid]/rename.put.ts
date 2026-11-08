@@ -5,8 +5,12 @@
 
 import { getFileByUuid, updateFile } from '../../../repositories/fileRepository';
 import { logActivity } from '../../../utils/activityLogger';
+import { requireFileManage } from "../../../utils/folderAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireFileManage(event, await getFileByUuid(getRouterParam(event, "uuid") || ""));
+
   try {
     const user = event.context.user;
     

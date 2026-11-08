@@ -8,6 +8,7 @@ import { executeQuery } from '../../../utils/db';
 import { logActivity } from '../../../utils/activityLogger';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
+import { Permission, roleHasAnyPermission, roleHasPermission } from "../../../utils/permissions";
 
 // Схема валидации для сброса пароля
 const resetPasswordSchema = z.object({
@@ -39,7 +40,7 @@ export default defineEventHandler(async (event) => {
     // Проверка прав доступа
     // Только ADMIN может менять пароли другим пользователям
     // MANAGER может менять пароли (но не ADMIN'ам) - проверим это ниже
-    const canReset = currentUser.role === 'ADMIN' || currentUser.role === 'MANAGER';
+    const canReset = roleHasPermission(currentUser, Permission.USERS_UPDATE);
 
     if (!canReset) {
       throw createError({
@@ -62,7 +63,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Дополнительная проверка: MANAGER не может менять пароль ADMIN'у
-    if (currentUser.role === 'MANAGER' && targetUser.role === 'ADMIN') {
+    if (targetUser.role === 'ADMIN' && !roleHasPermission(currentUser, Permission.USERS_MANAGE_ROLES)) {
       throw createError({
         statusCode: 403,
         message: 'Модератор не может менять пароль администратору',

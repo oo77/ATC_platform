@@ -5,6 +5,7 @@
  */
 import { executeQuery } from "../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
+import { requireTgRepresentative } from "../../utils/tgAppAuth";
 
 interface CourseRow extends RowDataPacket {
   id: string;
@@ -13,6 +14,9 @@ interface CourseRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // TG-ACCESS: подпись Telegram + представитель и организация только из БД
+  await requireTgRepresentative(event);
+
   try {
     const query = getQuery(event);
     const search = query.search as string | undefined;
