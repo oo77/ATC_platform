@@ -21,8 +21,8 @@ interface BadgeProps {
   variant?: BadgeVariant
   size?: BadgeSize
   color?: BadgeColor
-  startIcon?: object
-  endIcon?: object
+  startIcon?: object | Function
+  endIcon?: object | Function
 }
 
 const props = withDefaults(defineProps<BadgeProps>(), {
