@@ -11,6 +11,7 @@ import fs from "fs/promises";
 import path from "path";
 import os from "os";
 import type { ProcessingLogStatus } from "../../../../types/aiCertificateImport";
+import { requireTgRepresentative, assertTgMatches } from "../../../../utils/tgAppAuth";
 
 // Константы
 const MAX_FILES = 10; // Максимум файлов за раз для ТГ (меньше чем в веб-платформе)
@@ -43,6 +44,8 @@ export default defineEventHandler(
 
     // Получаем файлы из FormData
     const formData = await readMultipartFormData(event);
+    // TG-ACCESS: подпись Telegram + представитель и организация только из БД
+    const tg = await requireTgRepresentative(event, "can_request_certificates");
 
     if (!formData || formData.length === 0) {
       throw createError({
@@ -65,6 +68,9 @@ export default defineEventHandler(
         files.push(item);
       }
     }
+
+    assertTgMatches(organizationId, tg.organizationId, "organizationId");
+    assertTgMatches(representativeId, tg.representativeId, "representativeId");
 
     if (!organizationId) {
       throw createError({

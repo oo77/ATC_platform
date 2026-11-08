@@ -1,12 +1,16 @@
 import { defineEventHandler, createError } from 'h3';
 import { getRepresentativeById } from '../../repositories/representativeRepository';
 import { createActivityLog } from '../../repositories/activityLogRepository';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 /**
  * GET /api/representatives/:id
  * Получение детальной информации о представителе
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_VIEW);
+
   try {
     const id = event.context.params?.id;
 

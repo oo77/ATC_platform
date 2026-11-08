@@ -1,3 +1,4 @@
+import { requireSetupModeOrPermission, Permission } from "../../utils/permissions";
 import { initializeDatabase } from '../../database/init';
 
 /**
@@ -8,14 +9,17 @@ import { initializeDatabase } from '../../database/init';
  * ВНИМАНИЕ: В продакшене этот endpoint должен быть защищен или удален!
  */
 export default defineEventHandler(async (event) => {
+  // В production эндпоинт выключен полностью (проверка до try, чтобы catch не превратил 403 в 500)
+  if (process.env.NODE_ENV === 'production') {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'This endpoint is disabled in production',
+    });
+  }
+  // Только до первичной настройки или с правом управления настройками
+  await requireSetupModeOrPermission(event, Permission.SETTINGS_MANAGE);
+
   try {
-    // В продакшене добавьте проверку авторизации или удалите этот endpoint
-    if (process.env.NODE_ENV === 'production') {
-      throw createError({
-        statusCode: 403,
-        statusMessage: 'This endpoint is disabled in production',
-      });
-    }
 
     await initializeDatabase();
 

@@ -373,7 +373,7 @@
 
           <!-- Кнопка удаления (для пересдач) -->
           <div
-            v-if="canEditSchedule && isRetake && event && !event.group?.isArchived"
+            v-if="canDeleteSchedule && isRetake && event && !event.group?.isArchived"
             class="flex items-center gap-2"
           >
             <UiButton
@@ -444,6 +444,8 @@
 </template>
 
 <script setup lang="ts">
+// Удаление пересдачи — только с правом schedule:delete
+const { canDeleteSchedule } = usePermissions();
 import type {
   ScheduleEvent,
   ScheduleEventColor,

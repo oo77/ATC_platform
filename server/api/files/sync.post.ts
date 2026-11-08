@@ -20,6 +20,7 @@ import {
 } from "../../repositories/fileRepository";
 import { getFileExtension } from "../../utils/storage/fileUtils";
 import { logActivity } from "../../utils/activityLogger";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 const STORAGE_PATH = path.resolve(process.cwd(), "storage");
 
@@ -63,6 +64,9 @@ function getCategoryByPath(folderPath: string): string {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.FILES_MANAGE);
+
   try {
     const user = event.context.user;
 

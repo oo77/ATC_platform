@@ -6,6 +6,7 @@
 import { createCourse, courseCodeExists, type CreateCourseInput } from '../../repositories/courseRepository';
 import { logActivity } from '../../utils/activityLogger';
 import { z } from 'zod';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 // Схема валидации для дисциплины
 const disciplineSchema = z.object({
@@ -37,6 +38,9 @@ const courseSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.COURSES_CREATE);
+
   try {
     const body = await readBody(event);
 

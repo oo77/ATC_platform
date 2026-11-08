@@ -11,12 +11,16 @@ import {
 } from "../../../../repositories/groupRepository";
 import { logActivity } from "../../../../utils/activityLogger";
 import { invalidateRelatedCache } from "../../../../utils/botCache";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 const addStudentsSchema = z.object({
   studentIds: z.array(z.string()).min(1, "Выберите хотя бы одного слушателя"),
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.GROUPS_MANAGE_STUDENTS);
+
   try {
     const groupId = getRouterParam(event, "id");
 

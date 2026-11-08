@@ -37,6 +37,11 @@ export interface PaginationParams {
   noCertificates?: boolean;
   /** Облегчённый режим для поиска/выбора: без photo_base64 и без сертификатов */
   compact?: boolean;
+  /**
+   * Ограничить слушателями этих групп (область доступа преподавателя).
+   * undefined — без ограничения; пустой массив — ни одного слушателя.
+   */
+  restrictToGroupIds?: string[];
 }
 
 /** Колонки students без тяжёлого photo_base64 (для compact-режима) */
@@ -456,6 +461,18 @@ export async function getStudentsPaginated(
   // Строим WHERE условия
   const conditions: string[] = [];
   const queryParams: any[] = [];
+
+  // Область доступа: только слушатели указанных групп
+  if (params.restrictToGroupIds !== undefined) {
+    if (params.restrictToGroupIds.length === 0) {
+      conditions.push("1 = 0");
+    } else {
+      conditions.push(
+        `students.id IN (SELECT sgs.student_id FROM study_group_students sgs WHERE sgs.group_id IN (${params.restrictToGroupIds.map(() => "?").join(",")}))`,
+      );
+      queryParams.push(...params.restrictToGroupIds);
+    }
+  }
 
   // Универсальный поиск (используем LIKE для простоты, FULLTEXT для больших объёмов)
   if (search) {

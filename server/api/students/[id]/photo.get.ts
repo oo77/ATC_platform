@@ -6,8 +6,12 @@
 
 import { executeQuery } from "../../../utils/db";
 import { UserRole } from "../../../types/auth";
+import { requireStudentAccess } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: сотрудник со всеми слушателями, преподаватель — слушатели своих групп, слушатель — только себя
+  await requireStudentAccess(event, getRouterParam(event, "id") || "");
+
   const authUser = event.context.user;
   if (!authUser) {
     throw createError({ statusCode: 401, message: "Требуется авторизация" });

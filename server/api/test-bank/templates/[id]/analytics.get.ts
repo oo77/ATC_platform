@@ -1,5 +1,6 @@
 import { executeQuery } from '../../../../utils/db';
 import type { RowDataPacket } from 'mysql2/promise';
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 interface SessionRow extends RowDataPacket {
     session_id: string;
@@ -39,6 +40,10 @@ interface SummaryRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  // Аналитика содержит ФИО/ПИНФЛ/баллы слушателей всех групп — только для управляющих шаблонами
+  await requirePermission(event, Permission.TEST_TEMPLATES_MANAGE);
+
     try {
         const id = getRouterParam(event, 'id');
 

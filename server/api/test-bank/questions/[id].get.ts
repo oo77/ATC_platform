@@ -4,8 +4,12 @@
  */
 
 import { getQuestionById } from '../../../repositories/questionRepository';
+import { Permission, requireAnyPermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAnyPermission(event, [Permission.TEST_BANKS_VIEW, Permission.TEST_BANKS_MANAGE]);
+
     try {
         const id = getRouterParam(event, 'id');
 

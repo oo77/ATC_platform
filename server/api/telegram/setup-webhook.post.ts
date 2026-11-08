@@ -7,16 +7,12 @@
 import { defineEventHandler, readBody, createError } from 'h3';
 import { getBot } from '../../utils/telegramBot';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
-  // Проверяем авторизацию через middleware
-  const user = event.context.user;
-  if (!user || user.role !== 'admin') {
-    throw createError({
-      statusCode: 403,
-      statusMessage: 'Доступ запрещён. Требуются права администратора.',
-    });
-  }
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.SETTINGS_MANAGE);
+
 
   try {
     const body = await readBody(event);

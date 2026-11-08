@@ -5,12 +5,15 @@
 import {
   getRequestsByRepresentative,
 } from "../../repositories/trainingRequestRepository";
+import { requireTgRepresentative, assertTgMatches } from "../../utils/tgAppAuth";
 
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event);
-    const initData = getHeader(event, "x-init-data") || (query.initData as string);
     const representativeId = query.representativeId as string;
+    // TG-ACCESS: подпись Telegram + представитель и организация только из БД
+    const tg = await requireTgRepresentative(event);
+    assertTgMatches(representativeId, tg.representativeId, "representativeId");
 
     console.log("[TG-App] GET /api/tg-app/training-requests");
 

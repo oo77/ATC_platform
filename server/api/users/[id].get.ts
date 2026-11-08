@@ -1,6 +1,7 @@
 import { executeQuery } from '../../utils/db';
 import { toPublicUser } from '../../utils/auth';
 import type { User } from '../../types/auth';
+import { Permission, roleHasAnyPermission, roleHasPermission } from "../../utils/permissions";
 
 /**
  * API endpoint для получения пользователя по ID
@@ -55,8 +56,7 @@ export default defineEventHandler(async (event) => {
 
     // Проверка прав: админ видит всех, остальные - только себя
     const canView = 
-      currentUser.role === 'ADMIN' || 
-      currentUser.role === 'MANAGER' ||
+      roleHasPermission(currentUser, Permission.USERS_VIEW) ||
       currentUser.id === userId;
 
     if (!canView) {

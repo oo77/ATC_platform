@@ -15,19 +15,18 @@
     />
 
     <!-- Контент вкладок без лишней карточки-обёртки: каждая панель сама рисует фильтры и таблицу -->
-    <!-- Администраторы (только для ADMIN) -->
-    <UsersUserManagementPanel v-if="isAdmin" v-show="activeTab === 'admin'" :role="UserRole.ADMIN" />
+    <!-- Администраторы и модераторы — право users:manage_roles -->
+    <UsersUserManagementPanel v-if="canManageRoles" v-show="activeTab === 'admin'" :role="UserRole.ADMIN" />
+    <UsersUserManagementPanel v-if="canManageRoles" v-show="activeTab === 'manager'" :role="UserRole.MANAGER" />
 
-    <!-- Модераторы (только для ADMIN) -->
-    <UsersUserManagementPanel v-if="isAdmin" v-show="activeTab === 'manager'" :role="UserRole.MANAGER" />
-
-    <!-- Представители (только для ADMIN) -->
-    <RepresentativesRepresentativeManagementPanel v-if="isAdmin" v-show="activeTab === 'representatives'" />
+    <!-- Представители — право representatives:view (раньше только ADMIN: у менеджера страница была пустой) -->
+    <RepresentativesRepresentativeManagementPanel v-if="hasPermission(Permission.REPRESENTATIVES_VIEW)" v-show="activeTab === 'representatives'" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, watchEffect } from "vue";
+import { Permission } from "~/types/permissions";
 import { useRoute, useRouter } from "vue-router";
 import { UserRole } from "~/types/auth";
 import { Shield, UserCog, Briefcase, Users } from "lucide-vue-next";
@@ -43,37 +42,34 @@ const router = useRouter();
 // Получаем информацию о текущем пользователе
 const { user } = useAuth();
 
-// Проверка роли
-const isAdmin = computed(() => user.value?.role === "ADMIN");
-const isManager = computed(() => user.value?.role === "MANAGER");
+// Доступ по правам, а не по названию роли
+const { hasPermission } = usePermissions();
+const canManageRoles = computed(() => hasPermission(Permission.USERS_MANAGE_ROLES));
 
 // Все вкладки
 const allTabs = [
   {
     id: "admin",
     label: "Администраторы",
-    roles: ["ADMIN"], // Видна только админам
+    permission: Permission.USERS_MANAGE_ROLES,
     icon: Shield
   },
   {
     id: "manager",
     label: "Модераторы",
-    roles: ["ADMIN"], // Видна только админам
+    permission: Permission.USERS_MANAGE_ROLES,
     icon: UserCog
   },
   {
     id: "representatives",
     label: "Представители",
-    roles: ["ADMIN"], // Видна только админам
+    permission: Permission.REPRESENTATIVES_VIEW,
     icon: Briefcase
   },
 ];
 
-// Фильтруем вкладки по роли пользователя
-const visibleTabs = computed(() => {
-  const userRole = user.value?.role || "";
-  return allTabs.filter((tab) => tab.roles.includes(userRole));
-});
+// Фильтруем вкладки по правам пользователя
+const visibleTabs = computed(() => allTabs.filter((tab) => hasPermission(tab.permission)));
 
 // Получить иконку для вкладки
 const getTabIcon = (id: string) => {

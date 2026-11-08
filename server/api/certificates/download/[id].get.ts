@@ -6,6 +6,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { getIssuedCertificateById } from "../../../repositories/certificateTemplateRepository";
+import { requireIssuedCertificateAccess } from "../../../utils/resourceAccess";
 
 const STORAGE_ROOT = path.join(process.cwd(), "storage");
 
@@ -22,7 +23,12 @@ export default defineEventHandler(async (event) => {
   try {
     const id = getRouterParam(event, "id");
     const query = getQuery(event);
-    const requestedFormat = (query.format as string) || "pdf";
+    // Формат подставляется в имя файла на диске — только белый список,
+    // иначе ?format=x/../../../.env читал бы произвольные файлы сервера
+    const requestedFormat = String(query.format || "pdf").toLowerCase();
+    if (requestedFormat !== "pdf" && requestedFormat !== "docx") {
+      throw createError({ statusCode: 400, message: "Формат должен быть pdf или docx" });
+    }
 
     console.log(
       `[DOWNLOAD] user=${user.id} role=${user.role} cert=${id} format=${requestedFormat}`,
@@ -44,6 +50,9 @@ export default defineEventHandler(async (event) => {
         message: "Сертификат не найден",
       });
     }
+
+    // P0-ACCESS: раньше любой вошедший скачивал любой сертификат по id
+    await requireIssuedCertificateAccess(event, certificate as any);
 
     console.log(
       `[DOWNLOAD] Сертификат найден: ${certificate.certificateNumber}, источник: ${certificate.sourceType || "unknown"}`,

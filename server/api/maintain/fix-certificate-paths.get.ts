@@ -1,7 +1,11 @@
+import { requirePermission, Permission } from "../../utils/permissions";
 import { executeQuery } from "../../utils/db";
 import type { ResultSetHeader } from "mysql2/promise";
 
 export default defineEventHandler(async (event) => {
+  // Служебное массовое исправление данных — только с правом управления настройками
+  await requirePermission(event, Permission.SETTINGS_MANAGE);
+
   try {
     // Используем raw SQL для обновления, так как это проще для массового исправления путей
     // Таблица issued_certificates, поле pdf_file_url

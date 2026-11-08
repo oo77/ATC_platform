@@ -8,8 +8,13 @@ import { getTestTemplateById } from '../../../../repositories/testTemplateReposi
 import { getStudentByUserId } from '../../../../repositories/studentRepository';
 import { executeQuery } from '../../../../utils/db';
 import type { RowDataPacket } from 'mysql2/promise';
+import { Permission, canAccessGroup, requireAnyPermission, roleHasPermission } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: слушатель видит свои результаты (TESTS_TAKE),
+  // сотрудник — результаты группы (TESTS_VIEW_RESULTS + доступ к группе, проверка ниже)
+  const accessCtx = await requireAnyPermission(event, [Permission.TESTS_TAKE, Permission.TESTS_VIEW_RESULTS]);
+
     try {
         const id = getRouterParam(event, 'id');
 
@@ -43,6 +48,16 @@ export default defineEventHandler(async (event) => {
 
         // Получаем студента
         const student = await getStudentByUserId(userId);
+
+        // Не слушатель → нужны право на результаты и доступ к группе назначения
+        if (!student) {
+            if (
+                !roleHasPermission(accessCtx, Permission.TESTS_VIEW_RESULTS) ||
+                !(await canAccessGroup(accessCtx, assignment.group_id))
+            ) {
+                throw createError({ statusCode: 403, message: 'Нет доступа к результатам этой группы' });
+            }
+        }
 
         // Получаем результаты — только для текущего студента если это студент,
         // иначе возвращаем все (для преподавателей)
@@ -102,6 +117,7 @@ export default defineEventHandler(async (event) => {
 
     } catch (error) {
         console.error('Ошибка получения результатов:', error);
+        if ((error as any)?.statusCode) throw error;
 
         return {
             success: false,

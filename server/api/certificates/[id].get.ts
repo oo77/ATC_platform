@@ -2,6 +2,7 @@ import { executeQuery } from "../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
 import { logActivity } from "../../utils/activityLogger";
 import { getRouterParam } from "h3";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 interface CertificateRow extends RowDataPacket {
   id: string;
@@ -47,6 +48,9 @@ interface CertificateRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CERTIFICATES_VIEW_ALL);
+
   console.log("[DEBUG] GET /api/certificates/:id called");
   console.log("[DEBUG] event.context.params:", event.context.params);
 

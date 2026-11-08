@@ -10,8 +10,12 @@ import {
 } from "../../../repositories/certificateTemplateRepository";
 import { getGroupById } from "../../../repositories/groupRepository";
 import type { CertificateJournalRow } from "../../../types/certificate";
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CERTIFICATES_ISSUE);
+
   try {
     const groupId = getRouterParam(event, "groupId");
 

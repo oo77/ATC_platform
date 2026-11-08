@@ -5,8 +5,13 @@
 
 import { moveFolder, getFolderById } from '../../../repositories/folderRepository';
 import { logActivity } from '../../../utils/activityLogger';
+import { requireFolderManage, requireFolderUnlocked } from "../../../utils/folderAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  const { ctx: accessCtx } = await requireFolderManage(event, Number(getRouterParam(event, "id")) || null);
+  await requireFolderUnlocked(event, accessCtx, Number((await readBody(event))?.newParentId) || null);
+
   try {
     const user = event.context.user;
     

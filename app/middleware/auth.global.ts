@@ -18,6 +18,7 @@ const PUBLIC_PAGES = [
   "/environment",
   "/tg-app", // Telegram Mini App использует свою авторизацию
   "/verify", // Публичная верификация сертификата по QR-коду
+  "/d/", // Публичные дашборды по ссылке
 ];
 
 /**
@@ -57,8 +58,9 @@ function findPagePermissionConfig(path: string): RoutePermissionConfig | null {
  */
 function checkPageAccess(
   path: string,
-  userRole: UserRole,
+  subject: { role: string; permissions?: string[] | null },
 ): { allowed: boolean; reason?: string } {
+  const userRole = subject.role as UserRole;
   const config = findPagePermissionConfig(path);
 
   // Если конфигурация не найдена — разрешаем (может быть страница без ограничений)
@@ -78,9 +80,9 @@ function checkPageAccess(
 
   // Проверяем обязательные разрешения (AND)
   if (config.requiredPermissions && config.requiredPermissions.length > 0) {
-    if (!roleHasAllPermissions(userRole, config.requiredPermissions)) {
+    if (!roleHasAllPermissions(subject, config.requiredPermissions)) {
       const missing = config.requiredPermissions.filter(
-        (p) => !roleHasPermission(userRole, p),
+        (p) => !roleHasPermission(subject, p),
       );
       return {
         allowed: false,
@@ -91,7 +93,7 @@ function checkPageAccess(
 
   // Проверяем альтернативные разрешения (OR)
   if (config.anyPermissions && config.anyPermissions.length > 0) {
-    if (!roleHasAnyPermission(userRole, config.anyPermissions)) {
+    if (!roleHasAnyPermission(subject, config.anyPermissions)) {
       return {
         allowed: false,
         reason: `Требуется одно из разрешений: ${config.anyPermissions.join(", ")}`,
@@ -172,7 +174,8 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   }
 
   // Проверяем разрешения для страницы
-  const accessCheck = checkPageAccess(to.path, user.role as UserRole);
+  // Права роли пользователя приходят с сервера (гибкие роли)
+  const accessCheck = checkPageAccess(to.path, user as any);
 
   if (!accessCheck.allowed) {
     console.warn(

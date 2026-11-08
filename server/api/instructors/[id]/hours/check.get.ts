@@ -17,8 +17,13 @@ import {
   getInstructorById,
 } from "../../../../repositories/instructorRepository";
 import { getAcademicHourMinutes } from "../../../../utils/academicHours";
+import { Permission } from "../../../../utils/permissions";
+import { requireInstructorSelfOrPermission } from "../../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireInstructorSelfOrPermission(event, getRouterParam(event, "id"), Permission.INSTRUCTORS_HOURS);
+
   try {
     const id = getRouterParam(event, "id");
 

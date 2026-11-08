@@ -1,7 +1,11 @@
 import { getOrganizationById } from "../../../repositories/organizationRepository";
 import { executeQuery } from "../../../utils/db";
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.ORGANIZATIONS_VIEW);
+
   const id = getRouterParam(event, "id");
   const query = getQuery(event);
   const courseId = query.courseId as string;

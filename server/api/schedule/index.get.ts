@@ -38,8 +38,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // Проверяем разрешение на просмотр расписания
-    const canViewAll = roleHasPermission(context.role, Permission.SCHEDULE_VIEW_ALL);
-    const canViewOwn = roleHasPermission(context.role, Permission.SCHEDULE_VIEW_OWN);
+    const canViewAll = roleHasPermission(context, Permission.SCHEDULE_VIEW_ALL);
+    const canViewOwn = roleHasPermission(context, Permission.SCHEDULE_VIEW_OWN);
 
     if (!canViewAll && !canViewOwn) {
       throw createError({
@@ -68,7 +68,9 @@ export default defineEventHandler(async (event) => {
     };
 
     // Фильтрация для TEACHER: события его групп или где он назначен инструктором
-    if (context.role === UserRole.TEACHER && !canViewAll) {
+    // Без права «всё расписание»: сотрудник — свои группы/занятия, слушатель — свои группы.
+    // Раньше условие было по названию роли: роль без права «всё» видела бы всё
+    if (!canViewAll && !context.studentId) {
       if (context.instructorId) {
         const teacherGroupIds = await getTeacherGroups(context.instructorId);
         filters.groupIds = teacherGroupIds;
@@ -81,7 +83,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Фильтрация для STUDENT: только свои группы
-    if (context.role === UserRole.STUDENT && !canViewAll) {
+    if (!canViewAll && context.studentId) {
       if (context.studentId) {
         const studentGroupIds = await getStudentGroups(context.studentId);
         filters.groupIds = studentGroupIds;

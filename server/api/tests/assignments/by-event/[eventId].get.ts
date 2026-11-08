@@ -4,8 +4,13 @@
  */
 
 import { getTestAssignmentByScheduleEventId } from '../../../../repositories/testAssignmentRepository';
+import { Permission, requireAnyPermission } from "../../../../utils/permissions";
+import { requireScheduleEventPermission } from "../../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: право + доступ к группе назначения
+  await requireScheduleEventPermission(event, getRouterParam(event, "eventId"), [Permission.TESTS_ASSIGN, Permission.TESTS_VIEW_RESULTS]);
+
     try {
         const eventId = getRouterParam(event, 'eventId');
 

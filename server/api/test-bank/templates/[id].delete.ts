@@ -4,8 +4,12 @@
  */
 
 import { getTestTemplateById, deleteTestTemplate } from '../../../repositories/testTemplateRepository';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEST_TEMPLATES_MANAGE);
+
     try {
         const id = getRouterParam(event, 'id');
 

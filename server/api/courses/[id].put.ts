@@ -15,6 +15,8 @@ import {
 } from '../../repositories/courseRepository';
 import { logActivity } from '../../utils/activityLogger';
 import { z } from 'zod';
+import { Permission, requirePermission } from "../../utils/permissions";
+import { recordChanges } from "../../utils/audit";
 
 const disciplineSchema = z.object({
   id: z.string().optional(),
@@ -42,6 +44,9 @@ const updateCourseSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.COURSES_UPDATE);
+
   try {
     const id = getRouterParam(event, 'id');
 
@@ -85,7 +90,10 @@ export default defineEventHandler(async (event) => {
     const { disciplines, ...courseData } = data;
 
     // Обновляем основную информацию курса
+    const courseBefore = await getCourseById(id, false);
     const course = await updateCourse(id, courseData as UpdateCourseInput);
+    // Журнал аудита: что именно изменилось (было → стало)
+    recordChanges(event, courseBefore as any, courseData as any);
 
     if (!course) {
       return {

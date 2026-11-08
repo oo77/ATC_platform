@@ -6,8 +6,12 @@
 import { createQuestionBank, questionBankCodeExists } from '../../../repositories/questionBankRepository';
 import { logActivity } from '../../../utils/activityLogger';
 import type { CreateQuestionBankDTO } from '../../../types/testing';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEST_BANKS_MANAGE);
+
     try {
         const body = await readBody<CreateQuestionBankDTO>(event);
 

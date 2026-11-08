@@ -4,12 +4,16 @@ import {
   getRepresentativeById,
 } from "../../../repositories/representativeRepository";
 import { logActivity } from "../../../utils/activityLogger";
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 /**
  * POST /api/representatives/:id/unblock
  * Разблокировка представителя
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_BLOCK);
+
   try {
     const id = event.context.params?.id;
     const userId = event.context.user?.id;

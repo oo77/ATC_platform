@@ -5,6 +5,8 @@
 
 import { upsertFinalGrade } from "../../repositories/attendanceRepository";
 import { logActivity } from "../../utils/activityLogger";
+import { Permission } from "../../utils/permissions";
+import { assertGradeTargets, requireGroupPermission } from "../../utils/resourceAccess";
 
 interface BulkFinalGradeInput {
   groupId: string;
@@ -23,9 +25,18 @@ interface BulkFinalGradeInput {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  const gradeBody = await readBody(event);
+  const accessCtx = await requireGroupPermission(event, gradeBody?.groupId, [Permission.GRADES_MANAGE]);
+  await assertGradeTargets(accessCtx, {
+    groupId: gradeBody.groupId,
+    disciplineId: gradeBody?.disciplineId,
+    studentIds: Array.isArray(gradeBody?.grades) ? gradeBody.grades.map((g: any) => g?.studentId) : [],
+  });
+
   try {
     const body = await readBody<BulkFinalGradeInput>(event);
-    const userId = event.context.auth?.userId;
+    const userId = event.context.user?.id; // было context.auth — его никто не заполнял, автор терялся
 
     console.log(
       `[Bulk Final Grades] User ${userId} выставляет массовые итоговые оценки`,

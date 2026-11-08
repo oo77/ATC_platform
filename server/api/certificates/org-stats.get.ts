@@ -6,6 +6,7 @@
 import { executeQuery } from "../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
 import { logActivity } from "../../utils/activityLogger";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 interface OrgStatRow extends RowDataPacket {
   organization: string;
@@ -16,6 +17,9 @@ interface OrgStatRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CERTIFICATES_VIEW_ALL);
+
   try {
     const query = getQuery(event);
     const search = (query.search as string) || "";

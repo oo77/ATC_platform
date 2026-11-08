@@ -1,11 +1,15 @@
 import { defineEventHandler } from 'h3';
 import { getRepresentativeStats } from '../../repositories/representativeRepository';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 /**
  * GET /api/representatives/stats
  * Получение статистики по представителям
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_VIEW);
+
   try {
     const stats = await getRepresentativeStats();
 

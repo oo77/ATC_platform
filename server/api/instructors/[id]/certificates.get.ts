@@ -6,6 +6,7 @@
 import { getInstructorCertificates } from "../../../repositories/certificateTemplateRepository";
 import { getInstructorById } from "../../../repositories/instructorRepository";
 import { UserRole } from "../../../types/auth";
+import { Permission, roleHasPermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -16,7 +17,8 @@ export default defineEventHandler(async (event) => {
     const instructor = await getInstructorById(id);
     if (!instructor) return { success: false, message: "Инструктор не найден" };
 
-    if (authUser && authUser.role === UserRole.TEACHER && instructor.userId !== authUser.id) {
+    // Без права instructors:view — только свои сертификаты
+    if (authUser && !roleHasPermission(authUser, Permission.INSTRUCTORS_VIEW) && instructor.userId !== authUser.id) {
       throw createError({ statusCode: 403, statusMessage: "Forbidden", message: "Нет доступа" });
     }
 

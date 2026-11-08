@@ -5,8 +5,12 @@ import {
   StudentResource,
 } from "../../utils/coursePlanner";
 import crypto from "crypto";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.STUDENTS_IMPORT);
+
   console.log("🚀 [SyncPlanner] Starting 10x streaming pipeline student sync...");
 
   let body: any = {};

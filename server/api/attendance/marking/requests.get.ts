@@ -5,19 +5,25 @@
 
 import { getMarkingRequests, getPendingMarkingRequests } from '../../../repositories/attendanceMarkingRepository';
 import { getInstructorByUserId } from '../../../repositories/instructorRepository';
+import { Permission, requireAnyPermission } from "../../../utils/permissions";
+import { attendanceActorRole } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAnyPermission(event, [Permission.ATTENDANCE_MARK, Permission.ATTENDANCE_MANAGE]);
+
   try {
     const query = getQuery(event);
     const userId = event.context.user?.id;
-    const role = event.context.user?.role;
+    // Роль для логики отметки — из права attendance:manage, а не из названия роли
+    const role = attendanceActorRole(event.context.user);
 
     console.log(`[Attendance Marking] GET /api/attendance/marking/requests - User: ${userId}, Role: ${role}`);
 
     let requests;
 
     // Для админов и менеджеров — все запросы или фильтрованные
-    if (role === 'ADMIN' || role === 'MANAGER') {
+    if (role === 'ADMIN') {
       const filters: { status?: any; instructorId?: string } = {};
 
       if (query.status) {

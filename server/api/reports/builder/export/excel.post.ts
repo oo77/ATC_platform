@@ -12,12 +12,16 @@ import {
 } from "../../../../utils/reports/queryBuilder";
 import { logActivity } from "../../../../utils/activityLogger";
 import ExcelJS from "exceljs";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 /**
  * POST /api/reports/builder/export/excel
  * Генерирует и отдаёт .xlsx файл на основе конфигурации отчёта.
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.DASHBOARD_STATS);
+
   try {
     const user = requireAuth(event);
     const body = await readBody(event);

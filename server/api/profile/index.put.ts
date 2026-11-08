@@ -8,6 +8,7 @@ import { requireAuth } from "../../utils/auth";
 import { executeQuery } from "../../utils/db";
 import { logActivity } from "../../utils/activityLogger";
 import { z } from "zod";
+import { Permission, roleHasPermission } from "../../utils/permissions";
 
 // Схема валидации для обновления профиля
 const updateProfileSchema = z.object({
@@ -62,6 +63,11 @@ export default defineEventHandler(async (event) => {
     if (data.position !== undefined) {
       updateFields.push("position = ?");
       updateValues.push(data.position || null);
+    }
+    // ПИНФЛ — идентификатор личности: сам себе его меняет только сотрудник с правом
+    // редактирования слушателей (иначе можно «подменить» себя на другого человека)
+    if (data.pinfl !== undefined && !roleHasPermission(event.context.user, Permission.STUDENTS_UPDATE)) {
+      throw createError({ statusCode: 403, message: "ПИНФЛ меняет администратор" });
     }
     if (data.pinfl !== undefined) {
       updateFields.push("pinfl = ?");

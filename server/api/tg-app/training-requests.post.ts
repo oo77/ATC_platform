@@ -21,12 +21,17 @@ import {
   type CreateTrainingRequestInput,
 } from "../../repositories/trainingRequestRepository";
 import { createActivityLog } from "../../repositories/activityLogRepository";
+import { requireTgRepresentative, assertTgMatches } from "../../utils/tgAppAuth";
 
 export default defineEventHandler(async (event) => {
   try {
     console.log("[TG-App] POST /api/tg-app/training-requests");
 
     const body = await readBody<CreateTrainingRequestInput & { representativeName?: string }>(event);
+    // TG-ACCESS: подпись Telegram + представитель и организация только из БД
+    const tg = await requireTgRepresentative(event);
+    assertTgMatches(body?.representativeId, tg.representativeId, "representativeId");
+    assertTgMatches(body?.organizationId, tg.organizationId, "organizationId");
 
     // --- Валидация ---
     if (!body?.representativeId) {

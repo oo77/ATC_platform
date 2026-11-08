@@ -23,10 +23,12 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     console.error("[ENVIRONMENT] Database check failed:", error);
 
+    // Эндпоинт публичный (нужен до входа), поэтому не раскрываем текст ошибки MySQL:
+    // он содержит хост и имя пользователя БД. Подробности — в логе сервера.
     return {
       connected: false,
       error: error.code || "UNKNOWN_ERROR",
-      message: error.message || "Неизвестная ошибка подключения",
+      message: "Нет подключения к базе данных",
     };
   }
 });

@@ -4,8 +4,12 @@
 
 import { addDisciplineToCourse } from '../../../repositories/courseRepository';
 import { logActivity } from '../../../utils/activityLogger';
+import { Permission, requireAnyPermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAnyPermission(event, [Permission.DISCIPLINES_MANAGE, Permission.COURSES_UPDATE]);
+
   try {
     const courseId = getRouterParam(event, 'id');
     

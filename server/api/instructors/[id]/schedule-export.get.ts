@@ -8,8 +8,13 @@ import {
   buildInstructorScheduleWorkbook,
 } from "../../../services/instructorScheduleExcelService";
 import { sanitizeFilename } from "../../../utils/sanitizeFilename";
+import { Permission } from "../../../utils/permissions";
+import { requireInstructorSelfOrPermission } from "../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireInstructorSelfOrPermission(event, getRouterParam(event, "id"), Permission.INSTRUCTORS_VIEW);
+
   try {
     const instructorId = getRouterParam(event, "id");
     const groupId = String(getQuery(event).groupId ?? "");

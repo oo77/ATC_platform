@@ -5,8 +5,12 @@
 
 import { renameFolder, getFolderById } from '../../../repositories/folderRepository';
 import { logActivity } from '../../../utils/activityLogger';
+import { requireFolderManage } from "../../../utils/folderAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireFolderManage(event, Number(getRouterParam(event, "id")) || null);
+
   try {
     const user = event.context.user;
     

@@ -39,6 +39,9 @@ export function usePermissions() {
    */
   const permissions = computed<Permission[]>(() => {
     if (!currentRole.value) return [];
+    // Права роли пользователя приходят с сервера (гибкие роли); статическая таблица — запасной вариант
+    const fromServer = (user.value as any)?.permissions;
+    if (Array.isArray(fromServer)) return fromServer as Permission[];
     return getRolePermissions(currentRole.value);
   });
 
@@ -47,7 +50,7 @@ export function usePermissions() {
    */
   const hasPermission = (permission: Permission): boolean => {
     if (!currentRole.value) return false;
-    return roleHasPermission(currentRole.value, permission);
+    return roleHasPermission(user.value as any, permission);
   };
 
   /**
@@ -55,7 +58,7 @@ export function usePermissions() {
    */
   const hasAllPermissions = (requiredPermissions: Permission[]): boolean => {
     if (!currentRole.value) return false;
-    return roleHasAllPermissions(currentRole.value, requiredPermissions);
+    return roleHasAllPermissions(user.value as any, requiredPermissions);
   };
 
   /**
@@ -63,7 +66,7 @@ export function usePermissions() {
    */
   const hasAnyPermission = (requiredPermissions: Permission[]): boolean => {
     if (!currentRole.value) return false;
-    return roleHasAnyPermission(currentRole.value, requiredPermissions);
+    return roleHasAnyPermission(user.value as any, requiredPermissions);
   };
 
   /**

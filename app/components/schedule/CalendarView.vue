@@ -1,10 +1,21 @@
 <template>
   <div class="calendar-wrapper">
+   <!-- Режим планирования: календарь переносится в body и закрывает весь экран
+        (контент страницы анимирован transform'ом, поэтому fixed внутри него не работает) -->
+   <Teleport to="body" :disabled="!plannerMode">
+   <div
+    :class="
+      plannerMode
+        ? 'planner-mode fixed inset-0 z-[9990] flex flex-col bg-white p-3 dark:bg-boxdark'
+        : ''
+    "
+    :style="plannerStyle"
+   >
     <!-- Верхняя панель управления -->
     <div
-      class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6"
+      class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3 shrink-0"
     >
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2">
         <!-- Навигация по датам -->
         <button
           @click="handlePrev"
@@ -100,6 +111,74 @@
           </svg>
           Excel
         </button>
+
+        <!-- Раскрыть/скрыть фильтры -->
+        <button
+          type="button"
+          @click="showFilters = !showFilters"
+          class="relative flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
+          :class="
+            showFilters || hasActiveFilters
+              ? 'border-primary text-primary bg-primary/5'
+              : 'border-stroke dark:border-strokedark hover:bg-gray-100 dark:hover:bg-meta-4'
+          "
+          title="Показать или скрыть фильтры"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18l-7 8v6l-4 2v-8L3 4z" />
+          </svg>
+          Фильтры
+          <span
+            v-if="activeFiltersCount"
+            class="min-w-[18px] rounded-full bg-primary px-1 text-center text-[11px] leading-[18px] text-white"
+            >{{ activeFiltersCount }}</span
+          >
+        </button>
+
+        <!-- Раскрыть/скрыть легенду -->
+        <button
+          type="button"
+          @click="showLegend = !showLegend"
+          class="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
+          :class="
+            showLegend
+              ? 'border-primary text-primary bg-primary/5'
+              : 'border-stroke dark:border-strokedark hover:bg-gray-100 dark:hover:bg-meta-4'
+          "
+          title="Показать или скрыть легенду и группы"
+        >
+          Легенда
+        </button>
+
+        <!-- Режим планирования: календарь на весь экран -->
+        <button
+          type="button"
+          @click="togglePlanner"
+          class="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-colors"
+          :class="
+            plannerMode
+              ? 'border-danger text-danger hover:bg-danger/5'
+              : 'border-primary text-primary hover:bg-primary/5'
+          "
+          :title="plannerMode ? 'Выйти из режима планирования (Esc)' : 'Открыть календарь на весь экран'"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path v-if="!plannerMode" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4h4M20 8V4h-4M4 16v4h4m12-4v4h-4" />
+            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          {{ plannerMode ? "Закрыть" : "Планирование" }}
+        </button>
+
+        <!-- Масштаб (режим планирования) -->
+        <div
+          v-if="plannerMode"
+          class="flex items-center rounded-lg border border-stroke dark:border-strokedark overflow-hidden text-sm"
+          title="Ctrl + колесо мыши — масштаб"
+        >
+          <button type="button" class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-meta-4" @click="setZoom(zoom / 1.25)">−</button>
+          <button type="button" class="px-2 py-2 min-w-[54px] tabular-nums hover:bg-gray-100 dark:hover:bg-meta-4" @click="setZoom(1)">{{ Math.round(zoom * 100) }}%</button>
+          <button type="button" class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-meta-4" @click="setZoom(zoom * 1.25)">+</button>
+        </div>
       </div>
 
       <!-- Заголовок с текущей датой -->
@@ -129,11 +208,12 @@
       </div>
     </div>
 
-    <!-- Фильтры -->
+    <!-- Фильтры (раскрываются кнопкой «Фильтры») -->
     <div
-      class="bg-white dark:bg-boxdark rounded-lg border border-stroke dark:border-strokedark p-4 mb-6"
+      v-if="showFilters"
+      class="bg-white dark:bg-boxdark rounded-lg border border-stroke dark:border-strokedark p-3 mb-3 shrink-0"
     >
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <!-- Фильтр по группе -->
         <div>
           <label
@@ -307,7 +387,8 @@
 
     <!-- Календарь -->
     <div
-      class="bg-white dark:bg-boxdark rounded-lg border border-stroke dark:border-strokedark p-4 relative min-h-[500px]"
+      class="bg-white dark:bg-boxdark rounded-lg border border-stroke dark:border-strokedark p-2 relative"
+      :class="plannerMode ? 'flex-1 min-h-0 flex flex-col' : ''"
     >
       <!-- Overlay загрузки поверх календаря -->
       <div
@@ -326,7 +407,8 @@
 
       <!-- Подсказка о горячих клавишах и кнопка массовых действий -->
       <div
-        class="mb-2 text-xs text-gray-400 dark:text-gray-500 flex items-center justify-between"
+        v-if="showLegend || (currentView === 'listWeek' && canEditSchedule)"
+        class="mb-2 text-xs text-gray-400 dark:text-gray-500 flex items-center justify-between shrink-0"
       >
         <div class="flex items-center gap-4">
           <span
@@ -408,15 +490,32 @@
         </div>
       </div>
 
-      <FullCalendar
-        ref="calendarRef"
-        :options="calendarOptions"
-        class="schedule-calendar"
-      />
+      <!-- Область календаря: в обычном режиме — по высоте экрана, в планировании —
+           прокручиваемое «полотно», размер которого задаёт масштаб -->
+      <div
+        ref="scrollAreaRef"
+        class="calendar-scroll-area"
+        :class="plannerMode ? 'flex-1 min-h-0 overflow-auto overscroll-contain' : ''"
+        :style="plannerMode ? undefined : { height: normalCalendarHeight + 'px' }"
+      >
+        <div
+          :class="[
+            !plannerMode || currentView === 'listWeek' ? 'h-full' : '',
+            zoomTier ? `zoom-${zoomTier}` : '',
+          ]"
+          :style="canvasStyle"
+        >
+          <FullCalendar
+            ref="calendarRef"
+            :options="calendarOptions"
+            class="schedule-calendar"
+          />
+        </div>
+      </div>
 
       <!-- Легенда групп -->
       <div
-        v-if="usedGroupsWithColors.length > 0"
+        v-if="showLegend && usedGroupsWithColors.length > 0"
         class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700"
       >
         <div class="flex items-center gap-2 mb-2">
@@ -474,6 +573,7 @@
 
       <!-- Легенда видов занятий и обозначений сетки -->
       <div
+        v-if="showLegend"
         class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-500 dark:text-gray-400"
       >
         <span class="font-medium text-gray-600 dark:text-gray-400"
@@ -499,6 +599,8 @@
         >
       </div>
     </div>
+   </div>
+   </Teleport>
 
     <!-- Модальное окно просмотра деталей события -->
     <ScheduleEventDetailModal
@@ -692,6 +794,226 @@ const editingRetakeEvent = ref<any | null>(null); // Для редактиров
 const defaultEventStart = ref<Date | undefined>(undefined);
 const defaultEventEnd = ref<Date | undefined>(undefined);
 
+// ============ UI: ФИЛЬТРЫ / ЛЕГЕНДА / РЕЖИМ ПЛАНИРОВАНИЯ ============
+const UI_PREFS_KEY = "schedule:ui";
+const showFilters = ref(false);
+const showLegend = ref(false);
+const plannerMode = ref(false);
+const zoom = ref(1);
+const scrollAreaRef = ref<HTMLElement | null>(null);
+
+// Запоминаем, какие панели пользователь держит открытыми
+watch([showFilters, showLegend], () => {
+  try {
+    localStorage.setItem(
+      UI_PREFS_KEY,
+      JSON.stringify({ filters: showFilters.value, legend: showLegend.value }),
+    );
+  } catch {}
+  updateNormalHeight();
+});
+
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 4;
+
+// Уровень детализации: при малом масштабе — компактные полоски, при большом — всё
+const zoomTier = computed(() => {
+  if (!plannerMode.value) return "";
+  if (zoom.value < 0.7) return "xs";
+  if (zoom.value < 1.5) return "md";
+  return "xl";
+});
+
+// --- Высота календаря в обычном режиме: до низа экрана, без прокрутки страницы ---
+const normalCalendarHeight = ref(640);
+const updateNormalHeight = () => {
+  nextTick(() => {
+    const el = scrollAreaRef.value;
+    if (!el || plannerMode.value || typeof window === "undefined") return;
+    const top = el.getBoundingClientRect().top;
+    // 64px — нижние отступы карточки и страницы
+    normalCalendarHeight.value = Math.max(480, Math.round(window.innerHeight - top - 64));
+  });
+};
+
+// --- Размер видимой области в режиме планирования ---
+const areaSize = ref({ w: 0, h: 0 });
+let areaObserver: ResizeObserver | null = null;
+watch(scrollAreaRef, (el) => {
+  areaObserver?.disconnect();
+  if (!el || typeof ResizeObserver === "undefined") return;
+  areaObserver = new ResizeObserver(([entry]) => {
+    if (!entry) return;
+    areaSize.value = { w: entry.contentRect.width, h: entry.contentRect.height };
+  });
+  areaObserver.observe(el);
+});
+
+const timeStrToMinutes = (t: string) => {
+  const [h = 0, m = 0] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
+// Высота 10-минутного слота: при 100% весь учебный день помещается в экран
+const slotHeightPx = computed(() => {
+  const slots = Math.max(
+    1,
+    (timeStrToMinutes(slotMaxTime.value) - timeStrToMinutes(slotMinTime.value)) / 10,
+  );
+  const usable = Math.max(240, areaSize.value.h - 40); // 40 — строка с датами
+  return Math.max(3, (usable / slots) * zoom.value);
+});
+
+// Размер «полотна»: при увеличении растёт ширина дней (неделя/месяц) и высота месяца
+const canvasStyle = computed(() => {
+  if (!plannerMode.value) return undefined;
+  const style: Record<string, string> = {};
+  const widens = currentView.value === "timeGridWeek" || currentView.value === "dayGridMonth";
+  if (widens && zoom.value > 1) style.minWidth = `${Math.round(zoom.value * 100)}%`;
+  return style;
+});
+
+const plannerStyle = computed(() =>
+  plannerMode.value
+    ? {
+        "--slot-h": `${slotHeightPx.value.toFixed(2)}px`,
+        "--zf": String(zoom.value),
+      }
+    : undefined,
+);
+
+// Высота FullCalendar: обычный режим — по контейнеру; планирование — по масштабу
+const calendarHeight = computed<string | number>(() => {
+  if (!plannerMode.value) return "100%";
+  if (currentView.value === "dayGridMonth") {
+    return Math.max(260, Math.round(Math.max(300, areaSize.value.h) * zoom.value));
+  }
+  if (currentView.value === "listWeek") return "100%";
+  return "auto"; // неделя/день: высоту задаёт размер слотов
+});
+
+let sizeFrame = 0;
+const refreshCalendarSize = () => {
+  if (sizeFrame) return;
+  nextTick(() => {
+    sizeFrame = requestAnimationFrame(() => {
+      sizeFrame = 0;
+      calendarRef.value?.getApi().updateSize();
+    });
+  });
+};
+
+// Изменение масштаба с сохранением точки под курсором
+const setZoom = (value: number, anchor?: { x: number; y: number }) => {
+  const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(value * 100) / 100));
+  if (next === zoom.value) return;
+  const area = scrollAreaRef.value;
+  let ratio: { rx: number; ry: number; x: number; y: number } | null = null;
+  if (area) {
+    const rect = area.getBoundingClientRect();
+    const x = anchor ? anchor.x - rect.left : rect.width / 2;
+    const y = anchor ? anchor.y - rect.top : rect.height / 2;
+    ratio = {
+      rx: (area.scrollLeft + x) / Math.max(1, area.scrollWidth),
+      ry: (area.scrollTop + y) / Math.max(1, area.scrollHeight),
+      x,
+      y,
+    };
+  }
+  zoom.value = next;
+  nextTick(() => {
+    calendarRef.value?.getApi().updateSize();
+    requestAnimationFrame(() => {
+      if (!area || !ratio) return;
+      area.scrollLeft = ratio.rx * area.scrollWidth - ratio.x;
+      area.scrollTop = ratio.ry * area.scrollHeight - ratio.y;
+    });
+  });
+};
+
+const togglePlanner = () => {
+  cleanupAllTooltips();
+  plannerMode.value = !plannerMode.value;
+  if (plannerMode.value) {
+    zoom.value = 1;
+    // В планировании удобнее неделя: видна сетка пар
+    if (currentView.value === "dayGridMonth") handleViewChange("timeGridWeek");
+  } else {
+    updateNormalHeight();
+  }
+  refreshCalendarSize();
+};
+
+// Ctrl/⌘ + колесо (и щипок на тачпаде) — масштаб в режиме планирования
+let pendingZoom: number | null = null;
+let pendingAnchor: { x: number; y: number } | undefined;
+let wheelFrame = 0;
+const handlePlannerWheel = (e: WheelEvent) => {
+  if (!plannerMode.value || !(e.ctrlKey || e.metaKey)) return;
+  e.preventDefault();
+  // Колесо мыши даёт крупные шаги (±100), тачпад — мелкие; ограничиваем шаг
+  const delta = Math.max(-60, Math.min(60, e.deltaY));
+  pendingZoom = (pendingZoom ?? zoom.value) * Math.exp(-delta * 0.004);
+  pendingAnchor = { x: e.clientX, y: e.clientY };
+  if (!wheelFrame) {
+    wheelFrame = requestAnimationFrame(() => {
+      wheelFrame = 0;
+      if (pendingZoom != null) setZoom(pendingZoom, pendingAnchor);
+      pendingZoom = null;
+    });
+  }
+};
+
+const isModalOpen = () => !!document.querySelector(".z-100000");
+
+const handlePlannerKey = (e: KeyboardEvent) => {
+  if (!plannerMode.value) return;
+  const mod = e.ctrlKey || e.metaKey;
+  if (e.key === "Escape" && !isModalOpen()) {
+    togglePlanner();
+  } else if (mod && (e.key === "=" || e.key === "+")) {
+    e.preventDefault();
+    setZoom(zoom.value * 1.25);
+  } else if (mod && e.key === "-") {
+    e.preventDefault();
+    setZoom(zoom.value / 1.25);
+  } else if (mod && e.key === "0") {
+    e.preventDefault();
+    setZoom(1);
+  }
+};
+
+watch(plannerMode, (on) => {
+  document.body.style.overflow = on ? "hidden" : "";
+});
+// Слоты и вид меняются — FullCalendar должен перемерить сетку
+// (геттер не трогает slotHeightPx вне планирования — slotMaxTime объявлен ниже)
+watch(
+  () => (plannerMode.value ? `${slotHeightPx.value}|${currentView.value}` : ""),
+  (key) => {
+    if (key) refreshCalendarSize();
+  },
+);
+watch([showFilters, () => plannerMode.value], refreshCalendarSize);
+
+// Опции, зависящие от режима и масштаба, — точечно через API, без пересборки календаря
+watch(
+  () => ({
+    height: calendarHeight.value,
+    eventMinHeight: plannerMode.value ? (zoomTier.value === "xs" ? 8 : 16) : 28,
+    eventShortHeight: plannerMode.value ? 30 : 44,
+    navLinks: plannerMode.value,
+    dayMaxEvents: plannerMode.value ? true : 3,
+  }),
+  (opts, prev) => {
+    const api = calendarRef.value?.getApi();
+    if (!api) return;
+    (Object.keys(opts) as (keyof typeof opts)[]).forEach((key) => {
+      if (!prev || prev[key] !== opts[key]) api.setOption(key, opts[key] as any);
+    });
+  },
+);
+
 // Храним текущий диапазон дат
 const currentDateRange = ref<{ start: Date; end: Date } | null>(null);
 
@@ -716,6 +1038,9 @@ const showExportModal = ref(false);
 const exportInitialDate = ref<Date | null>(null);
 
 // Computed
+const activeFiltersCount = computed(
+  () => Object.values(filters.value).filter(Boolean).length,
+);
 const hasActiveFilters = computed(() => {
   return (
     filters.value.groupId ||
@@ -1476,7 +1801,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
     initialView: "dayGridMonth",
     locale: ruLocale,
     headerToolbar: false,
-    height: "auto",
+    height: "100%",
     timeZone: "local", // Используем локальное время для избежания сдвига дат
 
     // События будут управляться через API календаря
@@ -1489,6 +1814,7 @@ const calendarOptions = computed<CalendarOptions>(() => {
     eventStartEditable: isEditable,
     eventDurationEditable: isEditable,
 
+    // В планировании число видимых занятий в ячейке зависит от её размера (масштаба)
     dayMaxEvents: 3,
     moreLinkClick: "popover",
     weekends: true,
@@ -1502,6 +1828,9 @@ const calendarOptions = computed<CalendarOptions>(() => {
     // Параллельные занятия (несколько групп одновременно) — рядом в своих колонках,
     // а не «лесенкой» друг поверх друга
     slotEventOverlap: false,
+    // Зависящие от масштаба опции (height, eventMinHeight, navLinks, dayMaxEvents)
+    // меняются через setOption в watch ниже: любое изменение этого объекта
+    // пересобирает календарь с events: [] и стирает загруженные занятия
     eventMinHeight: 28,
     eventShortHeight: 44,
     eventContent,
@@ -2002,24 +2331,41 @@ const handleBulkDeleted = (result: { deletedCount: number }) => {
 const loadSelectData = async () => {
   try {
     const shouldFetchGroups = canViewAllGroups.value || isTeacher.value;
-    const shouldFetchInstructors = canViewInstructors.value || isStudent.value; // Students usually need to see instructors
+    // Список инструкторов — только при праве instructors:view. Слушателю сервер отвечает 403,
+    // а из-за Promise.all это обрывало и загрузку групп/аудиторий (имена инструкторов
+    // слушатель и так видит в самих занятиях)
+    const shouldFetchInstructors = canViewInstructors.value;
 
-    const [groupsResponse, instructorsResponse, classroomsResponse] =
-      await Promise.all([
-        shouldFetchGroups
-          ? authFetch<{ success: boolean; groups: any[] }>(
-              "/api/groups?limit=1000&isActive=true",
-            )
-          : Promise.resolve({ success: true, groups: [] }),
-        shouldFetchInstructors
-          ? authFetch<{ success: boolean; instructors: Instructor[] }>(
-              "/api/instructors?limit=1000&isActive=true",
-            )
-          : Promise.resolve({ success: true, instructors: [] }),
-        authFetch<{ success: boolean; classrooms: Classroom[] }>(
-          "/api/classrooms",
-        ),
-      ]);
+    // allSettled: сбой одного справочника не должен оставлять пустыми остальные
+    const settled = await Promise.allSettled([
+      shouldFetchGroups
+        ? authFetch<{ success: boolean; groups: any[] }>(
+            "/api/groups?limit=1000&isActive=true",
+          )
+        : Promise.resolve({ success: true, groups: [] }),
+      shouldFetchInstructors
+        ? authFetch<{ success: boolean; instructors: Instructor[] }>(
+            "/api/instructors?limit=1000&isActive=true",
+          )
+        : Promise.resolve({ success: true, instructors: [] }),
+      authFetch<{ success: boolean; classrooms: Classroom[] }>(
+        "/api/classrooms",
+      ),
+    ]);
+    const valueOf = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
+      r.status === "fulfilled" ? r.value : fallback;
+    const groupsResponse = valueOf<{ success: boolean; groups: any[] }>(
+      settled[0] as PromiseSettledResult<{ success: boolean; groups: any[] }>,
+      { success: false, groups: [] },
+    );
+    const instructorsResponse = valueOf<{ success: boolean; instructors: Instructor[] }>(
+      settled[1] as PromiseSettledResult<{ success: boolean; instructors: Instructor[] }>,
+      { success: false, instructors: [] },
+    );
+    const classroomsResponse = valueOf<{ success: boolean; classrooms: Classroom[] }>(
+      settled[2] as PromiseSettledResult<{ success: boolean; classrooms: Classroom[] }>,
+      { success: false, classrooms: [] },
+    );
 
     if (groupsResponse.success && groupsResponse.groups) {
       groups.value = groupsResponse.groups.map((g) => ({
@@ -2089,6 +2435,15 @@ const handleGlobalPointerDown = (e: MouseEvent) => {
 onMounted(async () => {
   window.addEventListener("scroll", cleanupAllTooltips, true);
   window.addEventListener("mousedown", handleGlobalPointerDown);
+  window.addEventListener("wheel", handlePlannerWheel, { passive: false });
+  window.addEventListener("keydown", handlePlannerKey);
+  window.addEventListener("resize", updateNormalHeight);
+  try {
+    const prefs = JSON.parse(localStorage.getItem(UI_PREFS_KEY) || "{}");
+    showFilters.value = !!prefs.filters;
+    showLegend.value = !!prefs.legend;
+  } catch {}
+  updateNormalHeight();
 
   // Вычисляем диапазон дат для текущего месяца заранее
   const now = new Date();
@@ -2117,6 +2472,11 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener("scroll", cleanupAllTooltips, true);
   window.removeEventListener("mousedown", handleGlobalPointerDown);
+  window.removeEventListener("wheel", handlePlannerWheel);
+  window.removeEventListener("keydown", handlePlannerKey);
+  window.removeEventListener("resize", updateNormalHeight);
+  areaObserver?.disconnect();
+  document.body.style.overflow = "";
   cleanupAllTooltips();
 
   if (loadingAbortController.value) {
@@ -2588,7 +2948,8 @@ onUnmounted(() => {
 
 /* «Неделя» и «День»: карточка — контейнер для адаптивного содержимого */
 .schedule-calendar .fc-timegrid-event.ev-group {
-  container-type: inline-size;
+  /* size: карточка отвечает и на ширину, и на высоту (детализация по масштабу) */
+  container-type: size;
   overflow: hidden;
 }
 
@@ -2843,7 +3204,7 @@ onUnmounted(() => {
 
 .event-tooltip {
   position: fixed;
-  z-index: 99999;
+  z-index: 100001;
   min-width: 220px;
   max-width: 320px;
   padding: 12px 16px;
@@ -3039,5 +3400,123 @@ onUnmounted(() => {
 .schedule-calendar .fc-list-event-title {
   display: flex;
   align-items: center;
+}
+
+/* ============ РЕЖИМ ПЛАНИРОВАНИЯ: масштабирование ============ */
+/* Высота 10-минутного слота считается в JS (--slot-h): при 100% весь день помещается в экран */
+.planner-mode .schedule-calendar .fc-timegrid-slot {
+  height: var(--slot-h, 1.1rem) !important;
+  border-bottom-color: transparent;
+}
+/* Метки пар не должны раздувать строки — рисуем их поверх сетки */
+.planner-mode .schedule-calendar .fc-timegrid-slot-label {
+  vertical-align: top;
+  padding: 0 !important;
+}
+.planner-mode .schedule-calendar .fc-timegrid-slot-label-frame {
+  position: relative;
+  height: var(--slot-h, 1.1rem);
+}
+.planner-mode .schedule-calendar .fc-timegrid-slot-label-cushion {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  white-space: nowrap;
+}
+.planner-mode .schedule-calendar .fc-timegrid-slot-label[data-time="13:20:00"]::after {
+  display: none;
+}
+/* Шкала времени остаётся на месте при горизонтальной прокрутке */
+.planner-mode .schedule-calendar .fc-timegrid-slot-label,
+.planner-mode .schedule-calendar .fc-timegrid-axis,
+.planner-mode .schedule-calendar .fc-scrollgrid-shrink {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #fff;
+}
+.dark .planner-mode .schedule-calendar .fc-timegrid-slot-label,
+.dark .planner-mode .schedule-calendar .fc-timegrid-axis,
+.dark .planner-mode .schedule-calendar .fc-scrollgrid-shrink {
+  background: #24303f;
+}
+.planner-mode .schedule-calendar .fc-col-header-cell {
+  background: #fff;
+}
+.dark .planner-mode .schedule-calendar .fc-col-header-cell {
+  background: #24303f;
+}
+.planner-mode .schedule-calendar .fc-col-header-cell-cushion,
+.planner-mode .schedule-calendar .fc-daygrid-day-number {
+  font-size: calc(0.875rem * clamp(0.8, var(--zf, 1), 1.3));
+}
+.planner-mode .schedule-calendar .fc-daygrid-event {
+  font-size: calc(0.8125rem * clamp(0.75, var(--zf, 1), 1.25));
+}
+
+/* Мелкий масштаб: метки пар — только время, карточки — цветные полоски */
+.planner-mode .zoom-xs .period-time-end,
+.planner-mode .zoom-xs .period-badge {
+  display: none;
+}
+.planner-mode .zoom-xs .period-time-main,
+.planner-mode .zoom-xs .period-time-start {
+  font-size: 0.625rem;
+}
+.planner-mode .zoom-xs .fc-timegrid-slot-label-frame {
+  min-width: 40px;
+}
+.planner-mode .zoom-xs .fc-daygrid-event {
+  font-size: 0.625rem;
+  padding: 0 2px;
+  line-height: 1.15;
+}
+.planner-mode .zoom-xs .fc-daygrid-event-harness {
+  margin-top: 1px;
+}
+.planner-mode .zoom-xs .fc-timegrid-event.ev-group .fc-event-main {
+  padding: 1px 3px;
+}
+/* Крупный масштаб: карточки просторнее, текст крупнее */
+.planner-mode .zoom-xl .ev-title {
+  font-size: 0.9375rem;
+  -webkit-line-clamp: 4;
+}
+.planner-mode .zoom-xl .ev-code {
+  font-size: 0.8125rem;
+}
+.planner-mode .zoom-xl .ev-meta,
+.planner-mode .zoom-xl .ev-time {
+  font-size: 0.75rem;
+}
+.planner-mode .zoom-xl .ev-card {
+  gap: 4px;
+}
+
+/* Детализация карточки по её реальной высоте (работает и в обычном режиме) */
+@container (max-height: 64px) {
+  .ev-meta {
+    display: none;
+  }
+  .ev-title {
+    -webkit-line-clamp: 1;
+  }
+}
+@container (max-height: 40px) {
+  .ev-time {
+    display: none;
+  }
+}
+@container (max-height: 26px) {
+  .ev-title {
+    display: none;
+  }
+  .ev-kind {
+    height: 14px;
+    min-width: 14px;
+    font-size: 0.6rem;
+  }
 }
 </style>

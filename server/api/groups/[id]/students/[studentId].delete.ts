@@ -6,8 +6,12 @@
 import { removeStudentFromGroup, getGroupById } from '../../../../repositories/groupRepository';
 import { logActivity } from '../../../../utils/activityLogger';
 import { invalidateRelatedCache } from '../../../../utils/botCache';
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.GROUPS_MANAGE_STUDENTS);
+
   try {
     const groupId = getRouterParam(event, 'id');
     const studentId = getRouterParam(event, 'studentId');

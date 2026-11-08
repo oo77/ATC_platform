@@ -11,8 +11,12 @@ import {
   executeImport,
 } from '../../../utils/importUtils';
 import { logActivity } from '../../../utils/activityLogger';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.STUDENTS_IMPORT);
+
   try {
     // Читаем multipart form data
     const formData = await readMultipartFormData(event);

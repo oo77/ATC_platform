@@ -5,6 +5,7 @@ import {
 } from "../../../repositories/courseRepository";
 import { logActivity } from "../../../utils/activityLogger";
 import { getPermissionContext } from "../../../utils/permissions";
+import { Permission, roleHasPermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   const id = event.context.params?.id;
@@ -22,7 +23,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Разрешаем ADMIN и MANAGER (Модератор)
-  if (context.role !== "ADMIN" && context.role !== "MANAGER") {
+  if (!roleHasPermission(context, Permission.COURSES_ARCHIVE)) {
     throw createError({
       statusCode: 403,
       message: "Недостаточно прав для архивации учебной программы",

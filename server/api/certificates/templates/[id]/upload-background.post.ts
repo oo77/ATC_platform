@@ -8,6 +8,7 @@ import { join } from "path";
 import { v4 as uuidv4 } from "uuid";
 import { getTemplateById } from "../../../../repositories/certificateTemplateRepository";
 import { logActivity } from "../../../../utils/activityLogger";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 const UPLOAD_DIR = "./public/uploads/certificate-backgrounds";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -70,6 +71,9 @@ function readImageSize(data: Buffer): { width: number; height: number } | null {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEMPLATES_UPDATE);
+
   try {
     const id = getRouterParam(event, "id");
 

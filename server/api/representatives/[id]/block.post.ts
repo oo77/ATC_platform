@@ -2,12 +2,16 @@ import { defineEventHandler, readBody, createError } from 'h3';
 import { blockRepresentative, getRepresentativeById } from '../../../repositories/representativeRepository';
 import { logActivity } from '../../../utils/activityLogger';
 import { notifyRepresentativeAboutBlock } from '../../../services/notificationService';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 /**
  * POST /api/representatives/:id/block
  * Блокировка представителя
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_BLOCK);
+
   try {
     const id = event.context.params?.id;
     const userId = event.context.user?.id;

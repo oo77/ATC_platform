@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    if (!roleHasPermission(context.role, Permission.SCHEDULE_VIEW_ALL)) {
+    if (!roleHasPermission(context, Permission.SCHEDULE_VIEW_ALL)) {
       throw createError({
         statusCode: 403,
         statusMessage: "Forbidden",

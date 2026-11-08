@@ -2,7 +2,9 @@ import { executeQuery, testConnection } from '../../utils/db';
 import { verifyPassword, generateToken, generateRefreshToken, toPublicUser, createTokenPayload } from '../../utils/auth';
 import { validate, loginSchema } from '../../utils/validation';
 import { logActivityDirect } from '../../utils/activityLogger';
+import { audit } from '../../utils/audit';
 import type { User, LoginData, AuthResponse } from '../../types/auth';
+import { withAccess } from '../../utils/roleRegistry';
 
 /**
  * API endpoint для входа пользователя
@@ -48,8 +50,7 @@ export default defineEventHandler(async (event) => {
         data: {
           success: false,
           message: 'Ошибка валидации данных',
-          errors: validation.errors,
-          debug: debugInfo // Include debug info in response
+          errors: validation.errors
         },
       });
     }
@@ -74,8 +75,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Database Connection Error',
         data: {
           success: false,
-          message: 'Ошибка подключения к базе данных',
-          debug: debugInfo
+          message: 'Ошибка подключения к базе данных'
         },
       });
     }
@@ -90,14 +90,21 @@ export default defineEventHandler(async (event) => {
     console.log('🔍 [DEBUG] Step 4: Found users:', users.length);
 
     if (users.length === 0) {
+      await audit(event, {
+        action: "auth.login_failed",
+        category: "security",
+        outcome: "denied",
+        summary: `Неудачный вход: неизвестный email ${email}`,
+        entity: { type: "USER", label: email },
+        metadata: { reason: "unknown_email" },
+      });
       throw createError({
         statusCode: 401,
         statusMessage: 'Invalid Credentials',
         data: {
           success: false,
           message: 'Неверный email или пароль',
-          errors: { _general: ['Неверный email или пароль'] },
-          debug: debugInfo
+          errors: { _general: ['Неверный email или пароль'] }
         },
       });
     }
@@ -111,8 +118,7 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Internal Server Error',
         data: {
           success: false,
-          message: 'Ошибка получения данных пользователя',
-          debug: debugInfo
+          message: 'Ошибка получения данных пользователя'
         },
       });
     }
@@ -127,14 +133,22 @@ export default defineEventHandler(async (event) => {
     console.log('🔍 [DEBUG] Step 6: Password valid:', isPasswordValid);
 
     if (!isPasswordValid) {
+      await audit(event, {
+        action: "auth.login_failed",
+        category: "security",
+        outcome: "denied",
+        summary: `Неудачный вход: неверный пароль для ${user.email}`,
+        entity: { type: "USER", id: user.id, label: user.email },
+        actor: { id: user.id, name: user.name, roleName: user.role },
+        metadata: { reason: "wrong_password" },
+      });
       throw createError({
         statusCode: 401,
         statusMessage: 'Invalid Credentials',
         data: {
           success: false,
           message: 'Неверный email или пароль',
-          errors: { _general: ['Неверный email или пароль'] },
-          debug: debugInfo
+          errors: { _general: ['Неверный email или пароль'] }
         },
       });
     }
@@ -150,7 +164,7 @@ export default defineEventHandler(async (event) => {
     // Возврат ответа
     const response: AuthResponse = {
       success: true,
-      user: toPublicUser(user),
+      user: await withAccess(toPublicUser(user)),
       token,
       refreshToken,
     };
@@ -175,22 +189,17 @@ export default defineEventHandler(async (event) => {
 
     // Если ошибка уже создана через createError, пробрасываем её
     if (error.statusCode) {
-      // Добавляем debug info к существующей ошибке
-      if (error.data) {
-        error.data.debug = debugInfo;
-      }
+      // Отладочные шаги в ответ НЕ отдаём: по ним можно было перебирать существующие email
       throw error;
     }
 
-    // Иначе создаем общую ошибку с debug info
+    // Иначе — общая ошибка без внутренних подробностей (они в логе сервера)
     throw createError({
       statusCode: 500,
       statusMessage: 'Login Failed',
       data: {
         success: false,
         message: 'Ошибка при входе в систему',
-        errorMessage: error.message,
-        debug: debugInfo
       },
     });
   }

@@ -1,4 +1,5 @@
 import { defineEventHandler, readMultipartFormData, createError } from "h3";
+import { logActivity } from "../../../../utils/activityLogger";
 import { requireAuth } from "../../../../utils/auth";
 import { roleHasPermission } from "../../../../utils/permissions";
 import { Permission } from "../../../../types/permissions";
@@ -28,11 +29,14 @@ const db = getDbPool();
  * - language?: Язык (по умолчанию 'ru')
  * - category?: Категория
  */
+/** Максимальный размер книги */
+const MAX_BOOK_SIZE = 200 * 1024 * 1024;
+
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event);
 
   // Проверка прав доступа
-  if (!roleHasPermission(user.role, Permission.LIBRARY_UPLOAD)) {
+  if (!roleHasPermission(user, Permission.LIBRARY_UPLOAD)) {
     console.error(
       `[Library] Unauthorized upload attempt by user ${user.id} (${user.role})`,
     );
@@ -86,11 +90,30 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Проверка формата файла
+    // Проверка формата файла: расширение + сигнатура %PDF- (переименованный
+    // не-PDF файл раньше сохранялся и ломал обработку)
     if (!pdfFile.filename.toLowerCase().endsWith(".pdf")) {
       throw createError({
         statusCode: 400,
         message: "Допустимы только PDF файлы",
+      });
+    }
+    if (pdfFile.data.subarray(0, 1024).indexOf("%PDF-") === -1) {
+      throw createError({
+        statusCode: 400,
+        message: "Файл не является PDF-документом",
+      });
+    }
+    if (pdfFile.data.length > MAX_BOOK_SIZE) {
+      throw createError({
+        statusCode: 413,
+        message: `Файл слишком большой (максимум ${MAX_BOOK_SIZE / 1024 / 1024} МБ)`,
+      });
+    }
+    if (metadata.title.trim().length === 0 || metadata.title.length > 255) {
+      throw createError({
+        statusCode: 400,
+        message: "Название книги: от 1 до 255 символов",
       });
     }
 
@@ -176,6 +199,12 @@ export default defineEventHandler(async (event) => {
     console.log(
       `[Library] Book upload completed: ID ${bookId}, Title: "${bookData.title}"`,
     );
+
+    await logActivity(event, "UPLOAD", "LIBRARY_BOOK", bookId, bookData.title, {
+      action: "upload_book",
+      pages: bookData.total_pages,
+      sizeBytes: bookData.file_size_bytes,
+    });
 
     return {
       success: true,

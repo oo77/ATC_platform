@@ -602,6 +602,21 @@ export async function checkMarkingAccess(
     };
   }
 
+  // 1.1. Для роли TEACHER — проверка, что это его занятие.
+  // Должна идти ДО проверки статуса "approved": одобрение администратора снимает
+  // ограничение по сроку, но не даёт права отмечать чужое занятие.
+  if (userRole === "TEACHER") {
+    if (!instructorId || event.instructor_id !== instructorId) {
+      return {
+        allowed: false,
+        status: "denied",
+        deadline: new Date(),
+        lateDeadline: new Date(),
+        message: "Вы не назначены инструктором на это занятие",
+      };
+    }
+  }
+
   // 1.5. Проверяем, может быть статус уже "approved" (одобрено админом)
   // Получаем текущий статус отметки из таблицы
   const [existingStatus] = await executeQuery<RowDataPacket[]>(
@@ -618,19 +633,6 @@ export async function checkMarkingAccess(
       message: "Отметка разрешена администратором",
       isApprovedByAdmin: true,
     };
-  }
-
-  // 2. Для роли TEACHER — проверка, что это его занятие
-  if (userRole === "TEACHER") {
-    if (event.instructor_id !== instructorId) {
-      return {
-        allowed: false,
-        status: "denied",
-        deadline: new Date(),
-        lateDeadline: new Date(),
-        message: "Вы не назначены инструктором на это занятие",
-      };
-    }
   }
 
   // 3. Получаем настройки и считаем дедлайны

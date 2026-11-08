@@ -23,6 +23,9 @@ export interface UserPublic {
   pinfl?: string | null;
   studentId?: string | null; // Связь с таблицей students
   instructorId?: string | null; // Связь с таблицей instructors
+  roleId?: string; // Назначенная роль (гибкие роли)
+  roleName?: string; // Название роли для отображения
+  permissions?: string[]; // Права роли (с сервера)
   created_at: Date;
   updated_at: Date;
 }

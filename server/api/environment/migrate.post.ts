@@ -1,3 +1,4 @@
+import { requireSetupModeOrPermission, Permission } from "../../utils/permissions";
 import { runMigrations } from "../../database/migrator";
 
 /**
@@ -5,6 +6,9 @@ import { runMigrations } from "../../database/migrator";
  * POST /api/environment/migrate
  */
 export default defineEventHandler(async (event) => {
+  // До настройки системы — без входа; после — только с правом управления настройками
+  await requireSetupModeOrPermission(event, Permission.SETTINGS_MANAGE);
+
   console.log("[ENVIRONMENT] Starting database migrations...");
 
   try {

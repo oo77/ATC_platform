@@ -10,6 +10,8 @@ import {
 import { getAcademicHourMinutes } from "../../utils/academicHours";
 import { logActivity } from "../../utils/activityLogger";
 import type { RowDataPacket } from "mysql2/promise";
+import { Permission } from "../../utils/permissions";
+import { requireGroupPermission } from "../../utils/resourceAccess";
 
 interface JournalColumn {
   scheduleEvent: {
@@ -68,6 +70,9 @@ interface JournalRow {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireGroupPermission(event, getQuery(event).groupId as string, [Permission.ATTENDANCE_MARK, Permission.ATTENDANCE_MANAGE]);
+
   try {
     const query = getQuery(event);
     const groupId = query.groupId as string;

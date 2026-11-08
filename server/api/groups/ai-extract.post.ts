@@ -16,6 +16,7 @@ import fs from "fs/promises";
 import path from "path";
 import os from "os";
 import { v4 as uuidv4 } from "uuid";
+import { roleHasPermission } from "../../utils/permissions";
 
 const EXTRACTION_SYSTEM_PROMPT = `Ты — дружелюбный ассистент оператора авиационного учебного центра. Тебе присылают текст, служебную записку, приказ на обучение, список слушателей или скан документа — нужно найти в них людей для зачисления в учебную группу.
 
@@ -301,7 +302,7 @@ export default defineEventHandler(async (event) => {
     await requirePermission(event, Permission.GROUPS_MANAGE_STUDENTS);
   } catch {
     const user = event.context.user;
-    if (!user || !["ADMIN", "MANAGER"].includes(user.role)) {
+    if (!user || !roleHasPermission(user, Permission.GROUPS_CREATE)) {
       throw createError({ statusCode: 403, message: "Недостаточно прав для управления группами" });
     }
   }

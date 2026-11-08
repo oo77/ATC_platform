@@ -8,12 +8,13 @@ import { requireAllPermissions } from '../../../utils/permissions'
 import { Permission } from '../../../types/permissions'
 import { UserRole } from '../../../types/auth'
 import { executeQuery } from '../../../utils/db'
+import { roleHasPermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   // Проверяем права доступа - только администратор
   const context = await requireAllPermissions(event, [Permission.USERS_VIEW])
 
-  if (context.role !== UserRole.ADMIN) {
+  if (!roleHasPermission(context, Permission.SETTINGS_MANAGE)) {
     throw createError({
       statusCode: 403,
       message: 'Доступ запрещен. Только для администраторов.',
@@ -55,7 +56,7 @@ export default defineEventHandler(async (event) => {
       executeQuery<any[]>('SELECT COUNT(*) as count FROM organizations'),
 
       // Всего выданных сертификатов (таблица может не существовать)
-      executeQuery<any[]>('SELECT COUNT(*) as count FROM certificates').catch(() => [{ count: 0 }]),
+      executeQuery<any[]>("SELECT COUNT(*) as count FROM issued_certificates WHERE status = 'issued'").catch(() => [{ count: 0 }]),
 
       // Активность за сегодня
       executeQuery<any[]>(`

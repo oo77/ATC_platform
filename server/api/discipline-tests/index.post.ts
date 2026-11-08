@@ -6,8 +6,12 @@
 import { createDisciplineTest, disciplineTestExists } from '../../repositories/disciplineTestRepository';
 import { getTestTemplateById } from '../../repositories/testTemplateRepository';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission, requireAnyPermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAnyPermission(event, [Permission.DISCIPLINES_MANAGE, Permission.COURSES_UPDATE]);
+
     try {
         const body = await readBody<{
             discipline_id: string;

@@ -3,12 +3,16 @@ import { requireAuth } from "../../../../utils/auth";
 import { useDatabase } from "../../../../utils/useDatabase";
 import { logActivity } from "../../../../utils/activityLogger";
 import { isValidFieldKey } from "../../../../utils/reports/fieldRegistry";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 /**
  * PUT /api/reports/builder/templates/:id
  * Обновление шаблона — пересоздание колонок в транзакции
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.DASHBOARD_STATS);
+
   try {
     const user = requireAuth(event);
     const id = getRouterParam(event, "id");

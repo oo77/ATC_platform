@@ -1,7 +1,11 @@
 import { executeQuery } from "../../utils/db";
 import { createCertificatesArchive } from "../../services/certificateArchiveService";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CERTIFICATES_VIEW_ALL);
+
   const user = event.context.user;
   if (!user) {
     throw createError({

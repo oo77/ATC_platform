@@ -5,8 +5,12 @@
 
 import { getStudentById } from '../../repositories/studentRepository';
 import { UserRole } from '../../types/auth';
+import { requireStudentAccess } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: сотрудник со всеми слушателями, преподаватель — слушатели своих групп, слушатель — только себя
+  await requireStudentAccess(event, getRouterParam(event, "id") || "");
+
   try {
     const id = getRouterParam(event, 'id');
     const authUser = event.context.user;

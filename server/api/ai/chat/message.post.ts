@@ -1,4 +1,5 @@
 import { executeQuery } from "../../../utils/db";
+import { Permission, roleHasPermission } from "../../../utils/permissions";
 import {
   processAiChatMessage,
   type UserContext,
@@ -6,6 +7,7 @@ import {
   type ReportArtifact,
 } from "../../../utils/ai/chatEngine";
 import { v4 as uuidv4 } from "uuid";
+import { requirePermission } from "../../../utils/permissions";
 
 /**
  * POST /api/ai/chat/message
@@ -13,6 +15,9 @@ import { v4 as uuidv4 } from "uuid";
  * status / step / result / error — интерфейс показывает прогресс сразу.
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.AI_CHAT_USE);
+
   const user = event.context.user;
   if (!user?.id) {
     throw createError({ statusCode: 401, message: "Требуется авторизация для доступа к ИИ-чату" });
@@ -87,7 +92,8 @@ export default defineEventHandler(async (event) => {
       role: user.role,
       organizationId: userInfo.organization_id || null,
       organizationName: userInfo.org_name || null,
-      canViewAll: ["ADMIN", "MANAGER"].includes(user.role),
+      // Доступ ко всем данным — по праву, а не по названию роли
+      canViewAll: roleHasPermission(user, Permission.DASHBOARD_STATS),
     };
 
     // 2. История (без нового сообщения) и сохранение сообщения пользователя — параллельно

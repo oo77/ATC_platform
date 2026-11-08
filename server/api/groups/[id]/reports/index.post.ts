@@ -15,6 +15,7 @@ import { validatePdfFile } from "../../../../utils/validatePdfFile";
 import { saveGroupReportFile } from "../../../../utils/groupFileStorage";
 import { logActivity } from "../../../../utils/activityLogger";
 import { v4 as uuidv4 } from "uuid";
+import { Permission, roleHasPermission } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   // 1. Проверка авторизации
@@ -24,7 +25,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 2. Проверка прав (ADMIN или MANAGER)
-  if (!["ADMIN", "MANAGER"].includes(user.role)) {
+  if (!roleHasPermission(user, Permission.GROUPS_UPDATE)) {
     throw createError({
       statusCode: 403,
       message: "Недостаточно прав для загрузки документов",

@@ -1,3 +1,4 @@
+import { Permission, requirePermission } from "../../../utils/permissions";
 /**
  * GET /api/certificates/templates/sources
  * Получить список доступных источников данных для переменных
@@ -5,7 +6,10 @@
  * Используется визуальным редактором для отображения списка переменных
  */
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEMPLATES_VIEW);
+
   // Источники данных для переменных (синхронизированы с AVAILABLE_VARIABLES в composable)
   const sources = [
     // Данные студента

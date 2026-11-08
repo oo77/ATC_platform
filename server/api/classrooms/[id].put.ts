@@ -5,6 +5,7 @@
 
 import { updateClassroom } from "../../repositories/scheduleRepository";
 import { z } from "zod";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 const updateClassroomSchema = z.object({
   name: z.string().min(1).optional(),
@@ -16,6 +17,9 @@ const updateClassroomSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CLASSROOMS_MANAGE);
+
   try {
     const id = getRouterParam(event, "id");
     if (!id) {

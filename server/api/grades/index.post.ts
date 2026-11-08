@@ -5,11 +5,29 @@
 
 import { upsertGrade, bulkUpsertGrades, getExistingGrade } from '../../repositories/attendanceRepository';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission } from "../../utils/permissions";
+import { assertGradeTargets, requireScheduleEventPermission } from "../../utils/resourceAccess";
+import { recordChanges } from "../../utils/audit";
+import { executeQuery } from "../../utils/db";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  const gradeBody = await readBody(event);
+  const accessCtx = await requireScheduleEventPermission(event, gradeBody?.scheduleEventId, [Permission.GRADES_MANAGE]);
+  {
+    const ev = await executeQuery<any[]>("SELECT group_id FROM schedule_events WHERE id = ? LIMIT 1", [gradeBody.scheduleEventId]);
+    await assertGradeTargets(accessCtx, {
+      groupId: ev[0]?.group_id,
+      scheduleEventId: gradeBody.scheduleEventId,
+      studentIds: gradeBody?.bulk && Array.isArray(gradeBody.grades)
+        ? gradeBody.grades.map((g: any) => g?.studentId)
+        : [gradeBody?.studentId],
+    });
+  }
+
   try {
     const body = await readBody(event);
-    const userId = event.context.auth?.userId;
+    const userId = event.context.user?.id; // было context.auth — его никто не заполнял, автор терялся
 
     // Массовое выставление
     if (body.bulk && Array.isArray(body.grades)) {
@@ -73,6 +91,13 @@ export default defineEventHandler(async (event) => {
       notes: body.notes,
       gradedBy: userId,
     });
+
+    // Журнал аудита: прежняя и новая оценка
+    recordChanges(
+      event,
+      { grade: existingGrade?.grade ?? null, notes: existingGrade?.notes ?? null },
+      { grade: body.grade, ...(body.notes !== undefined ? { notes: body.notes } : {}) },
+    );
 
     await logActivity(
       event,

@@ -16,7 +16,7 @@
         </div>
       </div>
       <button
-        v-if="certificates.length > 1"
+        v-if="certificates.length > 1 && canDownloadArchive"
         :disabled="zipLoading"
         class="px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-60 text-white text-[11px] font-semibold flex items-center gap-1.5 transition-all shadow-sm shadow-amber-600/20 shrink-0"
         @click="downloadZip"
@@ -77,6 +77,10 @@
 </template>
 
 <script setup lang="ts">
+import { Permission } from "~/types/permissions";
+// Архив ZIP сервер отдаёт только с certificates:view_all
+const { hasPermission: hasPermissionForZip } = usePermissions();
+const canDownloadArchive = computed(() => hasPermissionForZip(Permission.CERTIFICATES_VIEW_ALL));
 import { computed, ref } from 'vue';
 import { Award, Archive, Download, Loader2, CalendarCheck, CalendarClock } from 'lucide-vue-next';
 import type { AiCertificateItem } from '~/types/aiChat';

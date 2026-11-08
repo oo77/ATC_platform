@@ -13,6 +13,7 @@ import { hashPassword } from '../../utils/auth';
 import { logActivity } from '../../utils/activityLogger';
 import { z } from 'zod';
 import type { User } from '../../types/auth';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 const instructorSchema = z.object({
   fullName: z.string().min(1, 'ФИО обязательно'),
@@ -64,6 +65,9 @@ const instructorSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.INSTRUCTORS_CREATE);
+
   try {
     const body = await readBody(event);
 

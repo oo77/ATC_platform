@@ -2,12 +2,16 @@ import { defineEventHandler, getRouterParam, createError } from "h3";
 import { requireAuth } from "../../../../utils/auth";
 import { useDatabase } from "../../../../utils/useDatabase";
 import { logActivity } from "../../../../utils/activityLogger";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 /**
  * DELETE /api/reports/builder/templates/:id
  * Удаление шаблона (колонки удалятся каскадно по FK)
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.DASHBOARD_STATS);
+
   try {
     const user = requireAuth(event);
     const id = getRouterParam(event, "id");

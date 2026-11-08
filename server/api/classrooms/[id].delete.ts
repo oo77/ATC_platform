@@ -4,8 +4,12 @@
  */
 
 import { deleteClassroom } from '../../repositories/scheduleRepository';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CLASSROOMS_MANAGE);
+
     try {
         const id = getRouterParam(event, 'id');
         if (!id) {

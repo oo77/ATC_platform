@@ -2,12 +2,16 @@ import { defineEventHandler, readBody, createError } from 'h3';
 import { approveRepresentative, getRepresentativeById } from '../../../repositories/representativeRepository';
 import { logActivity } from '../../../utils/activityLogger';
 import { notifyRepresentativeAboutApproval } from '../../../services/notificationService';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 /**
  * POST /api/representatives/:id/approve
  * Одобрение заявки представителя
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_APPROVE);
+
   try {
     const id = event.context.params?.id;
     const userId = event.context.user?.id;

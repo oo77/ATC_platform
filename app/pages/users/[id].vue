@@ -72,6 +72,50 @@
           <div class="min-h-[300px]">
             <!-- Вкладка «Профиль» -->
             <div v-show="activeTab === 'info'" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <!-- Роль и доступ (гибкие роли) -->
+              <div class="rounded-xl border border-gray-200 bg-white p-5 sm:col-span-2 dark:border-gray-800 dark:bg-white/[0.03]">
+                <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+                  <ShieldCheck class="h-4 w-4 text-gray-400" /> Роль и доступ
+                </h3>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Текущая роль</p>
+                    <p class="text-sm font-medium text-gray-900 dark:text-white">
+                      {{ currentRoleName }}
+                      <span v-if="currentRoleItem" class="ml-1 text-xs font-normal text-gray-500">
+                        · прав: {{ currentRoleItem.isSystem ? "все" : currentRoleItem.permissions.length }}
+                      </span>
+                    </p>
+                  </div>
+                  <template v-if="canAssignRole">
+                    <select
+                      v-model="selectedRoleId"
+                      class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:border-primary focus:outline-none sm:w-64 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    >
+                      <option v-for="r in assignableRoles" :key="r.id" :value="r.id">{{ r.name }}</option>
+                    </select>
+                    <UiButton
+                      size="sm"
+                      variant="primary"
+                      :disabled="roleSaving || !selectedRoleId || selectedRoleId === currentRoleId"
+                      @click="assignRole"
+                    >
+                      {{ roleSaving ? "Сохранение…" : "Назначить" }}
+                    </UiButton>
+                  </template>
+                </div>
+                <NuxtLink
+                  v-if="hasPermission(Permission.LOGS_VIEW) && userData"
+                  :to="`/admin/audit?actorId=${userData.id}`"
+                  class="mt-2 inline-block text-xs text-primary hover:underline"
+                >
+                  Все действия пользователя в журнале аудита →
+                </NuxtLink>
+                <p v-if="canAssignRole" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Доступны роли, права которых есть у вас самих. Смена роли действует сразу и записывается в журнал аудита.
+                </p>
+              </div>
+
               <!-- Персональные данные -->
               <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
                 <h3 class="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
@@ -235,6 +279,7 @@ import {
   Database as DatabaseIcon
 } from "lucide-vue-next";
 import type { UserPublic, UserRole } from "~/types/auth";
+import { Permission } from "~/types/permissions";
 
 // Meta
 definePageMeta({
@@ -265,8 +310,8 @@ const userId = computed(() => route.params.id as string);
 
 const availableTabs = computed(() => {
   const tabs = [{ id: "info", label: "Профиль", icon: UserIcon }];
-  // Only admins/managers see activity logs for other users
-  if (currentUser.value?.role === 'ADMIN' || currentUser.value?.role === 'MANAGER') {
+  // Журнал действий пользователя — по праву просмотра журнала
+  if (hasPermission(Permission.LOGS_VIEW)) {
     tabs.push({ id: "activity", label: "Активность", icon: ActivityIcon });
   }
   return tabs;
@@ -285,29 +330,76 @@ const lastActivityDate = computed(() => {
   return formatDateShort(activityLogs.value[0].created_at);
 });
 
-// Permissions
+// Права — по разрешениям роли (как на сервере), а не по названию роли.
+// Действия над администраторами требуют users:manage_roles.
+const { hasPermission } = usePermissions();
+const touchesAdmin = computed(() => userData.value?.role === "ADMIN" && !hasPermission(Permission.USERS_MANAGE_ROLES));
+
 const canEdit = computed(() => {
   if (!currentUser.value || !userData.value) return false;
-  if (currentUser.value.role === "ADMIN") return true;
-  if (currentUser.value.role === "MANAGER" && userData.value.role !== "ADMIN") return true;
-  return currentUser.value.id === userData.value.id;
+  if (currentUser.value.id === userData.value.id) return true;
+  return hasPermission(Permission.USERS_UPDATE) && !touchesAdmin.value;
 });
 
 const canResetPassword = computed(() => {
   if (!currentUser.value || !userData.value) return false;
-  if (currentUser.value.role === "ADMIN") return true;
-  if (currentUser.value.role === "MANAGER" && userData.value.role !== "ADMIN") return true;
-  return false;
+  return hasPermission(Permission.USERS_UPDATE) && !touchesAdmin.value;
 });
 
 const canDelete = computed(() => {
   if (!currentUser.value || !userData.value) return false;
-  // Cannot delete self
   if (currentUser.value.id === userData.value.id) return false;
-  // Admin can delete any non-admin
-  if (currentUser.value.role === "ADMIN" && userData.value.role !== "ADMIN") return true;
-  return false;
+  return hasPermission(Permission.USERS_DELETE) && !touchesAdmin.value;
 });
+
+// Назначение роли
+interface RoleOption { id: string; name: string; isSystem: boolean; permissions: string[] }
+const roleList = ref<RoleOption[]>([]);
+const selectedRoleId = ref("");
+const roleSaving = ref(false);
+const canAssignRole = computed(
+  () => hasPermission(Permission.USERS_MANAGE_ROLES) && !!userData.value && currentUser.value?.id !== userData.value.id,
+);
+const currentRoleId = computed(() => {
+  const u: any = userData.value;
+  return u?.role_id || u?.roleId || (u?.role ? `role_${String(u.role).toLowerCase()}` : "");
+});
+const currentRoleItem = computed(() => roleList.value.find((r) => r.id === currentRoleId.value) || null);
+const currentRoleName = computed(() => currentRoleItem.value?.name || (userData.value as any)?.roleName || userData.value?.role || "—");
+const myPermissionSet = computed(() => new Set(((currentUser.value as any)?.permissions as string[]) || []));
+// Как и на сервере: назначить можно только роль, все права которой есть у вас самих
+const assignableRoles = computed(() =>
+  roleList.value.filter(
+    (r) => r.id === currentRoleId.value || r.permissions.every((p) => myPermissionSet.value.has(p)),
+  ),
+);
+
+const loadRoles = async () => {
+  if (!hasPermission(Permission.USERS_MANAGE_ROLES) && !hasPermission(Permission.ROLES_VIEW)) return;
+  try {
+    const res: any = await authFetch("/api/roles");
+    roleList.value = res.roles || [];
+    selectedRoleId.value = currentRoleId.value;
+  } catch {
+    /* список ролей необязателен для просмотра профиля */
+  }
+};
+
+const assignRole = async () => {
+  if (!userData.value || !selectedRoleId.value) return;
+  roleSaving.value = true;
+  try {
+    await authFetch(`/api/users/${userData.value.id}/role`, { method: "PUT", body: { roleId: selectedRoleId.value } });
+    notification.success("Роль назначена");
+    await loadUser();
+    selectedRoleId.value = currentRoleId.value;
+  } catch (e: any) {
+    notification.error(e?.data?.message || "Не удалось назначить роль");
+    selectedRoleId.value = currentRoleId.value;
+  } finally {
+    roleSaving.value = false;
+  }
+};
 
 // Меню «⋯» в шапке: «Сбросить пароль» и «Удалить» собраны в группу «Опасные», видимость — по прежним флагам прав
 const menuGroups = computed(() => [
@@ -490,7 +582,8 @@ useHead({
 });
 
 // Lifecycle
-onMounted(() => {
-  loadUser();
+onMounted(async () => {
+  await loadUser();
+  await loadRoles();
 });
 </script>

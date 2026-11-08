@@ -28,8 +28,8 @@ export default defineEventHandler(async (event) => {
     }
 
     const canView =
-      roleHasPermission(context.role, Permission.GROUPS_VIEW_ALL) ||
-      roleHasPermission(context.role, Permission.GROUPS_VIEW_OWN);
+      roleHasPermission(context, Permission.GROUPS_VIEW_ALL) ||
+      roleHasPermission(context, Permission.GROUPS_VIEW_OWN);
     if (!canView) {
       throw createError({
         statusCode: 403,

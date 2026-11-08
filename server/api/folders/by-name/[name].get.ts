@@ -4,8 +4,12 @@
  */
 
 import { getFolderByPath } from '../../../repositories/folderRepository';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.FILES_VIEW);
+
   try {
     const name = getRouterParam(event, 'name');
 

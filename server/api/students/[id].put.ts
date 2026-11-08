@@ -3,11 +3,16 @@
  * PUT /api/students/:id
  */
 
-import { updateStudent, studentExistsByPinfl } from '../../repositories/studentRepository';
+import { updateStudent, studentExistsByPinfl, getStudentById } from '../../repositories/studentRepository';
 import { logActivity } from '../../utils/activityLogger';
 import type { UpdateStudentInput } from '../../types/student';
+import { Permission, requirePermission } from "../../utils/permissions";
+import { recordChanges } from "../../utils/audit";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.STUDENTS_UPDATE);
+
   try {
     const id = getRouterParam(event, 'id');
 
@@ -78,7 +83,10 @@ export default defineEventHandler(async (event) => {
     if (body.birthDate !== undefined) updateData.birthDate = body.birthDate;
     if (body.photo_base64 !== undefined) updateData.photo_base64 = body.photo_base64;
 
+    const studentBefore = await getStudentById(id);
     const student = await updateStudent(id, updateData);
+    // Журнал аудита: что именно изменилось (было → стало)
+    recordChanges(event, studentBefore as any, updateData as any);
 
     if (!student) {
       return {

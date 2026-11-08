@@ -1,3 +1,4 @@
+import { requireSetupModeOrPermission, Permission } from "../../utils/permissions";
 import mysql from "mysql2/promise";
 
 /**
@@ -5,6 +6,9 @@ import mysql from "mysql2/promise";
  * POST /api/environment/test-connection
  */
 export default defineEventHandler(async (event) => {
+  // До настройки системы — без входа; после — только с правом управления настройками
+  await requireSetupModeOrPermission(event, Permission.SETTINGS_MANAGE);
+
   const body = await readBody(event);
 
   console.log("[ENVIRONMENT] Testing database connection...");

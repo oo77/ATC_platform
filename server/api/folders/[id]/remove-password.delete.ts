@@ -6,8 +6,12 @@
 import { getFolderById } from '../../../repositories/folderRepository';
 import { executeQuery } from '../../../utils/db';
 import type { ResultSetHeader } from 'mysql2/promise';
+import { requireFolderManage } from "../../../utils/folderAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireFolderManage(event, Number(getRouterParam(event, "id")) || null);
+
   try {
     const user = event.context.user;
     

@@ -5,8 +5,12 @@
 
 import { getTestTemplateById, updateTestTemplate, testTemplateCodeExists } from '../../../repositories/testTemplateRepository';
 import type { UpdateTestTemplateDTO } from '../../../types/testing';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEST_TEMPLATES_MANAGE);
+
     try {
         const id = getRouterParam(event, 'id');
         const body = await readBody(event);
