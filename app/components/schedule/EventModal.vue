@@ -490,7 +490,7 @@
     <template #footer>
       <div class="flex justify-between items-center">
         <button
-          v-if="isEditMode"
+          v-if="isEditMode && canDeleteSchedule"
           type="button"
           @click="handleDelete"
           class="px-4 py-2 text-sm font-medium text-danger hover:text-danger/80 transition-colors flex items-center gap-2"
@@ -566,6 +566,8 @@
 </template>
 
 <script setup lang="ts">
+// Удаление занятия — только с правом schedule:delete
+const { canDeleteSchedule } = usePermissions();
 import UiMultiSelect from "~/components/ui/MultiSelect.vue";
 import UiSearchSelect from "~/components/ui/SearchSelect.vue";
 import type {

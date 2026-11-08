@@ -39,11 +39,11 @@ export default defineEventHandler(async (event) => {
 
     // Проверяем разрешение на просмотр групп
     const canViewAll = roleHasPermission(
-      context.role,
+      context,
       Permission.GROUPS_VIEW_ALL
     );
     const canViewOwn = roleHasPermission(
-      context.role,
+      context,
       Permission.GROUPS_VIEW_OWN
     );
 
@@ -83,7 +83,9 @@ export default defineEventHandler(async (event) => {
     }
 
     // Фильтрация для TEACHER: только свои группы
-    if (context.role === UserRole.TEACHER && !canViewAll) {
+    // Без права «все группы» — только свои (по привязке к инструктору); без привязки — ничего.
+    // Раньше условие было по названию роли TEACHER: роль без права «все» видела бы всё
+    if (!canViewAll) {
       if (context.instructorId) {
         const teacherGroupIds = await getTeacherGroups(context.instructorId);
         filters.groupIds = teacherGroupIds;
@@ -118,7 +120,7 @@ export default defineEventHandler(async (event) => {
 
     // Получаем статистику (для TEACHER — только по своим группам)
     const stats =
-      context.role === UserRole.TEACHER && filters.groupIds
+      !canViewAll && filters.groupIds
         ? await getGroupsStats(filters.groupIds)
         : await getGroupsStats();
 

@@ -9,7 +9,7 @@ import type { User, RegisterData, AuthResponse } from '../../types/auth';
  * API endpoint для регистрации нового пользователя
  * POST /api/auth/register
  * 
- * Body: { name, email, password, phone?, workplace?, position?, pinfl?, role? }
+ * Body: { name, email, password, phone?, workplace?, position?, pinfl? } (role игнорируется)
  */
 export default defineEventHandler(async (event) => {
   try {
@@ -55,7 +55,10 @@ export default defineEventHandler(async (event) => {
 
     // Создание пользователя
     const userId = randomUUID();
-    const role = data.role || 'STUDENT'; // По умолчанию роль STUDENT
+    // Самостоятельная регистрация ВСЕГДА создаёт слушателя.
+    // Роль из тела запроса игнорируется: иначе любой мог бы зарегистрироваться администратором.
+    // Другие роли назначает сотрудник через /api/users.
+    const role = 'STUDENT';
 
     await executeQuery(
       `INSERT INTO users (id, role, name, email, password_hash, phone, workplace, position, pinfl, created_at, updated_at)

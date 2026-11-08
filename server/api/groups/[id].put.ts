@@ -13,6 +13,8 @@ import {
 } from "../../repositories/groupRepository";
 import { executeQuery } from "../../utils/db";
 import { logActivity } from "../../utils/activityLogger";
+import { Permission, roleHasPermission } from "../../utils/permissions";
+import { recordChanges } from "../../utils/audit";
 
 const updateGroupSchema = z.object({
   code: z.string().min(1).max(50).optional(),
@@ -33,7 +35,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 2. Проверка прав (ADMIN или MODERATOR/MANAGER)
-  if (!["ADMIN", "MANAGER"].includes(user.role)) {
+  if (!roleHasPermission(user, Permission.GROUPS_UPDATE)) {
     throw createError({ statusCode: 403, message: "Недостаточно прав" });
   }
 
@@ -69,7 +71,7 @@ export default defineEventHandler(async (event) => {
 
     // 5. Проверка прав на архивацию
     if (data.isArchived !== undefined) {
-      if (user.role !== "ADMIN") {
+      if (!roleHasPermission(user, Permission.GROUPS_EDIT_LOCKED)) {
         throw createError({
           statusCode: 403,
           message:
@@ -85,7 +87,7 @@ export default defineEventHandler(async (event) => {
       const currentEndDate = new Date(existingGroup.endDate);
 
       // Если группа завершена и пользователь не админ
-      if (now > currentEndDate && user.role !== "ADMIN") {
+      if (now > currentEndDate && !roleHasPermission(user, Permission.GROUPS_EDIT_LOCKED)) {
         throw createError({
           statusCode: 403,
           message:
@@ -204,6 +206,9 @@ export default defineEventHandler(async (event) => {
         params,
       );
     }
+
+    // Журнал аудита: что именно изменилось (было → стало)
+    recordChanges(event, existingGroup as any, data as any);
 
     // 9. Логирование
     await logActivity(

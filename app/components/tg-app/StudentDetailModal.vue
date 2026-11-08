@@ -228,6 +228,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+const tgFetch = useTgFetch(); // заголовок X-Telegram-Init-Data для /api/tg-app/*
 
 const props = defineProps({
   show: {
@@ -301,7 +302,7 @@ async function loadDetails() {
   error.value = null;
 
   try {
-    const data = await $fetch(`/api/tg-app/students/${props.studentId}`, {
+    const data = await tgFetch(`/api/tg-app/students/${props.studentId}`, {
       params: {
         organizationId: props.organizationId,
       },
@@ -325,7 +326,7 @@ async function downloadCertificate(cert) {
   downloadingId.value = cert.id;
 
   try {
-    const response = await $fetch("/api/tg-app/send-certificate", {
+    const response = await tgFetch("/api/tg-app/send-certificate", {
       method: "POST",
       body: {
         certificateId: cert.id,

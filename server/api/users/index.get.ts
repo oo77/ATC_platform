@@ -1,6 +1,7 @@
 import { executeQuery } from '../../utils/db';
 import { toPublicUser } from '../../utils/auth';
 import type { User, UserPublic, UserRole } from '../../types/auth';
+import { Permission, roleHasAnyPermission, roleHasPermission } from "../../utils/permissions";
 
 /**
  * API endpoint для получения списка пользователей
@@ -26,7 +27,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // Проверка прав доступа (только ADMIN, MANAGER, TEACHER)
-    if (!['ADMIN', 'MANAGER', 'TEACHER'].includes(currentUser.role)) {
+    // Список пользователей: users:view; без него, но со students:view — только слушатели
+    if (!roleHasAnyPermission(currentUser, [Permission.USERS_VIEW, Permission.STUDENTS_VIEW])) {
       throw createError({
         statusCode: 403,
         statusMessage: 'Forbidden',
@@ -51,7 +53,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Ограничение доступа для TEACHER - только студенты
-    if (currentUser.role === 'TEACHER') {
+    if (!roleHasPermission(currentUser, Permission.USERS_VIEW)) {
       if (roleFilter && roleFilter !== 'STUDENT') {
         throw createError({
           statusCode: 403,
@@ -69,7 +71,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // Ограничение доступа для MANAGER - не может видеть ADMIN
-    if (currentUser.role === 'MANAGER') {
+    // Без users:manage_roles администраторы в списке не показываются
+    if (!roleHasPermission(currentUser, Permission.USERS_MANAGE_ROLES)) {
       if (roleFilter === 'ADMIN') {
         throw createError({
           statusCode: 403,

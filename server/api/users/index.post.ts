@@ -4,6 +4,7 @@ import { hashPassword, toPublicUser } from '../../utils/auth';
 import { validate, registerSchema } from '../../utils/validation';
 import { logActivity } from '../../utils/activityLogger';
 import type { User, RegisterData, UserPublic } from '../../types/auth';
+import { Permission, roleHasAnyPermission, roleHasPermission } from "../../utils/permissions";
 
 /**
  * API endpoint для создания нового пользователя (только для админов/модераторов)
@@ -28,7 +29,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Проверка прав доступа (только ADMIN и MANAGER могут создавать пользователей)
-    if (!['ADMIN', 'MANAGER'].includes(currentUser.role)) {
+    if (!roleHasPermission(currentUser, Permission.USERS_CREATE)) {
       throw createError({
         statusCode: 403,
         statusMessage: 'Forbidden',
@@ -59,8 +60,8 @@ export default defineEventHandler(async (event) => {
     const data = validation.data;
 
     // Проверка прав на создание пользователя с определенной ролью
-    if (currentUser.role === 'MANAGER') {
-      // Модератор не может создавать админов
+    if (!roleHasPermission(currentUser, Permission.USERS_MANAGE_ROLES)) {
+      // Без users:manage_roles нельзя создавать администраторов
       if (data.role === 'ADMIN') {
         throw createError({
           statusCode: 403,

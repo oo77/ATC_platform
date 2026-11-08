@@ -15,6 +15,7 @@ import type {
     AnswerData,
     QuestionMedia,
 } from '../../../../types/testing';
+import { requireTestSessionAccess } from "../../../../utils/resourceAccess";
 
 interface SessionRow extends RowDataPacket {
     id: string;
@@ -75,6 +76,9 @@ interface SessionDetailAnswer {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireTestSessionAccess(event, getRouterParam(event, "id") || "", "read");
+
     try {
         const id = getRouterParam(event, 'id');
 

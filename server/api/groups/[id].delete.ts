@@ -11,6 +11,7 @@ import {
   deleteGroupReportFile,
 } from "../../utils/groupFileStorage";
 import { executeQuery } from "../../utils/db";
+import { Permission, roleHasPermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   // 1. Проверка авторизации
@@ -20,7 +21,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 2. Проверка прав (Только ADMIN)
-  if (user.role !== "ADMIN") {
+  if (!roleHasPermission(user, Permission.GROUPS_DELETE)) {
     throw createError({
       statusCode: 403,
       message:

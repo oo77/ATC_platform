@@ -101,6 +101,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+const tgFetch = useTgFetch(); // заголовок X-Telegram-Init-Data для /api/tg-app/*
 
 const props = defineProps({
   organizationId: {
@@ -192,7 +193,7 @@ async function loadSchedule() {
   error.value = null;
 
   try {
-    const data = await $fetch("/api/tg-app/schedule", {
+    const data = await tgFetch("/api/tg-app/schedule", {
       params: {
         organizationId: props.organizationId,
       },

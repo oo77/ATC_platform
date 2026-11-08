@@ -5,6 +5,7 @@
 
 import { getInstructorById } from '../../repositories/instructorRepository';
 import { UserRole } from '../../types/auth';
+import { Permission, roleHasPermission } from '../../utils/permissions';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -28,8 +29,8 @@ export default defineEventHandler(async (event) => {
     }
 
     // Проверка прав доступа для роли TEACHER
-    if (authUser && authUser.role === UserRole.TEACHER) {
-      // Преподаватель может запрашивать только свои данные
+    // Без права instructors:view — только свои данные (по привязке user_id)
+    if (authUser && !roleHasPermission(authUser, Permission.INSTRUCTORS_VIEW)) {
       if (instructor.userId !== authUser.id) {
         throw createError({
           statusCode: 403,

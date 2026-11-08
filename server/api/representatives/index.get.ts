@@ -1,12 +1,16 @@
 import { defineEventHandler, getQuery, createError } from 'h3';
 import { getRepresentativesPaginated, type RepresentativePaginationParams, type RepresentativeStatus } from '../../repositories/representativeRepository';
 import { createActivityLog } from '../../repositories/activityLogRepository';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 /**
  * GET /api/representatives
  * Получение списка представителей с пагинацией и фильтрами
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_VIEW);
+
   try {
     const query = getQuery(event);
 

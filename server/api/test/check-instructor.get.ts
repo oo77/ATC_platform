@@ -1,3 +1,4 @@
+import { requireDevOnly } from "../../utils/permissions";
 /**
  * Тестовый endpoint для проверки getInstructorByUserId
  * GET /api/test/check-instructor
@@ -6,6 +7,9 @@
 import { executeQuery } from '../../utils/db';
 
 export default defineEventHandler(async (event) => {
+  // Отладочный эндпоинт: в production недоступен, в разработке — только администратору настроек
+  await requireDevOnly(event);
+
     const userId = '2e825de8-31ee-4faa-b39f-078515721379';
 
     try {

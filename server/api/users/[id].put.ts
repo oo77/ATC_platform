@@ -3,6 +3,8 @@ import { toPublicUser } from '../../utils/auth';
 import { validate, updateProfileSchema } from '../../utils/validation';
 import { logActivity } from '../../utils/activityLogger';
 import type { User } from '../../types/auth';
+import { Permission, roleHasAnyPermission, roleHasPermission } from "../../utils/permissions";
+import { recordChanges } from "../../utils/audit";
 
 /**
  * API endpoint для обновления пользователя
@@ -59,8 +61,9 @@ export default defineEventHandler(async (event) => {
 
     // Проверка прав доступа
     const canUpdate = 
-      currentUser.role === 'ADMIN' || // Админ может редактировать всех
-      (currentUser.role === 'MANAGER' && userToUpdate.role !== 'ADMIN') || // Модератор может редактировать всех кроме админов
+      // users:update — всех, кроме администраторов; администраторов — только с users:manage_roles
+      (roleHasPermission(currentUser, Permission.USERS_UPDATE) &&
+        (userToUpdate.role !== 'ADMIN' || roleHasPermission(currentUser, Permission.USERS_MANAGE_ROLES))) ||
       currentUser.id === userId; // Пользователь может редактировать себя
 
     if (!canUpdate) {
@@ -149,6 +152,9 @@ export default defineEventHandler(async (event) => {
     }
 
     console.log(`✅ User updated by ${currentUser.email}: ${updatedUser.email}`);
+
+    // Журнал аудита: что именно изменилось (было → стало)
+    recordChanges(event, userToUpdate as any, validation.data as any);
 
     // Логируем действие
     await logActivity(

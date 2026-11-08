@@ -7,12 +7,16 @@ import {
   type ReportConfig,
 } from "../../../utils/reports/queryBuilder";
 import { logActivity } from "../../../utils/activityLogger";
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 /**
  * POST /api/reports/builder/preview
  * Выполняет запрос на основе конфигурации и возвращает предпросмотр (max 100 строк).
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.DASHBOARD_STATS);
+
   try {
     const user = requireAuth(event);
     const body = await readBody(event);

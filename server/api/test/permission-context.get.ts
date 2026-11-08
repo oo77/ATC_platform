@@ -1,3 +1,4 @@
+import { requireDevOnly } from "../../utils/permissions";
 /**
  * Тестовый endpoint для проверки getPermissionContext
  * GET /api/test/permission-context
@@ -6,6 +7,9 @@
 import { getPermissionContext, getTeacherGroups } from '../../utils/permissions';
 
 export default defineEventHandler(async (event) => {
+  // Отладочный эндпоинт: в production недоступен, в разработке — только администратору настроек
+  await requireDevOnly(event);
+
     try {
         const context = await getPermissionContext(event);
 

@@ -8,8 +8,13 @@
 import { getTestAssignmentById } from '../../../../repositories/testAssignmentRepository';
 import { getAvailableLanguagesForTemplate } from '../../../../repositories/testTemplateRepository';
 import { LANGUAGE_LABELS, LANGUAGE_FLAGS, QuestionLanguage } from '../../../../types/testing';
+import { Permission, requireAnyPermission } from "../../../../utils/permissions";
+import { requireTestAssignmentAccess } from "../../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: право + доступ к группе назначения
+  await requireTestAssignmentAccess(event, getRouterParam(event, "id"), "read");
+
     try {
         const id = getRouterParam(event, 'id');
 

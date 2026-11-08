@@ -15,8 +15,12 @@ import {
   type UpdateTrainingRequestInput,
 } from "../../repositories/trainingRequestRepository";
 import { createActivityLog } from "../../repositories/activityLogRepository";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_APPROVE);
+
   try {
     const id = event.context.params?.id;
 

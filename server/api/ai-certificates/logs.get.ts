@@ -7,7 +7,7 @@ import type {
 } from "../../types/aiCertificateImport";
 
 export default defineEventHandler(async (event) => {
-  await requirePermission(event, Permission.CERTIFICATES_VIEW);
+  await requirePermission(event, Permission.CERTIFICATES_ISSUE); // было CERTIFICATES_VIEW — оно есть и у слушателя
   const query = getQuery(event);
 
   const filters: LogFilters = {

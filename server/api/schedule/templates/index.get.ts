@@ -5,6 +5,7 @@
 
 import { executeQuery } from "../../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
+import { Permission, roleHasPermission } from "../../../utils/permissions";
 
 interface TemplateRow extends RowDataPacket {
   id: string;
@@ -31,7 +32,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Проверка прав (только ADMIN и MANAGER)
-  if (!["ADMIN", "MANAGER"].includes(user.role)) {
+  if (!roleHasPermission(user, Permission.SCHEDULE_VIEW_ALL)) {
     throw createError({
       statusCode: 403,
       statusMessage: "Недостаточно прав для просмотра шаблонов",

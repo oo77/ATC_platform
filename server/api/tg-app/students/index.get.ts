@@ -9,6 +9,7 @@
 
 import { executeQuery } from "../../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
+import { requireTgRepresentative, assertTgMatches } from "../../../utils/tgAppAuth";
 
 // Тип для режима "все слушатели"
 interface StudentAllRow extends RowDataPacket {
@@ -34,6 +35,9 @@ interface StudentGroupRow extends RowDataPacket {
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const { organizationId, mode = "all", search } = query;
+  // TG-ACCESS: подпись Telegram + представитель и организация только из БД
+  const tg = await requireTgRepresentative(event, "can_view_students");
+  assertTgMatches(organizationId, tg.organizationId, "organizationId");
 
   console.log(
     `[TG-App] GET /api/tg-app/students - mode: ${mode}, orgId: ${organizationId}`,

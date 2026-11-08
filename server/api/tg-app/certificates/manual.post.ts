@@ -7,6 +7,7 @@
 import { executeQuery } from "../../../utils/db";
 import { v4 as uuidv4 } from "uuid";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
+import { requireTgRepresentative, assertTgMatches } from "../../../utils/tgAppAuth";
 
 interface StudentRow extends RowDataPacket {
   id: string;
@@ -23,6 +24,10 @@ export default defineEventHandler(async (event) => {
   );
 
   const body = await readBody(event);
+  // TG-ACCESS: подпись Telegram + представитель и организация только из БД
+  const tg = await requireTgRepresentative(event, "can_request_certificates");
+  assertTgMatches(body?.organizationId, tg.organizationId, "organizationId");
+  assertTgMatches(body?.representativeId, tg.representativeId, "representativeId");
   const {
     organizationId,
     representativeId,

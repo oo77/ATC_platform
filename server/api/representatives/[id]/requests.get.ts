@@ -5,8 +5,12 @@
 
 import { getBotRequestHistory, getBotRequestStats } from '../../../utils/botLogger';
 import { getRepresentativeById } from '../../../repositories/representativeRepository';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_VIEW);
+
   try {
     const id = getRouterParam(event, 'id');
 

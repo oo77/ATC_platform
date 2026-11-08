@@ -3,7 +3,7 @@ import { requirePermission } from "../../utils/permissions";
 import { Permission } from "../../types/permissions";
 
 export default defineEventHandler(async (event) => {
-  await requirePermission(event, Permission.CERTIFICATES_VIEW);
+  await requirePermission(event, Permission.CERTIFICATES_ISSUE); // было CERTIFICATES_VIEW — оно есть и у слушателя
 
   try {
     const stats = await aiCertificateRepository.getStats();

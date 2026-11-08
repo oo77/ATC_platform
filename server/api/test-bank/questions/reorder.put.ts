@@ -4,8 +4,12 @@
  */
 
 import { updateQuestionsOrder } from '../../../repositories/questionRepository';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEST_BANKS_MANAGE);
+
     try {
         const body = await readBody<{
             orders: Array<{ id: string; order_index: number }>;

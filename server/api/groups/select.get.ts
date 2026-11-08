@@ -4,8 +4,12 @@
  */
 
 import { getGroupsForSelect } from '../../repositories/groupRepository';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.GROUPS_VIEW_ALL);
+
   try {
     const query = getQuery(event);
     const excludeGroupId = query.excludeGroupId as string | undefined;

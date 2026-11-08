@@ -6,6 +6,7 @@ import { getTrainingRequestById } from "../../repositories/trainingRequestReposi
 import { executeQuery } from "../../utils/db";
 import { createActivityLog } from "../../repositories/activityLogRepository";
 import type { RowDataPacket } from "mysql2/promise";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 interface StudentRow extends RowDataPacket {
   id: string;
@@ -15,6 +16,9 @@ interface StudentRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_VIEW);
+
   try {
     const id = event.context.params?.id;
 

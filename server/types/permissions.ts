@@ -22,6 +22,10 @@ export enum Permission {
   USERS_DELETE = "users:delete",
   USERS_MANAGE_ROLES = "users:manage_roles",
 
+  // ========== ROLES (гибкие роли) ==========
+  ROLES_VIEW = "roles:view", // Просмотр ролей и их прав
+  ROLES_MANAGE = "roles:manage", // Создание, изменение, удаление ролей
+
   // ========== STUDENTS ==========
   STUDENTS_VIEW = "students:view",
   STUDENTS_VIEW_OWN = "students:view_own",
@@ -56,6 +60,7 @@ export enum Permission {
   COURSES_CREATE = "courses:create",
   COURSES_UPDATE = "courses:update",
   COURSES_DELETE = "courses:delete",
+  COURSES_ARCHIVE = "courses:archive",
 
   // ========== DISCIPLINES ==========
   DISCIPLINES_VIEW = "disciplines:view",
@@ -68,6 +73,8 @@ export enum Permission {
   GROUPS_CREATE = "groups:create",
   GROUPS_UPDATE = "groups:update",
   GROUPS_DELETE = "groups:delete",
+  GROUPS_ARCHIVE = "groups:archive",
+  GROUPS_EDIT_LOCKED = "groups:edit_locked", // Менять даты начавшейся/завершённой группы
   GROUPS_MANAGE_STUDENTS = "groups:manage_students",
 
   // ========== SCHEDULE ==========
@@ -78,10 +85,14 @@ export enum Permission {
   SCHEDULE_UPDATE = "schedule:update",
   SCHEDULE_DELETE = "schedule:delete",
 
+  // ========== CLASSROOMS ==========
+  CLASSROOMS_MANAGE = "classrooms:manage", // Создание, изменение, удаление аудиторий
+
   // ========== ATTENDANCE ==========
   ATTENDANCE_VIEW = "attendance:view",
   ATTENDANCE_MARK = "attendance:mark",
   ATTENDANCE_EDIT = "attendance:edit",
+  ATTENDANCE_MANAGE = "attendance:manage",
 
   // ========== GRADES ==========
   GRADES_VIEW = "grades:view",
@@ -90,6 +101,7 @@ export enum Permission {
   // ========== CERTIFICATES ==========
   CERTIFICATES_VIEW = "certificates:view",
   CERTIFICATES_VIEW_OWN = "certificates:view_own",
+  CERTIFICATES_VIEW_ALL = "certificates:view_all", // Все сертификаты (реестр, аналитика)
   CERTIFICATES_ISSUE = "certificates:issue",
   CERTIFICATES_REVOKE = "certificates:revoke",
   CERTIFICATES_DOWNLOAD = "certificates:download",
@@ -119,6 +131,18 @@ export enum Permission {
   LIBRARY_UPLOAD = "library:upload", // Загрузка новых книг
   LIBRARY_MANAGE = "library:manage", // Управление книгами (редактирование, удаление)
   LIBRARY_ACCESS_MANAGE = "library:access_manage", // Управление правами доступа
+
+  // ========== TEST BANKS / TEMPLATES / TESTS ==========
+  TEST_BANKS_VIEW = "test_banks:view",
+  TEST_BANKS_MANAGE = "test_banks:manage",
+  TEST_TEMPLATES_VIEW = "test_templates:view",
+  TEST_TEMPLATES_MANAGE = "test_templates:manage",
+  TESTS_ASSIGN = "tests:assign",
+  TESTS_TAKE = "tests:take",
+  TESTS_VIEW_RESULTS = "tests:view_results",
+
+  // ========== AI ==========
+  AI_CHAT_USE = "ai_chat:use", // AI-ассистент (чат с данными платформы)
 
   // ========== ATTESTATION (Аттестация инструкторов) ==========
   ATTESTATION_VIEW = "attestation:view",
@@ -165,12 +189,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.SCHEDULE_VIEW_ALL,
     Permission.SCHEDULE_CREATE,
     Permission.SCHEDULE_UPDATE,
+    Permission.CLASSROOMS_MANAGE,
     Permission.ATTENDANCE_VIEW,
     Permission.ATTENDANCE_MARK,
     Permission.ATTENDANCE_EDIT,
     Permission.GRADES_VIEW,
     Permission.GRADES_MANAGE,
     Permission.CERTIFICATES_VIEW,
+    Permission.CERTIFICATES_VIEW_ALL,
     Permission.CERTIFICATES_ISSUE,
     Permission.CERTIFICATES_DOWNLOAD,
     Permission.TEMPLATES_VIEW,
@@ -185,6 +211,26 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.LIBRARY_ACCESS_MANAGE,
     Permission.ATTESTATION_VIEW,
     Permission.ATTESTATION_MANAGE,
+
+    // Синхронизировано с app/types/permissions.ts
+    Permission.ATTENDANCE_MANAGE,
+    Permission.COURSES_ARCHIVE,
+    Permission.GROUPS_ARCHIVE,
+    Permission.TESTS_ASSIGN,
+    Permission.TESTS_VIEW_RESULTS,
+    Permission.TEST_BANKS_MANAGE,
+    Permission.TEST_BANKS_VIEW,
+    Permission.TEST_TEMPLATES_MANAGE,
+    Permission.TEST_TEMPLATES_VIEW,
+
+    // AI-ассистент
+    Permission.AI_CHAT_USE,
+    Permission.SCHEDULE_DELETE,
+
+    // Пользователи (кроме администраторов — для них нужен users:manage_roles)
+    Permission.USERS_CREATE,
+    Permission.USERS_UPDATE,
+    Permission.USERS_DELETE,
   ],
 
   [UserRole.TEACHER]: [
@@ -206,6 +252,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.LIBRARY_READ,
     Permission.ATTESTATION_VIEW_OWN,
     Permission.ATTESTATION_CONDUCT,
+
+    // Синхронизировано с app/types/permissions.ts
+    Permission.SETTINGS_VIEW,
+    Permission.TESTS_ASSIGN,
+    Permission.TESTS_VIEW_RESULTS,
+    Permission.TEST_BANKS_VIEW,
+    Permission.TEST_TEMPLATES_VIEW,
+
+    // AI-ассистент
+    Permission.AI_CHAT_USE,
   ],
 
   [UserRole.STUDENT]: [
@@ -220,6 +276,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.CERTIFICATES_DOWNLOAD,
     Permission.LIBRARY_VIEW,
     Permission.LIBRARY_READ,
+
+    // Синхронизировано с app/types/permissions.ts
+    Permission.SETTINGS_VIEW,
+    Permission.TESTS_TAKE,
   ],
 };
 
@@ -229,7 +289,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
 export interface PermissionContext {
   userId: string;
+  /** Профиль кабинета (ADMIN / MANAGER / TEACHER / STUDENT) */
   role: UserRole;
+  /** Назначенная роль (гибкие роли) */
+  roleId?: string;
+  roleName?: string;
+  /** Права роли пользователя (из БД) */
+  permissions?: Set<string>;
   instructorId?: string;
   studentId?: string;
 }

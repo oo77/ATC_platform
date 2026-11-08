@@ -18,6 +18,7 @@ import type {
   PoolConnection,
   ResultSetHeader,
 } from "mysql2/promise";
+import { requireTgRepresentative, assertTgMatches } from "../../../../utils/tgAppAuth";
 
 interface ConfirmItem {
   fileId: string;
@@ -68,6 +69,10 @@ export default defineEventHandler(
 
     const body = await readBody(event);
     const { items, organizationId, representativeId } = body;
+    // TG-ACCESS: подпись Telegram + представитель и организация только из БД
+    const tg = await requireTgRepresentative(event, "can_request_certificates");
+    assertTgMatches(organizationId, tg.organizationId, "organizationId");
+    assertTgMatches(representativeId, tg.representativeId, "representativeId");
 
     // 1. Валидация
     if (!items || !Array.isArray(items) || items.length === 0) {

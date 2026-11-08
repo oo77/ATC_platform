@@ -1,11 +1,15 @@
 import { defineEventHandler, createError } from 'h3';
 import { getOrganizationsStats } from '../../repositories/organizationRepository';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 /**
  * GET /api/organizations/stats
  * Получение статистики по организациям
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.ORGANIZATIONS_VIEW);
+
   try {
     const stats = await getOrganizationsStats();
 

@@ -17,6 +17,7 @@ import {
 import { deleteFile, getFileByUuid } from '../../repositories/fileRepository';
 import { storage } from '../../utils/storage';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 // Каталог PDF, сгенерированных при выдаче из журнала группы
 const CERTIFICATES_DIR = path.join(process.cwd(), 'storage', 'Certificates');
@@ -99,6 +100,9 @@ async function deleteCertificateFiles(fileUrls: (string | null)[]): Promise<void
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CERTIFICATES_REVOKE);
+
   // Проверка авторизации
   const user = event.context.user;
   if (!user) {

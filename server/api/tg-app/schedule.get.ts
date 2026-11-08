@@ -6,6 +6,7 @@
 import { executeQuery } from "../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
 import type { FormattedScheduleEvent } from "../../utils/telegramBot";
+import { requireTgRepresentative, assertTgMatches } from "../../utils/tgAppAuth";
 
 interface ScheduleRow extends RowDataPacket {
   date: string;
@@ -22,6 +23,9 @@ export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event);
     const { organizationId } = query;
+    // TG-ACCESS: подпись Telegram + представитель и организация только из БД
+    const tg = await requireTgRepresentative(event, "can_view_schedule");
+    assertTgMatches(organizationId, tg.organizationId, "organizationId");
 
     if (!organizationId) {
       throw createError({

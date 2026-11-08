@@ -6,6 +6,7 @@
 import { executeQuery } from "../../../../utils/db";
 import { getGroupById } from "../../../../repositories/groupRepository";
 import type { RowDataPacket } from "mysql2/promise";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 interface InstructorRow extends RowDataPacket {
   id: string;
@@ -15,6 +16,9 @@ interface InstructorRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CERTIFICATES_ISSUE);
+
   try {
     const groupId = getRouterParam(event, "groupId");
 

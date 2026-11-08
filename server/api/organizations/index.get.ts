@@ -3,12 +3,16 @@ import { getOrganizationsPaginated, type PaginationParams } from '../../reposito
 import { createActivityLog } from '../../repositories/activityLogRepository';
 import { executeQuery } from '../../utils/db';
 import type { RowDataPacket } from 'mysql2/promise';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 /**
  * GET /api/organizations
  * Получение списка организаций с пагинацией и фильтрами
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.ORGANIZATIONS_VIEW);
+
   try {
     const query = getQuery(event);
 

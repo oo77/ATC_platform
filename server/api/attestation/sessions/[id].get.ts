@@ -7,8 +7,12 @@ import { getSessionById, getSessionAnswers } from "../../../repositories/attesta
 import { getQuestionsByIds } from "../../../repositories/questionRepository";
 import { getAttestationGroupById } from "../../../repositories/attestationGroupRepository";
 import { getTestTemplateById } from "../../../repositories/testTemplateRepository";
+import { requireAttestationSessionAccess } from "../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAttestationSessionAccess(event, getRouterParam(event, "id") || "", "read");
+
   try {
     const id = getRouterParam(event, "id");
     const query = getQuery(event);

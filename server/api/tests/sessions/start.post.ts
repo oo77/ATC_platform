@@ -14,6 +14,8 @@ import { getQuestionsByBankId, getRandomQuestionsFromBank, getQuestionsByIds } f
 import { getTemplateQuestions } from '../../../repositories/testTemplateRepository';
 import { getStudentByUserId } from '../../../repositories/studentRepository';
 import type { SessionQuestionOrder, QuestionLanguage } from '../../../types/testing';
+import { Permission, requirePermission } from "../../../utils/permissions";
+import { executeQuery } from "../../../utils/db";
 
 function shuffleArray<T>(array: T[]): T[] {
     const shuffled = [...array];
@@ -25,6 +27,9 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TESTS_TAKE);
+
     try {
         const body = await readBody<{
             assignment_id: string;
@@ -70,6 +75,15 @@ export default defineEventHandler(async (event) => {
                 success: false,
                 message: 'Назначение не найдено',
             };
+        }
+
+        // Слушатель может проходить только тесты, назначенные его группе
+        const membership = await executeQuery<any[]>(
+            'SELECT 1 FROM study_group_students WHERE group_id = ? AND student_id = ? LIMIT 1',
+            [assignment.group_id, student.id]
+        );
+        if (membership.length === 0) {
+            throw createError({ statusCode: 403, message: 'Этот тест назначен другой группе' });
         }
 
         // Проверяем статус назначения

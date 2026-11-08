@@ -11,9 +11,10 @@ export default defineEventHandler(async (event) => {
   const startTime = Date.now();
   
   try {
-    // Проверяем секрет webhook (опционально)
-    const webhookSecret = getHeader(event, 'x-telegram-bot-api-secret-token');
-    if (webhookSecret && !verifyWebhookSecret(webhookSecret)) {
+    // Проверяем секрет webhook. Если секрет настроен, заголовок обязателен:
+    // иначе любой мог бы прислать поддельное обновление, просто не указав заголовок
+    const webhookSecret = getHeader(event, 'x-telegram-bot-api-secret-token') || '';
+    if (!verifyWebhookSecret(webhookSecret)) {
       console.warn('[Telegram Webhook] Неверный секрет webhook');
       throw createError({
         statusCode: 401,

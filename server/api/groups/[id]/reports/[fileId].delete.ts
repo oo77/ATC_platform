@@ -10,6 +10,7 @@ import { executeQuery } from "../../../../utils/db";
 import { logActivity } from "../../../../utils/activityLogger";
 import fs from "fs";
 import path from "path";
+import { Permission, roleHasPermission } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
@@ -18,7 +19,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Проверка прав доступа - только модераторы и админы
-  if (user.role !== "ADMIN" && user.role !== "MANAGER") {
+  if (!roleHasPermission(user, Permission.GROUPS_UPDATE)) {
     throw createError({
       statusCode: 403,
       message: "Недостаточно прав для удаления документов",

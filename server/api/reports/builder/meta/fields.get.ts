@@ -4,6 +4,7 @@ import {
   ENTITY_GROUPS,
   TIME_SCALE_LABELS,
 } from "../../../../utils/reports/fieldRegistry";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 /**
  * GET /api/reports/builder/meta/fields
@@ -11,6 +12,9 @@ import {
  * для построения левой панели конструктора отчётов.
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.DASHBOARD_STATS);
+
   try {
     requireAuth(event);
 

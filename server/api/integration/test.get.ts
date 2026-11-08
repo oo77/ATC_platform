@@ -1,4 +1,5 @@
 import { defineEventHandler, getHeader, createError, getMethod } from "h3";
+import { safeEqual } from "../../utils/safeCompare";
 
 async function verifyPlannerToken(event: any) {
   if (getMethod(event) === "OPTIONS") return;
@@ -12,7 +13,7 @@ async function verifyPlannerToken(event: any) {
   if (!expectedToken) {
     throw createError({ statusCode: 500, message: "Server configuration error" });
   }
-  if (token !== expectedToken) {
+  if (!safeEqual(token, expectedToken)) {
     throw createError({ statusCode: 401, message: "Invalid token" });
   }
 }

@@ -5,8 +5,12 @@
 
 import { getFilesByUuids } from '../../repositories/fileRepository';
 import { storage } from '../../utils/storage';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.FILES_VIEW);
+
   try {
     const query = getQuery(event);
     const uuidsStr = query.uuids as string;

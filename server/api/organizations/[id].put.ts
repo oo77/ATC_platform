@@ -6,12 +6,17 @@ import {
   organizationInnExists,
 } from "../../repositories/organizationRepository";
 import { createActivityLog } from "../../repositories/activityLogRepository";
+import { Permission, requirePermission } from "../../utils/permissions";
+import { recordChanges, audit } from "../../utils/audit";
 
 /**
  * PUT /api/organizations/:id
  * Обновление организации
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.ORGANIZATIONS_UPDATE);
+
   try {
     const id = event.context.params?.id;
 
@@ -87,6 +92,14 @@ export default defineEventHandler(async (event) => {
         statusMessage: "Не удалось обновить организацию",
       });
     }
+
+    // Журнал аудита: что именно изменилось (было → стало)
+    const orgChanges = recordChanges(event, existing as any, body as any);
+    await audit(event, {
+      action: "organization.update",
+      summary: `Обновил организацию «${updated.name}»` + (orgChanges.length ? ` (полей: ${orgChanges.length})` : ""),
+      entity: { type: "ORGANIZATION", id, label: updated.name },
+    });
 
     // Логирование действия
     await createActivityLog({

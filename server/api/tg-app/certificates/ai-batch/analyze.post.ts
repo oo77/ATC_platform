@@ -13,6 +13,7 @@ import type {
 } from "../../../../types/aiCertificateImport";
 import type { Student } from "../../../../types/student";
 import type { RowDataPacket } from "mysql2/promise";
+import { requireTgRepresentative, assertTgMatches } from "../../../../utils/tgAppAuth";
 
 interface CertificateCheckRow extends RowDataPacket {
   id: string;
@@ -38,6 +39,9 @@ export default defineEventHandler(
   }> => {
     console.log("[TG-App] Batch AI анализ (рефакторинг)...");
     const { fileIds, organizationId } = await readBody(event);
+    // TG-ACCESS: подпись Telegram + представитель и организация только из БД
+    const tg = await requireTgRepresentative(event, "can_request_certificates");
+    assertTgMatches(organizationId, tg.organizationId, "organizationId");
 
     if (!fileIds?.length || !organizationId) {
       throw createError({

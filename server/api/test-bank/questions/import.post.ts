@@ -12,6 +12,7 @@ import { getQuestionBankById } from '../../../repositories/questionBankRepositor
 import { executeQuery } from '../../../utils/db';
 import { QuestionType, QuestionLanguage } from '../../../types/testing';
 import type { CreateQuestionDTO, SingleChoiceOptions } from '../../../types/testing';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 // Старый формат (из Excel)
 interface LegacyImportedQuestion {
@@ -48,6 +49,9 @@ function isNewFormat(q: ImportedQuestion): q is NewImportedQuestion {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEST_BANKS_MANAGE);
+
     try {
         const body = await readBody<{
             bank_id?: string;

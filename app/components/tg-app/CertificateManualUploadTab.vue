@@ -283,6 +283,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+const tgFetch = useTgFetch(); // заголовок X-Telegram-Init-Data для /api/tg-app/*
 
 const props = defineProps({
   organizationId: {
@@ -358,7 +359,7 @@ async function searchStudents() {
   searchingStudents.value = true;
 
   try {
-    const response = await $fetch("/api/tg-app/students/search", {
+    const response = await tgFetch("/api/tg-app/students/search", {
       params: {
         organizationId: props.organizationId,
         q: studentSearch.value,
@@ -432,7 +433,7 @@ async function submitForm() {
   submitError.value = "";
 
   try {
-    const response = await $fetch("/api/tg-app/certificates/manual", {
+    const response = await tgFetch("/api/tg-app/certificates/manual", {
       method: "POST",
       body: {
         organizationId: props.organizationId,

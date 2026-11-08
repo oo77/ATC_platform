@@ -1,3 +1,4 @@
+import { notInLockedFolderSql } from "../folderAccess";
 import { getDbPool, executeQuery } from "../db";
 import type {
   UserContext,
@@ -142,15 +143,16 @@ export function validateSafeSql(
     return { valid: false, error: "Доступ к системным таблицам и секретам запрещён.", cleanSql: "" };
   }
 
-  // Изоляция организаций: без прав администратора запрос обязан фильтроваться по своей организации
+  // Произвольный SQL — только для сотрудников с доступом ко всем данным.
+  // Раньше для остальных требовалось лишь, чтобы id организации встречался в тексте
+  // запроса: это обходилось комментарием (WHERE 1=1 /* <org_id> */) и открывало всю базу.
+  // Надёжно ограничить произвольный SQL одной организацией нельзя, поэтому запрещаем.
   if (!userContext.canViewAll) {
-    if (!userContext.organizationId || !sql.includes(userContext.organizationId)) {
-      return {
-        valid: false,
-        error: `Запрос обязан содержать фильтр organization_id = '${userContext.organizationId ?? ""}'.`,
-        cleanSql: "",
-      };
-    }
+    return {
+      valid: false,
+      error: "Свободные SQL-запросы доступны только сотрудникам с доступом ко всем данным.",
+      cleanSql: "",
+    };
   }
 
   // Тяжёлые base64-поля никогда не читаем целиком
@@ -496,8 +498,9 @@ export async function findCertificates(
 
 export async function searchFiles(params: { query?: string; category?: string; limit?: number }) {
   const { query = "", category = "", limit = 15 } = params || {};
+  // Файлы из папок под паролем AI-чату недоступны (у него нет разблокировки)
   let sql = `SELECT uuid, filename, category, extension, size_bytes, created_at
-             FROM files WHERE deleted_at IS NULL`;
+             FROM files WHERE deleted_at IS NULL${await notInLockedFolderSql()}`;
   const p: any[] = [];
   if (query) {
     sql += " AND (filename LIKE ? OR original_filename LIKE ?)";

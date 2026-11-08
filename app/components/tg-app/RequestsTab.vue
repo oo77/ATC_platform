@@ -429,6 +429,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
+const tgFetch = useTgFetch(); // заголовок X-Telegram-Init-Data для /api/tg-app/*
 
 // ─── Типы ───
 interface Student {
@@ -602,7 +603,7 @@ async function loadRequests() {
   loading.value = true;
   error.value   = null;
   try {
-    const res = await ($fetch as any)("/api/tg-app/training-requests", {
+    const res = await tgFetch("/api/tg-app/training-requests", {
       params: { representativeId: props.representative.id },
     });
     requests.value = (res.requests as TrainingRequest[]) || [];
@@ -616,7 +617,7 @@ async function loadRequests() {
 async function loadCourses() {
   coursesLoading.value = true;
   try {
-    const res = await ($fetch as any)("/api/tg-app/courses");
+    const res = await tgFetch("/api/tg-app/courses");
     courses.value = (res.courses as Course[]) || [];
   } catch (err: any) {
     console.error("Ошибка загрузки курсов:", err);
@@ -628,7 +629,7 @@ async function loadCourses() {
 async function loadStudents() {
   studentsLoading.value = true;
   try {
-    const res = await ($fetch as any)("/api/tg-app/students", {
+    const res = await tgFetch("/api/tg-app/students", {
       params: { organizationId: props.organizationId as string, mode: "all" },
     });
     allStudents.value = (res.students as Student[]) || [];
@@ -765,7 +766,7 @@ async function submitRequest() {
 
   submitting.value = true;
   try {
-    const res = await ($fetch as any)("/api/tg-app/training-requests", {
+    const res = await tgFetch("/api/tg-app/training-requests", {
       method: "POST",
       body: {
         representativeId: props.representative.id,

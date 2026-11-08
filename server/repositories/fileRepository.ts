@@ -24,6 +24,7 @@ export interface FileRecord {
   storagePath: string;
   fullPath: string;
   category: FileCategory;
+  folderId: number | null;
   userId: string | null;
   courseId: number | null;
   groupId: string | null;
@@ -122,6 +123,7 @@ function mapRowToFile(row: FileRow): FileRecord {
     storagePath: row.storage_path,
     fullPath: row.full_path,
     category: row.category,
+    folderId: row.folder_id ?? null,
     userId: row.user_id,
     courseId: row.course_id,
     groupId: row.group_id,
@@ -374,7 +376,7 @@ export async function getFilesByCategory(
  */
 export async function updateFile(
   id: number,
-  updates: Partial<{ filename: string }>
+  updates: Partial<{ filename: string; folderId: number | null }>
 ): Promise<boolean> {
   const now = new Date();
   const fields: string[] = [];
@@ -383,6 +385,11 @@ export async function updateFile(
   if (updates.filename !== undefined) {
     fields.push("filename = ?");
     values.push(updates.filename);
+  }
+
+  if (updates.folderId !== undefined) {
+    fields.push("folder_id = ?");
+    values.push(updates.folderId);
   }
 
   if (fields.length === 0) {

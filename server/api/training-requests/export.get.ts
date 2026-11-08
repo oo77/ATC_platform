@@ -8,6 +8,7 @@ import {
   type TrainingRequestFilters,
 } from "../../repositories/trainingRequestRepository";
 import { createActivityLog } from "../../repositories/activityLogRepository";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 const STATUS_LABELS: Record<string, string> = {
   pending:     "На рассмотрении",
@@ -47,6 +48,9 @@ function formatDate(d: Date | string | null): string {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_VIEW);
+
   try {
     const query = getQuery(event);
     const userId = event.context.user?.id || "system";

@@ -5,8 +5,14 @@
 
 import bcrypt from 'bcryptjs';
 import { getFolderById } from '../../../repositories/folderRepository';
+import { grantFolderUnlock } from "../../../utils/folderAccess";
+import { requireAuthContext } from "../../../utils/permissions";
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.FILES_VIEW);
+
   try {
     const user = event.context.user;
     
@@ -62,6 +68,10 @@ export default defineEventHandler(async (event) => {
         message: 'Неверный пароль',
       });
     }
+
+    // Пароль верный: ставим подписанную httpOnly-cookie разблокировки.
+    // Без неё сервер не отдаст содержимое папки (проверка в utils/folderAccess.ts)
+    grantFolderUnlock(event, await requireAuthContext(event), folder);
 
     return {
       success: true,

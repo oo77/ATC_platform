@@ -4,11 +4,12 @@
  */
 import { executeQuery } from "../../../../utils/db";
 import { randomUUID } from "node:crypto";
+import { Permission, roleHasPermission } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   const user = event.context.user;
   if (!user) throw createError({ statusCode: 401, message: "Необходима авторизация" });
-  if (!["ADMIN", "MANAGER"].includes(user.role)) {
+  if (!roleHasPermission(user, Permission.TEST_BANKS_MANAGE)) {
     throw createError({ statusCode: 403, message: "Недостаточно прав" });
   }
 

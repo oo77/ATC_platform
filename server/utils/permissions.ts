@@ -3,7 +3,7 @@
  */
 
 import { H3Event, createError, getHeader } from "h3";
-import { UserRole, type JwtPayload } from "../types/auth";
+import { UserRole } from "../types/auth";
 import {
   Permission,
   ROLE_PERMISSIONS,
@@ -14,46 +14,73 @@ import type {
   AccessCheckResult,
   ApiPermissionConfig,
 } from "../types/permissions";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { dirname, join } from "path";
 import { executeQuery } from "./db";
 import { verifyToken } from "./auth";
+import { getUserAccess } from "./roleRegistry";
 
 // ========================================
 // ОСНОВНЫЕ ФУНКЦИИ ПРОВЕРКИ
 // ========================================
 
 /**
- * Проверяет, есть ли у роли указанное разрешение
+ * Кого проверяем:
+ *  - контекст/пользователь с набором прав (PermissionContext, event.context.user) —
+ *    права его роли из БД (гибкие роли);
+ *  - строка роли — статический ROLE_PERMISSIONS (только для совместимости и тестов).
+ */
+export type PermissionSubject =
+  | UserRole
+  | string
+  | { permissions?: Set<string> | string[] | null; role?: string | null }
+  | null
+  | undefined;
+
+function permissionSetOf(subject: PermissionSubject): Set<string> | string[] | null {
+  if (!subject) return null;
+  if (typeof subject === "string") {
+    return (ROLE_PERMISSIONS[subject as UserRole] as string[]) || null;
+  }
+  if (subject.permissions) return subject.permissions;
+  if (subject.role) return (ROLE_PERMISSIONS[subject.role as UserRole] as string[]) || null;
+  return null;
+}
+
+/**
+ * Есть ли у субъекта право
  */
 export function roleHasPermission(
-  role: UserRole,
+  subject: PermissionSubject,
   permission: Permission,
 ): boolean {
-  const permissions = ROLE_PERMISSIONS[role];
-  return permissions?.includes(permission) ?? false;
+  const set = permissionSetOf(subject);
+  if (!set) return false;
+  return set instanceof Set ? set.has(permission) : set.includes(permission);
 }
 
 /**
- * Проверяет, есть ли у роли все указанные разрешения (AND)
+ * Все указанные права (AND)
  */
 export function roleHasAllPermissions(
-  role: UserRole,
+  subject: PermissionSubject,
   permissions: Permission[],
 ): boolean {
-  return permissions.every((p) => roleHasPermission(role, p));
+  return permissions.every((p) => roleHasPermission(subject, p));
 }
 
 /**
- * Проверяет, есть ли у роли хотя бы одно из указанных разрешений (OR)
+ * Хотя бы одно из прав (OR)
  */
 export function roleHasAnyPermission(
-  role: UserRole,
+  subject: PermissionSubject,
   permissions: Permission[],
 ): boolean {
-  return permissions.some((p) => roleHasPermission(role, p));
+  return permissions.some((p) => roleHasPermission(subject, p));
 }
 
 /**
- * Получает все разрешения для роли
+ * Статические права роли по умолчанию (из кода)
  */
 export function getRolePermissions(role: UserRole): Permission[] {
   return ROLE_PERMISSIONS[role] || [];
@@ -64,61 +91,45 @@ export function getRolePermissions(role: UserRole): Permission[] {
 // ========================================
 
 /**
- * Извлекает данные пользователя из event.context или из токена
- */
-function getAuthUserFromEvent(event: H3Event): JwtPayload | null {
-  // Сначала пробуем получить из context (установлено в auth middleware)
-  const contextUser = event.context.user as any;
-  if (contextUser) {
-    return {
-      userId: contextUser.id,
-      email: contextUser.email,
-      role: contextUser.role as UserRole,
-    };
-  }
-
-  // Если нет в context — пробуем извлечь из токена напрямую
-  const authHeader = getHeader(event, "authorization");
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return null;
-  }
-
-  const token = authHeader.substring(7);
-  return verifyToken(token);
-}
-
-/**
- * Получает полный контекст разрешений для пользователя
- * Включает связанные сущности (instructor/student)
+ * Полный контекст доступа пользователя: роль (профиль кабинета), права его роли
+ * из БД, привязки к инструктору/слушателю. Данные кладёт middleware auth
+ * (event.context.user); если его нет — читаем токен и БД сами.
  */
 export async function getPermissionContext(
   event: H3Event,
 ): Promise<PermissionContext | null> {
-  const user = getAuthUserFromEvent(event);
-  if (!user) return null;
+  let contextUser = event.context.user as any;
 
-  const context: PermissionContext = {
-    userId: user.userId,
-    role: user.role as UserRole,
+  if (!contextUser?.permissions) {
+    let userId: string | undefined = contextUser?.id;
+    if (!userId) {
+      const authHeader = getHeader(event, "authorization");
+      const payload = authHeader?.startsWith("Bearer ") ? verifyToken(authHeader.substring(7)) : null;
+      userId = payload?.userId;
+    }
+    if (!userId) return null;
+    const access = await getUserAccess(userId);
+    if (!access) return null;
+    contextUser = {
+      id: access.userId,
+      role: access.baseRole,
+      roleId: access.roleId,
+      roleName: access.roleName,
+      permissions: access.permissions,
+      instructorId: access.instructorId,
+      studentId: access.studentId,
+    };
+  }
+
+  return {
+    userId: contextUser.id,
+    role: contextUser.role as UserRole,
+    roleId: contextUser.roleId,
+    roleName: contextUser.roleName,
+    permissions: contextUser.permissions,
+    instructorId: contextUser.instructorId || undefined,
+    studentId: contextUser.studentId || undefined,
   };
-
-  // Если TEACHER — получаем instructor_id
-  if (user.role === UserRole.TEACHER) {
-    const instructor = await getInstructorByUserId(user.userId);
-    if (instructor) {
-      context.instructorId = instructor.id;
-    }
-  }
-
-  // Если STUDENT — получаем student_id
-  if (user.role === UserRole.STUDENT) {
-    const student = await getStudentByUserId(user.userId);
-    if (student) {
-      context.studentId = student.id;
-    }
-  }
-
-  return context;
 }
 
 // ========================================
@@ -132,29 +143,11 @@ export async function getInstructorByUserId(
   userId: string,
 ): Promise<{ id: string; fullName: string } | null> {
   try {
-    console.log(
-      `[Permissions] getInstructorByUserId called with userId: ${userId}`,
-    );
-
     const rows = await executeQuery<any[]>(
       "SELECT id, full_name as fullName FROM instructors WHERE user_id = ? LIMIT 1",
       [userId],
     );
-
-    console.log(`[Permissions] Query result type:`, typeof rows);
-    console.log(`[Permissions] Query result is array:`, Array.isArray(rows));
-    console.log(`[Permissions] Query result:`, rows);
-    console.log(`[Permissions] Query result length:`, rows?.length);
-
-    if (rows && rows.length > 0) {
-      console.log(
-        `[Permissions] Found instructor: ${rows[0].fullName} (ID: ${rows[0].id})`,
-      );
-      return rows[0];
-    } else {
-      console.log(`[Permissions] No instructor found for user_id: ${userId}`);
-      return null;
-    }
+    return rows?.[0] || null;
   } catch (error) {
     console.error("[Permissions] Error getting instructor by user_id:", error);
     return null;
@@ -241,62 +234,56 @@ export async function getStudentGroups(studentId: string): Promise<string[]> {
 }
 
 /**
- * Проверяет, имеет ли пользователь доступ к группе
+ * Доступ к группе — по праву, а не по названию роли:
+ *  - groups:view_all → любая группа;
+ *  - привязан к инструктору и есть groups:view_own → группы, которые он ведёт;
+ *  - привязан к слушателю → группы, в которых он учится.
  */
 export async function canAccessGroup(
   context: PermissionContext,
   groupId: string,
 ): Promise<boolean> {
-  // ADMIN и MANAGER имеют доступ ко всем группам
-  if (context.role === UserRole.ADMIN || context.role === UserRole.MANAGER) {
-    return true;
-  }
+  if (!groupId) return false;
+  if (roleHasPermission(context, Permission.GROUPS_VIEW_ALL)) return true;
 
-  // TEACHER — проверяем через schedule_events
-  if (context.role === UserRole.TEACHER && context.instructorId) {
+  if (context.instructorId && roleHasPermission(context, Permission.GROUPS_VIEW_OWN)) {
     const teacherGroups = await getTeacherGroups(context.instructorId);
-    return teacherGroups.includes(groupId);
+    if (teacherGroups.includes(groupId)) return true;
   }
 
-  // STUDENT — проверяем через study_group_students
-  if (context.role === UserRole.STUDENT && context.studentId) {
+  if (context.studentId) {
     const studentGroups = await getStudentGroups(context.studentId);
-    return studentGroups.includes(groupId);
+    if (studentGroups.includes(groupId)) return true;
   }
 
   return false;
 }
 
 /**
- * Проверяет, имеет ли пользователь доступ к студенту
+ * Доступ к слушателю — по праву:
+ *  - students:view_all → любой слушатель;
+ *  - привязан к инструктору → слушатели его групп;
+ *  - сам слушатель → только он сам.
  */
 export async function canAccessStudent(
   context: PermissionContext,
   studentId: string,
 ): Promise<boolean> {
-  // ADMIN и MANAGER имеют доступ ко всем студентам
-  if (context.role === UserRole.ADMIN || context.role === UserRole.MANAGER) {
-    return true;
-  }
+  if (!studentId) return false;
+  if (roleHasPermission(context, Permission.STUDENTS_VIEW_ALL)) return true;
 
-  // TEACHER — проверяем, входит ли студент в одну из его групп
-  if (context.role === UserRole.TEACHER && context.instructorId) {
+  if (context.studentId && context.studentId === studentId) return true;
+
+  if (context.instructorId && roleHasAnyPermission(context, [Permission.STUDENTS_VIEW, Permission.GROUPS_VIEW_OWN])) {
     const teacherGroups = await getTeacherGroups(context.instructorId);
     if (teacherGroups.length === 0) return false;
-
-    // Проверяем, есть ли студент в этих группах
-    const [rows] = await executeQuery<any[]>(
-      `SELECT 1 FROM study_group_students 
+    const rows = await executeQuery<any[]>(
+      `SELECT 1 FROM study_group_students
        WHERE student_id = ? AND group_id IN (${teacherGroups.map(() => "?").join(",")})
        LIMIT 1`,
       [studentId, ...teacherGroups],
     );
     return rows.length > 0;
-  }
-
-  // STUDENT — может видеть только себя
-  if (context.role === UserRole.STUDENT) {
-    return context.studentId === studentId;
   }
 
   return false;
@@ -342,7 +329,7 @@ export async function requirePermission(
     });
   }
 
-  if (!roleHasPermission(context.role, permission)) {
+  if (!roleHasPermission(context, permission)) {
     console.warn(
       `[Permissions] Access denied: user ${context.userId} (${context.role}) lacks permission ${permission}`,
     );
@@ -373,7 +360,7 @@ export async function requireAnyPermission(
     });
   }
 
-  if (!roleHasAnyPermission(context.role, permissions)) {
+  if (!roleHasAnyPermission(context, permissions)) {
     console.warn(
       `[Permissions] Access denied: user ${context.userId} (${context.role}) lacks any of [${permissions.join(", ")}]`,
     );
@@ -404,9 +391,9 @@ export async function requireAllPermissions(
     });
   }
 
-  if (!roleHasAllPermissions(context.role, permissions)) {
+  if (!roleHasAllPermissions(context, permissions)) {
     const missing = permissions.filter(
-      (p) => !roleHasPermission(context.role, p),
+      (p) => !roleHasPermission(context, p),
     );
     console.warn(
       `[Permissions] Access denied: user ${context.userId} (${context.role}) lacks permissions [${missing.join(", ")}]`,
@@ -483,6 +470,86 @@ export async function requireStudentAccess(
   }
 
   return context;
+}
+
+/**
+ * Метка «установка завершена». Пока её нет, мастер настройки может работать без входа.
+ * Создаётся автоматически, как только в БД обнаружен хотя бы один администратор,
+ * и больше никогда не удаляется приложением. Для повторной первичной настройки
+ * её удаляют вручную на сервере.
+ */
+const INSTALL_LOCK_FILE = join(process.cwd(), "storage", ".installed");
+
+/** Ошибки MySQL, означающие «БД ещё не создана / таблиц нет» — это действительно первичная установка */
+const NOT_INSTALLED_DB_ERRORS = new Set(["ER_BAD_DB_ERROR", "ER_NO_SUCH_TABLE"]);
+
+function markInstalled(): void {
+  try {
+    mkdirSync(dirname(INSTALL_LOCK_FILE), { recursive: true });
+    writeFileSync(INSTALL_LOCK_FILE, new Date().toISOString());
+  } catch (error) {
+    console.error("[Permissions] Не удалось записать метку установки:", error);
+  }
+}
+
+/**
+ * Система ещё не настроена (первичная установка).
+ *
+ * Fail-closed: при любой ОШИБКЕ БД (сеть, перезапуск MySQL, нет соединений)
+ * считаем систему настроенной — иначе сбой БД открывал бы мастер настройки
+ * без входа. Режим настройки включается только если:
+ *   - нет метки установки, И
+ *   - БД ещё не создана / нет таблиц, ИЛИ в таблице users нет ни одного ADMIN.
+ */
+export async function isSetupMode(): Promise<boolean> {
+  if (process.env.INSTALLATION_COMPLETE === "true" || existsSync(INSTALL_LOCK_FILE)) {
+    return false;
+  }
+  try {
+    const rows = await executeQuery<any[]>(
+      "SELECT COUNT(*) AS cnt FROM users WHERE role = 'ADMIN'",
+    );
+    const hasAdmin = Number(rows?.[0]?.cnt ?? 0) > 0;
+    if (hasAdmin) {
+      markInstalled();
+      return false;
+    }
+    return true;
+  } catch (error: any) {
+    return NOT_INSTALLED_DB_ERRORS.has(error?.code);
+  }
+}
+
+/**
+ * Для эндпоинтов мастера настройки: без входа — только пока система не настроена,
+ * после настройки — только с указанным разрешением.
+ */
+export async function requireSetupModeOrPermission(
+  event: H3Event,
+  permission: Permission,
+): Promise<PermissionContext | null> {
+  if (await isSetupMode()) {
+    return null;
+  }
+  return requirePermission(event, permission);
+}
+
+/**
+ * Служебные и отладочные эндпоинты: в production недоступны вовсе,
+ * в разработке — только с указанным разрешением.
+ */
+export async function requireDevOnly(
+  event: H3Event,
+  permission: Permission = Permission.SETTINGS_MANAGE,
+): Promise<PermissionContext> {
+  if (process.env.NODE_ENV === "production") {
+    throw createError({
+      statusCode: 404,
+      statusMessage: "Not Found",
+      message: "Эндпоинт недоступен",
+    });
+  }
+  return requirePermission(event, permission);
 }
 
 // ========================================
@@ -563,7 +630,7 @@ export async function checkApiAccess(
 
   // Проверяем разрешения
   if (config.requiredPermissions && config.requiredPermissions.length > 0) {
-    if (!roleHasAllPermissions(context.role, config.requiredPermissions)) {
+    if (!roleHasAllPermissions(context, config.requiredPermissions)) {
       return {
         allowed: false,
         reason: `Недостаточно прав. Требуется: ${config.requiredPermissions.join(", ")}`,
@@ -572,7 +639,7 @@ export async function checkApiAccess(
   }
 
   if (config.anyPermissions && config.anyPermissions.length > 0) {
-    if (!roleHasAnyPermission(context.role, config.anyPermissions)) {
+    if (!roleHasAnyPermission(context, config.anyPermissions)) {
       return {
         allowed: false,
         reason: `Недостаточно прав. Требуется одно из: ${config.anyPermissions.join(", ")}`,
@@ -595,3 +662,13 @@ export { Permission, ROLE_PERMISSIONS };
 
 // TypeScript типы (интерфейсы) — реэкспорт через type для корректной работы Rollup
 export type { PermissionContext, AccessCheckResult, ApiPermissionConfig };
+
+/**
+ * Роль для логики отметки посещаемости (attendanceMarkingRepository ждёт строку роли):
+ *  - attendance:manage → "ADMIN" (видит и одобряет всё, без ограничения сроков);
+ *  - иначе → "TEACHER" (только свои занятия, со сроками).
+ * Так логика работает и для кастомных ролей, а не только по названию роли.
+ */
+export function attendanceActorRole(user: PermissionSubject): "ADMIN" | "TEACHER" {
+  return roleHasPermission(user, Permission.ATTENDANCE_MANAGE) ? "ADMIN" : "TEACHER";
+}

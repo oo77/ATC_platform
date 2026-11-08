@@ -68,8 +68,8 @@
             <tr
               v-for="template in filteredTemplates"
               :key="template.id"
-              class="group cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]"
-              @click="navigateTo(`/certificates/templates/${template.id}`)"
+              :class="['group transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.03]', canEditTemplates ? 'cursor-pointer' : '']"
+              @click="canEditTemplates && navigateTo(`/certificates/templates/${template.id}`)"
             >
               <!-- Шаблон (Превью + Название + Описание) -->
               <td class="px-6 py-4">
@@ -168,6 +168,7 @@
               <td class="px-4 py-3" @click.stop>
                 <div class="flex items-center justify-end gap-1">
                   <UiButton
+                    v-if="canEditTemplates"
                     :to="`/certificates/templates/${template.id}/editor`"
                     variant="ghost"
                     size="sm"
@@ -241,7 +242,7 @@ useHead({
 
 const { authFetch } = useAuthFetch();
 const { success: showSuccess, error: showError } = useNotification();
-const { canCreateTemplates, canDeleteTemplates } = usePermissions();
+const { canCreateTemplates, canEditTemplates, canDeleteTemplates } = usePermissions();
 
 // State
 const loading = ref(true);
@@ -298,8 +299,9 @@ const onStatusSegment = (value: string | number | boolean) => {
 const rowMenu = (template: CertificateTemplate) => [
   {
     items: [
-      { key: "settings", label: "Настройки шаблона", icon: Settings, to: `/certificates/templates/${template.id}` },
-      { key: "duplicate", label: "Дублировать", icon: Copy },
+      // Настройки и редактор требуют templates:update, дублирование — templates:create
+      { key: "settings", label: "Настройки шаблона", icon: Settings, to: `/certificates/templates/${template.id}`, hidden: !canEditTemplates.value },
+      { key: "duplicate", label: "Дублировать", icon: Copy, hidden: !canCreateTemplates.value },
     ],
   },
   {

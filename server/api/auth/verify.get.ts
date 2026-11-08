@@ -1,6 +1,7 @@
 import { executeQuery } from '../../utils/db';
 import { verifyToken, extractToken, toPublicUser } from '../../utils/auth';
 import type { User, UserPublic } from '../../types/auth';
+import { withAccess } from '../../utils/roleRegistry';
 
 /**
  * API endpoint для верификации токена и получения данных пользователя
@@ -60,7 +61,7 @@ export default defineEventHandler(async (event) => {
     // Возврат публичных данных пользователя
     return {
       success: true,
-      user: toPublicUser(user),
+      user: await withAccess(toPublicUser(user)),
     };
   } catch (error: any) {
     console.error('Token verification error:', error);

@@ -6,6 +6,7 @@
 import { getFileByUuid, deleteFile } from '../../repositories/fileRepository';
 import { storage } from '../../utils/storage';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission, roleHasPermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -39,7 +40,7 @@ export default defineEventHandler(async (event) => {
 
     // Проверка прав на удаление (только владелец или админ)
     const isOwner = user.id === fileRecord.uploadedBy || user.id === fileRecord.userId;
-    const isAdmin = user.role === 'ADMIN';
+    const isAdmin = roleHasPermission(user, Permission.FILES_DELETE) || roleHasPermission(user, Permission.FILES_MANAGE);
 
     if (!isOwner && !isAdmin) {
       throw createError({

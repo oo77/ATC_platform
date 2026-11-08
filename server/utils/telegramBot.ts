@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 /**
  * Telegram Bot - Инициализация и конфигурация
  * Используется библиотека grammy для работы с Telegram Bot API
@@ -640,8 +641,17 @@ export async function sendDocument(
 export function verifyWebhookSecret(secret: string): boolean {
   const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!expectedSecret) {
-    console.warn("[TelegramBot] TELEGRAM_WEBHOOK_SECRET не задан");
-    return true; // В dev-режиме пропускаем проверку
+    if (process.env.NODE_ENV === "production") {
+      // Без секрета любой может прислать поддельное обновление от имени Telegram
+      console.error(
+        "[TelegramBot] TELEGRAM_WEBHOOK_SECRET не задан — вебхук отклонён. Задайте секрет и перерегистрируйте вебхук",
+      );
+      return false;
+    }
+    console.warn("[TelegramBot] TELEGRAM_WEBHOOK_SECRET не задан (dev-режим: проверка пропущена)");
+    return true;
   }
-  return secret === expectedSecret;
+  const a = Buffer.from(String(secret));
+  const b = Buffer.from(String(expectedSecret));
+  return a.length === b.length && timingSafeEqual(a, b);
 }

@@ -5,8 +5,12 @@
 
 import { getFilesPaginated } from '../../repositories/fileRepository';
 import { storage, type FileCategory } from '../../utils/storage';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.FILES_VIEW);
+
   try {
     // Получение текущего пользователя
     const user = event.context.user;

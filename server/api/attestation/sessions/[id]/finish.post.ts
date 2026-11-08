@@ -11,8 +11,12 @@ import {
 import { getAttestationGroupById } from "../../../../repositories/attestationGroupRepository";
 import { getTestTemplateById } from "../../../../repositories/testTemplateRepository";
 import { upsertResultScore } from "../../../../repositories/attestationResultRepository";
+import { requireAttestationSessionAccess } from "../../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireAttestationSessionAccess(event, getRouterParam(event, "id") || "", "owner");
+
   try {
     const id = getRouterParam(event, "id");
     if (!id) return { success: false, message: "ID сессии не указан" };

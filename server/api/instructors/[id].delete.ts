@@ -5,8 +5,12 @@
 
 import { deleteInstructor, getInstructorById } from '../../repositories/instructorRepository';
 import { logActivity } from '../../utils/activityLogger';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.INSTRUCTORS_DELETE);
+
   try {
     const id = getRouterParam(event, 'id');
 

@@ -5,6 +5,7 @@
 
 import { aiSettingsRepository } from "../../../repositories/aiSettingsRepository";
 import { TOP_AI_PROVIDERS } from "../../../utils/ai/aiProvidersConfig";
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export interface ConfiguredModelItem {
   id: string;
@@ -64,6 +65,9 @@ function formatModelMeta(modelId: string, isConfigured: boolean): { name: string
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.AI_CHAT_USE);
+
   const user = event.context.user;
   if (!user?.id) {
     throw createError({

@@ -16,6 +16,7 @@ import {
 import { getCourseById } from "../../repositories/courseRepository";
 import { v4 as uuidv4 } from "uuid";
 import type { PoolConnection } from "mysql2/promise";
+import { Permission, roleHasPermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   // 1. Проверка авторизации
@@ -25,7 +26,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // 2. Проверка прав (ADMIN или MODERATOR/MANAGER)
-  if (!["ADMIN", "MANAGER"].includes(user.role)) {
+  if (!roleHasPermission(user, Permission.GROUPS_CREATE)) {
     throw createError({
       statusCode: 403,
       message: "Недостаточно прав для создания группы",

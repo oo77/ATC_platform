@@ -1,3 +1,4 @@
+import { requireSetupModeOrPermission, Permission } from "../../utils/permissions";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 
@@ -6,6 +7,9 @@ import { join } from "path";
  * POST /api/environment/restart
  */
 export default defineEventHandler(async (event) => {
+  // До настройки системы — без входа; после — только с правом управления настройками
+  await requireSetupModeOrPermission(event, Permission.SETTINGS_MANAGE);
+
   console.log("[ENVIRONMENT] Restarting application...");
 
   try {

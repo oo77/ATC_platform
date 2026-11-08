@@ -1,3 +1,4 @@
+import { Permission, requirePermission } from "../../../utils/permissions";
 /**
  * API endpoint для добавления сертификата студенту
  * POST /api/students/:id/certificates
@@ -11,6 +12,9 @@
  */
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CERTIFICATES_ISSUE);
+
   console.warn('[DEPRECATED] POST /api/students/:id/certificates is deprecated. Use POST /api/certificates/issue/[groupId] instead.');
   
   throw createError({

@@ -5,8 +5,12 @@
 
 import { createTestTemplate, testTemplateCodeExists } from '../../../repositories/testTemplateRepository';
 import type { CreateTestTemplateDTO } from '../../../types/testing';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEST_TEMPLATES_MANAGE);
+
     try {
         const body = await readBody(event);
 

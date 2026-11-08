@@ -5,6 +5,7 @@
 
 import { createClassroom } from "../../repositories/scheduleRepository";
 import { z } from "zod";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 const createClassroomSchema = z.object({
   name: z.string().min(1, "Название обязательно"),
@@ -13,6 +14,9 @@ const createClassroomSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CLASSROOMS_MANAGE);
+
   try {
     const body = await readBody(event);
 

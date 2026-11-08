@@ -11,6 +11,7 @@ import {
 import { getGroupById } from "../../../repositories/groupRepository";
 import { getUserById } from "../../../repositories/userRepository";
 import { executeQuery } from "../../../utils/db";
+import { Permission, roleHasPermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -25,7 +26,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // MANAGER - это модератор в системе
-    if (user.role !== "MANAGER" && user.role !== "ADMIN") {
+    if (!roleHasPermission(user, Permission.CERTIFICATES_ISSUE)) {
       throw createError({
         statusCode: 403,
         message:

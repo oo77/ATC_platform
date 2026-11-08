@@ -1,3 +1,4 @@
+import { getClientIp } from "../utils/clientIp";
 /**
  * Rate Limiting middleware для публичных endpoints верификации сертификатов
  *
@@ -46,13 +47,6 @@ const RATE_LIMITED_PATHS = [
 
 function isRateLimitedPath(path: string): boolean {
   return RATE_LIMITED_PATHS.some(p => path.startsWith(p));
-}
-
-function getClientIp(event: Parameters<typeof defineEventHandler>[0] extends (e: infer E) => unknown ? E : never): string {
-  return (
-    getRequestIP(event, { xForwardedFor: true }) ??
-    "unknown"
-  );
 }
 
 export default defineEventHandler((event) => {

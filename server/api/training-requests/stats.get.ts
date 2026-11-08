@@ -8,8 +8,12 @@ import {
   getStatusTotals,
 } from "../../repositories/trainingRequestRepository";
 import { createActivityLog } from "../../repositories/activityLogRepository";
+import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.REPRESENTATIVES_VIEW);
+
   try {
     const query = getQuery(event);
     const year = query.year as string | undefined;

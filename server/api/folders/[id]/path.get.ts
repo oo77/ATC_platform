@@ -6,6 +6,7 @@
 import { getFolderById } from '../../../repositories/folderRepository';
 import { executeQuery } from '../../../utils/db';
 import type { RowDataPacket } from 'mysql2/promise';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 interface FolderRow extends RowDataPacket {
   id: number;
@@ -15,6 +16,9 @@ interface FolderRow extends RowDataPacket {
 }
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.FILES_VIEW);
+
   try {
     const user = event.context.user;
     if (!user) {

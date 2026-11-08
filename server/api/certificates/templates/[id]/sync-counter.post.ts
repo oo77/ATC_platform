@@ -1,4 +1,5 @@
 import { syncCertificateNumberCounter } from "../../../../repositories/certificateTemplateRepository";
+import { Permission, roleHasPermission } from "../../../../utils/permissions";
 
 /**
  * POST /api/certificates/templates/[id]/sync-counter
@@ -8,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireAuth(event);
 
   // Только администраторы могут синхронизировать счетчики
-  if (user.role !== "ADMIN") {
+  if (!roleHasPermission(user, Permission.TEMPLATES_UPDATE)) {
     throw createError({
       statusCode: 403,
       message: "Доступ запрещен",

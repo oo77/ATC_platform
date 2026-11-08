@@ -10,8 +10,12 @@ import {
 } from '../../../../repositories/testSessionRepository';
 import { getQuestionById } from '../../../../repositories/questionRepository';
 import type { AnswerData } from '../../../../types/testing';
+import { requireTestSessionAccess } from "../../../../utils/resourceAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireTestSessionAccess(event, getRouterParam(event, "id") || "", "owner");
+
     try {
         const id = getRouterParam(event, 'id');
         const body = await readBody<{

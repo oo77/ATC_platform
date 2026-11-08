@@ -4,8 +4,12 @@
  */
 
 import { getTemplates } from '../../../repositories/certificateTemplateRepository';
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.TEMPLATES_VIEW);
+
   try {
     const query = getQuery(event);
     const isActive = query.isActive !== undefined 

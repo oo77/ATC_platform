@@ -1,12 +1,16 @@
 import { defineEventHandler, createError } from 'h3';
 import { deleteOrganization, getOrganizationById } from '../../repositories/organizationRepository';
 import { createActivityLog } from '../../repositories/activityLogRepository';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 /**
  * DELETE /api/organizations/:id
  * Удаление организации
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.ORGANIZATIONS_DELETE);
+
   try {
     const id = event.context.params?.id;
 

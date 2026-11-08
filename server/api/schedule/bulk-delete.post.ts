@@ -6,6 +6,7 @@
 import { executeQuery, executeTransaction } from "../../utils/db";
 import { logActivity } from "../../utils/activityLogger";
 import type { RowDataPacket, PoolConnection } from "mysql2/promise";
+import { Permission, roleHasPermission } from "../../utils/permissions";
 
 interface ScheduleEventRow extends RowDataPacket {
   id: string;
@@ -23,8 +24,8 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Проверка прав (только ADMIN и MANAGER)
-  if (!["ADMIN", "MANAGER"].includes(user.role)) {
+  // Проверка по праву, а не по названию роли
+  if (!roleHasPermission(user, Permission.SCHEDULE_DELETE)) {
     throw createError({
       statusCode: 403,
       statusMessage: "Недостаточно прав для массового удаления",

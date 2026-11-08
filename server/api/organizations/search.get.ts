@@ -1,11 +1,15 @@
 import { defineEventHandler, getQuery, createError } from 'h3';
 import { searchOrganizations, getAllOrganizations } from '../../repositories/organizationRepository';
+import { Permission, requirePermission } from "../../utils/permissions";
 
 /**
  * GET /api/organizations/search
  * Поиск организаций для автокомплита
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.ORGANIZATIONS_VIEW);
+
   try {
     const query = getQuery(event);
     const searchQuery = query.q as string;

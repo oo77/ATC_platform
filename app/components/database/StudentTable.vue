@@ -72,6 +72,7 @@
           <td class="px-4 py-3" @click.stop>
             <div class="flex items-center justify-end gap-1">
               <UiButton
+                v-if="canEditStudents"
                 variant="ghost"
                 size="sm"
                 icon
@@ -123,10 +124,14 @@ const navigateToStudent = (studentId: string) => {
 };
 
 // Меню строки «⋯»: сначала безопасное (сертификаты), опасное «Удалить» — отдельной группой в самом конце
-const rowMenu = [
+// «Удалить» — только при праве students:delete (иначе сервер ответит 403)
+const { canEditStudents, canDeleteStudents } = usePermissions();
+const rowMenu = computed(() => [
   { items: [{ key: "certificates", label: "Сертификаты", icon: Award }] },
-  { items: [{ key: "delete", label: "Удалить", icon: Trash2, danger: true }] },
-];
+  ...(canDeleteStudents.value
+    ? [{ items: [{ key: "delete", label: "Удалить", icon: Trash2, danger: true }] }]
+    : []),
+]);
 
 // Маршрутизация выбора пункта меню в уже существующие эмиты (контракт компонента не изменён);
 // подтверждение удаления делает родитель через UiConfirmModal, как и раньше

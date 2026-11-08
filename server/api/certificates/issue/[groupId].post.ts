@@ -5,6 +5,7 @@
  * Использует визуальный редактор шаблонов и Puppeteer для генерации PDF
  */
 
+import { computeTemplateRenderHash } from "../../../utils/templateRenderHash";
 import { z } from "zod";
 import * as fs from "fs";
 import * as path from "path";
@@ -31,6 +32,7 @@ import type {
   IssueWarning,
   CertificateTemplateData,
 } from "../../../types/certificate";
+import { Permission, requirePermission } from "../../../utils/permissions";
 
 interface InstructorRow extends RowDataPacket {
   id: string;
@@ -65,6 +67,9 @@ const issueSchema = z.object({
 const GENERATED_DIR = path.join(process.cwd(), "storage", "Certificates");
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.CERTIFICATES_ISSUE);
+
   try {
     const groupId = getRouterParam(event, "groupId");
 
@@ -361,7 +366,12 @@ export default defineEventHandler(async (event) => {
         }
 
         // Обновляем файлы (для нового подхода только PDF)
-        await updateCertificateFiles(certificate.id, pdfUrl, pdfUrl);
+        await updateCertificateFiles(
+          certificate.id,
+          pdfUrl,
+          pdfUrl,
+          computeTemplateRenderHash(templateData),
+        );
 
         // Логируем
         const logAction = reissueInPlace ? "UPDATE" : "CREATE";

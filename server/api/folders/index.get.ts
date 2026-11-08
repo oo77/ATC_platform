@@ -4,8 +4,12 @@
  */
 
 import { getSubFolders, getRootFolders } from '../../repositories/folderRepository';
+import { requireFolderRead } from "../../utils/folderAccess";
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireFolderRead(event, Number(getQuery(event).parentId) || null);
+
   try {
     const user = event.context.user;
     if (!user) {
@@ -25,7 +29,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      folders,
+      folders: folders.map((f) => ({ ...f, passwordHash: f.passwordHash ? 'locked' : null })),
     };
   } catch (error: any) {
     console.error('Ошибка получения папок:', error);

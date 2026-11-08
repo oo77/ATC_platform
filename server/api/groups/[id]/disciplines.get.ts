@@ -6,6 +6,8 @@
 import { executeQuery } from "../../../utils/db";
 import type { RowDataPacket } from "mysql2/promise";
 import { getAcademicHourMinutes } from "../../../utils/academicHours";
+import { Permission } from "../../../utils/permissions";
+import { requireGroupPermission } from "../../../utils/resourceAccess";
 
 interface DisciplineRow extends RowDataPacket {
   id: string;
@@ -49,6 +51,9 @@ const formatDateLocal = (date: Date): string => {
 };
 
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requireGroupPermission(event, getRouterParam(event, "id"), [Permission.GROUPS_VIEW_ALL, Permission.GROUPS_VIEW_OWN, Permission.SCHEDULE_VIEW_OWN]);
+
   try {
     const groupId = getRouterParam(event, "id");
 

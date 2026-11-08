@@ -4,12 +4,16 @@ import { useDatabase } from "../../../../utils/useDatabase";
 import { logActivity } from "../../../../utils/activityLogger";
 import { randomUUID } from "crypto";
 import { isValidFieldKey } from "../../../../utils/reports/fieldRegistry";
+import { Permission, requirePermission } from "../../../../utils/permissions";
 
 /**
  * POST /api/reports/builder/templates
  * Создание нового шаблона отчёта с его колонками (в транзакции)
  */
 export default defineEventHandler(async (event) => {
+  // P0-ACCESS: проверка прав доступа
+  await requirePermission(event, Permission.DASHBOARD_STATS);
+
   try {
     const user = requireAuth(event);
     const body = await readBody(event);
