@@ -177,6 +177,7 @@ export function useActivityLogs() {
       SYSTEM: 'Система',
       GROUP_REPORT: 'Отчет группы',
       TRAINING_REQUEST: 'Заявка на обучение',
+      LIBRARY_BOOK: 'Книга библиотеки',
     };
     return labels[entityType] || entityType;
   };

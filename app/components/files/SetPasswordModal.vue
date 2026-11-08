@@ -1,115 +1,54 @@
 <template>
-  <UiModal :is-open="isOpen" @close="$emit('close')" title="Установить пароль на папку">
-    <form @submit.prevent="handleSubmit" class="space-y-4">
+  <UiModal :is-open="isOpen" :title="`Защитить паролем: ${folderName}`" size="sm" @close="emit('close')">
+    <form id="set-password-form" class="space-y-3" @submit.prevent="submit">
       <div>
-        <label for="password" class="mb-2.5 block text-sm font-medium text-black dark:text-white">
-          Пароль <span class="text-danger">*</span>
-        </label>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          required
-          autofocus
-          minlength="6"
-          class="w-full rounded border-[1.5px] border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-          :class="{ 'border-danger': error }"
-          placeholder="Минимум 6 символов"
-        />
+        <label for="fm-pass" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Пароль</label>
+        <input id="fm-pass" ref="inputRef" v-model="password" type="password" autocomplete="new-password" placeholder="Минимум 6 символов" class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-white" />
       </div>
-
       <div>
-        <label for="confirmPassword" class="mb-2.5 block text-sm font-medium text-black dark:text-white">
-          Подтвердите пароль <span class="text-danger">*</span>
-        </label>
-        <input
-          id="confirmPassword"
-          v-model="confirmPassword"
-          type="password"
-          required
-          autofocus
-          minlength="6"
-          class="w-full rounded border-[1.5px] border-stroke bg-transparent px-5 py-3 font-medium outline-none transition focus:border-primary active:border-primary disabled:cursor-default disabled:bg-whiter dark:border-form-strokedark dark:bg-form-input dark:focus:border-primary"
-          :class="{ 'border-danger': error }"
-          placeholder="Повторите пароль"
-        />
-        <p v-if="error" class="mt-1 text-sm text-danger">
-          {{ error }}
-        </p>
-      </div>
-
-      <div class="flex justify-end gap-4">
-        <UiButton
-          type="button"
-          variant="secondary"
-          @click="$emit('close')"
-          :disabled="isSubmitting"
-        >
-          Отмена
-        </UiButton>
-        <UiButton
-          type="submit"
-          variant="primary"
-          :disabled="isSubmitting"
-        >
-          <span v-if="!isSubmitting">Установить пароль</span>
-          <span v-else class="flex items-center gap-2">
-            <div class="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-t-transparent"></div>
-            Сохранение...
-          </span>
-        </UiButton>
+        <label for="fm-pass2" class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Повторите пароль</label>
+        <input id="fm-pass2" v-model="confirm" type="password" autocomplete="new-password" class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-white" :class="{ 'border-error-500': error }" />
+        <p v-if="error" class="mt-1 text-sm text-error-600">{{ error }}</p>
       </div>
     </form>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <UiButton variant="outline" :disabled="loading" @click="emit('close')">Отмена</UiButton>
+        <UiButton type="submit" form="set-password-form" :loading="loading" :disabled="!password">Установить</UiButton>
+      </div>
+    </template>
   </UiModal>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
-
-interface Props {
-  isOpen: boolean;
-  folderId: number;
-}
-
-const props = defineProps<Props>();
-
-const emit = defineEmits<{
-  close: [];
-  submit: [password: string];
-}>();
+const props = defineProps<{ isOpen: boolean; folderName: string; onSubmit: (password: string) => Promise<void> }>();
+const emit = defineEmits<{ close: [] }>();
 
 const password = ref('');
-const confirmPassword = ref('');
+const confirm = ref('');
 const error = ref('');
-const isSubmitting = ref(false);
+const loading = ref(false);
+const inputRef = ref<HTMLInputElement | null>(null);
 
-// Сброс формы при открытии
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen) {
-    password.value = '';
-    confirmPassword.value = '';
-    error.value = '';
-    isSubmitting.value = false;
-  }
+watch(() => props.isOpen, async (open) => {
+  if (!open) return;
+  password.value = confirm.value = error.value = '';
+  loading.value = false;
+  await nextTick();
+  inputRef.value?.focus();
 });
 
-const handleSubmit = () => {
+const submit = async () => {
+  if (password.value.length < 6) { error.value = 'Пароль должен содержать минимум 6 символов'; return; }
+  if (password.value !== confirm.value) { error.value = 'Пароли не совпадают'; return; }
+  loading.value = true;
   error.value = '';
-
-  if (password.value.length < 6) {
-    error.value = 'Пароль должен содержать минимум 6 символов';
-    return;
+  try {
+    await props.onSubmit(password.value);
+  } catch (e: any) {
+    error.value = e?.data?.message || 'Не удалось установить пароль';
+  } finally {
+    loading.value = false;
   }
-
-  if (password.value !== confirmPassword.value) {
-    error.value = 'Пароли не совпадают';
-    return;
-  }
-
-  isSubmitting.value = true;
-  emit('submit', password.value);
 };
 </script>
-
-<style scoped>
-</style>

@@ -1,75 +1,67 @@
 <template>
-  <Modal
-    :is-open="isOpen"
-    :title="title"
-    @close="emit('close')"
-  >
-    <div class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          Новое название
-        </label>
-        <input
-          v-model="newName"
-          type="text"
-          :placeholder="`Введите новое название для ${currentName}`"
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300"
-        />
+  <UiModal :is-open="isOpen" :title="title" size="sm" @close="emit('close')">
+    <form id="rename-form" class="space-y-2" @submit.prevent="submit">
+      <label for="rename-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Новое название</label>
+      <input
+        id="rename-input"
+        ref="inputRef"
+        v-model="newName"
+        type="text"
+        maxlength="255"
+        autocomplete="off"
+        class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-white"
+        :class="{ 'border-error-500': error }"
+      />
+      <p v-if="error" class="text-sm text-error-600">{{ error }}</p>
+    </form>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <UiButton variant="outline" :disabled="loading" @click="emit('close')">Отмена</UiButton>
+        <UiButton type="submit" form="rename-form" :loading="loading" :disabled="!newName.trim() || newName.trim() === currentName">Переименовать</UiButton>
       </div>
-      <div class="flex justify-end">
-        <button
-          @click="emit('close')"
-          class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-        >
-          Отмена
-        </button>
-        <button
-          @click="rename"
-          :disabled="!newName.trim() || isLoading"
-          class="px-4 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 disabled:opacity-50"
-        >
-          {{ isLoading ? 'Переименовывание...' : 'Переименовать' }}
-        </button>
-      </div>
-    </div>
-  </Modal>
+    </template>
+  </UiModal>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import Modal from '~/components/ui/Modal.vue';
-
-interface Props {
+const props = defineProps<{
   isOpen: boolean;
   currentName: string;
   title: string;
-}
-
-defineProps<Props>();
-
-const emit = defineEmits<{
-  close: [];
-  submit: (newName: string) => void;
+  onSubmit: (name: string) => Promise<void>;
 }>();
+const emit = defineEmits<{ close: [] }>();
 
 const newName = ref('');
-const isLoading = ref(false);
+const error = ref('');
+const loading = ref(false);
+const inputRef = ref<HTMLInputElement | null>(null);
 
-const rename = async () => {
-  if (!newName.trim()) return;
+// Предзаполняем текущим именем и выделяем его без расширения — как в Проводнике/Finder
+watch(() => props.isOpen, async (open) => {
+  if (!open) return;
+  newName.value = props.currentName;
+  error.value = '';
+  await nextTick();
+  const el = inputRef.value;
+  if (!el) return;
+  el.focus();
+  const dot = props.currentName.lastIndexOf('.');
+  el.setSelectionRange(0, dot > 0 ? dot : props.currentName.length);
+});
 
-  isLoading.value = true;
+const submit = async () => {
+  const value = newName.value.trim();
+  if (!value || value === props.currentName || loading.value) return;
+  if (/[\\/]/.test(value)) { error.value = 'Имя не должно содержать / и \\'; return; }
+  loading.value = true;
+  error.value = '';
   try {
-    emit('submit', newName.trim());
-    newName.value = '';
-  } catch (error) {
-    console.error('Error renaming:', error);
-    // TODO: Show error message
+    await props.onSubmit(value);
+  } catch (e: any) {
+    error.value = e?.data?.message || e?.message || 'Не удалось переименовать';
   } finally {
-    isLoading.value = false;
+    loading.value = false;
   }
 };
 </script>
-
-<style scoped>
-</style>

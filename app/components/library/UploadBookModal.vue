@@ -57,7 +57,7 @@
                   Перетащите PDF файл или
                   <span class="text-primary">выберите</span>
                 </p>
-                <p class="text-xs text-gray-500">Максимальный размер: 100 МБ</p>
+                <p class="text-xs text-gray-500">Максимальный размер: 200 МБ</p>
               </div>
             </div>
 
@@ -345,8 +345,8 @@ const validateAndSetPdfFile = (file: File) => {
     return;
   }
 
-  if (file.size > 100 * 1024 * 1024) {
-    errors.value.pdfFile = "Размер файла не должен превышать 100 МБ";
+  if (file.size > 200 * 1024 * 1024) {
+    errors.value.pdfFile = "Размер файла не должен превышать 200 МБ";
     return;
   }
 

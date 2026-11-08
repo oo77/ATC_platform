@@ -13,14 +13,26 @@
       </template>
     </UiPageHeader>
 
-    <!-- Панель управления сертификатами: KPI, фильтры, таблица -->
-    <DatabaseCertificateManagementPanel />
+    <UiTabs v-model="activeTab" :tabs="tabs" />
+
+    <!-- Панель управления сертификатами: KPI, фильтры, таблица (v-show — состояние фильтров не теряется) -->
+    <DatabaseCertificateManagementPanel v-show="activeTab === 'registry'" />
+    <DatabaseCertificateAnalytics v-if="visited.analytics" v-show="activeTab === 'analytics'" />
   </div>
 </template>
 
 <script setup lang="ts">
 // Award больше не нужен (иконка в заголовке убрана), остаётся только LayoutTemplate для кнопки
-import { LayoutTemplate } from 'lucide-vue-next';
+import { LayoutTemplate, ListChecks, BarChart3 } from 'lucide-vue-next';
+
+const activeTab = ref('registry');
+const visited = reactive({ analytics: false });
+const tabs = [
+  { id: 'registry', label: 'Реестр', icon: ListChecks },
+  { id: 'analytics', label: 'Аналитика', icon: BarChart3 },
+];
+// Аналитика грузится при первом открытии вкладки
+watch(activeTab, (t) => { if (t === 'analytics') visited.analytics = true; });
 
 definePageMeta({
   layout: 'default',

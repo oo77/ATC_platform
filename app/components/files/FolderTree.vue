@@ -1,84 +1,72 @@
 <template>
-  <div class="folder-tree">
-    <div class="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-      Папки
-    </div>
+  <nav class="flex h-full flex-col" aria-label="Дерево папок">
+    <div class="px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Папки</div>
 
-    <div class="flex-1 overflow-y-auto">
-      <!-- Root -->
-      <button
-        @click="emit('navigate', null)"
-        :class="[
-          'w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors',
-          currentFolderId === null ? 'bg-primary/10 text-primary' : 'text-gray-700 dark:text-gray-300'
-        ]"
-      >
-        <svg class="h-5 w-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-        </svg>
-        <span class="truncate">Все файлы</span>
-      </button>
-
-      <!-- Folders -->
-      <div v-for="folder in folders" :key="folder.id">
+    <ul role="tree" class="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
+      <li role="treeitem" :aria-selected="currentFolderId === null">
         <button
-          @click="handleFolderClick(folder)"
-          @contextmenu.prevent="emit('contextmenu', $event, folder)"
+          type="button"
           :class="[
-            'w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group',
-            currentFolderId === folder.id ? 'bg-primary/10 text-primary' : 'text-gray-700 dark:text-gray-300'
+            'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors',
+            currentFolderId === null
+              ? 'bg-primary-50 font-medium text-primary dark:bg-primary-500/15 dark:text-primary-300'
+              : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/[0.06]',
+            rootDrop ? 'bg-primary-100 ring-2 ring-primary/40 dark:bg-primary-500/25' : '',
           ]"
+          @click="emit('navigate', null)"
+          @dragover="(e) => { if (canDropOn(null, e)) { e.preventDefault(); rootDrop = true; } }"
+          @dragleave="rootDrop = false"
+          @drop="(e) => { rootDrop = false; if (canDropOn(null, e)) emit('dropOn', null, e); }"
         >
-          <svg class="h-5 w-5 text-yellow-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-          </svg>
-          <span class="truncate flex-1 text-left">{{ folder.name }}</span>
-
-          <!-- Lock icon -->
-          <svg
-            v-if="folder.passwordHash"
-            class="h-4 w-4 text-warning shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2-2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
+          <HardDrive class="h-4 w-4 shrink-0 text-gray-500" />
+          <span class="truncate">Все файлы</span>
         </button>
+      </li>
+
+      <div v-if="loadingRoot" class="space-y-1.5 px-2 pt-2">
+        <div v-for="n in 4" :key="n" class="h-6 animate-pulse rounded bg-gray-100 dark:bg-white/[0.06]" />
       </div>
-    </div>
-  </div>
+
+      <FolderTreeNode
+        v-for="folder in roots"
+        :key="folder.id"
+        :folder="folder"
+        :depth="0"
+        :current-folder-id="currentFolderId"
+        :tree-children="treeChildren"
+        :expanded-set="expanded"
+        :loading-set="loading"
+        :can-drop-on="canDropOn"
+        @navigate="emit('navigate', $event)"
+        @toggle="emit('toggle', $event)"
+        @drop-on="(id, e) => emit('dropOn', id, e)"
+        @contextmenu="(e, f) => emit('contextmenu', e, f)"
+      />
+    </ul>
+  </nav>
 </template>
 
 <script setup lang="ts">
+import { HardDrive } from 'lucide-vue-next';
+import FolderTreeNode from './FolderTreeNode.vue';
 import type { Folder } from '~/types/file';
 
-interface Props {
-  folders: Folder[];
+const props = defineProps<{
   currentFolderId: number | null;
-}
-
-defineProps<Props>();
-
-const emit = defineEmits<{
-  navigate: [folderId: number | null];
-  contextmenu: [event: MouseEvent, folder: Folder];
+  treeChildren: Record<string, Folder[]>;
+  expanded: Set<number>;
+  loading: Set<string>;
+  canDropOn: (id: number | null, e?: DragEvent) => boolean;
 }>();
 
-const handleFolderClick = (folder: Folder) => {
-  emit('navigate', folder.id);
-};
+const emit = defineEmits<{
+  navigate: [id: number | null];
+  toggle: [id: number];
+  dropOn: [id: number | null, e: DragEvent];
+  contextmenu: [e: MouseEvent, f: Folder];
+}>();
+
+const rootDrop = ref(false);
+const roots = computed(() => props.treeChildren['root'] ?? []);
+const loadingRoot = computed(() => !props.treeChildren['root']);
 </script>
-
-<style scoped>
-.folder-tree {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background-color: var(--color-gray-50);
-}
-
-.folder-tree:deep(.dark) {
-  background-color: var(--color-gray-900);
-}
-</style>

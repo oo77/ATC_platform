@@ -1,195 +1,174 @@
-import { defineEventHandler, getQuery, createError } from "h3";
+import { defineEventHandler, getQuery } from "h3";
 import { requireAuth } from "../../../utils/auth";
 import { executeQuery } from "../../../utils/db";
-import { roleHasPermission, Permission } from "../../../utils/permissions";
+import {
+  isLibraryStaff,
+  accessExistsSql,
+  accessMatchSql,
+  accessParams,
+  clampInt,
+} from "../../../utils/libraryAccess";
 
 /**
  * GET /api/library/catalog
- * Получение каталога книг, доступных текущему пользователю
+ * Каталог книг, доступных текущему пользователю.
  *
- * Query параметры:
- * - search?: поиск по названию/автору
- * - category?: фильтр по категории
- * - language?: фильтр по языку
- * - sortBy?: поле сортировки (title|author|created_at)
- * - sortOrder?: порядок сортировки (asc|desc)
+ * Query:
+ * - page, limit (≤ 48)
+ * - search  — название, автор, ISBN
+ * - author, language
+ * - shelf   — all | reading | completed | unread
+ * - sort    — title | recent | added | progress
+ *
+ * Доступ считается по тем же правилам, что и при открытии книги:
+ * личный, по роли, через группу или курс. Раньше каталог не видел
+ * доступ через группы/курсы — такие книги можно было открыть, но не найти.
  */
+const COMPLETED_SQL = "(brp.completed_at IS NOT NULL OR (b.total_pages > 0 AND brp.max_page >= b.total_pages))";
+
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event);
-
   const query = getQuery(event);
+  const staff = isLibraryStaff(user);
 
-  console.log(
-    `[Library] Catalog requested by user ${user.id} (${user.email}), role: ${user.role}`,
+  const page = clampInt(query.page, 1, 10_000, 1);
+  const limit = clampInt(query.limit, 1, 48, 12);
+  const offset = (page - 1) * limit;
+
+  // Базовое условие — что пользователь вообще может видеть
+  const baseWhere = [`b.status = 'ready'`, `b.deleted_at IS NULL`];
+  const baseParams: any[] = [];
+  if (!staff) {
+    baseWhere.push(accessExistsSql("b"));
+    baseParams.push(...accessParams(user));
+  }
+
+  // Фильтры пользователя
+  const where = [...baseWhere];
+  const params: any[] = [...baseParams];
+
+  const search = typeof query.search === "string" ? query.search.trim().slice(0, 100) : "";
+  if (search) {
+    where.push("(b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?)");
+    const term = `%${search.replace(/[%_\\]/g, "\\$&")}%`;
+    params.push(term, term, term);
+  }
+  if (typeof query.author === "string" && query.author) {
+    where.push("b.author = ?");
+    params.push(query.author.slice(0, 255));
+  }
+  if (typeof query.language === "string" && query.language) {
+    where.push("b.language = ?");
+    params.push(query.language.slice(0, 10));
+  }
+
+  const shelf = String(query.shelf || "all");
+  if (shelf === "reading") where.push(`brp.id IS NOT NULL AND NOT ${COMPLETED_SQL}`);
+  else if (shelf === "completed") where.push(`brp.id IS NOT NULL AND ${COMPLETED_SQL}`);
+  else if (shelf === "unread") where.push("brp.id IS NULL");
+
+  const sort = String(query.sort || "title");
+  const orderBy =
+    sort === "added"
+      ? "b.created_at DESC, b.title ASC"
+      : sort === "recent"
+        ? "brp.last_read_at IS NULL, brp.last_read_at DESC, b.title ASC"
+        : sort === "progress"
+          ? "COALESCE(brp.max_page / NULLIF(b.total_pages, 0), 0) DESC, b.title ASC"
+          : "b.title ASC";
+
+  // Срок доступа: NULL — бессрочно (есть хотя бы одна бессрочная запись)
+  const expiresSql = staff
+    ? "NULL"
+    : `(SELECT IF(SUM(ba.expires_at IS NULL) > 0, NULL, MAX(ba.expires_at))
+        FROM book_access ba WHERE ba.book_id = b.id AND ${accessMatchSql("ba")})`;
+  const expiresParams = staff ? [] : accessParams(user);
+
+  const fromSql = `FROM books b
+    LEFT JOIN book_reading_progress brp ON brp.book_id = b.id AND brp.user_id = ?`;
+
+  const rows = await executeQuery<any[]>(
+    `SELECT b.id, b.title, b.author, b.description, b.isbn, b.language, b.category,
+            b.published_year, b.total_pages, b.cover_path, b.created_at,
+            brp.last_page, brp.max_page, brp.last_read_at, brp.completed_at, brp.total_seconds,
+            ${expiresSql} AS access_expires_at
+     ${fromSql}
+     WHERE ${where.join(" AND ")}
+     ORDER BY ${orderBy}
+     LIMIT ${limit} OFFSET ${offset}`,
+    [...expiresParams, user.id, ...params],
   );
 
-  try {
-    // Параметры пагинации
-    const page = Math.max(1, parseInt(query.page as string) || 1);
-    const limit = Math.max(1, parseInt(query.limit as string) || 12);
-    const offset = (page - 1) * limit;
+  const [countRow] = await executeQuery<any[]>(
+    `SELECT COUNT(*) AS total ${fromSql} WHERE ${where.join(" AND ")}`,
+    [user.id, ...params],
+  );
 
-    // Проверка прав доступа: если админ, показываем все книги
-    const isAdmin = roleHasPermission(user.role, Permission.LIBRARY_MANAGE);
+  // Сводка по «полкам» — без пользовательских фильтров
+  const [summaryRow] = await executeQuery<any[]>(
+    `SELECT COUNT(*) AS available,
+            SUM(brp.id IS NOT NULL AND NOT ${COMPLETED_SQL}) AS reading,
+            SUM(brp.id IS NOT NULL AND ${COMPLETED_SQL}) AS completed,
+            COALESCE(SUM(brp.total_seconds), 0) AS total_seconds
+     ${fromSql}
+     WHERE ${baseWhere.join(" AND ")}`,
+    [user.id, ...baseParams],
+  );
 
-    // Базовый WHERE clause
-    let whereClause = "";
-    const whereParams: any[] = [];
-
-    if (isAdmin) {
-      whereClause = `
-        b.status = 'ready'
-        AND b.deleted_at IS NULL
-      `;
-    } else {
-      // ИСПРАВЛЕНИЕ: Проверяем доступ по user_id ИЛИ по role_name пользователя.
-      // Ранее использовался INNER JOIN только по user_id, что приводило к тому,
-      // что книги, выданные через роль, не отображались у студентов/преподавателей.
-      whereClause = `
-        b.status = 'ready'
-        AND b.deleted_at IS NULL
-        AND EXISTS (
-          SELECT 1 FROM book_access ba
-          WHERE ba.book_id = b.id
-            AND (ba.expires_at IS NULL OR ba.expires_at > NOW())
-            AND (
-              ba.user_id = ?
-              OR ba.role_name = ?
-            )
-        )
-      `;
-      whereParams.push(user.id, user.role);
-    }
-
-    // Применение фильтров
-    if (query.author) {
-      whereClause += " AND b.author = ?";
-      whereParams.push(query.author);
-      console.log(`[Library] Applied author filter: "${query.author}"`);
-    }
-    if (query.search) {
-      whereClause +=
-        " AND (b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?)";
-      const searchTerm = `%${query.search}%`;
-      whereParams.push(searchTerm, searchTerm, searchTerm);
-      console.log(`[Library] Applied search filter: "${query.search}"`);
-    }
-
-    if (query.category) {
-      whereClause += " AND b.category = ?";
-      whereParams.push(query.category);
-      console.log(`[Library] Applied category filter: "${query.category}"`);
-    }
-
-    if (query.language) {
-      whereClause += " AND b.language = ?";
-      whereParams.push(query.language);
-      console.log(`[Library] Applied language filter: "${query.language}"`);
-    }
-
-    // Subquery для получения даты выдачи доступа конкретного пользователя
-    // (приоритет у персонального доступа над ролевым)
-    const accessSubquery = isAdmin
-      ? "NULL"
-      : `(SELECT ba2.created_at FROM book_access ba2 WHERE ba2.book_id = b.id AND ba2.user_id = ? ORDER BY ba2.created_at DESC LIMIT 1)`;
-    const expiresSubquery = isAdmin
-      ? "NULL"
-      : `(SELECT ba2.expires_at FROM book_access ba2 WHERE ba2.book_id = b.id AND ba2.user_id = ? ORDER BY ba2.created_at DESC LIMIT 1)`;
-
-    // Основной запрос — LEFT JOIN для прогресса чтения
-    let sql = `
-      SELECT 
-        b.id, b.title, b.author, b.description, b.isbn, 
-        NULL as publisher, b.published_year as published_year, 
-        b.language, b.category, b.is_published, b.cover_path,
-        b.total_pages, b.created_at,
-        ${accessSubquery} as granted_at, 
-        ${expiresSubquery} as expires_at,
-        COALESCE(brp.last_page, 0) as last_page_read,
-        brp.last_read_at
-      FROM books b
-      LEFT JOIN book_reading_progress brp ON b.id = brp.book_id AND brp.user_id = ?
-      WHERE ${whereClause}
-    `;
-
-    // Сортировка
-    const sortBy = (query.sortBy as string) || "title";
-    const sortOrder = (query.sortOrder as string) === "desc" ? "desc" : "asc";
-
-    const allowedSortFields = ["title", "author", "created_at"];
-    if (allowedSortFields.includes(sortBy)) {
-      sql += ` ORDER BY b.${sortBy} ${sortOrder.toUpperCase()}`;
-    } else {
-      sql += ` ORDER BY b.title ASC`;
-    }
-
-    // Пагинация
-    sql += " LIMIT ? OFFSET ?";
-
-    // Параметры для основного SELECT:
-    // Для isAdmin:   [user.id (brp LEFT JOIN), ...whereParams, limit, offset]
-    // Для !isAdmin:  [user.id (subq granted_at), user.id (subq expires_at), user.id (brp LEFT JOIN), user.id (EXISTS), user.role (EXISTS), ...остальные фильтры, limit, offset]
-    let selectParams: any[];
-    if (isAdmin) {
-      selectParams = [user.id, ...whereParams, limit, offset];
-    } else {
-      // whereParams уже содержит [user.id, user.role] + фильтры
-      selectParams = [user.id, user.id, user.id, ...whereParams, limit, offset];
-    }
-
-    // Выполняем запрос книг
-    const books = await executeQuery<any[]>(sql, selectParams);
-
-    // Подсчет общего количества (отдельный легковесный запрос без subqueries)
-    const countSql = `
-      SELECT COUNT(DISTINCT b.id) as total
-      FROM books b
-      WHERE ${whereClause}
-    `;
-
-    const [countResult] = await executeQuery<any[]>(countSql, whereParams);
-    const totalCount = Number(countResult?.total || 0);
-
-    console.log(
-      `[Library] Catalog returned ${books.length} books (page ${page}/${Math.ceil(totalCount / limit)}, total: ${totalCount}) for user ${user.id} (role: ${user.role})`,
+  // «Продолжить чтение» — последние начатые и не дочитанные книги
+  let continueReading: any[] = [];
+  if (page === 1) {
+    continueReading = await executeQuery<any[]>(
+      `SELECT b.id, b.title, b.author, b.total_pages, b.cover_path,
+              brp.last_page, brp.max_page, brp.last_read_at
+       ${fromSql}
+       WHERE ${baseWhere.join(" AND ")} AND brp.id IS NOT NULL AND NOT ${COMPLETED_SQL}
+       ORDER BY brp.last_read_at DESC
+       LIMIT 3`,
+      [user.id, ...baseParams],
     );
-
-    return {
-      books: books.map((book) => ({
-        id: book.id,
-        title: book.title,
-        author: book.author,
-        description: book.description,
-        isbn: book.isbn,
-        language: book.language,
-        category: book.category,
-        published_year: book.published_year,
-        total_pages: book.total_pages,
-        cover_url: book.cover_path ? `/api/library/covers/${book.id}` : null,
-        grantedAt: book.granted_at,
-        expiresAt: book.expires_at,
-        progress: {
-          current_page: book.last_page_read || 0,
-          total_pages: book.total_pages,
-          percentage:
-            book.total_pages > 0
-              ? Math.round(
-                  ((book.last_page_read || 0) / book.total_pages) * 100,
-                )
-              : 0,
-          lastReadAt: book.last_read_at,
-        },
-      })),
-      total: totalCount,
-    };
-  } catch (error: any) {
-    console.error(
-      `[Library] Failed to fetch catalog for user ${user.id}:`,
-      error,
-    );
-    throw createError({
-      statusCode: 500,
-      message: `Ошибка при получении каталога книг: ${error.message}`,
-    });
   }
+
+  const NEW_MS = 14 * 24 * 3600 * 1000;
+  const mapBook = (b: any) => {
+    const total = Number(b.total_pages) || 0;
+    const last = Number(b.last_page) || 0;
+    const max = Math.max(Number(b.max_page) || 0, last);
+    const completed = !!b.completed_at || (total > 0 && max >= total);
+    return {
+      id: b.id,
+      title: b.title,
+      author: b.author,
+      description: b.description,
+      isbn: b.isbn,
+      language: b.language,
+      category: b.category,
+      published_year: b.published_year,
+      total_pages: total,
+      cover_url: b.cover_path ? `/api/library/covers/${b.id}` : null,
+      isNew: b.created_at ? Date.now() - new Date(b.created_at).getTime() < NEW_MS : false,
+      expiresAt: b.access_expires_at || null,
+      progress: {
+        current_page: last,
+        max_page: max,
+        total_pages: total,
+        percentage: total > 0 ? Math.min(100, Math.round((max / total) * 100)) : 0,
+        lastReadAt: b.last_read_at || null,
+        completed,
+        totalSeconds: Number(b.total_seconds) || 0,
+      },
+    };
+  };
+
+  return {
+    books: rows.map(mapBook),
+    total: Number(countRow?.total || 0),
+    summary: {
+      available: Number(summaryRow?.available || 0),
+      reading: Number(summaryRow?.reading || 0),
+      completed: Number(summaryRow?.completed || 0),
+      totalSeconds: Number(summaryRow?.total_seconds || 0),
+    },
+    continueReading: continueReading.map(mapBook),
+  };
 });

@@ -1,425 +1,508 @@
 <template>
-  <!-- Внешний враппер без двойного отступа: отступы даёт layout -->
-  <div class="mx-auto max-w-screen-2xl space-y-4">
-    <!-- Единый заголовок; главное действие для персонала — «Панель управления» -->
-    <UiPageHeader title="Библиотека" description="Доступные вам материалы для чтения и изучения">
+  <div class="mx-auto max-w-screen-2xl space-y-5">
+    <UiPageHeader title="Библиотека" description="Учебные материалы, доступные вам для чтения">
       <template #actions>
-        <UiButton v-if="isStaff" to="/admin/library/books" variant="primary" :start-icon="Library">
-          Панель управления
+        <UiButton v-if="canManage" to="/admin/library/books" variant="outline" :start-icon="Settings2">
+          Управление библиотекой
         </UiButton>
       </template>
     </UiPageHeader>
 
-    <!-- Три декоративные карточки («В процессе», «Сегодня» — заглушки без данных) убраны: количество книг показывает «Найдено N» в блоке фильтров -->
+    <!-- Продолжить чтение -->
+    <section
+      v-if="hero && !hasFilters"
+      class="overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-brand-50 via-white to-white dark:border-gray-800 dark:from-brand-500/10 dark:via-white/[0.02] dark:to-transparent"
+    >
+      <div class="grid gap-0 lg:grid-cols-[1fr_minmax(0,22rem)]">
+        <!-- Главная книга -->
+        <button
+          type="button"
+          class="group flex items-center gap-5 p-5 text-left sm:p-6"
+          @click="openBook(hero)"
+        >
+          <LibraryBookCover
+            :url="hero.cover_url"
+            :title="hero.title"
+            :author="hero.author"
+            :width="160"
+            class="w-24 shrink-0 transition-transform duration-300 group-hover:-translate-y-1 sm:w-28"
+          />
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-semibold uppercase tracking-wider text-brand-500">Продолжить чтение</p>
+            <h2 class="mt-1 line-clamp-2 text-lg font-semibold text-gray-900 dark:text-white sm:text-xl">
+              {{ hero.title }}
+            </h2>
+            <p class="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">{{ hero.author || "Автор не указан" }}</p>
+            <div class="mt-4 flex items-center gap-3">
+              <div class="h-1.5 max-w-xs flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-white/10">
+                <div class="h-full rounded-full bg-brand-500" :style="{ width: `${hero.progress.percentage}%` }" />
+              </div>
+              <span class="text-xs tabular-nums text-gray-500">{{ hero.progress.percentage }}%</span>
+            </div>
+            <span class="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-colors group-hover:bg-brand-600">
+              <BookOpen class="h-4 w-4" />
+              Страница {{ hero.progress.current_page || 1 }} из {{ hero.total_pages }}
+            </span>
+          </div>
+        </button>
 
-    <!-- Единый блок фильтров: поиск на виду, автор и язык — в панели «Фильтры»; «Сбросить всё» доступно, как только что-то применено -->
+        <!-- Ещё начатые -->
+        <div
+          v-if="continueReading.length > 1"
+          class="border-t border-gray-200/70 p-3 dark:border-gray-800 lg:border-l lg:border-t-0"
+        >
+          <p class="px-2 pb-1 pt-1 text-xs font-medium text-gray-500 dark:text-gray-400">Также читаете</p>
+          <button
+            v-for="b in continueReading.slice(1)"
+            :key="b.id"
+            type="button"
+            class="flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-white/80 dark:hover:bg-white/[0.04]"
+            @click="openBook(b)"
+          >
+            <LibraryBookCover :url="b.cover_url" :title="b.title" :width="64" compact class="w-9 shrink-0" />
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ b.title }}</p>
+              <div class="mt-1.5 flex items-center gap-2">
+                <div class="h-1 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-white/10">
+                  <div class="h-full rounded-full bg-brand-500" :style="{ width: `${b.progress.percentage}%` }" />
+                </div>
+                <span class="text-[11px] tabular-nums text-gray-500">{{ b.progress.percentage }}%</span>
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Личная статистика -->
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <UiStat label="Доступно" :value="summary.available" :icon="Library" tone="primary" :loading="firstLoad" />
+      <UiStat label="Читаю" :value="summary.reading" :icon="BookOpen" tone="info" :loading="firstLoad" clickable :active="shelf === 'reading'" @click="setShelf('reading')" />
+      <UiStat label="Прочитано" :value="summary.completed" :icon="BookCheck" tone="success" :loading="firstLoad" clickable :active="shelf === 'completed'" @click="setShelf('completed')" />
+      <UiStat label="Время чтения" :value="formatDuration(summary.totalSeconds)" :icon="Clock" tone="neutral" :loading="firstLoad" />
+    </div>
+
+    <!-- Полки -->
+    <UiTabs :model-value="shelf" :tabs="shelfTabs" @update:model-value="setShelf" />
+
+    <!-- Поиск и фильтры -->
     <UiFilterBar
       v-model:search="searchQuery"
-      search-placeholder="Поиск по названию…"
-      :debounce="0"
+      search-placeholder="Название, автор или ISBN…"
+      :debounce="300"
       :chips="filterChips"
       :active-count="filterChips.length"
       :total="pagination.total"
       persist-key="library"
-      @search="handleSearch"
+      @search="onFilterChange"
       @remove="removeFilterChip"
       @reset="resetFilters"
     >
-      <template #filters>
-        <!-- Автор: поле с подсказками (класс group нужен closeDropdowns для закрытия по клику вне) -->
-        <div class="group relative">
-          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Автор</span>
-          <div class="relative">
-            <User class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              v-model="authorQuery"
-              type="text"
-              placeholder="Автор произведения…"
-              class="h-9 w-full rounded-lg border border-gray-300 bg-transparent pl-9 pr-14 text-sm text-gray-800 placeholder:text-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:text-gray-100"
-              @focus="showAuthorDropdown = true"
-              @input="showAuthorDropdown = true"
-            />
-            <button
-              v-if="authorQuery"
-              type="button"
-              aria-label="Очистить автора"
-              class="absolute right-8 top-1/2 -translate-y-1/2 rounded p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              @click.stop="clearAuthor"
-            >
-              <X class="h-3.5 w-3.5" />
-            </button>
-            <ChevronDown
-              class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 transition-transform duration-200"
-              :class="showAuthorDropdown ? 'rotate-180 text-primary' : ''"
-            />
-          </div>
-
-          <!-- Список подсказок авторов -->
-          <div
-            v-if="showAuthorDropdown && filteredAuthors.length"
-            class="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-60 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 shadow-theme-lg dark:border-gray-800 dark:bg-gray-900"
+      <template #actions>
+        <select
+          v-model="sort"
+          class="h-9 rounded-lg border border-gray-300 bg-transparent px-2 text-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+          aria-label="Сортировка"
+          @change="onFilterChange"
+        >
+          <option value="title">По названию</option>
+          <option value="recent">Недавно читал</option>
+          <option value="added">Новые поступления</option>
+          <option value="progress">По прогрессу</option>
+        </select>
+        <div class="hidden rounded-lg bg-gray-100 p-0.5 dark:bg-white/[0.06] sm:flex" role="group" aria-label="Вид">
+          <button
+            v-for="v in viewModes"
+            :key="v.id"
+            type="button"
+            :title="v.label"
+            :aria-pressed="view === v.id"
+            class="flex h-8 w-8 items-center justify-center rounded-md transition-colors"
+            :class="view === v.id ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-white' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'"
+            @click="setView(v.id)"
           >
-            <div
-              v-for="author in filteredAuthors"
-              :key="author"
-              class="cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/[0.06]"
-              :class="authorQuery === author ? 'bg-primary-50 text-primary dark:bg-primary-500/15' : ''"
-              @click="selectAuthor(author)"
-            >
-              {{ author }}
-            </div>
-          </div>
+            <component :is="v.icon" class="h-4 w-4" />
+          </button>
         </div>
-
-        <!-- Язык: обычный select вместо самописного выпадающего списка (меньше кода, работает с клавиатурой) -->
+      </template>
+      <template #filters>
+        <label class="block">
+          <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Автор</span>
+          <input
+            v-model="author"
+            list="library-authors"
+            type="text"
+            placeholder="Любой автор"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:text-gray-100"
+            @change="onFilterChange"
+          />
+          <datalist id="library-authors">
+            <option v-for="a in authors" :key="a" :value="a" />
+          </datalist>
+        </label>
         <label class="block">
           <span class="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Язык</span>
           <select
-            :value="selectedLanguage"
-            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-            @change="(e) => selectLanguage((e.target as HTMLSelectElement).value)"
+            v-model="language"
+            class="h-9 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+            @change="onFilterChange"
           >
-            <option v-for="lang in languageOptions" :key="lang.value" :value="lang.value">{{ lang.label }}</option>
+            <option v-for="l in languageOptions" :key="l.value" :value="l.value">{{ l.label }}</option>
           </select>
         </label>
       </template>
     </UiFilterBar>
 
-    <!-- Загрузка -->
-    <div v-if="loading" class="rounded-xl border border-gray-200 bg-white py-24 text-center dark:border-gray-800 dark:bg-white/[0.03]">
-      <div class="inline-block h-10 w-10 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"></div>
-      <p class="mt-4 text-sm text-gray-500">Загрузка каталога...</p>
+    <!-- Загрузка (скелетон) -->
+    <div v-if="loading && !books.length" class="grid grid-cols-2 gap-x-4 gap-y-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      <div v-for="i in 12" :key="i" class="animate-pulse">
+        <div class="aspect-[3/4] rounded-md bg-gray-200 dark:bg-white/[0.06]" />
+        <div class="mt-3 h-3.5 w-4/5 rounded bg-gray-200 dark:bg-white/[0.06]" />
+        <div class="mt-2 h-3 w-1/2 rounded bg-gray-100 dark:bg-white/[0.04]" />
+      </div>
     </div>
 
-    <!-- Пусто: причина + следующий шаг (сброс фильтров) -->
-    <div v-else-if="books.length === 0" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <UiEmptyState
-        :icon="BookX"
-        title="Ничего не найдено"
-        :description="searchQuery || selectedLanguage || authorQuery
-          ? 'Попробуйте изменить параметры поиска, чтобы найти нужную книгу'
-          : 'У вас пока нет доступа к книгам в библиотеке'"
-      >
-        <template v-if="searchQuery || selectedLanguage || authorQuery" #actions>
-          <UiButton variant="outline" size="sm" @click="resetFilters">Сбросить фильтры</UiButton>
+    <!-- Пусто -->
+    <div v-else-if="!books.length" class="rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+      <UiEmptyState :icon="BookX" :title="emptyState.title" :description="emptyState.text">
+        <template v-if="hasFilters || shelf !== 'all'" #actions>
+          <UiButton variant="outline" size="sm" @click="resetAll">Показать все книги</UiButton>
         </template>
       </UiEmptyState>
     </div>
 
-    <!-- Список книг: карточка, пагинация — футер внутри -->
-    <div v-else id="library-list" class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
-      <!-- Шапка колонок (только на десктопе) -->
-      <div class="hidden grid-cols-12 gap-4 border-b border-gray-200 bg-white px-4 py-3 text-xs font-medium text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400 md:grid">
-        <div class="col-span-5">Название</div>
-        <div class="col-span-2">Автор</div>
-        <div class="col-span-2 text-center">Язык</div>
-        <div class="col-span-1 text-center">Год</div>
-        <div class="col-span-2 text-right">Прогресс</div>
+    <template v-else>
+      <!-- Сетка -->
+      <div
+        v-if="view === 'grid'"
+        class="grid grid-cols-2 gap-x-4 gap-y-7 transition-opacity sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+        :class="{ 'opacity-60': loading }"
+      >
+        <button
+          v-for="book in books"
+          :key="book.id"
+          type="button"
+          class="group text-left focus:outline-none"
+          @click="openBook(book)"
+        >
+          <LibraryBookCover
+            :url="book.cover_url"
+            :title="book.title"
+            :author="book.author"
+            class="transition duration-300 group-hover:-translate-y-1 group-hover:shadow-lg group-focus-visible:ring-2 group-focus-visible:ring-brand-500"
+          >
+            <!-- Бейджи -->
+            <div class="absolute left-2 top-2 flex flex-col items-start gap-1">
+              <span v-if="book.progress.completed" class="badge bg-success-500 text-white"><Check class="h-3 w-3" />Прочитано</span>
+              <span v-else-if="book.isNew && !book.progress.current_page" class="badge bg-brand-500 text-white">Новинка</span>
+            </div>
+            <span v-if="book.expiresAt" class="badge absolute bottom-2 left-2 bg-black/70 text-white" :title="`Доступ до ${formatDate(book.expiresAt)}`">
+              <Timer class="h-3 w-3" />до {{ formatDate(book.expiresAt, true) }}
+            </span>
+            <!-- Прогресс по нижнему краю обложки -->
+            <div v-if="book.progress.current_page && !book.progress.completed" class="absolute inset-x-0 bottom-0 h-1 bg-black/20">
+              <div class="h-full bg-brand-500" :style="{ width: `${book.progress.percentage}%` }" />
+            </div>
+            <!-- Действие при наведении -->
+            <div class="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/60 via-black/0 to-transparent pb-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <span class="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-gray-900 shadow">
+                {{ book.progress.current_page && !book.progress.completed ? "Продолжить" : book.progress.completed ? "Перечитать" : "Читать" }}
+              </span>
+            </div>
+          </LibraryBookCover>
+          <h3 class="mt-3 line-clamp-2 text-sm font-semibold leading-snug text-gray-900 transition-colors group-hover:text-brand-500 dark:text-white">
+            {{ book.title }}
+          </h3>
+          <p class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{{ book.author || "Автор не указан" }}</p>
+          <p class="mt-1 flex items-center gap-2 text-[11px] text-gray-400">
+            <span>{{ book.total_pages }} стр.</span>
+            <span v-if="book.language">· {{ langShort(book.language) }}</span>
+            <span v-if="book.published_year">· {{ book.published_year }}</span>
+            <span v-if="book.progress.current_page && !book.progress.completed" class="ml-auto font-medium tabular-nums text-brand-500">{{ book.progress.percentage }}%</span>
+          </p>
+        </button>
       </div>
 
-      <!-- Строки книг: кликабельны целиком -->
-      <div
-        v-for="book in books"
-        :key="book.id"
-        class="group grid cursor-pointer grid-cols-1 gap-4 border-b border-gray-100 px-4 py-3 transition-colors last:border-b-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/[0.03] md:grid-cols-12"
-        @click="openBook(book)"
-      >
-        <!-- Название + бейдж «Продолжить» -->
-        <div class="col-span-5 flex items-center gap-3">
-          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary transition-colors group-hover:bg-primary group-hover:text-white dark:bg-primary-500/15">
-            <BookOpen class="h-5 w-5" />
-          </div>
-          <div class="min-w-0">
+      <!-- Список -->
+      <div v-else class="overflow-hidden rounded-xl border border-gray-200 bg-white transition-opacity dark:border-gray-800 dark:bg-white/[0.03]" :class="{ 'opacity-60': loading }">
+        <button
+          v-for="book in books"
+          :key="book.id"
+          type="button"
+          class="group flex w-full items-center gap-4 border-b border-gray-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-white/[0.03]"
+          @click="openBook(book)"
+        >
+          <LibraryBookCover :url="book.cover_url" :title="book.title" :width="80" compact class="w-10 shrink-0" />
+          <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
-              <h4 class="truncate text-sm font-semibold leading-tight text-gray-900 transition-colors group-hover:text-primary dark:text-white">
-                {{ book.title }}
-              </h4>
-              <UiBadge v-if="book.progress && book.progress.current_page > 0" size="sm" color="primary" class="shrink-0">Продолжить</UiBadge>
+              <h3 class="truncate text-sm font-semibold text-gray-900 group-hover:text-brand-500 dark:text-white">{{ book.title }}</h3>
+              <UiBadge v-if="book.progress.completed" size="sm" color="success">Прочитано</UiBadge>
+              <UiBadge v-else-if="book.isNew && !book.progress.current_page" size="sm" color="primary">Новинка</UiBadge>
             </div>
-            <p class="mt-0.5 truncate text-xs text-gray-500 md:hidden">
-              {{ book.author || "Автор не указан" }}
+            <p class="mt-0.5 truncate text-xs text-gray-500">
+              {{ book.author || "Автор не указан" }} · {{ book.total_pages }} стр.<template v-if="book.published_year"> · {{ book.published_year }}</template>
             </p>
           </div>
-        </div>
-
-        <!-- Автор -->
-        <div class="col-span-2 hidden items-center md:flex">
-          <span class="truncate text-sm text-gray-600 dark:text-gray-400">
-            {{ book.author || "Автор не указан" }}
-          </span>
-        </div>
-
-        <!-- Язык -->
-        <div class="col-span-2 hidden items-center justify-center md:flex">
-          <span class="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-white/[0.06] dark:text-gray-400">
-            <Globe class="h-3.5 w-3.5" />
-            {{ getLanguageLabel(book.language) }}
-          </span>
-        </div>
-
-        <!-- Год -->
-        <div class="col-span-1 hidden items-center justify-center md:flex">
-          <span class="text-sm text-gray-500">
-            {{ book.published_year || "—" }}
-          </span>
-        </div>
-
-        <!-- Прогресс (десктоп) -->
-        <div class="col-span-2 hidden items-center justify-end md:flex">
-          <div v-if="book.progress && book.progress.current_page > 0" class="flex items-center gap-3">
-            <div class="h-1.5 w-24 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
-              <div
-                class="h-full rounded-full bg-primary transition-all duration-500 ease-out"
-                :style="{ width: `${book.progress.percentage}%` }"
-              ></div>
-            </div>
-            <span class="text-xs tabular-nums text-gray-500">
-              {{ book.progress.percentage }}%
-            </span>
+          <span class="hidden w-12 text-center text-xs font-medium text-gray-500 md:block">{{ langShort(book.language) }}</span>
+          <span v-if="book.expiresAt" class="hidden items-center gap-1 text-xs text-warning-600 lg:flex"><Timer class="h-3.5 w-3.5" />до {{ formatDate(book.expiresAt) }}</span>
+          <div class="hidden w-40 items-center justify-end gap-2 sm:flex">
+            <template v-if="book.progress.current_page">
+              <div class="h-1.5 w-24 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+                <div class="h-full rounded-full" :class="book.progress.completed ? 'bg-success-500' : 'bg-brand-500'" :style="{ width: `${book.progress.percentage}%` }" />
+              </div>
+              <span class="w-9 text-right text-xs tabular-nums text-gray-500">{{ book.progress.percentage }}%</span>
+            </template>
+            <span v-else class="text-xs text-gray-400">Не начата</span>
           </div>
-          <div v-else class="flex items-center gap-2 text-xs text-gray-400">
-            <Clock class="h-3.5 w-3.5" />
-            Не начата
-          </div>
-        </div>
-
-        <!-- Прогресс (мобильный) -->
-        <div class="col-span-1 flex items-center justify-end md:hidden">
-          <div v-if="book.progress && book.progress.current_page > 0" class="flex items-center gap-2">
-            <div class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
-              <div
-                class="h-full rounded-full bg-primary"
-                :style="{ width: `${book.progress.percentage}%` }"
-              ></div>
-            </div>
-            <span class="text-xs text-primary">
-              {{ book.progress.percentage }}%
-            </span>
-          </div>
-          <span v-else class="text-xs text-gray-400">—</span>
-        </div>
+          <ChevronRight class="h-4 w-4 shrink-0 text-gray-300 group-hover:text-brand-500" />
+        </button>
       </div>
 
-      <!-- Единая пагинация внутри карточки (раньше была снаружи по центру) -->
-      <UiPagination
-        :current-page="pagination.page"
-        :total-pages="Math.ceil(pagination.total / pagination.limit)"
-        :total="pagination.total"
-        :limit="pagination.limit"
-        :limit-options="[12, 24, 48]"
-        @update:page="handlePageChange"
-        @update:limit="(l: number) => { pagination.limit = l; pagination.page = 1; fetchBooks(); }"
-      />
-    </div>
+      <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+        <UiPagination
+          :current-page="pagination.page"
+          :total-pages="Math.ceil(pagination.total / pagination.limit)"
+          :total="pagination.total"
+          :limit="pagination.limit"
+          :limit-options="[12, 24, 48]"
+          @update:page="onPageChange"
+          @update:limit="onLimitChange"
+        />
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { 
-  Library, 
-  Search, 
-  User, 
-  Globe, 
-  ChevronDown, 
-  BookOpen, 
-  BookX, 
-  Clock, 
-  X,
-  BookCheck
+import {
+  Library, BookOpen, BookCheck, BookX, Clock, Check, Timer, ChevronRight, Settings2,
+  LayoutGrid, List, BookMarked, Sparkles,
 } from "lucide-vue-next";
 import { useToast } from "~/composables/useToast";
 import { usePermissions } from "~/composables/usePermissions";
-
-const { isStaff } = usePermissions();
+import { Permission } from "~/types/permissions";
 
 definePageMeta({ layout: "default" as any });
+useHead({ title: "Библиотека" });
 
-interface Book {
+interface CatalogBook {
   id: string;
   title: string;
   author: string | null;
-  description: string | null;
   language: string | null;
   cover_url: string | null;
   published_year: number | null;
   total_pages: number;
-  progress?: {
+  isNew: boolean;
+  expiresAt: string | null;
+  progress: {
     current_page: number;
-    total_pages: number;
+    max_page: number;
     percentage: number;
-    lastReadAt: string;
+    lastReadAt: string | null;
+    completed: boolean;
+    totalSeconds: number;
   };
 }
 
-interface Pagination {
-  page: number;
-  limit: number;
-  total: number;
-}
+const router = useRouter();
+const toast = useToast();
+const { hasPermission } = usePermissions();
+const canManage = computed(() => hasPermission(Permission.LIBRARY_MANAGE));
 
 const languageOptions = [
   { value: "", label: "Все языки" },
-  { value: "ru", label: "🇷🇺 Русский" },
-  { value: "uz", label: "🇺🇿 O'zbekcha" },
-  { value: "en", label: "🇬🇧 English" },
-  { value: "kk", label: "🇰🇿 Қазақша" }
+  { value: "ru", label: "Русский" },
+  { value: "uz", label: "O'zbekcha" },
+  { value: "en", label: "English" },
+  { value: "kk", label: "Қазақша" },
 ];
+const langShort = (l: string | null) => (l ? l.toUpperCase() : "—");
 
-const router = useRouter();
-const toast = useToast();
-
+// ---------- состояние ----------
 const loading = ref(false);
-const books = ref<Book[]>([]);
-const searchQuery = ref("");
-const selectedLanguage = ref("");
-const authorQuery = ref("");
+const firstLoad = ref(true);
+const books = ref<CatalogBook[]>([]);
+const continueReading = ref<CatalogBook[]>([]);
+const summary = ref({ available: 0, reading: 0, completed: 0, totalSeconds: 0 });
 const authors = ref<string[]>([]);
 
-const showAuthorDropdown = ref(false);
-const showLanguageDropdown = ref(false);
+const searchQuery = ref("");
+const author = ref("");
+const language = ref("");
+const shelf = ref<"all" | "reading" | "completed" | "unread">("all");
+const sort = ref("title");
+const view = ref<"grid" | "list">("grid");
+const pagination = ref({ page: 1, limit: 24, total: 0 });
 
-const pagination = ref<Pagination>({
-  page: 1,
-  limit: 12,
-  total: 0,
-});
+const viewModes = [
+  { id: "grid" as const, label: "Обложки", icon: LayoutGrid },
+  { id: "list" as const, label: "Список", icon: List },
+];
 
-const filteredAuthors = computed(() => {
-  if (!authorQuery.value) return authors.value;
-  const q = authorQuery.value.toLowerCase();
-  return authors.value.filter(a => a.toLowerCase().includes(q));
-});
+const hero = computed(() => continueReading.value[0] || null);
+const hasFilters = computed(() => !!(searchQuery.value || author.value || language.value));
 
-const selectedLanguageLabel = computed(() => {
-  const opt = languageOptions.find(o => o.value === selectedLanguage.value);
-  return opt ? opt.label : "Все языки";
-});
+const shelfTabs = computed(() => [
+  { id: "all", label: "Все книги", icon: Library, count: summary.value.available },
+  { id: "reading", label: "Читаю", icon: BookMarked, count: summary.value.reading },
+  { id: "completed", label: "Прочитанные", icon: BookCheck, count: summary.value.completed },
+  {
+    id: "unread",
+    label: "Не начатые",
+    icon: Sparkles,
+    count: Math.max(summary.value.available - summary.value.reading - summary.value.completed, 0),
+  },
+]);
 
-// Чипы применённых фильтров: поиск, автор, язык — состояние видно и снимается по одному
 const filterChips = computed(() => {
   const chips: { key: string; label: string }[] = [];
   if (searchQuery.value) chips.push({ key: "search", label: `Поиск: ${searchQuery.value}` });
-  if (authorQuery.value) chips.push({ key: "author", label: `Автор: ${authorQuery.value}` });
-  if (selectedLanguage.value) chips.push({ key: "language", label: `Язык: ${selectedLanguageLabel.value}` });
+  if (author.value) chips.push({ key: "author", label: `Автор: ${author.value}` });
+  if (language.value) chips.push({ key: "language", label: `Язык: ${languageOptions.find((l) => l.value === language.value)?.label}` });
   return chips;
 });
-// Снятие чипа вызывает прежние обработчики очистки
-const removeFilterChip = (key: string) => {
-  if (key === "author") return clearAuthor();
-  if (key === "language") return clearLanguage();
-  searchQuery.value = "";
-  pagination.value.page = 1;
-  fetchBooks();
+
+const emptyState = computed(() => {
+  if (hasFilters.value) return { title: "Ничего не найдено", text: "Измените запрос или сбросьте фильтры" };
+  if (shelf.value === "reading") return { title: "Вы пока ничего не читаете", text: "Откройте любую книгу — она появится здесь" };
+  if (shelf.value === "completed") return { title: "Прочитанных книг пока нет", text: "Книга попадёт сюда, когда вы дойдёте до последней страницы" };
+  if (shelf.value === "unread") return { title: "Все книги начаты", text: "Отличный результат!" };
+  return { title: "Библиотека пуста", text: "Вам пока не выдали доступ к книгам. Обратитесь к куратору или администратору." };
+});
+
+// ---------- загрузка ----------
+let requestId = 0;
+const fetchBooks = async () => {
+  const id = ++requestId;
+  loading.value = true;
+  try {
+    const params: Record<string, string> = {
+      page: String(pagination.value.page),
+      limit: String(pagination.value.limit),
+      shelf: shelf.value,
+      sort: sort.value,
+    };
+    if (searchQuery.value) params.search = searchQuery.value;
+    if (author.value) params.author = author.value;
+    if (language.value) params.language = language.value;
+
+    const res = await $fetch<{
+      books: CatalogBook[];
+      total: number;
+      summary: typeof summary.value;
+      continueReading: CatalogBook[];
+    }>("/api/library/catalog", { params });
+    if (id !== requestId) return; // пришёл ответ на устаревший запрос
+    books.value = res.books;
+    pagination.value.total = res.total;
+    summary.value = res.summary;
+    if (pagination.value.page === 1) continueReading.value = res.continueReading;
+  } catch (error: any) {
+    if (id === requestId) toast.error(error?.data?.message || "Не удалось загрузить каталог");
+  } finally {
+    if (id === requestId) {
+      loading.value = false;
+      firstLoad.value = false;
+    }
+  }
 };
 
 const fetchAuthors = async () => {
   try {
-    const res = await $fetch<{ authors: string[] }>("/api/library/catalog/authors");
-    authors.value = res.authors;
-  } catch (error) {
-    console.warn("Failed to fetch authors", error);
-  }
+    authors.value = (await $fetch<{ authors: string[] }>("/api/library/catalog/authors")).authors;
+  } catch { /* подсказки не критичны */ }
 };
 
-const fetchBooks = async () => {
-  loading.value = true;
-  try {
-    const params = new URLSearchParams({
-      page: pagination.value.page.toString(),
-      limit: pagination.value.limit.toString(),
-      ...(searchQuery.value && { search: searchQuery.value }),
-      ...(selectedLanguage.value && { language: selectedLanguage.value }),
-      ...(authorQuery.value && { author: authorQuery.value })
-    });
-
-    const response = await $fetch<{ books: Book[]; total: number }>(`/api/library/catalog?${params}`);
-    books.value = response.books;
-    pagination.value.total = response.total;
-  } catch (error: any) {
-    toast.error(error.data?.message || "Ошибка загрузки каталога");
-  } finally {
-    loading.value = false;
-  }
-};
-
-const selectAuthor = (author: string) => {
-  authorQuery.value = author;
-  showAuthorDropdown.value = false;
+// ---------- действия ----------
+const onFilterChange = () => {
   pagination.value.page = 1;
+  savePrefs();
   fetchBooks();
 };
-
-const clearAuthor = () => {
-  authorQuery.value = "";
-  showAuthorDropdown.value = false;
-  pagination.value.page = 1;
-  fetchBooks();
+const setShelf = (value: string) => {
+  shelf.value = (shelf.value === value && value !== "all" ? "all" : value) as typeof shelf.value;
+  if (shelf.value === "reading" && sort.value === "title") sort.value = "recent";
+  onFilterChange();
 };
-
-const selectLanguage = (val: string) => {
-  selectedLanguage.value = val;
-  showLanguageDropdown.value = false;
-  pagination.value.page = 1;
-  fetchBooks();
+const setView = (v: "grid" | "list") => {
+  view.value = v;
+  savePrefs();
 };
-
-const clearLanguage = () => {
-  selectedLanguage.value = "";
-  showLanguageDropdown.value = false;
-  pagination.value.page = 1;
-  fetchBooks();
+const removeFilterChip = (key: string) => {
+  if (key === "search") searchQuery.value = "";
+  if (key === "author") author.value = "";
+  if (key === "language") language.value = "";
+  onFilterChange();
 };
-
 const resetFilters = () => {
   searchQuery.value = "";
-  selectedLanguage.value = "";
-  authorQuery.value = "";
-  pagination.value.page = 1;
-  fetchBooks();
+  author.value = "";
+  language.value = "";
+  onFilterChange();
 };
-
-let searchTimeout: NodeJS.Timeout;
-const handleSearch = () => {
-  clearTimeout(searchTimeout);
-  searchTimeout = setTimeout(() => {
-    pagination.value.page = 1;
-    fetchBooks();
-  }, 300);
+const resetAll = () => {
+  shelf.value = "all";
+  resetFilters();
 };
-
-const handlePageChange = (page: number) => {
+const onPageChange = (page: number) => {
   pagination.value.page = page;
   fetchBooks();
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
-
-const openBook = (book: Book) => {
-  router.push(`/library/${book.id}`);
+const onLimitChange = (limit: number) => {
+  pagination.value.limit = limit;
+  pagination.value.page = 1;
+  savePrefs();
+  fetchBooks();
 };
+const openBook = (book: { id: string }) => router.push(`/library/${book.id}`);
 
-const getLanguageLabel = (lang: string | null) => {
-  if (!lang) return "—";
-  const labels: Record<string, string> = { ru: "RU", uz: "UZ", en: "EN", kk: "KK" };
-  return labels[lang] || lang.toUpperCase();
+// ---------- форматирование ----------
+const formatDuration = (sec: number) => {
+  if (!sec) return "0 мин";
+  const h = Math.floor(sec / 3600);
+  const m = Math.round((sec % 3600) / 60);
+  return h ? `${h} ч ${m} мин` : `${Math.max(m, 1)} мин`;
+};
+const formatDate = (d: string, short = false) =>
+  new Date(d).toLocaleDateString("ru-RU", short ? { day: "2-digit", month: "2-digit" } : { day: "2-digit", month: "2-digit", year: "numeric" });
+
+// ---------- настройки вида (на устройство) ----------
+const PREFS_KEY = "library:catalog-prefs";
+const savePrefs = () => {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ view: view.value, sort: sort.value, limit: pagination.value.limit }));
+  } catch { /* приватный режим */ }
+};
+const loadPrefs = () => {
+  try {
+    const p = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+    if (p.view === "grid" || p.view === "list") view.value = p.view;
+    if (["title", "recent", "added", "progress"].includes(p.sort)) sort.value = p.sort;
+    if ([12, 24, 48].includes(p.limit)) pagination.value.limit = p.limit;
+  } catch { /* приватный режим */ }
 };
 
 onMounted(() => {
+  loadPrefs();
   fetchBooks();
   fetchAuthors();
-  document.addEventListener('click', closeDropdowns);
 });
-
-onUnmounted(() => {
-  document.removeEventListener('click', closeDropdowns);
-});
-
-const closeDropdowns = (e: MouseEvent) => {
-  const target = e.target as HTMLElement;
-  if (!target.closest('.group')) {
-    showAuthorDropdown.value = false;
-    showLanguageDropdown.value = false;
-  }
-};
 </script>
+
+<style scoped>
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.125rem 0.5rem;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+}
+</style>

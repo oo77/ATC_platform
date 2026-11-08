@@ -11,7 +11,10 @@
 
 import { getDbPool } from "../utils/db";
 import { v4 as uuidv4 } from "uuid";
+import { randomBytes } from "crypto";
 import type { RowDataPacket, ResultSetHeader } from "mysql2";
+import { canReadBook } from "../utils/libraryAccess";
+import { resolveBookFilePath } from "../utils/pdfProcessor";
 
 const db = getDbPool();
 
@@ -170,7 +173,11 @@ export async function getBookById(id: string): Promise<Book | null> {
     [id],
   );
 
-  return rows[0] || null;
+  const book = rows[0];
+  if (!book) return null;
+  // Путь из БД может указывать на другую машину — подставляем реальное расположение файла
+  book.original_file_path = resolveBookFilePath(book.original_file_path);
+  return book;
 }
 
 /**
@@ -430,106 +437,21 @@ export async function deleteBookAccess(accessId: string): Promise<void> {
 }
 
 /**
- * Проверить доступ пользователя к книге
+ * Проверить доступ пользователя к книге.
+ * Использует те же правила, что каталог и обложки (server/utils/libraryAccess.ts):
+ * персонал библиотеки — все книги; остальные — личный доступ, роль, группа или курс.
  */
 export async function checkUserBookAccess(
   userId: string,
   bookId: string,
 ): Promise<boolean> {
-  // Проверяем роль пользователя - админы и модераторы имеют доступ ко всем книгам
-  const [userRole] = await db.execute<RowDataPacket[]>(
-    `SELECT role FROM users WHERE id = ? LIMIT 1`,
+  const [userRows] = await db.execute<RowDataPacket[]>(
+    `SELECT id, role FROM users WHERE id = ? LIMIT 1`,
     [userId],
   );
-
-  if (userRole.length > 0) {
-    const role = userRole[0].role;
-    if (role === "ADMIN" || role === "MANAGER") {
-      return true;
-    }
-  }
-
-  // Проверяем прямой доступ пользователя
-  const [directAccess] = await db.execute<RowDataPacket[]>(
-    `SELECT 1 FROM book_access 
-     WHERE book_id = ? 
-       AND user_id = ? 
-       AND (expires_at IS NULL OR expires_at > NOW())
-     LIMIT 1`,
-    [bookId, userId],
-  );
-
-  if (directAccess.length > 0) return true;
-
-  // Проверяем доступ через группы
-  const [groupAccess] = await db.execute<RowDataPacket[]>(
-    `SELECT 1 FROM book_access ba
-     INNER JOIN study_group_students sgs ON ba.group_id = sgs.group_id
-     WHERE ba.book_id = ? 
-       AND sgs.student_id IN (SELECT id FROM students WHERE user_id = ?)
-       AND (ba.expires_at IS NULL OR ba.expires_at > NOW())
-     LIMIT 1`,
-    [bookId, userId],
-  );
-
-  if (groupAccess.length > 0) return true;
-
-  // Проверяем доступ через курсы
-  const [courseAccess] = await db.execute<RowDataPacket[]>(
-    `SELECT 1 FROM book_access ba
-     INNER JOIN study_groups sg ON ba.course_id = sg.course_id
-     INNER JOIN study_group_students sgs ON sg.id = sgs.group_id
-     WHERE ba.book_id = ? 
-       AND sgs.student_id IN (SELECT id FROM students WHERE user_id = ?)
-       AND (ba.expires_at IS NULL OR ba.expires_at > NOW())
-     LIMIT 1`,
-    [bookId, userId],
-  );
-
-  if (courseAccess.length > 0) return true;
-
-  // Проверяем доступ по роли
-  const [roleAccess] = await db.execute<RowDataPacket[]>(
-    `SELECT 1 FROM book_access ba
-     INNER JOIN users u ON ba.role_name = u.role
-     WHERE ba.book_id = ? 
-       AND u.id = ?
-       AND (ba.expires_at IS NULL OR ba.expires_at > NOW())
-     LIMIT 1`,
-    [bookId, userId],
-  );
-
-  return roleAccess.length > 0;
-}
-
-/**
- * Получить доступные книги для пользователя
- */
-export async function getUserAccessibleBooks(userId: string): Promise<Book[]> {
-  const [rows] = await db.execute<(Book & RowDataPacket)[]>(
-    `SELECT DISTINCT b.* FROM books b
-     INNER JOIN book_access ba ON b.id = ba.book_id
-     LEFT JOIN group_students gs ON ba.group_id = gs.group_id
-     LEFT JOIN students s ON gs.student_id = s.id
-     LEFT JOIN study_groups sg ON ba.course_id = sg.course_id
-     LEFT JOIN group_students gs2 ON sg.id = gs2.group_id
-     LEFT JOIN students s2 ON gs2.student_id = s2.id
-     LEFT JOIN users u ON ba.role_name = u.role
-     WHERE b.is_published = TRUE 
-       AND b.status = 'ready'
-       AND b.deleted_at IS NULL
-       AND (ba.expires_at IS NULL OR ba.expires_at > NOW())
-       AND (
-         ba.user_id = ? OR
-         s.user_id = ? OR
-         s2.user_id = ? OR
-         u.id = ?
-       )
-     ORDER BY b.created_at DESC`,
-    [userId, userId, userId, userId],
-  );
-
-  return rows;
+  const user = userRows[0];
+  if (!user) return false;
+  return canReadBook({ id: String(user.id), role: String(user.role) }, bookId);
 }
 
 // ========================================
@@ -546,7 +468,8 @@ export async function createReadingSession(data: {
   user_agent?: string;
 }): Promise<{ id: string; session_token: string }> {
   const id = uuidv4();
-  const session_token = uuidv4() + uuidv4(); // 64 символа
+  // 64 hex-символа — ровно под VARCHAR(64); uuid+uuid давал 72 символа
+  const session_token = randomBytes(32).toString("hex");
 
   await db.execute(
     `INSERT INTO book_reading_sessions (
@@ -566,38 +489,30 @@ export async function createReadingSession(data: {
 }
 
 /**
- * Получить активную сессию по токену
- */
-export async function getSessionByToken(
-  token: string,
-): Promise<BookReadingSession | null> {
-  const [rows] = await db.execute<(BookReadingSession & RowDataPacket)[]>(
-    `SELECT * FROM book_reading_sessions 
-     WHERE session_token = ? 
-       AND ended_at IS NULL
-       AND last_activity_at > DATE_SUB(NOW(), INTERVAL 30 MINUTE)`,
-    [token],
-  );
-
-  return rows[0] || null;
-}
-
-/**
- * Обновить активность сессии
+ * Обновить активность сессии (heartbeat).
+ * Порядок SET важен: MySQL применяет присваивания слева направо, поэтому
+ * pages_viewed и active_seconds считаются от старых current_page/last_activity_at.
  */
 export async function updateSessionActivity(
   sessionId: string,
   currentPage?: number,
+  addSeconds = 0,
 ): Promise<void> {
+  const seconds = Math.max(0, Math.round(addSeconds));
   if (currentPage !== undefined) {
     await db.execute(
-      "UPDATE book_reading_sessions SET last_activity_at = NOW(), current_page = ? WHERE id = ?",
-      [currentPage, sessionId],
+      `UPDATE book_reading_sessions
+       SET pages_viewed = pages_viewed + IF(current_page <> ?, 1, 0),
+           active_seconds = active_seconds + ?,
+           current_page = ?,
+           last_activity_at = NOW()
+       WHERE id = ?`,
+      [currentPage, seconds, currentPage, sessionId],
     );
   } else {
     await db.execute(
-      "UPDATE book_reading_sessions SET last_activity_at = NOW() WHERE id = ?",
-      [sessionId],
+      "UPDATE book_reading_sessions SET active_seconds = active_seconds + ?, last_activity_at = NOW() WHERE id = ?",
+      [seconds, sessionId],
     );
   }
 }
@@ -632,18 +547,35 @@ export async function endUserBookSessions(
 // ========================================
 
 /**
- * Сохранить прогресс чтения
+ * Сохранить прогресс чтения.
+ * last_page — где остановился читатель, max_page — дальше всего, куда он дошёл
+ * (по нему считаем завершение), total_seconds — накопленное реальное время чтения.
  */
 export async function saveReadingProgress(
   userId: string,
   bookId: string,
   lastPage: number,
+  options: { totalPages?: number; addSeconds?: number } = {},
 ): Promise<void> {
+  const addSeconds = Math.max(0, Math.round(options.addSeconds || 0));
+  const totalPages = options.totalPages || 0;
   await db.execute(
-    `INSERT INTO book_reading_progress (id, book_id, user_id, last_page, last_read_at)
-     VALUES (?, ?, ?, ?, NOW())
-     ON DUPLICATE KEY UPDATE last_page = ?, last_read_at = NOW()`,
-    [uuidv4(), bookId, userId, lastPage, lastPage],
+    `INSERT INTO book_reading_progress
+       (id, book_id, user_id, last_page, max_page, total_seconds, first_read_at, last_read_at, completed_at)
+     VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW(), IF(? > 0 AND ? >= ?, NOW(), NULL))
+     ON DUPLICATE KEY UPDATE
+       completed_at = IF(completed_at IS NULL AND ? > 0 AND GREATEST(max_page, ?) >= ?, NOW(), completed_at),
+       last_page = ?,
+       max_page = GREATEST(max_page, ?),
+       total_seconds = total_seconds + ?,
+       first_read_at = COALESCE(first_read_at, NOW()),
+       last_read_at = NOW()`,
+    [
+      uuidv4(), bookId, userId, lastPage, lastPage, addSeconds,
+      totalPages, lastPage, totalPages,
+      totalPages, lastPage, totalPages,
+      lastPage, lastPage, addSeconds,
+    ],
   );
 }
 

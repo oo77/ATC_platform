@@ -1,400 +1,226 @@
 <template>
-  <UiModal
-    :is-open="isOpen"
-    title="Аналитика книги"
-    size="xl"
-    @close="$emit('close')"
-  >
+  <UiModal :is-open="isOpen" title="Аналитика книги" size="xl" @close="$emit('close')">
     <div v-if="book" class="space-y-6">
-      <!-- Информация о книге -->
-      <div
-        class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
-      >
-        <div
-          class="h-16 w-12 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0"
-        >
-          <img
-            v-if="book.cover_url"
-            :src="book.cover_url"
-            :alt="book.title"
-            class="h-full w-full object-cover"
-          />
-        </div>
-        <div>
-          <h3 class="font-semibold text-gray-900 dark:text-white">
-            {{ book.title }}
-          </h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400">
-            {{ book.author || "Автор не указан" }}
+      <!-- Книга + период -->
+      <div class="flex flex-wrap items-center gap-4">
+        <LibraryBookCover :url="book.cover_url" :title="book.title" :width="80" compact class="w-11 shrink-0" />
+        <div class="min-w-0 flex-1">
+          <h3 class="truncate font-semibold text-gray-900 dark:text-white">{{ book.title }}</h3>
+          <p class="truncate text-sm text-gray-500 dark:text-gray-400">
+            {{ book.author || "Автор не указан" }}<template v-if="data"> · {{ data.book.totalPages }} стр.</template>
           </p>
         </div>
+        <span v-if="data?.summary.readingNow" class="inline-flex items-center gap-1.5 rounded-full bg-success-50 px-2.5 py-1 text-xs font-medium text-success-700 dark:bg-success-500/15 dark:text-success-400">
+          <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-success-500" />Читают сейчас: {{ data.summary.readingNow }}
+        </span>
+        <select v-model.number="days" class="h-9 rounded-lg border border-gray-300 bg-transparent px-2 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200" aria-label="Период" @change="load">
+          <option :value="7">7 дней</option>
+          <option :value="30">30 дней</option>
+          <option :value="90">90 дней</option>
+          <option :value="365">Год</option>
+        </select>
       </div>
 
-      <!-- Загрузка -->
-      <div v-if="loading" class="text-center py-12">
-        <div
-          class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-        ></div>
-        <p class="mt-4 text-gray-600 dark:text-gray-400">
-          Загрузка аналитики...
-        </p>
+      <div v-if="loading && !data" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div v-for="i in 4" :key="i" class="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-white/[0.04]" />
       </div>
 
-      <!-- Статистика -->
-      <div v-else-if="analytics">
-        <!-- Общая статистика -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="p-4 bg-primary/10 rounded-lg">
-            <div class="flex items-center gap-3">
-              <svg
-                class="w-8 h-8 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
-              </svg>
-              <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  Всего просмотров
-                </p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                  {{ analytics.totalViews }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-4 bg-success/10 rounded-lg">
-            <div class="flex items-center gap-3">
-              <svg
-                class="w-8 h-8 text-success"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  Уникальных читателей
-                </p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                  {{ analytics.uniqueReaders }}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-4 bg-warning/10 rounded-lg">
-            <div class="flex items-center gap-3">
-              <svg
-                class="w-8 h-8 text-warning"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <div>
-                <p class="text-sm text-gray-600 dark:text-gray-400">
-                  Завершили чтение
-                </p>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">
-                  {{ analytics.completedReaders }}
-                </p>
-              </div>
-            </div>
-          </div>
+      <template v-else-if="data">
+        <!-- KPI -->
+        <div class="grid grid-cols-2 gap-3 lg:grid-cols-4" :class="{ 'opacity-60': loading }">
+          <UiStat label="Читателей" :value="data.summary.readers" :icon="Users" tone="primary" :hint="`за период: ${data.summary.periodReaders}`" />
+          <UiStat label="Дочитали" :value="`${data.summary.completed}`" :icon="BookCheck" tone="success" :hint="`${data.summary.completionRate}% читателей`" :progress="data.summary.completionRate" />
+          <UiStat label="Время чтения" :value="formatDuration(data.summary.totalSeconds)" :icon="Clock" tone="info" :hint="`≈ ${formatDuration(data.summary.avgSecondsPerReader)} на читателя`" />
+          <UiStat label="Средний прогресс" :value="`${data.summary.averageProgress}%`" :icon="TrendingUp" tone="warning" :hint="`${data.summary.sessions} сессий, ${data.summary.pagesViewed} листаний`" :progress="data.summary.averageProgress" />
         </div>
 
-        <!-- Средний прогресс -->
-        <div
-          class="p-4 bg-white dark:bg-boxdark border border-gray-200 dark:border-gray-700 rounded-lg"
-        >
-          <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Средний прогресс чтения
-          </h4>
-          <div class="flex items-center gap-4">
-            <div class="flex-1">
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                <div
-                  class="bg-primary rounded-full h-3 transition-all duration-300"
-                  :style="{ width: `${analytics.averageProgress}%` }"
-                ></div>
-              </div>
-            </div>
-            <span class="text-lg font-semibold text-gray-900 dark:text-white">
-              {{ analytics.averageProgress }}%
-            </span>
-          </div>
-        </div>
+        <div class="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <section class="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+            <h4 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Активность по дням</h4>
+            <LibraryActivityChart :points="data.daily" />
+          </section>
 
-        <!-- Активные читатели -->
-        <div>
-          <h4 class="font-semibold text-gray-900 dark:text-white mb-4">
-            Активные читатели
-          </h4>
-
-          <div
-            v-if="analytics.activeReaders.length === 0"
-            class="text-center py-8 text-gray-500 dark:text-gray-400"
-          >
-            <p>Нет активных читателей</p>
-          </div>
-
-          <div v-else class="space-y-2">
-            <div
-              v-for="reader in analytics.activeReaders"
-              :key="reader.userId"
-              class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"
-                >
-                  <span class="text-sm font-semibold text-primary">
-                    {{ getInitials(reader.userName) }}
-                  </span>
+          <!-- Где останавливаются читатели -->
+          <section class="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Докуда дочитывают</h4>
+            <p class="mb-4 text-xs text-gray-500">Распределение читателей по прогрессу</p>
+            <div class="space-y-3">
+              <div v-for="(b, i) in data.distribution" :key="b.label">
+                <div class="mb-1 flex justify-between text-xs">
+                  <span class="text-gray-600 dark:text-gray-300">{{ b.label }}</span>
+                  <span class="tabular-nums text-gray-500">{{ b.value }}</span>
                 </div>
-                <div>
-                  <p class="font-medium text-gray-900 dark:text-white">
-                    {{ reader.userName }}
-                  </p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">
-                    Последняя активность: {{ formatDate(reader.lastActivity) }}
-                  </p>
-                </div>
-              </div>
-              <div class="text-right">
-                <p class="text-sm font-medium text-gray-900 dark:text-white">
-                  Стр. {{ reader.currentPage }} / {{ book.total_pages }}
-                </p>
-                <div class="flex items-center gap-2 mt-1">
+                <div class="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-white/[0.06]">
                   <div
-                    class="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5"
-                  >
-                    <div
-                      class="bg-primary rounded-full h-1.5"
-                      :style="{ width: `${reader.progress}%` }"
-                    ></div>
-                  </div>
-                  <span class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ reader.progress }}%
-                  </span>
+                    class="h-full rounded-full transition-all duration-500"
+                    :class="i === data.distribution.length - 1 ? 'bg-success-500' : 'bg-brand-500'"
+                    :style="{ width: `${maxBucket ? (b.value / maxBucket) * 100 : 0}%`, opacity: 0.45 + Number(i) * 0.13 }"
+                  />
                 </div>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
-        <!-- История сессий -->
-        <div>
-          <h4 class="font-semibold text-gray-900 dark:text-white mb-4">
-            Последние сессии чтения
-          </h4>
-
-          <div
-            v-if="analytics.recentSessions.length === 0"
-            class="text-center py-8 text-gray-500 dark:text-gray-400"
-          >
-            <p>Нет записей о сессиях</p>
+        <!-- Читатели / сессии -->
+        <section class="rounded-xl border border-gray-200 dark:border-gray-800">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 pt-2 dark:border-gray-800">
+            <UiTabs v-model="tab" :tabs="tabs" class="-mb-px border-b-0" />
+            <input
+              v-if="tab === 'readers'"
+              v-model="readerSearch"
+              type="search"
+              placeholder="Найти читателя…"
+              class="mb-2 h-8 w-48 rounded-lg border border-gray-300 bg-transparent px-3 text-xs dark:border-gray-700 dark:text-gray-200"
+            />
           </div>
 
-          <div v-else class="overflow-x-auto">
-            <table class="w-full">
-              <thead>
-                <tr class="border-b border-gray-200 dark:border-gray-700">
-                  <th
-                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
-                  >
-                    Читатель
-                  </th>
-                  <th
-                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
-                  >
-                    Начало
-                  </th>
-                  <th
-                    class="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400"
-                  >
-                    Окончание
-                  </th>
-                  <th
-                    class="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400"
-                  >
-                    Длительность
-                  </th>
+          <div class="max-h-80 overflow-y-auto">
+            <table v-if="tab === 'readers'" class="w-full text-sm">
+              <thead class="sticky top-0 bg-white text-xs text-gray-500 dark:bg-gray-900">
+                <tr>
+                  <th class="px-4 py-2 text-left font-medium">Читатель</th>
+                  <th class="px-4 py-2 text-left font-medium">Прогресс</th>
+                  <th class="hidden px-4 py-2 text-right font-medium sm:table-cell">Время</th>
+                  <th class="hidden px-4 py-2 text-right font-medium md:table-cell">Сессий</th>
+                  <th class="px-4 py-2 text-right font-medium">Последнее чтение</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                <tr
-                  v-for="session in analytics.recentSessions"
-                  :key="session.id"
-                  class="hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                    {{ session.userName }}
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                <tr v-for="r in filteredReaders" :key="r.userId">
+                  <td class="px-4 py-2.5">
+                    <div class="flex items-center gap-2">
+                      <span v-if="r.readingNow" class="h-2 w-2 shrink-0 rounded-full bg-success-500" title="Читает сейчас" />
+                      <div class="min-w-0">
+                        <p class="truncate font-medium text-gray-900 dark:text-white">{{ r.name }}</p>
+                        <p class="truncate text-xs text-gray-500">{{ r.role }} · {{ r.email }}</p>
+                      </div>
+                    </div>
                   </td>
-                  <td
-                    class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    {{ formatDateTime(session.startedAt) }}
+                  <td class="px-4 py-2.5">
+                    <div class="flex items-center gap-2">
+                      <div class="h-1.5 w-20 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+                        <div class="h-full rounded-full" :class="r.completedAt ? 'bg-success-500' : 'bg-brand-500'" :style="{ width: `${r.progress}%` }" />
+                      </div>
+                      <span class="text-xs tabular-nums text-gray-500">{{ r.progress }}%</span>
+                    </div>
+                    <p class="mt-0.5 text-[11px] text-gray-400">стр. {{ r.currentPage }}<template v-if="r.maxPage > r.currentPage"> (макс. {{ r.maxPage }})</template></p>
                   </td>
-                  <td
-                    class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400"
-                  >
-                    {{
-                      session.endedAt
-                        ? formatDateTime(session.endedAt)
-                        : "В процессе"
-                    }}
+                  <td class="hidden px-4 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-300 sm:table-cell">{{ formatDuration(r.totalSeconds) }}</td>
+                  <td class="hidden px-4 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-300 md:table-cell">{{ r.sessions }}</td>
+                  <td class="px-4 py-2.5 text-right text-xs text-gray-500">{{ relative(r.lastReadAt) }}</td>
+                </tr>
+                <tr v-if="!filteredReaders.length">
+                  <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">{{ data.readers.length ? "Никого не нашли" : "Книгу ещё никто не открывал" }}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <table v-else class="w-full text-sm">
+              <thead class="sticky top-0 bg-white text-xs text-gray-500 dark:bg-gray-900">
+                <tr>
+                  <th class="px-4 py-2 text-left font-medium">Читатель</th>
+                  <th class="px-4 py-2 text-left font-medium">Начало</th>
+                  <th class="px-4 py-2 text-right font-medium">Чтение</th>
+                  <th class="hidden px-4 py-2 text-right font-medium sm:table-cell">Листаний</th>
+                  <th class="px-4 py-2 text-right font-medium">Статус</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                <tr v-for="s in data.recentSessions" :key="s.id">
+                  <td class="px-4 py-2.5 font-medium text-gray-900 dark:text-white">{{ s.userName }}</td>
+                  <td class="px-4 py-2.5 text-xs text-gray-500">{{ formatDateTime(s.startedAt) }}</td>
+                  <td class="px-4 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-300">{{ formatDuration(s.activeSeconds) }}</td>
+                  <td class="hidden px-4 py-2.5 text-right tabular-nums text-gray-600 dark:text-gray-300 sm:table-cell">{{ s.pagesViewed }}</td>
+                  <td class="px-4 py-2.5 text-right">
+                    <UiBadge v-if="s.isActive" size="sm" color="success">Читает</UiBadge>
+                    <span v-else class="text-xs text-gray-400">стр. {{ s.currentPage }}</span>
                   </td>
-                  <td
-                    class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 text-right"
-                  >
-                    {{ formatDuration(session.duration) }}
-                  </td>
+                </tr>
+                <tr v-if="!data.recentSessions.length">
+                  <td colspan="5" class="px-4 py-8 text-center text-sm text-gray-500">Сессий пока не было</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
+        </section>
+        <p class="text-xs text-gray-400">
+          Время чтения считается только пока книга открыта на экране и читатель активен; простой дольше двух минут не засчитывается.
+        </p>
+      </template>
     </div>
   </UiModal>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, computed, watch } from "vue";
+import { Users, BookCheck, Clock, TrendingUp } from "lucide-vue-next";
 import { useToast } from "~/composables/useToast";
 
-interface Book {
-  id: string;
-  title: string;
-  author: string | null;
-  cover_url: string | null;
-  total_pages: number;
-}
-
-interface Analytics {
-  totalViews: number;
-  uniqueReaders: number;
-  completedReaders: number;
-  averageProgress: number;
-  activeReaders: Array<{
-    userId: number;
-    userName: string;
-    currentPage: number;
-    progress: number;
-    lastActivity: string;
-  }>;
-  recentSessions: Array<{
-    id: number;
-    userName: string;
-    startedAt: string;
-    endedAt: string | null;
-    duration: number;
-  }>;
-}
-
-interface Props {
-  isOpen: boolean;
-  book: Book | null;
-}
-
-const props = defineProps<Props>();
-defineEmits<{
-  close: [];
-}>();
-
+interface Book { id: string; title: string; author: string | null; cover_url: string | null }
+const props = defineProps<{ isOpen: boolean; book: Book | null }>();
+defineEmits<{ close: [] }>();
 const toast = useToast();
 
 const loading = ref(false);
-const analytics = ref<Analytics | null>(null);
+const data = ref<any>(null);
+const days = ref(30);
+const tab = ref("readers");
+const readerSearch = ref("");
 
-const fetchAnalytics = async () => {
+const tabs = computed(() => [
+  { id: "readers", label: "Читатели", count: data.value?.readers.length ?? null },
+  { id: "sessions", label: "Последние сессии", count: data.value?.recentSessions.length ?? null },
+]);
+const maxBucket = computed(() => Math.max(0, ...(data.value?.distribution || []).map((b: any) => b.value)));
+const filteredReaders = computed(() => {
+  const q = readerSearch.value.trim().toLowerCase();
+  const list = data.value?.readers || [];
+  return q ? list.filter((r: any) => `${r.name} ${r.email}`.toLowerCase().includes(q)) : list;
+});
+
+const load = async () => {
   if (!props.book) return;
-
   loading.value = true;
   try {
-    const response = await $fetch<Analytics>(
-      `/api/library/admin/books/${props.book.id}/analytics`,
-    );
-    analytics.value = response;
-  } catch (error: any) {
-    toast.error(error.data?.message || "Ошибка загрузки аналитики");
+    data.value = await $fetch(`/api/library/admin/books/${props.book.id}/analytics`, { params: { days: days.value } });
+  } catch (e: any) {
+    toast.error(e?.data?.message || "Не удалось загрузить аналитику");
   } finally {
     loading.value = false;
   }
 };
 
-const getInitials = (name: string) => {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+const formatDuration = (sec: number) => {
+  if (!sec) return "—";
+  const h = Math.floor(sec / 3600);
+  const m = Math.round((sec % 3600) / 60);
+  return h ? `${h} ч ${m} мин` : `${Math.max(m, 1)} мин`;
 };
-
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
-
-const formatDateTime = (date: string) => {
-  return new Date(date).toLocaleString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
-const formatDuration = (seconds: number) => {
-  if (!seconds) return "—";
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-
-  if (hours > 0) {
-    return `${hours}ч ${minutes}м`;
-  }
-  return `${minutes}м`;
+const formatDateTime = (d: string) =>
+  new Date(d).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+const relative = (d: string | null) => {
+  if (!d) return "—";
+  const diff = Date.now() - new Date(d).getTime();
+  const min = Math.round(diff / 60000);
+  if (min < 1) return "только что";
+  if (min < 60) return `${min} мин назад`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `${h} ч назад`;
+  const dd = Math.round(h / 24);
+  return dd < 30 ? `${dd} дн. назад` : new Date(d).toLocaleDateString("ru-RU");
 };
 
 watch(
-  () => props.isOpen,
-  (isOpen) => {
-    if (isOpen && props.book) {
-      fetchAnalytics();
+  () => [props.isOpen, props.book?.id],
+  ([open]) => {
+    if (open && props.book) {
+      data.value = null;
+      readerSearch.value = "";
+      tab.value = "readers";
+      load();
     }
   },
+  { immediate: true },
 );
 </script>

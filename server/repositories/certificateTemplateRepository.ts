@@ -862,12 +862,24 @@ export async function updateCertificateFiles(
   id: string,
   docxFileUrl: string,
   pdfFileUrl: string,
+  renderHash?: string | null,
 ): Promise<void> {
+  const now = new Date();
+  if (renderHash) {
+    // Запоминаем, по какой версии шаблона отрисован PDF
+    await executeQuery<ResultSetHeader>(
+      `UPDATE issued_certificates 
+       SET docx_file_url = ?, pdf_file_url = ?, render_hash = ?, rendered_at = ?, updated_at = ?
+       WHERE id = ?`,
+      [docxFileUrl, pdfFileUrl, renderHash, now, now, id],
+    );
+    return;
+  }
   await executeQuery<ResultSetHeader>(
     `UPDATE issued_certificates 
      SET docx_file_url = ?, pdf_file_url = ?, updated_at = ?
      WHERE id = ?`,
-    [docxFileUrl, pdfFileUrl, new Date(), id],
+    [docxFileUrl, pdfFileUrl, now, id],
   );
 }
 

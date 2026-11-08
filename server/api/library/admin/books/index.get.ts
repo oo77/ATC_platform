@@ -1,185 +1,121 @@
-﻿import { defineEventHandler, createError, getQuery } from "h3";
+﻿import { defineEventHandler, getQuery } from "h3";
 import { requireAuth } from "../../../../utils/auth";
-import { roleHasPermission, Permission } from "../../../../utils/permissions";
 import { executeQuery } from "../../../../utils/db";
+import { requireLibraryPermission, clampInt, activeSessionSql } from "../../../../utils/libraryAccess";
 
 /**
  * GET /api/library/admin/books
- * Получение списка всех книг для администратора
+ * Список книг для панели управления.
  *
- * Требуемые права: library.manage
- *
- * Query параметры:
- * - page?: номер страницы (по умолчанию 1)
- * - limit?: количество на странице (по умолчанию 20)
- * - search?: поиск по названию/автору
- * - category?: фильтр по категории
- * - language?: фильтр по языку
- * - status?: фильтр по статусу обработки (processing|completed|failed)
- * - sortBy?: поле сортировки (created_at|title|author|page_count)
- * - sortOrder?: порядок сортировки (asc|desc)
+ * Query: page, limit (≤100), search, author, language, status (ready|processing|failed),
+ *        access (none — книги без единой записи доступа),
+ *        sortBy (created_at|title|author|total_pages|readers|last_read), sortOrder (asc|desc)
  */
+const SORT: Record<string, string> = {
+  created_at: "b.created_at",
+  title: "b.title",
+  author: "b.author",
+  total_pages: "b.total_pages",
+  readers: "readers_count",
+  last_read: "last_read_at",
+};
+
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event);
-
-  // Проверка прав доступа
-  if (!roleHasPermission(user.role, Permission.LIBRARY_MANAGE)) {
-    console.error(
-      `[Library] Unauthorized books list access by user ${user.id} (${user.role})`,
-    );
-    throw createError({
-      statusCode: 403,
-      message: "Недостаточно прав для просмотра списка книг",
-    });
-  }
+  requireLibraryPermission(user);
 
   const query = getQuery(event);
-  const page = parseInt(query.page as string) || 1;
-  const limit = Math.min(parseInt(query.limit as string) || 20, 100);
+  const page = clampInt(query.page, 1, 10_000, 1);
+  const limit = clampInt(query.limit, 1, 100, 20);
   const offset = (page - 1) * limit;
 
-  console.log(
-    `[Library] Admin books list requested by user ${user.id}, page ${page}, limit ${limit}`,
+  const where: string[] = ["b.deleted_at IS NULL"];
+  const params: any[] = [];
+
+  const search = typeof query.search === "string" ? query.search.trim().slice(0, 100) : "";
+  if (search) {
+    const term = `%${search.replace(/[%_\\]/g, "\\$&")}%`;
+    where.push("(b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?)");
+    params.push(term, term, term);
+  }
+  if (typeof query.author === "string" && query.author) {
+    where.push("b.author LIKE ?");
+    params.push(`%${query.author.slice(0, 255).replace(/[%_\\]/g, "\\$&")}%`);
+  }
+  if (typeof query.language === "string" && query.language) {
+    where.push("b.language = ?");
+    params.push(query.language.slice(0, 10));
+  }
+  if (typeof query.status === "string" && query.status) {
+    where.push("b.status = ?");
+    params.push(query.status === "failed" ? "error" : query.status);
+  }
+  if (query.access === "none") {
+    where.push("NOT EXISTS (SELECT 1 FROM book_access ba WHERE ba.book_id = b.id)");
+  }
+
+  const sortField = SORT[String(query.sortBy)] || SORT.created_at;
+  const sortOrder = query.sortOrder === "asc" ? "ASC" : "DESC";
+  const whereSql = where.join(" AND ");
+
+  const [countRow] = await executeQuery<any[]>(`SELECT COUNT(*) AS total FROM books b WHERE ${whereSql}`, params);
+
+  const [statsRow] = await executeQuery<any[]>(
+    `SELECT
+       SUM(status = 'ready') AS ready,
+       SUM(status = 'processing') AS processing,
+       SUM(status = 'error') AS failed,
+       SUM(NOT EXISTS (SELECT 1 FROM book_access ba WHERE ba.book_id = books.id)) AS without_access
+     FROM books WHERE deleted_at IS NULL`,
   );
 
-  try {
-    // Построение SQL запроса с фильтрами
-    let whereClauses: string[] = [];
-    let params: any[] = [];
+  const rows = await executeQuery<any[]>(
+    `SELECT b.*, u.name AS uploaded_by_name,
+       (SELECT COUNT(*) FROM book_access ba WHERE ba.book_id = b.id) AS access_count,
+       (SELECT COUNT(*) FROM book_reading_progress p WHERE p.book_id = b.id) AS readers_count,
+       (SELECT COUNT(*) FROM book_reading_progress p WHERE p.book_id = b.id
+          AND (p.completed_at IS NOT NULL OR (b.total_pages > 0 AND p.max_page >= b.total_pages))) AS completed_count,
+       (SELECT COUNT(DISTINCT s.user_id) FROM book_reading_sessions s WHERE s.book_id = b.id AND ${activeSessionSql("s")}) AS reading_now,
+       (SELECT MAX(p.last_read_at) FROM book_reading_progress p WHERE p.book_id = b.id) AS last_read_at
+     FROM books b
+     LEFT JOIN users u ON u.id = b.uploaded_by
+     WHERE ${whereSql}
+     ORDER BY ${sortField} ${sortOrder}, b.title ASC
+     LIMIT ${limit} OFFSET ${offset}`,
+    params,
+  );
 
-    // Применение фильтров
-    if (query.search) {
-      whereClauses.push(
-        "(books.title LIKE ? OR books.author LIKE ? OR books.isbn LIKE ?)",
-      );
-      const searchTerm = `%${query.search}%`;
-      params.push(searchTerm, searchTerm, searchTerm);
-      console.log(`[Library] Applied search filter: "${query.search}"`);
-    }
-
-    if (query.category) {
-      whereClauses.push("books.category = ?");
-      params.push(query.category);
-      console.log(`[Library] Applied category filter: "${query.category}"`);
-    }
-
-    if (query.language) {
-      whereClauses.push("books.language = ?");
-      params.push(query.language);
-      console.log(`[Library] Applied language filter: "${query.language}"`);
-    }
-
-    if (query.status) {
-      const dbStatus = query.status === "failed" ? "error" : query.status;
-      whereClauses.push("books.status = ?");
-      params.push(dbStatus);
-      console.log(
-        `[Library] Applied status filter: "${query.status}" (db: ${dbStatus})`,
-      );
-    }
-
-    const whereClause =
-      whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
-
-    // Подсчет общего количества
-    const countQuery = `
-      SELECT COUNT(*) as count
-      FROM books
-      ${whereClause ? whereClause + " AND books.deleted_at IS NULL" : "WHERE books.deleted_at IS NULL"}
-    `;
-    const countResult = await executeQuery<any[]>(countQuery, params);
-    const totalBooks = countResult[0]?.count || 0;
-
-    // Подсчет статистики
-    const statsQuery = `
-      SELECT 
-        SUM(CASE WHEN status = 'ready' THEN 1 ELSE 0 END) as ready,
-        SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
-        SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as failed
-      FROM books
-      WHERE deleted_at IS NULL
-    `;
-    const statsResult = await executeQuery<any[]>(statsQuery);
-    const stats = {
-      ready: parseInt(statsResult[0]?.ready || "0"),
-      processing: parseInt(statsResult[0]?.processing || "0"),
-      failed: parseInt(statsResult[0]?.failed || "0"),
-    };
-
-    // Сортировка
-    const sortBy = (query.sortBy as string) || "created_at";
-    const sortOrder = (query.sortOrder as string) === "asc" ? "ASC" : "DESC";
-    const allowedSortFields = ["created_at", "title", "author", "total_pages"];
-    const sortField = allowedSortFields.includes(sortBy)
-      ? sortBy
-      : "created_at";
-
-    // Основной запрос с пагинацией
-    const booksQuery = `
-      SELECT 
-        books.*,
-        users.name as uploaded_by_username,
-        (SELECT COUNT(*) FROM book_access WHERE book_id = books.id) as access_count,
-        (SELECT COUNT(DISTINCT user_id) FROM book_reading_sessions WHERE book_id = books.id) as readers_count
-      FROM books
-      LEFT JOIN users ON books.uploaded_by = users.id
-      ${whereClause ? whereClause + " AND books.deleted_at IS NULL" : "WHERE books.deleted_at IS NULL"}
-      ORDER BY books.${sortField} ${sortOrder}
-      LIMIT ? OFFSET ?
-    `;
-
-    const books = await executeQuery<any[]>(booksQuery, [
-      ...params,
-      limit,
-      offset,
-    ]);
-
-    console.log(
-      `[Library] Returned ${books.length} books out of ${totalBooks} total`,
-    );
-
-    return {
-      books: books.map((book) => ({
-        id: book.id,
-        title: book.title,
-        author: book.author,
-        description: book.description || null,
-        isbn: book.isbn,
-        publisher: book.publisher,
-        publishedYear: book.published_year,
-        language: book.language,
-        category: book.category,
-        pageCount: book.page_count,
-        fileSize: book.file_size,
-        coverPath: book.cover_path,
-        cover_url: book.cover_path ? `/api/library/covers/${book.id}` : null,
-        status: book.status === "error" ? "failed" : book.status,
-        errorMessage: book.error_message,
-        uploadedBy: {
-          id: book.uploaded_by,
-          username: book.uploaded_by_username,
-        },
-        // Extra fields expected by frontend
-        total_pages: book.total_pages || book.page_count,
-        created_at: book.created_at,
-        processedAt: book.processed_at,
-        published_at: book.published_at || null,
-        readers_count: book.readers_count || 0,
-      })),
-      total: totalBooks,
-      stats,
-      pagination: {
-        page,
-        limit,
-        total: totalBooks,
-        totalPages: Math.ceil(totalBooks / limit),
-      },
-    };
-  } catch (error) {
-    console.error(`[Library] Failed to fetch books list:`, error);
-    throw createError({
-      statusCode: 500,
-      message: "Ошибка при получении списка книг",
-    });
-  }
+  const total = Number(countRow?.total || 0);
+  return {
+    books: rows.map((b) => ({
+      id: b.id,
+      title: b.title,
+      author: b.author,
+      description: b.description || null,
+      isbn: b.isbn,
+      language: b.language,
+      category: b.category,
+      published_year: b.published_year,
+      total_pages: b.total_pages || 0,
+      file_size: Number(b.file_size_bytes) || 0,
+      cover_url: b.cover_path ? `/api/library/covers/${b.id}` : null,
+      status: b.status === "error" ? "failed" : b.status,
+      errorMessage: b.processing_error || null,
+      uploadedBy: b.uploaded_by_name || null,
+      created_at: b.created_at,
+      access_count: Number(b.access_count) || 0,
+      readers_count: Number(b.readers_count) || 0,
+      completed_count: Number(b.completed_count) || 0,
+      reading_now: Number(b.reading_now) || 0,
+      last_read_at: b.last_read_at || null,
+    })),
+    total,
+    stats: {
+      ready: Number(statsRow?.ready || 0),
+      processing: Number(statsRow?.processing || 0),
+      failed: Number(statsRow?.failed || 0),
+      withoutAccess: Number(statsRow?.without_access || 0),
+    },
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
 });

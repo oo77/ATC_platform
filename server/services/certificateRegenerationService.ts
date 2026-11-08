@@ -22,11 +22,16 @@ import { getGroupById } from "../repositories/groupRepository";
 import { getStudentById } from "../repositories/studentRepository";
 import {
   generateCertificatePdf,
+  generateCertificatePdfBuffer,
   resolveVariable,
   type VariableContext,
 } from "../utils/pdfGenerator";
 import { executeQuery } from "../utils/db";
-import type { CertificateTemplateData } from "../types/certificate";
+import type { CertificateTemplate, CertificateTemplateData } from "../types/certificate";
+import {
+  computeTemplateRenderHash,
+  templateUsesInstructor,
+} from "../utils/templateRenderHash";
 
 const GENERATED_DIR = path.join(process.cwd(), "storage", "Certificates");
 
@@ -43,6 +48,19 @@ export interface RegenerateResult {
   studentName: string;
   templateName: string;
   pdfUrl: string;
+  /** Только для dryRun: сгенерированный PDF, на диск и в БД ничего не пишется */
+  pdfBuffer?: Buffer;
+}
+
+export interface RegenerateOptions {
+  /** Уже загруженный шаблон (массовая перегенерация: одна версия на весь прогон) */
+  template?: CertificateTemplate;
+  /** Не перерисовывать, если шаблону нужен инструктор, а его негде взять */
+  requireInstructor?: boolean;
+  /** Сгенерировать PDF в память, ничего не сохраняя */
+  dryRun?: boolean;
+  /** Папка, куда скопировать прежний PDF перед заменой */
+  backupDir?: string;
 }
 
 export class RegenerateError extends Error {
@@ -53,6 +71,9 @@ export class RegenerateError extends Error {
     super(message);
   }
 }
+
+/** Сертификат намеренно пропущен (не ошибка): данных для безопасной перерисовки нет */
+export class RegenerateSkip extends RegenerateError {}
 
 /** "DD.MM.YYYY" из снимка → "YYYY-MM-DD" для контекста */
 function snapshotDateToInput(value: string | undefined): string | null {
@@ -86,6 +107,7 @@ async function loadInstructor(instructorId: string | null | undefined) {
 export async function regenerateIssuedCertificatePdf(
   certificateId: string,
   fallbackInstructorId?: string | null,
+  opts: RegenerateOptions = {},
 ): Promise<RegenerateResult> {
   const cert = await getIssuedCertificateById(certificateId);
   if (!cert) throw new RegenerateError("Сертификат не найден", 404);
@@ -101,12 +123,15 @@ export async function regenerateIssuedCertificatePdf(
     throw new RegenerateError("У сертификата не сохранён шаблон");
   }
 
-  const template = await getTemplateById(cert.templateId);
+  const template = opts.template ?? (await getTemplateById(cert.templateId));
   if (!template) throw new RegenerateError("Шаблон сертификата удалён", 404);
   if (!template.templateData) {
     throw new RegenerateError(`Шаблон «${template.name}» не настроен`);
   }
   const templateData = template.templateData as CertificateTemplateData;
+  if (opts.template && template.id !== cert.templateId) {
+    throw new RegenerateError("Сертификат выдан по другому шаблону");
+  }
 
   const [group, student] = await Promise.all([
     getGroupById(cert.groupId),
@@ -131,6 +156,12 @@ export async function regenerateIssuedCertificatePdf(
   const instructor = await loadInstructor(
     snapshot.instructorId || fallbackInstructorId || null,
   );
+  // Если инструктора нет, перерисовка стёрла бы его с сертификата
+  if (opts.requireInstructor && !instructor && templateUsesInstructor(templateData)) {
+    throw new RegenerateSkip(
+      "В снимке сертификата нет инструктора — перерисовка стёрла бы его подпись",
+    );
+  }
 
   const context: VariableContext = {
     student: {
@@ -169,16 +200,46 @@ export async function regenerateIssuedCertificatePdf(
     instructor,
   };
 
+  const pdfFilename = `${cert.certificateNumber.replace(/[\/\\:*?"<>|]/g, "_")}.pdf`;
+  const pdfUrl = `/storage/Certificates/${pdfFilename}`;
+
+  if (opts.dryRun) {
+    const pdfBuffer = await generateCertificatePdfBuffer(templateData, context);
+    return {
+      certificateId: cert.id,
+      certificateNumber: cert.certificateNumber,
+      studentName: student.fullName,
+      templateName: template.name,
+      pdfUrl,
+      pdfBuffer,
+    };
+  }
+
   if (!fs.existsSync(GENERATED_DIR)) {
     fs.mkdirSync(GENERATED_DIR, { recursive: true });
   }
 
-  // Перезаписываем тот же файл, чтобы ссылка на PDF не менялась
-  const pdfFilename = `${cert.certificateNumber.replace(/[\/\\:*?"<>|]/g, "_")}.pdf`;
+  // Перезаписываем тот же файл, чтобы ссылка на PDF не менялась. Сначала
+  // пишем во временный файл и подменяем атомарно: сбой посреди генерации
+  // не оставит битый PDF вместо рабочего
   const pdfPath = path.join(GENERATED_DIR, pdfFilename);
-  await generateCertificatePdf({ templateData, context, outputPath: pdfPath });
-  const pdfUrl = `/storage/Certificates/${pdfFilename}`;
-  await updateCertificateFiles(cert.id, pdfUrl, pdfUrl);
+  const tmpPath = `${pdfPath}.tmp-${process.pid}-${Date.now()}`;
+  try {
+    await generateCertificatePdf({ templateData, context, outputPath: tmpPath });
+    if (opts.backupDir && fs.existsSync(pdfPath)) {
+      fs.mkdirSync(opts.backupDir, { recursive: true });
+      fs.copyFileSync(pdfPath, path.join(opts.backupDir, pdfFilename));
+    }
+    fs.renameSync(tmpPath, pdfPath);
+  } finally {
+    if (fs.existsSync(tmpPath)) fs.rmSync(tmpPath, { force: true });
+  }
+  await updateCertificateFiles(
+    cert.id,
+    pdfUrl,
+    pdfUrl,
+    computeTemplateRenderHash(templateData),
+  );
 
   // Дополняем снимок, чтобы следующая перегенерация дала тот же результат
   await updateCertificateVariablesData(cert.id, {

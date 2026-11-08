@@ -1,99 +1,43 @@
-import { defineEventHandler, createError, getRouterParam } from "h3";
-import { readFile } from "fs/promises";
-import { existsSync } from "fs";
+import { defineEventHandler, createError, getRouterParam, setResponseHeader, sendStream } from "h3";
+import { createReadStream, existsSync } from "fs";
+import { stat } from "fs/promises";
 import path from "path";
-import { executeQuery } from "../../../utils/db";
+import { requireAuth } from "../../../utils/auth";
+import { canReadBook } from "../../../utils/libraryAccess";
+
+const COVERS_DIR = path.join(process.cwd(), "storage", "library", "covers");
+const TYPES: [string, string][] = [
+  ["pdf", "application/pdf"],
+  ["webp", "image/webp"],
+  ["png", "image/png"],
+];
 
 /**
  * GET /api/library/covers/:bookId
- * Получение обложки книги (первая страница PDF)
+ * Обложка книги (первая страница PDF). Раньше отдавалась без проверки доступа —
+ * теперь её видят только те, кто может открыть книгу.
  */
 export default defineEventHandler(async (event) => {
+  const user = requireAuth(event);
   const bookId = getRouterParam(event, "bookId");
-
-  if (!bookId) {
-    throw createError({
-      statusCode: 400,
-      message: "Book ID is required",
-    });
+  if (!bookId || !/^[0-9a-f-]{36}$/i.test(bookId)) {
+    throw createError({ statusCode: 400, message: "Некорректный ID книги" });
   }
 
-  try {
-    // Получаем информацию о книге из БД
-    const books = await executeQuery<any[]>(
-      "SELECT cover_path FROM books WHERE id = ? AND deleted_at IS NULL LIMIT 1",
-      [bookId],
-    );
-
-    if (!books || books.length === 0) {
-      throw createError({
-        statusCode: 404,
-        message: "Book not found",
-      });
-    }
-
-    const book = books[0];
-
-    // Если обложки нет, возвращаем 404
-    if (!book.cover_path) {
-      throw createError({
-        statusCode: 404,
-        message: "Cover not found",
-      });
-    }
-
-    // Проверяем все возможные форматы обложек (pdf → png → webp)
-    const coversDir = path.join(process.cwd(), "storage", "library", "covers");
-    const extensions = ["pdf", "png", "webp"];
-    let coverPath = "";
-    let contentType = "";
-
-    for (const ext of extensions) {
-      const candidatePath = path.join(coversDir, `${bookId}.${ext}`);
-      if (existsSync(candidatePath)) {
-        coverPath = candidatePath;
-        contentType =
-          ext === "pdf"
-            ? "application/pdf"
-            : ext === "png"
-              ? "image/png"
-              : "image/webp";
-        break;
-      }
-    }
-
-    if (!coverPath) {
-      console.error(
-        `[Library] Cover file not found for book ${bookId} in any format`,
-      );
-      throw createError({
-        statusCode: 404,
-        message: "Cover file not found",
-      });
-    }
-
-    // Читаем файл
-    const coverBuffer = await readFile(coverPath);
-
-    // Устанавливаем заголовки
-    event.node.res.setHeader("Content-Type", contentType);
-    event.node.res.setHeader("Cache-Control", "public, max-age=31536000");
-    event.node.res.setHeader("Content-Length", coverBuffer.length);
-
-    console.log(
-      `[Library] Served cover for book ${bookId} (${contentType}, ${coverBuffer.length} bytes)`,
-    );
-
-    return coverBuffer;
-  } catch (error: any) {
-    if (error.statusCode) {
-      throw error;
-    }
-
-    console.error(`[Library] Failed to serve cover for book ${bookId}:`, error);
-    throw createError({
-      statusCode: 500,
-      message: "Failed to load cover",
-    });
+  if (!(await canReadBook(user, bookId))) {
+    throw createError({ statusCode: 404, message: "Обложка не найдена" });
   }
+
+  for (const [ext, type] of TYPES) {
+    const file = path.join(COVERS_DIR, `${bookId}.${ext}`);
+    if (!existsSync(file)) continue;
+    const { size } = await stat(file);
+    setResponseHeader(event, "Content-Type", type);
+    setResponseHeader(event, "Content-Length", size);
+    setResponseHeader(event, "Cache-Control", "private, max-age=86400");
+    setResponseHeader(event, "X-Content-Type-Options", "nosniff");
+    return sendStream(event, createReadStream(file));
+  }
+
+  throw createError({ statusCode: 404, message: "Обложка не найдена" });
 });

@@ -1,186 +1,89 @@
 import { defineEventHandler, readBody, createError } from "h3";
 import { requireAuth } from "../../../../../utils/auth";
-import { roleHasPermission } from "../../../../../utils/permissions";
-import {
-  getBookById,
-  updateBook,
-} from "../../../../../repositories/libraryRepository";
+import { getBookById, updateBook } from "../../../../../repositories/libraryRepository";
+import { logActivity } from "../../../../../utils/activityLogger";
+import { requireLibraryPermission } from "../../../../../utils/libraryAccess";
 
-interface UpdateBookBody {
-  title?: string;
-  author?: string;
-  description?: string;
-  isbn?: string;
-  publisher?: string;
-  publishedYear?: number | null;
-  language?: string;
-  category?: string;
-}
+const LANGUAGES = ["ru", "uz", "en", "kk"];
 
 /**
  * PATCH /api/library/admin/books/[id]
- * Обновление метаданных книги
+ * Обновление метаданных книги.
  *
- * Требуемые права: library.manage
- *
- * Body:
- * - title?: string
- * - author?: string
- * - description?: string
- * - isbn?: string
- * - publisher?: string
- * - publishedYear?: number
- * - language?: string
- * - category?: string
+ * Исправлено: проверка права шла по строке "library.manage" (в системе — "library:manage"),
+ * поэтому редактирование всегда отвечало 403; ID книги (UUID) приводился через parseInt.
  */
+const str = (v: unknown, max: number): string | null => {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  return s ? s.slice(0, max) : null;
+};
+
 export default defineEventHandler(async (event) => {
   const user = requireAuth(event);
+  requireLibraryPermission(user);
 
-  // Проверка прав доступа
-  if (!roleHasPermission(user.role, "library.manage" as any)) {
-    console.error(
-      `[Library] Unauthorized book update attempt by user ${user.id} (${user.role})`,
-    );
-    throw createError({
-      statusCode: 403,
-      message: "Недостаточно прав для обновления книги",
-    });
+  const bookId = event.context.params?.id;
+  if (!bookId) throw createError({ statusCode: 400, message: "Некорректный ID книги" });
+
+  const body: any = (await readBody(event).catch(() => null)) || {};
+  const existing = await getBookById(bookId);
+  if (!existing) throw createError({ statusCode: 404, message: "Книга не найдена" });
+
+  const data: Record<string, any> = {};
+
+  if (body.title !== undefined) {
+    const title = str(body.title, 255);
+    if (!title) throw createError({ statusCode: 400, message: "Название книги не может быть пустым" });
+    data.title = title;
   }
-
-  const bookId = parseInt(event.context.params?.id || "0");
-  if (!bookId) {
-    throw createError({
-      statusCode: 400,
-      message: "Некорректный ID книги",
-    });
+  if (body.author !== undefined) data.author = str(body.author, 255);
+  if (body.description !== undefined) data.description = str(body.description, 5000);
+  if (body.isbn !== undefined) data.isbn = str(body.isbn, 20);
+  if (body.category !== undefined) data.category = str(body.category, 100);
+  if (body.language !== undefined) {
+    const lang = String(body.language || "ru");
+    if (!LANGUAGES.includes(lang)) throw createError({ statusCode: 400, message: "Неизвестный язык" });
+    data.language = lang;
   }
-
-  const body = await readBody<UpdateBookBody>(event);
-
-  if (!body) {
-    throw createError({
-      statusCode: 400,
-      message: "Отсутствуют данные в запросе",
-    });
-  }
-
-  console.log(
-    `[Library] Book update requested: ID ${bookId} by user ${user.id} (${user.username})`,
-  );
-
-  try {
-    // Проверка существования книги
-    const existingBook = await getBookById(String(bookId));
-    if (!existingBook) {
-      console.warn(`[Library] Book not found for update: ID ${bookId}`);
-      throw createError({
-        statusCode: 404,
-        message: "Книга не найдена",
-      });
-    }
-
-    // Валидация и подготовка данных для обновления
-    const updateData: Record<string, any> = {};
-
-    if (body.title !== undefined) {
-      if (!body.title || body.title.trim().length === 0) {
-        throw createError({
-          statusCode: 400,
-          message: "Название книги не может быть пустым",
-        });
+  const yearRaw = body.publishedYear ?? body.published_year;
+  if (yearRaw !== undefined) {
+    if (yearRaw === null || String(yearRaw).trim() === "") {
+      data.published_year = null;
+    } else {
+      const year = Number.parseInt(String(yearRaw), 10);
+      if (!Number.isFinite(year) || year < 1000 || year > new Date().getFullYear() + 1) {
+        throw createError({ statusCode: 400, message: "Некорректный год издания" });
       }
-      updateData.title = body.title.trim();
+      data.published_year = year;
     }
-
-    if (body.author !== undefined) {
-      updateData.author = body.author ? body.author.trim() : null;
-    }
-
-    if (body.description !== undefined) {
-      updateData.description = body.description
-        ? body.description.trim()
-        : null;
-    }
-
-    if (body.isbn !== undefined) {
-      updateData.isbn = body.isbn ? body.isbn.trim() : null;
-    }
-
-    if (body.publisher !== undefined) {
-      updateData.publisher = body.publisher ? body.publisher.trim() : null;
-    }
-
-    if (body.publishedYear !== undefined) {
-      if (body.publishedYear === null || String(body.publishedYear).trim() === "") {
-        updateData.published_year = null;
-      } else {
-        const year = parseInt(String(body.publishedYear));
-        if (isNaN(year) || year < 1000 || year > new Date().getFullYear() + 1) {
-          throw createError({
-            statusCode: 400,
-            message: "Некорректный год издания",
-          });
-        }
-        updateData.published_year = year;
-      }
-    }
-
-
-    if (body.language !== undefined) {
-      updateData.language = body.language || "ru";
-    }
-
-    if (body.category !== undefined) {
-      updateData.category = body.category ? body.category.trim() : null;
-    }
-
-    if (Object.keys(updateData).length === 0) {
-      throw createError({
-        statusCode: 400,
-        message: "Нет данных для обновления",
-      });
-    }
-
-    // Обновление книги
-    await updateBook(String(bookId), {
-      ...updateData,
-      ...(body.language !== undefined
-        ? { language: body.language || "ru" }
-        : {}),
-    });
-    const updatedBook = await getBookById(String(bookId));
-
-    if (!updatedBook) {
-      throw createError({
-        statusCode: 500,
-        message: "Не удалось получить обновленную книгу",
-      });
-    }
-
-    console.log(
-      `[Library] Book ${bookId} updated successfully by user ${user.id}. Fields: ${Object.keys(updateData).join(", ")}`,
-    );
-
-    return {
-      success: true,
-      book: {
-        id: updatedBook.id,
-        title: updatedBook.title,
-        author: updatedBook.author,
-        description: updatedBook.description,
-        isbn: updatedBook.isbn,
-        category: updatedBook.category,
-        language: updatedBook.language,
-        published_year: body.publishedYear ? parseInt(String(body.publishedYear)) : null,
-        updatedAt: updatedBook.updated_at,
-      },
-    };
-  } catch (error: any) {
-    console.error(`[Library] Failed to update book ${bookId}:`, error);
-    if (error.statusCode) throw error;
-    throw createError({
-      statusCode: 500,
-      message: "Ошибка при обновлении книги",
-    });
   }
+
+  if (Object.keys(data).length === 0) {
+    throw createError({ statusCode: 400, message: "Нет данных для обновления" });
+  }
+
+  await updateBook(bookId, data);
+  const updated = await getBookById(bookId);
+
+  const changed = Object.keys(data).filter((k) => (existing as any)[k] !== data[k]);
+  await logActivity(event, "UPDATE", "LIBRARY_BOOK", bookId, updated?.title || existing.title, {
+    action: "update_book",
+    fields: changed,
+  });
+
+  return {
+    success: true,
+    book: updated && {
+      id: updated.id,
+      title: updated.title,
+      author: updated.author,
+      description: updated.description,
+      isbn: updated.isbn,
+      category: updated.category,
+      language: updated.language,
+      published_year: updated.published_year,
+      updatedAt: updated.updated_at,
+    },
+  };
 });

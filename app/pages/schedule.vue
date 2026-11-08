@@ -1,21 +1,28 @@
 <template>
-  <!-- Обёртка без двойного отступа (отступы задаёт layout) -->
-  <div class="mx-auto max-w-screen-2xl space-y-4">
-    <!-- Единый заголовок страницы вместо самописного h1 (text-4xl/uppercase) -->
-    <UiPageHeader title="Расписание занятий" description="Управление расписанием учебных групп" />
+  <div class="mx-auto max-w-screen-2xl space-y-3">
+    <!-- Компактная шапка: заголовок + кнопка показа метрик -->
+    <div class="flex items-center justify-between gap-3">
+      <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Расписание занятий</h1>
+      <button
+        type="button"
+        class="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors"
+        :class="showStats ? 'border-primary bg-primary/5 text-primary' : 'border-gray-200 hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-white/5'"
+        @click="toggleStats"
+      >
+        Показатели
+        <span class="text-xs text-gray-500">{{ stats.today }} сегодня · {{ stats.thisWeek }} на неделе</span>
+      </button>
+    </div>
 
-    <!-- Метрики одной плоской строкой: 4 крупные карточки заменены UiStat, чтобы календарь был выше сгиба -->
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <!-- Метрики раскрываются по кнопке -->
+    <div v-if="showStats" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <UiStat label="Сегодня" :value="stats.today" :icon="Calendar" tone="primary" />
       <UiStat label="На этой неделе" :value="stats.thisWeek" :icon="CalendarDays" tone="success" />
       <UiStat label="Активных групп" :value="stats.activeGroups" :icon="Users" tone="warning" />
       <UiStat label="Аудиторий" :value="stats.classrooms" :icon="Building" tone="info" />
     </div>
 
-    <!-- Календарь в стандартной карточке: без теней и большого padding -->
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03] md:p-6">
-      <ScheduleCalendarView />
-    </div>
+    <ScheduleCalendarView />
   </div>
 </template>
 
@@ -36,6 +43,13 @@ import { usePermissions } from '~/composables/usePermissions';
 
 const { canViewAllGroups, isTeacher } = usePermissions();
 const { authFetch } = useAuthFetch();
+
+// Показ метрик (запоминаем выбор)
+const showStats = ref(false);
+const toggleStats = () => {
+  showStats.value = !showStats.value;
+  try { localStorage.setItem('schedule:showStats', showStats.value ? '1' : '0'); } catch {}
+};
 
 // Статистика
 const stats = ref({
@@ -99,6 +113,7 @@ const loadStats = async () => {
 };
 
 onMounted(() => {
+  try { showStats.value = localStorage.getItem('schedule:showStats') === '1'; } catch {}
   loadStats();
 });
 </script>

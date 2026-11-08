@@ -1,116 +1,69 @@
 import { defineEventHandler, readBody, createError } from "h3";
 import { requireAuth } from "../../../../utils/auth";
 import * as libraryRepository from "../../../../repositories/libraryRepository";
-import { executeQuery } from "../../../../utils/db";
+import { canReadBook, getSessionByToken } from "../../../../utils/libraryAccess";
+
+/** Сколько секунд максимум засчитываем за один heartbeat (клиент шлёт раз в 30 с) */
+const MAX_SECONDS_PER_BEAT = 60;
+/** Если пауза больше — читатель отходил, время не засчитываем */
+const MAX_IDLE_SECONDS = 120;
 
 /**
  * POST /api/library/reading/[bookId]/progress
- * Сохранение прогресса чтения
+ * Heartbeat сессии чтения: сохраняет текущую страницу и реальное время чтения.
+ *
+ * Body: { token: string, page: number, visible?: boolean }
+ *
+ * Каждый вызов повторно проверяет доступ: если доступ отозван, сессия
+ * закрывается и клиент получает 403 — ридер сразу перестаёт показывать книгу.
  */
 export default defineEventHandler(async (event) => {
-  const user = requireAuth(event) as any;
-
+  const user = requireAuth(event);
   const bookId = event.context.params?.bookId;
   if (!bookId) {
-    throw createError({
-      statusCode: 400,
-      message: "Некорректный ID книги",
-    });
+    throw createError({ statusCode: 400, message: "Некорректный ID книги" });
   }
 
-  const body: any = (await readBody(event)) || {};
-  const lastPageRead = parseInt(body.lastPageRead);
-
-  if (!lastPageRead || lastPageRead < 1) {
-    throw createError({
-      statusCode: 400,
-      message: "Некорректный номер страницы",
-    });
+  const body: any = (await readBody(event).catch(() => null)) || {};
+  const page = Number.parseInt(String(body.page ?? body.lastPageRead), 10);
+  if (!Number.isFinite(page) || page < 1) {
+    throw createError({ statusCode: 400, message: "Некорректный номер страницы" });
   }
 
-  // console.log(
-  //   `[Library] Progress update for book ${bookId} by user ${user.id}: page ${lastPageRead}`,
-  // );
-
-  try {
-    // Проверка доступа
-    const hasAccess = await libraryRepository.checkUserBookAccess(
-      String(user.id),
-      bookId,
-    );
-    if (!hasAccess) {
-      throw createError({
-        statusCode: 403,
-        message: "У вас нет доступа к этой книге",
-      });
-    }
-
-    // Получение книги для валидации номера страницы
-    const book = await libraryRepository.getBookById(bookId);
-    if (!book) {
-      throw createError({
-        statusCode: 404,
-        message: "Книга не найдена",
-      });
-    }
-
-    if (lastPageRead > book.total_pages) {
-      throw createError({
-        statusCode: 400,
-        message: `Номер страницы превышает количество страниц в книге (${book.total_pages})`,
-      });
-    }
-
-    // Проверка активной сессии
-    const sessions = await executeQuery<any[]>(
-      `SELECT * FROM book_reading_sessions 
-       WHERE book_id = ? 
-         AND user_id = ? 
-         AND ended_at IS NULL LIMIT 1`,
-      [bookId, user.id],
-    );
-    const activeSession = sessions[0];
-
-    if (!activeSession) {
-      throw createError({
-        statusCode: 409,
-        message: "Нет активной сессии чтения",
-      });
-    }
-
-    // Обновление прогресса
-    await libraryRepository.saveReadingProgress(
-      String(user.id),
-      bookId,
-      lastPageRead,
-    );
-
-    // Также можно обновить активность сессии
-    await libraryRepository.updateSessionActivity(
-      activeSession.id,
-      lastPageRead,
-    );
-
-    const progressPercent = Math.round((lastPageRead / book.total_pages) * 100);
-
-    return {
-      success: true,
-      progress: {
-        lastPageRead,
-        totalPages: book.total_pages,
-        progressPercent,
-        isCompleted: lastPageRead >= book.total_pages,
-      },
-    };
-  } catch (error: any) {
-    console.error(
-      `[Library] Failed to save progress for book ${bookId}, user ${user.id}:`,
-      error,
-    );
-    if (error.statusCode) throw error;
-    throw createError({
-      statusCode: 500,
-      message: "Ошибка при сохранении прогресса",
-    });
+  const session = await getSessionByToken(user.id, bookId, body.token);
+  if (!session) {
+    throw createError({ statusCode: 409, message: "Сессия чтения истекла. Откройте книгу заново." });
   }
+
+  if (!(await canReadBook(user, bookId))) {
+    await libraryRepository.endReadingSession(session.id);
+    throw createError({ statusCode: 403, message: "Доступ к книге был отозван" });
+  }
+
+  const book = await libraryRepository.getBookById(bookId);
+  if (!book) {
+    await libraryRepository.endReadingSession(session.id);
+    throw createError({ statusCode: 404, message: "Книга не найдена" });
+  }
+
+  const safePage = Math.min(page, Math.max(book.total_pages, 1));
+  const idle = Number(session.idle_seconds) || 0;
+  const visible = body.visible !== false;
+  const addSeconds = visible && idle <= MAX_IDLE_SECONDS ? Math.min(idle, MAX_SECONDS_PER_BEAT) : 0;
+
+  await libraryRepository.updateSessionActivity(session.id, safePage, addSeconds);
+  await libraryRepository.saveReadingProgress(user.id, bookId, safePage, {
+    totalPages: book.total_pages,
+    addSeconds,
+  });
+
+  return {
+    success: true,
+    progress: {
+      lastPageRead: safePage,
+      totalPages: book.total_pages,
+      progressPercent: book.total_pages > 0 ? Math.round((safePage / book.total_pages) * 100) : 0,
+      isCompleted: safePage >= book.total_pages,
+    },
+  };
 });

@@ -4,8 +4,26 @@
     {
       "name": "atc-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3417"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3417"
+      ],
       "port": 3417
+    },
+    {
+      "name": "atc-dev-2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3418"
+      ],
+      "port": 3418
     }
   ]
 }

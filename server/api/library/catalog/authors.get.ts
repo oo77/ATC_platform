@@ -1,25 +1,28 @@
-import { defineEventHandler, createError } from "h3";
+import { defineEventHandler, getQuery } from "h3";
 import { requireAuth } from "../../../utils/auth";
 import { executeQuery } from "../../../utils/db";
+import { isLibraryStaff, accessExistsSql, accessParams } from "../../../utils/libraryAccess";
 
+/**
+ * GET /api/library/catalog/authors?scope=admin
+ * Авторы для подсказок фильтра. Читатель видит только авторов доступных ему книг
+ * (раньше список раскрывал авторов всего фонда). scope=admin — все книги, для персонала.
+ */
 export default defineEventHandler(async (event) => {
-  requireAuth(event);
+  const user = requireAuth(event);
+  const staff = isLibraryStaff(user);
+  const adminScope = staff && getQuery(event).scope === "admin";
 
-  try {
-    const sql = `
-      SELECT DISTINCT author
-      FROM books
-      WHERE status = 'ready' AND deleted_at IS NULL AND author IS NOT NULL AND author != ''
-      ORDER BY author ASC
-    `;
-    const rows = await executeQuery<{author: string}[]>(sql);
-    
-    return { authors: rows.map(r => r.author).filter(Boolean) };
-  } catch (error: any) {
-    console.error(`[Library] Failed to fetch authors:`, error);
-    throw createError({
-      statusCode: 500,
-      message: `Ошибка при получении списка авторов: ${error.message}`,
-    });
-  }
+  const rows = await executeQuery<{ author: string }[]>(
+    `SELECT DISTINCT b.author
+     FROM books b
+     WHERE b.deleted_at IS NULL AND b.author IS NOT NULL AND b.author <> ''
+       ${adminScope ? "" : "AND b.status = 'ready'"}
+       ${staff ? "" : `AND ${accessExistsSql("b")}`}
+     ORDER BY b.author ASC
+     LIMIT 500`,
+    staff ? [] : accessParams(user),
+  );
+
+  return { authors: rows.map((r) => r.author).filter(Boolean) };
 });

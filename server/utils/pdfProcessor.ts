@@ -13,6 +13,7 @@
 import { PDFDocument } from "pdf-lib";
 import fs from "fs/promises";
 import path from "path";
+import { existsSync } from "fs";
 
 // ============================================================
 // КОНСТАНТЫ
@@ -25,6 +26,29 @@ const COVERS_PATH = path.join(STORAGE_PATH, "covers");
 // ============================================================
 // ТИПЫ
 // ============================================================
+
+/**
+ * Находит файл книги на диске.
+ *
+ * В БД хранится абсолютный путь с машины, где книгу загрузили
+ * (например, C:\projects\ATC_platform\storage\library\originals\<id>.pdf).
+ * Если проект перенесли в другую папку или на другой сервер вместе со storage,
+ * этот путь уже не существует — тогда ищем файл по имени в storage текущего проекта.
+ */
+export function resolveBookFilePath(storedPath: string | null | undefined): string {
+  if (!storedPath) return "";
+  if (existsSync(storedPath)) return storedPath;
+
+  // basename вручную: path.basename на macOS/Linux не разбирает обратные слэши Windows
+  const fileName = storedPath.split(/[\\/]/).pop() || "";
+  if (!fileName || fileName === "." || fileName === "..") return storedPath;
+
+  for (const dir of ["originals", ""]) {
+    const candidate = path.join(STORAGE_PATH, dir, fileName);
+    if (existsSync(candidate)) return candidate;
+  }
+  return storedPath;
+}
 
 export interface PDFMetadata {
   title?: string;

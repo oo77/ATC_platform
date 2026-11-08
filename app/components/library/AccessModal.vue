@@ -1,435 +1,190 @@
 <template>
-  <UiModal
-    :is-open="isOpen"
-    title="Управление доступом"
-    size="lg"
-    @close="$emit('close')"
-  >
+  <UiModal :is-open="isOpen" title="Доступ к книге" size="lg" @close="$emit('close')">
     <div v-if="book" class="space-y-6">
-      <!-- Информация о книге -->
-      <div
-        class="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
-      >
-        <div
-          class="h-16 w-12 rounded bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0"
-        >
-          <img
-            v-if="book.cover_url"
-            :src="book.cover_url"
-            :alt="book.title"
-            class="h-full w-full object-cover"
-          />
+      <!-- Книга -->
+      <div class="flex items-center gap-4 rounded-xl bg-gray-50 p-3 dark:bg-white/[0.03]">
+        <LibraryBookCover :url="book.cover_url" :title="book.title" :width="80" compact class="w-11 shrink-0" />
+        <div class="min-w-0 flex-1">
+          <h3 class="truncate font-semibold text-gray-900 dark:text-white">{{ book.title }}</h3>
+          <p class="truncate text-sm text-gray-500 dark:text-gray-400">{{ book.author || "Автор не указан" }}</p>
         </div>
-        <div>
-          <h3 class="font-semibold text-gray-900 dark:text-white">
-            {{ book.title }}
-          </h3>
-          <p class="text-sm text-gray-600 dark:text-gray-400">
-            {{ book.author || "Автор не указан" }}
-          </p>
+        <div v-if="accesses.length" class="hidden text-right text-xs text-gray-500 sm:block">
+          <p><span class="font-semibold text-gray-900 tabular-nums dark:text-white">{{ activeCount }}</span> активных</p>
+          <p v-if="expiredCount">{{ expiredCount }} истекло</p>
         </div>
       </div>
 
-      <!-- Форма назначения доступа -->
-      <div class="space-y-4">
-        <h4 class="font-semibold text-gray-900 dark:text-white">
-          Назначить доступ
-        </h4>
-
-        <!-- Тип доступа -->
+      <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <!-- Выдача -->
         <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Тип доступа
-          </label>
-          <div class="flex gap-4">
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                v-model="accessForm.type"
-                type="radio"
-                value="user"
-                class="text-primary focus:ring-primary"
-              />
-              <span class="text-sm text-gray-700 dark:text-gray-300">
-                Пользователь
-              </span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                v-model="accessForm.type"
-                type="radio"
-                value="group"
-                class="text-primary focus:ring-primary"
-              />
-              <span class="text-sm text-gray-700 dark:text-gray-300">
-                Группа
-              </span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input
-                v-model="accessForm.type"
-                type="radio"
-                value="role"
-                class="text-primary focus:ring-primary"
-              />
-              <span class="text-sm text-gray-700 dark:text-gray-300">
-                Роль
-              </span>
-            </label>
+          <h4 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Выдать доступ</h4>
+          <LibraryAccessGrantForm ref="formRef" :submitting="granting" @submit="grant" />
+        </div>
+
+        <!-- Текущие доступы -->
+        <div class="min-w-0">
+          <div class="mb-3 flex items-center justify-between">
+            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Кому открыто</h4>
+            <span v-if="coveredPeople" class="text-xs text-gray-500">≈ {{ coveredPeople }} чел.</span>
           </div>
-        </div>
 
-        <!-- Выбор пользователя/группы/роли -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            {{
-              accessForm.type === "user"
-                ? "Пользователь"
-                : accessForm.type === "group"
-                  ? "Группа"
-                  : "Роль"
-            }}
-          </label>
-          <select
-            v-model="accessForm.targetId"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2 px-4 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary appearance-none"
-          >
-            <option value="">
-              {{
-                accessForm.type === "user"
-                  ? "Выберите пользователя"
-                  : accessForm.type === "group"
-                    ? "Выберите группу"
-                    : "Выберите роль"
-              }}
-            </option>
+          <div v-if="loading" class="space-y-2">
+            <div v-for="i in 3" :key="i" class="h-14 animate-pulse rounded-lg bg-gray-100 dark:bg-white/[0.04]" />
+          </div>
 
-            <template v-if="accessForm.type === 'user'">
-              <option v-for="item in users" :key="item.id" :value="item.id">
-                {{ item.name }}
-              </option>
-            </template>
+          <div v-else-if="!accesses.length" class="rounded-lg border border-dashed border-warning-300 bg-warning-50/50 px-4 py-6 text-center dark:border-warning-500/30 dark:bg-warning-500/5">
+            <ShieldAlert class="mx-auto h-6 w-6 text-warning-500" />
+            <p class="mt-2 text-sm font-medium text-gray-800 dark:text-gray-200">Книгу пока никто не видит</p>
+            <p class="mt-0.5 text-xs text-gray-500">Выдайте доступ группе, курсу или роли</p>
+          </div>
 
-            <template v-else-if="accessForm.type === 'group'">
-              <option v-for="item in groups" :key="item.id" :value="item.id">
-                {{ item.name }}
-              </option>
-            </template>
-
-            <template v-else-if="accessForm.type === 'role'">
-              <option v-for="item in roles" :key="item.id" :value="item.id">
-                {{ item.name }}
-              </option>
-            </template>
-          </select>
-        </div>
-
-        <!-- Срок действия удален по требованию -->
-
-        <UiButton
-          @click="grantAccess"
-          :disabled="!accessForm.targetId || granting"
-          class="w-full"
-        >
-          <span v-if="granting" class="flex items-center justify-center gap-2">
-            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            Назначение...
-          </span>
-          <span v-else>Назначить доступ</span>
-        </UiButton>
-      </div>
-
-      <!-- Список доступов -->
-      <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-        <h4 class="font-semibold text-gray-900 dark:text-white mb-4">
-          Текущие доступы
-        </h4>
-
-        <div v-if="loadingAccess" class="text-center py-8">
-          <div
-            class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent"
-          ></div>
-        </div>
-
-        <div
-          v-else-if="accesses.length === 0"
-          class="text-center py-8 text-gray-500 dark:text-gray-400"
-        >
-          <p>Доступы не назначены</p>
-        </div>
-
-        <div v-else class="space-y-2">
-          <div
-            v-for="access in accesses"
-            :key="access.id"
-            class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"
-              >
-                <svg
-                  v-if="access.type === 'user'"
-                  class="w-5 h-5 text-primary"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-                <svg
-                  v-else
-                  class="w-5 h-5 text-primary"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p class="font-medium text-gray-900 dark:text-white">
-                  {{ access.name }}
-                </p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                  {{ access.type === "user" ? "Пользователь" : "Группа" }}
-                  {{
-                    access.expires_at
-                      ? ` • До ${formatDate(access.expires_at)}`
-                      : " • Бессрочно"
-                  }}
-                </p>
-              </div>
-            </div>
-            <button
-              @click="revokeAccess(access)"
-              class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-              title="Отозвать доступ"
+          <ul v-else class="max-h-[22rem] space-y-1.5 overflow-y-auto pr-1">
+            <li
+              v-for="a in accesses"
+              :key="a.id"
+              class="group flex items-center gap-3 rounded-lg border border-gray-100 px-3 py-2 dark:border-gray-800"
+              :class="{ 'opacity-60': a.isExpired }"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full" :class="typeStyle[a.type].bg">
+                <component :is="typeStyle[a.type].icon" class="h-4 w-4" :class="typeStyle[a.type].fg" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ a.name }}</p>
+                <p class="truncate text-xs text-gray-500">
+                  {{ typeStyle[a.type].label }}<template v-if="a.type !== 'user' && a.members"> · {{ a.members }} чел.</template>
+                  <template v-if="a.subtitle"> · {{ a.subtitle }}</template>
+                </p>
+                <p v-if="a.readingStats && a.readingStats.progress" class="mt-0.5 text-[11px] text-brand-500">
+                  Прочитано {{ a.readingStats.progress }}%
+                </p>
+              </div>
+              <div class="shrink-0 text-right">
+                <UiBadge v-if="a.isExpired" size="sm" color="error">Истёк</UiBadge>
+                <UiBadge v-else-if="a.expiresSoon" size="sm" color="warning">до {{ formatDate(a.expiresAt!) }}</UiBadge>
+                <span v-else-if="a.expiresAt" class="text-xs text-gray-500">до {{ formatDate(a.expiresAt) }}</span>
+                <span v-else class="text-xs text-gray-400">бессрочно</span>
+                <p class="mt-0.5 text-[10px] text-gray-400" :title="a.grantedBy ? `Выдал: ${a.grantedBy}` : ''">{{ formatDate(a.grantedAt) }}</p>
+              </div>
+              <button
+                type="button"
+                class="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-500/10"
+                :aria-label="`Отозвать доступ: ${a.name}`"
+                title="Отозвать"
+                @click="toRevoke = a"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </button>
-          </div>
+                <Trash2 class="h-4 w-4" />
+              </button>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
 
-    <!-- Подтверждение отзыва доступа (телепортируется в body поверх основной модалки) -->
     <UiConfirmModal
-      :is-open="!!accessToRevoke"
+      :is-open="!!toRevoke"
       title="Отозвать доступ?"
-      message="Пользователь или группа потеряет доступ к этой книге."
+      :message="toRevoke ? `«${toRevoke.name}» потеряет доступ к книге. Если книга сейчас открыта, она закроется в течение 30 секунд.` : ''"
       confirm-text="Отозвать"
-      @confirm="revokeAccessConfirmed"
-      @cancel="accessToRevoke = null"
+      @confirm="revoke"
+      @cancel="toRevoke = null"
     />
   </UiModal>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from "vue";
+import { ref, computed, watch } from "vue";
+import { User, Users, GraduationCap, Shield, ShieldAlert, Trash2 } from "lucide-vue-next";
 import { useToast } from "~/composables/useToast";
 
-interface Book {
-  id: string;
-  title: string;
-  author: string | null;
-  cover_url: string | null;
-}
-
+interface Book { id: string; title: string; author: string | null; cover_url: string | null }
 interface Access {
-  id: number;
-  type: "user" | "group" | "role";
+  id: string;
+  type: "user" | "group" | "course" | "role";
   name: string;
-  expires_at: string | null;
-  user_id?: string;
-  group_id?: number | string;
-  role_name?: string;
+  subtitle: string | null;
+  members: number;
+  grantedBy: string | null;
+  grantedAt: string;
+  expiresAt: string | null;
+  isExpired: boolean;
+  expiresSoon: boolean;
+  readingStats: { progress: number } | null;
 }
 
-interface Props {
-  isOpen: boolean;
-  book: Book | null;
-}
-
-const props = defineProps<Props>();
-defineEmits<{
-  close: [];
-}>();
-
+const props = defineProps<{ isOpen: boolean; book: Book | null }>();
+const emit = defineEmits<{ close: []; changed: [] }>();
 const toast = useToast();
 
-const loadingAccess = ref(false);
+const typeStyle = {
+  user: { icon: User, label: "Пользователь", bg: "bg-brand-50 dark:bg-brand-500/15", fg: "text-brand-500" },
+  group: { icon: Users, label: "Группа", bg: "bg-success-50 dark:bg-success-500/15", fg: "text-success-600" },
+  course: { icon: GraduationCap, label: "Курс", bg: "bg-blue-light-50 dark:bg-blue-light-500/15", fg: "text-blue-light-500" },
+  role: { icon: Shield, label: "Роль", bg: "bg-warning-50 dark:bg-warning-500/15", fg: "text-warning-600" },
+} as const;
+
+const loading = ref(false);
 const granting = ref(false);
 const accesses = ref<Access[]>([]);
-const users = ref<{ id: string; name: string }[]>([]);
-const groups = ref<{ id: number; name: string }[]>([]);
-const roles = [
-  { id: "STUDENT", name: "Слушатель" },
-  { id: "TEACHER", name: "Преподаватель" },
-  { id: "MANAGER", name: "Менеджер" },
-  { id: "ADMIN", name: "Администратор" },
-];
+const toRevoke = ref<Access | null>(null);
+const formRef = ref<{ reset: () => void } | null>(null);
 
-const accessForm = ref({
-  type: "user" as "user" | "group" | "role",
-  targetId: "",
-  expiresAt: "",
-});
+const activeCount = computed(() => accesses.value.filter((a) => !a.isExpired).length);
+const expiredCount = computed(() => accesses.value.length - activeCount.value);
+const coveredPeople = computed(() =>
+  accesses.value.filter((a) => !a.isExpired).reduce((sum, a) => sum + (a.members || 0), 0),
+);
 
-const fetchAccesses = async () => {
+const load = async () => {
   if (!props.book) return;
-
-  loadingAccess.value = true;
+  loading.value = true;
   try {
-    const response = await $fetch<{ data: { accessList: Access[] } }>(
-      `/api/library/admin/books/${props.book.id}/access`,
-    );
-    accesses.value = response.data.accessList;
-  } catch (error: any) {
-    toast.error(error.data?.message || "Ошибка загрузки списка доступов");
+    const res = await $fetch<{ data: { accessList: Access[] } }>(`/api/library/admin/books/${props.book.id}/access`);
+    accesses.value = res.data.accessList;
+  } catch (e: any) {
+    toast.error(e?.data?.message || "Не удалось загрузить доступы");
   } finally {
-    loadingAccess.value = false;
+    loading.value = false;
   }
 };
 
-const fetchUsersAndGroups = async () => {
-  try {
-    // Загружаем пользователей
-    const usersResponse = await $fetch("/api/users");
-    users.value = usersResponse.users.map((u: any) => ({
-      id: u.id,
-      name: `${u.name} (${u.email})`, // Fixed: use name instead of first_name/last_name
-    }));
-
-    // Загружаем группы
-    const groupsResponse = await $fetch("/api/groups");
-    groups.value = groupsResponse.groups.map((g: any) => ({
-      id: g.id,
-      name: g.name,
-    }));
-  } catch (error) {
-    console.error("Ошибка загрузки пользователей/групп:", error);
-  }
-};
-
-const grantAccess = async () => {
-  if (!props.book || !accessForm.value.targetId) return;
-
+const grant = async (payload: { type: string; targetId: string; expiresAt: string | null }) => {
+  if (!props.book) return;
   granting.value = true;
   try {
-    await $fetch(`/api/library/admin/books/${props.book.id}/access`, {
-      method: "POST",
-      body: {
-        type: accessForm.value.type,
-        userId:
-          accessForm.value.type === "user"
-            ? String(accessForm.value.targetId)
-            : undefined,
-        groupId:
-          accessForm.value.type === "group"
-            ? Number(accessForm.value.targetId)
-            : undefined,
-        roleName:
-          accessForm.value.type === "role"
-            ? accessForm.value.targetId
-            : undefined,
-        // expiresAt excluded
-      },
-    });
-
-    toast.success("Доступ успешно назначен");
-    accessForm.value.targetId = "";
-    accessForm.value.expiresAt = "";
-    fetchAccesses();
-  } catch (error: any) {
-    toast.error(error.data?.message || "Ошибка назначения доступа");
+    const res: any = await $fetch(`/api/library/admin/books/${props.book.id}/access`, { method: "POST", body: payload });
+    toast.success(res.message || "Доступ выдан");
+    formRef.value?.reset();
+    await load();
+    emit("changed");
+  } catch (e: any) {
+    toast.error(e?.data?.message || "Не удалось выдать доступ");
   } finally {
     granting.value = false;
   }
 };
 
-// Безопасность UX: отзыв доступа необратим — сначала запрашиваем подтверждение через UiConfirmModal
-const accessToRevoke = ref<Access | null>(null);
-const revokeAccess = (access: Access) => {
-  accessToRevoke.value = access;
-};
-
-// Прежняя логика отзыва доступа — после подтверждения
-const revokeAccessConfirmed = async () => {
-  const access = accessToRevoke.value;
-  accessToRevoke.value = null;
-  if (!props.book || !access) return;
-
+const revoke = async () => {
+  const a = toRevoke.value;
+  toRevoke.value = null;
+  if (!a || !props.book) return;
   try {
-    await $fetch(`/api/library/admin/books/${props.book.id}/access`, {
-      method: "DELETE",
-      body: { accessId: access.id },
-    });
-
-    toast.success("Доступ успешно отозван");
-    fetchAccesses();
-  } catch (error: any) {
-    toast.error(error.data?.message || "Ошибка отзыва доступа");
+    await $fetch(`/api/library/admin/books/${props.book.id}/access`, { method: "DELETE", body: { accessId: a.id } });
+    toast.success("Доступ отозван");
+    await load();
+    emit("changed");
+  } catch (e: any) {
+    toast.error(e?.data?.message || "Не удалось отозвать доступ");
   }
 };
 
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
+const formatDate = (d: string) => new Date(d).toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "2-digit" });
 
 watch(
-  () => props.isOpen,
-  (isOpen) => {
-    if (isOpen && props.book) {
-      fetchAccesses();
-    }
+  () => [props.isOpen, props.book?.id],
+  ([open]) => {
+    if (open && props.book) load();
+    else accesses.value = [];
   },
+  { immediate: true },
 );
-
-onMounted(() => {
-  fetchUsersAndGroups();
-});
 </script>

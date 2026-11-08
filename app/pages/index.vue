@@ -1,22 +1,23 @@
 <template>
   <!-- Обёртка без двойного отступа: внешние отступы даёт layout -->
   <div class="mx-auto max-w-screen-2xl space-y-4">
-    <Suspense>
-      <component :is="activeDashboardComponent" />
+    <!--
+      Дашборд зависит от роли и данных пользователя (имя, дата, статистика) — на сервере они
+      отличаются от клиентских. Рассогласование гидратации оставляло серверные узлы в DOM,
+      и после перехода на другую страницу блоки дашборда «торчали» под её содержимым.
+      Поэтому дашборд рендерится только на клиенте, а на сервере показывается скелетон.
+    -->
+    <ClientOnly>
+      <Suspense>
+        <component :is="activeDashboardComponent" />
+        <template #fallback>
+          <DashboardSkeleton />
+        </template>
+      </Suspense>
       <template #fallback>
-        <div class="space-y-4">
-          <!-- Скелетон дашборда: единая нейтральная палитра gray, без теней (редизайн) -->
-          <div class="h-24 rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] skeleton" />
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div
-              v-for="i in 4"
-              :key="`dashboard-skeleton-card-${i}`"
-              class="h-28 rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] skeleton"
-            />
-          </div>
-        </div>
+        <DashboardSkeleton />
       </template>
-    </Suspense>
+    </ClientOnly>
   </div>
 </template>
 
@@ -34,6 +35,24 @@ useHead({
 })
 
 const { isStudent, isTeacher, isManager, isAdmin } = usePermissions();
+
+// Скелетон дашборда: единая нейтральная палитра gray, без теней (редизайн)
+const DashboardSkeleton = defineComponent({
+  name: "DashboardSkeleton",
+  setup() {
+    const card = (cls: string, key: string) =>
+      h("div", { key, class: `${cls} rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03] skeleton` });
+    return () =>
+      h("div", { class: "space-y-4" }, [
+        card("h-24", "hero"),
+        h(
+          "div",
+          { class: "grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4" },
+          [1, 2, 3, 4].map((i) => card("h-28", `dashboard-skeleton-card-${i}`)),
+        ),
+      ]);
+  },
+});
 
 const DashboardStudentAsync = defineAsyncComponent(() => import("~/components/dashboard/Student.vue"));
 const DashboardTeacherAsync = defineAsyncComponent(() => import("~/components/dashboard/Teacher.vue"));

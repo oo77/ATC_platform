@@ -130,8 +130,32 @@
         </div>
       </div>
 
+      <!-- Быстрые показатели: сколько выдано и нужно ли обновить PDF -->
+      <div v-if="stats" class="mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-800 dark:bg-boxdark">
+        <span>Выдано: <b class="tabular-nums">{{ stats.summary.issued }}</b></span>
+        <span>Отозвано: <b class="tabular-nums">{{ stats.summary.revoked }}</b></span>
+        <span v-if="stats.summary.lastIssue">Последняя выдача: <b>{{ formatDate(stats.summary.lastIssue) }}</b></span>
+        <button
+          v-if="outdatedCount > 0"
+          type="button"
+          class="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-400"
+          @click="activeTab = 'stats'"
+        >
+          {{ outdatedCount }} PDF могут отличаться от текущего шаблона
+        </button>
+      </div>
+
+      <UiTabs v-model="activeTab" :tabs="tabs" class="mb-4" />
+
+      <CertificatesTemplateStatsPanel
+        v-if="activeTab === 'stats'"
+        :template-id="template.id"
+        :stats="stats"
+        @refresh="loadStats"
+      />
+
       <!-- Основной контент в 2 колонки -->
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div v-show="activeTab === 'overview'" class="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <!-- Левая колонка: Превью шаблона -->
         <div class="space-y-6">
           <!-- Превью шаблона -->
@@ -594,6 +618,27 @@ const previewData = ref<{
 const previewPageIndex = ref(0);
 const previewPageCount = ref(1);
 
+// Вкладки и статистика выданных по шаблону
+const activeTab = ref<"overview" | "stats">("overview");
+const stats = ref<any | null>(null);
+const outdatedCount = computed(
+  () => (stats.value?.render?.outdated || 0) + (stats.value?.render?.unknown || 0),
+);
+const tabs = computed(() => [
+  { id: "overview", label: "Обзор" },
+  { id: "stats", label: "Статистика и перерисовка", count: stats.value?.summary?.issued },
+]);
+const loadStats = async () => {
+  try {
+    const r = await authFetch<{ data: any }>(
+      `/api/certificates/templates/${route.params.id}/stats`,
+    );
+    stats.value = r.data;
+  } catch (e) {
+    console.error("Не удалось загрузить статистику шаблона", e);
+  }
+};
+
 // Number format
 const numberFormat = ref("ATC{YY}_{CODE}_{NUM}");
 const isSavingFormat = ref(false);
@@ -922,11 +967,13 @@ function getVariableLabel(key: VariableSource): string {
 // Load on mount
 onMounted(() => {
   loadTemplate();
+  loadStats();
 });
 
 // Reload when returning to this page (e.g., from editor)
 onActivated(() => {
   loadTemplate();
+  loadStats();
 });
 </script>
 ```
