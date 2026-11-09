@@ -51,19 +51,22 @@ export async function createCertificatesArchive(
         ? `${studentName}_${safeCertNum}_${groupCode}.pdf`
         : `${studentName}_${safeCertNum}.pdf`;
 
-      let folder = "";
+      const organizationFolder = sanitize(
+        cert.organization_name || cert.organizationName,
+        "Без организации",
+      );
+
+      const folders: string[] = [];
       if (groupBy === "organization") {
-        folder = sanitize(
-          cert.organization_name || cert.organizationName,
-          "Без организации",
-        );
+        folders.push(organizationFolder);
       } else if (groupBy === "course") {
-        folder = sanitize(cert.course_name || cert.courseName, "Без курса");
+        folders.push(sanitize(cert.course_name || cert.courseName, "Без курса"));
+        folders.push(organizationFolder);
       } else if (groupBy === "group") {
-        folder = groupCode || "Без группы";
+        folders.push(groupCode || "Без группы");
       }
 
-      const fileName = folder ? `${folder}/${fileBaseName}` : fileBaseName;
+      const fileName = [...folders, fileBaseName].join("/");
 
       archive.file(filePath, { name: fileName });
       filesAdded++;
