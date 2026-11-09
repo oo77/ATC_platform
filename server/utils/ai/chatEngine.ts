@@ -25,18 +25,6 @@ import {
 } from "./chatTools";
 import { tryFastPath } from "./chatFastPath";
 
-export type {
-  AgentStep,
-  SummaryMetric,
-  ColumnDef,
-  CertificateItem,
-  StudentCard,
-  ReportArtifact,
-  ChatEngineResponse,
-  UserContext,
-  ChatHistoryMessage,
-} from "./chatTypes";
-
 /** Запрос остановлен пользователем */
 export class ChatAbortedError extends Error {
   constructor() {

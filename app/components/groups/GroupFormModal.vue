@@ -52,6 +52,41 @@
             </div>
           </div>
 
+          <!-- Связь с группой Course Planner (только при создании) -->
+          <div v-if="!isEdit">
+            <div
+              v-if="plannerLink"
+              class="flex items-start justify-between gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3"
+            >
+              <div class="min-w-0 text-xs">
+                <p class="flex items-center gap-1.5 font-bold text-primary">
+                  <CalendarRange class="h-3.5 w-3.5" /> Из Course Planner
+                </p>
+                <p class="mt-0.5 truncate font-medium text-slate-700 dark:text-slate-200" :title="plannerLink.name">
+                  {{ plannerLink.name }}
+                </p>
+                <p class="text-slate-500">
+                  Слушателей: {{ selectedStudentIds.length }}<span v-if="plannerLink.classroom"> · {{ plannerLink.classroom }}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                class="shrink-0 text-xs font-medium text-slate-500 hover:text-danger cursor-pointer"
+                @click="clearPlannerLink"
+              >
+                Отвязать
+              </button>
+            </div>
+            <button
+              v-else
+              type="button"
+              class="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:border-primary hover:text-primary dark:border-slate-600 dark:text-slate-300 cursor-pointer"
+              @click="showPlannerPicker = true"
+            >
+              <CalendarRange class="h-4 w-4" /> Заполнить из Course Planner
+            </button>
+          </div>
+
           <!-- Учебная программа -->
           <div>
             <label
@@ -398,14 +433,22 @@
       </div>
     </template>
   </UiModal>
+
+  <GroupsPlannerGroupPicker
+    v-if="!isEdit"
+    :is-open="showPlannerPicker"
+    @close="showPlannerPicker = false"
+    @apply="handlePlannerApply"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
-import { Sparkles, FileText } from "lucide-vue-next";
+import { Sparkles, FileText, CalendarRange } from "lucide-vue-next";
 import type { StudyGroup } from "~/types/group";
 import type { Course } from "~/types/course";
 import UiSearchSelect from "~/components/ui/SearchSelect.vue";
+import type { PlannerGroupApplied } from "~/components/groups/PlannerGroupPicker.vue";
 
 const props = defineProps<{
   isOpen: boolean;
@@ -453,6 +496,40 @@ const loadingReports = ref(false);
 const handleStudentsConfirmed = (ids: string[]) => {
   selectedStudentIds.value = ids;
   toast.success(`Прикреплено слушателей к создаваемой группе: ${ids.length}`);
+};
+
+// Связь с группой Course Planner
+const showPlannerPicker = ref(false);
+const plannerLink = ref<{ id: string; name: string; classroom: string | null } | null>(null);
+
+const handlePlannerApply = ({ preview, studentIds, created, errors: importErrors }: PlannerGroupApplied) => {
+  plannerLink.value = {
+    id: preview.plannerGroup.id,
+    name: preview.plannerGroup.name,
+    classroom: preview.classroom,
+  };
+  if (preview.course) form.value.courseId = preview.course.id;
+  if (preview.startDate) form.value.startDate = preview.startDate;
+  if (preview.endDate) form.value.endDate = preview.endDate;
+  if (!form.value.code.trim() && preview.plannerGroup.name.length <= 50) {
+    form.value.code = preview.plannerGroup.name;
+  }
+  selectedStudentIds.value = studentIds;
+  showPlannerPicker.value = false;
+
+  const parts = [`Слушателей: ${studentIds.length}`];
+  if (created) parts.push(`создано новых: ${created}`);
+  toast.success(`Данные группы загружены из Course Planner. ${parts.join(", ")}`);
+  if (importErrors.length) {
+    toast.warning(`Не удалось добавить ${importErrors.length} слушателей: ${importErrors.slice(0, 3).map((e) => e.name || e.pinfl).join(", ")}${importErrors.length > 3 ? "…" : ""}`);
+  }
+  if (!preview.course) {
+    toast.warning("Программа из Course Planner не найдена в ATC — выберите её вручную");
+  }
+};
+
+const clearPlannerLink = () => {
+  plannerLink.value = null;
 };
 
 // Computed
@@ -585,6 +662,12 @@ const handleSubmit = async () => {
       const payload = {
         ...form.value,
         studentIds: selectedStudentIds.value,
+        ...(plannerLink.value
+          ? {
+              plannerGroupId: plannerLink.value.id,
+              classroom: plannerLink.value.classroom?.slice(0, 100) || undefined,
+            }
+          : {}),
       };
 
       // Добавляем данные как JSON строку (согласно нашему API)
@@ -654,6 +737,8 @@ const resetForm = () => {
   errors.value = {};
   selectedFiles.value = [];
   selectedStudentIds.value = [];
+  plannerLink.value = null;
+  showPlannerPicker.value = false;
   rightTab.value = "files";
   uploaderRef.value?.clearFiles();
   existingReports.value = [];

@@ -62,6 +62,7 @@ import * as issuedCertificatesRenderHash from "./migrations/20261108_051_issued_
 import * as publicDashboards from "./migrations/20261108_052_public_dashboards";
 import * as libraryAnalytics from "./migrations/20261108_053_library_analytics";
 import * as rolesAndAudit from "./migrations/20261109_054_roles_and_audit";
+import * as studyGroupsPlannerLink from "./migrations/20261109_055_study_groups_planner_link";
 
 /**
  * ============================================================================
@@ -547,6 +548,12 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: rolesAndAudit.up,
     down: rolesAndAudit.down,
     description: rolesAndAudit.description,
+  },
+  {
+    name: "20261109_055_study_groups_planner_link",
+    up: studyGroupsPlannerLink.up,
+    down: studyGroupsPlannerLink.down,
+    description: studyGroupsPlannerLink.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

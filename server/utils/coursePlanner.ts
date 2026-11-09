@@ -66,7 +66,7 @@ export interface GroupResource {
       duration: number | null;
     } | null;
   };
-  students: Array<{ pinfl: string; name: string }>;
+  students: StudentResource[];
   total: number;
 }
 
@@ -244,6 +244,76 @@ export async function fetchCoursePlannerGroup(
     return {
       success: true,
       data: resData.data,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || "Ошибка при вызове API course-planner2",
+    };
+  }
+}
+
+export type GroupListItem = GroupResource["group"] & { createdAt?: string | null; studentCount?: number };
+
+/**
+ * Получить список групп из course-planner2 (resource=groups)
+ */
+export async function fetchCoursePlannerGroups(
+  params?: {
+    search?: string;
+    status?: string;
+    startDateFrom?: string;
+    startDateTo?: string;
+    page?: number;
+    limit?: number;
+  },
+  overrideConfig?: { url?: string; token?: string }
+): Promise<{
+  success: boolean;
+  data?: GroupListItem[];
+  total?: number;
+  page?: number;
+  totalPages?: number;
+  error?: string;
+}> {
+  const config = getCoursePlannerConfig();
+  const url = (overrideConfig?.url || config.url).replace(/\/+$/, "");
+  const token = overrideConfig?.token !== undefined ? overrideConfig.token : config.token;
+
+  const queryParams = new URLSearchParams();
+  queryParams.set("resource", "groups");
+  if (params?.search) queryParams.set("search", params.search);
+  if (params?.status) queryParams.set("status", params.status);
+  if (params?.startDateFrom) queryParams.set("startDateFrom", params.startDateFrom);
+  if (params?.startDateTo) queryParams.set("startDateTo", params.startDateTo);
+  if (params?.page) queryParams.set("page", String(params.page));
+  if (params?.limit) queryParams.set("limit", String(params.limit));
+
+  try {
+    const response = await fetch(`${url}/api/external?${queryParams.toString()}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-API-Key": token,
+        Accept: "application/json",
+      },
+    });
+
+    const resData = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: resData.error || `Ошибка сервера course-planner2 (${response.status})`,
+      };
+    }
+
+    return {
+      success: true,
+      data: resData.data || [],
+      total: Number(resData.total) || 0,
+      page: Number(resData.page) || 1,
+      totalPages: Number(resData.totalPages) || 1,
     };
   } catch (err: any) {
     return {

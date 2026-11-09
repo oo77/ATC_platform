@@ -20,6 +20,9 @@ export interface StudyGroup {
   isArchived: boolean;
   archivedAt?: string | null;
   archivedBy?: string | null;
+  /** ID связанной группы в Course Planner 2 */
+  plannerGroupId?: string | null;
+  plannerSyncedAt?: string | null;
   students?: GroupStudent[];
   studentCount?: number;
   createdAt: string;
