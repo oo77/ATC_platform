@@ -1028,7 +1028,7 @@ const regenerateAllCertificates = async () => {
       try {
         await authFetch(`/api/certificates/${id}/regenerate`, {
           method: "POST",
-          // Для старых сертификатов, где инструктор не сохранён
+          // Заменяет инструктора в снимке сертификата (в т.ч. у старых, где он не сохранён)
           body: { instructorId: selectedInstructorId.value },
         });
       } catch (error: any) {

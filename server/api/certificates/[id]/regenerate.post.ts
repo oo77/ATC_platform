@@ -3,8 +3,8 @@
  * Перерисовать PDF выданного сертификата по текущей версии его шаблона.
  * Номер, дата выдачи и статус не меняются.
  *
- * Body: { instructorId?: string | null } — инструктор для старых сертификатов,
- * у которых он не сохранён в снимке
+ * Body: { instructorId?: string | null } — инструктор, которым нужно заменить
+ * сохранённый в снимке (в том числе чтобы убрать его, если передан null)
  */
 
 import { z } from "zod";
@@ -36,10 +36,9 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const result = await regenerateIssuedCertificatePdf(
-      id,
-      parsed.data.instructorId,
-    );
+    const result = await regenerateIssuedCertificatePdf(id, undefined, {
+      overrideInstructorId: parsed.data.instructorId ?? null,
+    });
 
     await logActivity(
       event,
