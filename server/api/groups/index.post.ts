@@ -14,6 +14,7 @@ import {
   getGroupById,
 } from "../../repositories/groupRepository";
 import { getCourseById } from "../../repositories/courseRepository";
+import { findGroupByPlannerId } from "../../utils/plannerGroupSync";
 import { v4 as uuidv4 } from "uuid";
 import type { PoolConnection } from "mysql2/promise";
 import { Permission, roleHasPermission } from "../../utils/permissions";
@@ -117,6 +118,21 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  // Связь с группой Course Planner (опционально)
+  const plannerGroupId =
+    typeof groupData.plannerGroupId === "string" && groupData.plannerGroupId.trim()
+      ? groupData.plannerGroupId.trim()
+      : null;
+  if (plannerGroupId) {
+    const linked = await findGroupByPlannerId(plannerGroupId);
+    if (linked) {
+      throw createError({
+        statusCode: 409,
+        message: `Эта группа Course Planner уже связана с группой ${linked.code}`,
+      });
+    }
+  }
+
   // Проверка существования курса
   const course = await getCourseById(groupData.courseId, false); // Импорт нужно добавить или использовать существующий courseExists, но нам нужен статус архивации
   if (!course) {
@@ -174,8 +190,8 @@ export default defineEventHandler(async (event) => {
       async (connection: PoolConnection) => {
         // 7.1 Вставка группы
         await connection.execute(
-          `INSERT INTO study_groups (id, code, course_id, start_date, end_date, classroom, description, is_active, is_archived, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, FALSE, NOW(3), NOW(3))`,
+          `INSERT INTO study_groups (id, code, course_id, start_date, end_date, classroom, description, is_active, is_archived, planner_group_id, planner_synced_at, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, FALSE, ?, ?, NOW(3), NOW(3))`,
           [
             newGroupId,
             groupData.code,
@@ -185,6 +201,8 @@ export default defineEventHandler(async (event) => {
             groupData.classroom || null,
             groupData.description || null,
             groupData.isActive !== false ? 1 : 0,
+            plannerGroupId,
+            plannerGroupId ? new Date() : null,
           ],
         );
 
@@ -245,6 +263,7 @@ export default defineEventHandler(async (event) => {
     await logActivity(event, "CREATE", "GROUP", newGroupId, groupData.code, {
       courseId: groupData.courseId,
       studentsCount: groupData.studentIds?.length || 0,
+      plannerGroupId,
       filesCount: pdfFiles.length,
     });
 

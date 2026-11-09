@@ -2,10 +2,9 @@ import { executeQuery } from "../../../utils/db";
 import { Permission, roleHasPermission } from "../../../utils/permissions";
 import {
   processAiChatMessage,
-  type UserContext,
   type ChatProgressEvent,
-  type ReportArtifact,
 } from "../../../utils/ai/chatEngine";
+import type { UserContext, ReportArtifact } from "../../../utils/ai/chatTypes";
 import { v4 as uuidv4 } from "uuid";
 import { requirePermission } from "../../../utils/permissions";
 

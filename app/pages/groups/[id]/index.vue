@@ -60,6 +60,18 @@
           <span>{{ daysInfo }}</span>
           <span class="text-gray-300 dark:text-gray-600">·</span>
           <span>{{ group.students?.length || 0 }} слушателей</span>
+          <template v-if="group.plannerGroupId">
+            <span class="text-gray-300 dark:text-gray-600">·</span>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 text-primary hover:underline disabled:cursor-default disabled:no-underline"
+              :disabled="!canEditGroups || group.isArchived"
+              title="Группа связана с Course Planner"
+              @click="showPlannerSyncModal = true"
+            >
+              <CalendarRange class="h-3.5 w-3.5" /> Course Planner
+            </button>
+          </template>
         </template>
 
         <!-- Действия: primary «Сертификаты» + меню «Документы» + меню «Действия» -->
@@ -740,6 +752,15 @@
       @updated="handleGroupUpdated"
     />
 
+    <GroupsPlannerSyncModal
+      v-if="group?.plannerGroupId"
+      :is-open="showPlannerSyncModal"
+      :group-id="group.id"
+      @close="showPlannerSyncModal = false"
+      @synced="loadGroup"
+      @unlinked="loadGroup"
+    />
+
     <GroupsManageStudentsModal
       :is-open="showManageStudentsModal"
       :group="group"
@@ -983,6 +1004,8 @@ import {
   Upload, // иконка «Загрузить документ» в меню «Действия»
   Archive, // иконка «В архив» в меню «Действия»
   ArchiveRestore, // иконка «Восстановить» в меню «Действия»
+  CalendarRange, // иконка «Course Planner»
+  RefreshCw, // иконка «Синхронизировать с Course Planner»
 } from "lucide-vue-next";
 import type { StudyGroup } from "~/types/group";
 import type { EvaluationSheetsCommission } from "../../../../shared/utils/evaluationSheets";
@@ -1026,6 +1049,7 @@ const loading = ref(true);
 const group = ref<StudyGroup | null>(null);
 const showEditModal = ref(false);
 const showManageStudentsModal = ref(false);
+const showPlannerSyncModal = ref(false);
 const showDeleteModal = ref(false);
 const showArchiveModal = ref(false);
 const showUploadReportModal = ref(false);
@@ -2569,6 +2593,12 @@ const actionGroups = computed(() => [
         hidden: !(canManageGroupStudents.value && !group.value?.isArchived),
       },
       { key: "upload", label: "Загрузить документ", icon: Upload, hidden: !canEditGroups.value },
+      {
+        key: "planner-sync",
+        label: "Синхронизировать с Course Planner",
+        icon: RefreshCw,
+        hidden: !(canEditGroups.value && group.value?.plannerGroupId && !group.value?.isArchived),
+      },
     ],
   },
   {
@@ -2600,6 +2630,9 @@ const handleGroupAction = (key: string) => {
       break;
     case "upload":
       showUploadReportModal.value = true;
+      break;
+    case "planner-sync":
+      showPlannerSyncModal.value = true;
       break;
     case "archive":
       showArchiveModal.value = true;

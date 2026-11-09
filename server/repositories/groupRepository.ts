@@ -60,6 +60,8 @@ export interface StudyGroup {
   description: string | null;
   isActive: boolean;
   isArchived?: boolean;
+  plannerGroupId?: string | null;
+  plannerSyncedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   course?: Course | null;
@@ -167,6 +169,8 @@ function mapGroupRow(row: any): StudyGroup {
     description: row.description,
     isActive: Boolean(row.is_active),
     isArchived: Boolean(row.is_archived),
+    plannerGroupId: row.planner_group_id ?? null,
+    plannerSyncedAt: row.planner_synced_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     course: row.course_name
