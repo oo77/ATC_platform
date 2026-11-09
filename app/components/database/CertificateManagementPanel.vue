@@ -349,6 +349,17 @@
       @close="closeManualFormModal"
       @created="handleCertificateCreated"
     />
+
+    <DatabaseCertificateArchiveModal
+      :is-open="isArchiveModalOpen"
+      :initial-filters="{
+        organizationName: filters.organizationName,
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+        status: filters.status,
+      }"
+      @close="closeArchiveModal"
+    />
   </div>
 </template>
 
@@ -431,7 +442,7 @@ const isDeleting = ref(false);
 const isExportModalOpen = ref(false);
 const templates = ref<{ id: string; name: string }[]>([]);
 const isDownloadingExcel = ref(false);
-const isDownloadingArchive = ref(false);
+const isArchiveModalOpen = ref(false);
 
 const hasActiveFilters = computed(() =>
   !!(filters.value.search || filters.value.status !== 'all' || filters.value.sourceType !== 'all' ||
@@ -525,22 +536,18 @@ const toolbarMenu = computed(() => [
     ],
   },
   {
-    // Архив PDF по текущим фильтрам, разложенный по папкам. Имя каждого файла
-    // внутри архива: ФИО_НомерСертификата_Группа.pdf
-    label: 'Архив сертификатов (ZIP)',
+    // Окно настройки: период, курс, группа, организация, статус и группировка папок —
+    // вместо скачивания всех сертификатов разом
+    label: 'Архив',
     items: [
-      { key: 'archive-organization', label: 'По организациям', description: 'Папка на каждую организацию', icon: Archive, loading: isDownloadingArchive.value, disabled: loading.value || isDownloadingArchive.value || !pagination.value.total },
-      { key: 'archive-group', label: 'По группам', description: 'Папка на каждую учебную группу', icon: Archive, loading: isDownloadingArchive.value, disabled: loading.value || isDownloadingArchive.value || !pagination.value.total },
-      { key: 'archive-course', label: 'По курсам', description: 'Папка на каждый курс', icon: Archive, loading: isDownloadingArchive.value, disabled: loading.value || isDownloadingArchive.value || !pagination.value.total },
+      { key: 'archive-zip', label: 'Скачать архив (ZIP)…', description: 'Период, курс, группа — на выбор', icon: Archive, disabled: loading.value || !pagination.value.total },
     ],
   },
 ]);
 function onToolbarSelect(key: string) {
   if (key === 'download-excel') downloadExcel();
   else if (key === 'export') openExportModal();
-  else if (key === 'archive-organization') downloadArchive('organization');
-  else if (key === 'archive-group') downloadArchive('group');
-  else if (key === 'archive-course') downloadArchive('course');
+  else if (key === 'archive-zip') openArchiveModal();
 }
 
 // Меню строки «⋯»: «Подробнее» — безопасное; отзыв/удаление (опасные) — отдельной группой в конце
@@ -714,48 +721,8 @@ async function downloadExcel() {
     isDownloadingExcel.value = false;
   }
 }
-// ZIP-архив PDF сертификатов по текущим фильтрам, сгруппированный по папкам
-// на сервере (server/api/certificates/archive.post.ts). Имя файла внутри
-// архива: ФИО_НомерСертификата_Группа.pdf
-const archiveGroupLabels: Record<'organization' | 'group' | 'course', string> = {
-  organization: 'po_organizaciyam',
-  group: 'po_gruppam',
-  course: 'po_kursam',
-};
-async function downloadArchive(groupBy: 'organization' | 'group' | 'course') {
-  if (isDownloadingArchive.value || !pagination.value.total) return;
-  isDownloadingArchive.value = true;
-  try {
-    const activeFilters: Record<string, string> = { status: filters.value.status };
-    if (filters.value.search) activeFilters.search = filters.value.search;
-    if (filters.value.sourceType !== 'all') activeFilters.sourceType = filters.value.sourceType;
-    if (filters.value.organizationName) activeFilters.organizationName = filters.value.organizationName;
-    if (filters.value.dateFrom) activeFilters.dateFrom = filters.value.dateFrom;
-    if (filters.value.dateTo) activeFilters.dateTo = filters.value.dateTo;
-    if (filters.value.templateId) activeFilters.templateId = filters.value.templateId;
-
-    const blob = await authFetch<Blob>('/api/certificates/archive', {
-      method: 'POST',
-      body: { filters: activeFilters, groupBy },
-      responseType: 'blob',
-    });
-
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    const dateStr = new Date().toISOString().split('T')[0];
-    link.download = `sertifikaty_${archiveGroupLabels[groupBy]}_${dateStr}.zip`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (error: any) {
-    console.error('Error downloading certificates archive:', error);
-    notification.error('Ошибка скачивания', error.data?.message || error.message || 'Не удалось скачать архив сертификатов');
-  } finally {
-    isDownloadingArchive.value = false;
-  }
-}
+function openArchiveModal() { isArchiveModalOpen.value = true; }
+function closeArchiveModal() { isArchiveModalOpen.value = false; }
 
 function openManualFormModal() { isManualFormModalOpen.value = true; }
 function closeManualFormModal() { isManualFormModalOpen.value = false; }
