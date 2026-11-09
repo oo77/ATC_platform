@@ -20,8 +20,8 @@ const filtersSchema = z.object({
   groupId: z.string().uuid().optional(),
   templateId: z.string().uuid().optional(),
   organizationName: z.string().optional(),
-  courseName: z.string().optional(),
-  groupCode: z.string().optional(),
+  courseNames: z.array(z.string()).optional(),
+  groupCodes: z.array(z.string()).optional(),
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
 });
@@ -147,14 +147,14 @@ export default defineEventHandler(async (event) => {
       params.push(`%${parsed.organizationName}%`);
     }
 
-    if (parsed.courseName) {
-      sql += " AND COALESCE(c.name, ic.course_name) = ?";
-      params.push(parsed.courseName);
+    if (parsed.courseNames?.length) {
+      sql += ` AND COALESCE(c.name, ic.course_name) IN (${parsed.courseNames.map(() => "?").join(",")})`;
+      params.push(...parsed.courseNames);
     }
 
-    if (parsed.groupCode) {
-      sql += " AND COALESCE(g.code, ic.group_code) = ?";
-      params.push(parsed.groupCode);
+    if (parsed.groupCodes?.length) {
+      sql += ` AND COALESCE(g.code, ic.group_code) IN (${parsed.groupCodes.map(() => "?").join(",")})`;
+      params.push(...parsed.groupCodes);
     }
 
     if (parsed.dateFrom) {

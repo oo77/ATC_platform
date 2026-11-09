@@ -21,30 +21,53 @@
         </div>
       </div>
 
-      <!-- Курс -->
-      <label class="block">
-        <span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Курс</span>
-        <select
-          v-model="form.courseName"
-          class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-          @change="onCourseChange"
-        >
-          <option value="">Все курсы</option>
-          <option v-for="name in options.courses" :key="name" :value="name">{{ name }}</option>
-        </select>
-      </label>
+      <!-- Курсы: мультивыбор; пусто = все курсы -->
+      <div>
+        <div class="mb-1.5 flex items-center justify-between">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Курсы</span>
+          <span class="text-xs text-gray-500 dark:text-gray-400">{{ form.courseNames.length ? `выбрано: ${form.courseNames.length}` : 'все' }}</span>
+        </div>
+        <div class="max-h-36 space-y-1 overflow-auto rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+          <p v-if="!options.courses.length" class="px-1 py-2 text-xs text-gray-500">Курсов нет</p>
+          <label
+            v-for="name in options.courses"
+            :key="name"
+            class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-800 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/[0.04]"
+          >
+            <input
+              type="checkbox"
+              :checked="form.courseNames.includes(name)"
+              class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              @change="toggleCourse(name)"
+            />
+            <span class="truncate">{{ name }}</span>
+          </label>
+        </div>
+      </div>
 
-      <!-- Группа: сужается до группы выбранного курса -->
-      <label class="block">
-        <span class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Группа</span>
-        <select
-          v-model="form.groupCode"
-          class="h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-        >
-          <option value="">Все группы</option>
-          <option v-for="g in filteredGroups" :key="g.code" :value="g.code">{{ g.code }}</option>
-        </select>
-      </label>
+      <!-- Группы: мультивыбор, список сужается до групп выбранных курсов -->
+      <div>
+        <div class="mb-1.5 flex items-center justify-between">
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Группы</span>
+          <span class="text-xs text-gray-500 dark:text-gray-400">{{ form.groupCodes.length ? `выбрано: ${form.groupCodes.length}` : 'все' }}</span>
+        </div>
+        <div class="max-h-36 space-y-1 overflow-auto rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+          <p v-if="!filteredGroups.length" class="px-1 py-2 text-xs text-gray-500">Групп нет</p>
+          <label
+            v-for="g in filteredGroups"
+            :key="g.code"
+            class="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm text-gray-800 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/[0.04]"
+          >
+            <input
+              type="checkbox"
+              :checked="form.groupCodes.includes(g.code)"
+              class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              @change="toggleGroup(g.code)"
+            />
+            <span class="truncate">{{ g.code }}</span>
+          </label>
+        </div>
+      </div>
 
       <!-- Организация -->
       <label class="block">
@@ -144,8 +167,8 @@ const groupByOptions = [
 const form = reactive({
   dateFrom: '',
   dateTo: '',
-  courseName: '',
-  groupCode: '',
+  courseNames: [] as string[],
+  groupCodes: [] as string[],
   organizationName: '',
   status: 'issued' as 'all' | 'issued' | 'revoked',
   groupBy: 'organization' as 'none' | 'organization' | 'group' | 'course',
@@ -159,15 +182,23 @@ const isLoadingOptions = ref(false);
 const isDownloading = ref(false);
 
 const filteredGroups = computed(() => {
-  if (!form.courseName) return options.value.groups;
-  return options.value.groups.filter((g) => g.courseName === form.courseName);
+  if (!form.courseNames.length) return options.value.groups;
+  return options.value.groups.filter((g) => g.courseName && form.courseNames.includes(g.courseName));
 });
 
-function onCourseChange() {
-  // Сброс группы, если она принадлежит другому курсу
-  if (form.groupCode && !filteredGroups.value.some((g) => g.code === form.groupCode)) {
-    form.groupCode = '';
-  }
+function toggleCourse(name: string) {
+  const idx = form.courseNames.indexOf(name);
+  if (idx >= 0) form.courseNames.splice(idx, 1);
+  else form.courseNames.push(name);
+  // Убираем выбранные группы, которых больше нет в списке (их курс снят)
+  const visible = new Set(filteredGroups.value.map((g) => g.code));
+  form.groupCodes = form.groupCodes.filter((code) => visible.has(code));
+}
+
+function toggleGroup(code: string) {
+  const idx = form.groupCodes.indexOf(code);
+  if (idx >= 0) form.groupCodes.splice(idx, 1);
+  else form.groupCodes.push(code);
 }
 
 async function loadOptions() {
@@ -196,8 +227,8 @@ watch(
     form.status = props.initialFilters?.status && props.initialFilters.status !== 'all'
       ? props.initialFilters.status
       : 'issued';
-    form.courseName = '';
-    form.groupCode = '';
+    form.courseNames = [];
+    form.groupCodes = [];
     loadOptions();
   },
   { immediate: true },
@@ -211,11 +242,11 @@ async function startDownload() {
   if (isDownloading.value) return;
   isDownloading.value = true;
   try {
-    const filters: Record<string, string> = { status: form.status };
+    const filters: Record<string, string | string[]> = { status: form.status };
     if (form.dateFrom) filters.dateFrom = form.dateFrom;
     if (form.dateTo) filters.dateTo = form.dateTo;
-    if (form.courseName) filters.courseName = form.courseName;
-    if (form.groupCode) filters.groupCode = form.groupCode;
+    if (form.courseNames.length) filters.courseNames = [...form.courseNames];
+    if (form.groupCodes.length) filters.groupCodes = [...form.groupCodes];
     if (form.organizationName) filters.organizationName = form.organizationName;
 
     const blob = await authFetch<Blob>('/api/certificates/archive', {
