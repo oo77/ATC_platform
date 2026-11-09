@@ -55,8 +55,8 @@ type ButtonSize = 'xs' | 'sm' | 'md' | 'lg'
 interface ButtonProps {
   size?: ButtonSize
   variant?: ButtonVariant
-  startIcon?: object
-  endIcon?: object
+  startIcon?: object | Function
+  endIcon?: object | Function
   className?: string
   disabled?: boolean
   loading?: boolean

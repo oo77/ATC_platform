@@ -13,5 +13,5 @@
 
 <script setup lang="ts">
 import { Inbox } from 'lucide-vue-next'
-defineProps<{ title: string; description?: string; icon?: object }>()
+defineProps<{ title: string; description?: string; icon?: object | Function }>()
 </script>

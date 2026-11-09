@@ -112,7 +112,7 @@ const props = withDefaults(
     /** Только кнопка «⋯» (для строк таблицы) */
     iconOnly?: boolean
     ariaLabel?: string
-    triggerIcon?: object
+    triggerIcon?: object | Function
     align?: 'start' | 'end'
   }>(),
   { label: 'Действия', variant: 'outline', size: 'md', iconOnly: false, align: 'end' },
