@@ -104,6 +104,59 @@
         </p>
       </div>
 
+      <!-- Шаблон теста (только для проверки знаний) -->
+      <div v-if="isAssessment">
+        <label
+          class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+        >
+          Шаблон экзамена
+        </label>
+        <div class="relative">
+          <select
+            v-model="form.testTemplateId"
+            :disabled="loadingTemplates"
+            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-boxdark px-3 py-2 text-gray-900 dark:text-white focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">
+              {{
+                isEditMode
+                  ? "Без теста (только запись в расписании)"
+                  : "Как в оригинальном занятии"
+              }}
+            </option>
+            <option
+              v-for="template in testTemplates"
+              :key="template.id"
+              :value="template.id"
+            >
+              {{ template.name }}{{ template.code ? ` (${template.code})` : "" }}
+              {{ template.id === originalTemplateId ? " — как в оригинале" : "" }}
+            </option>
+          </select>
+          <div
+            v-if="loadingTemplates"
+            class="absolute right-8 top-1/2 -translate-y-1/2"
+          >
+            <div
+              class="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"
+            ></div>
+          </div>
+        </div>
+        <p
+          v-if="templateChangedOnEdit"
+          class="mt-1 text-xs text-warning"
+        >
+          Внимание: при смене шаблона текущее назначение теста пересдачи будет
+          пересоздано.
+        </p>
+        <p
+          v-else-if="!isEditMode"
+          class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+        >
+          Можно выбрать другой шаблон — например, другой вариант экзамена.
+        </p>
+      </div>
+
       <!-- Дата и время -->
       <div class="grid grid-cols-3 gap-4">
         <div>
@@ -309,7 +362,82 @@ const form = reactive({
   endTime: "",
   instructorId: "",
   classroomId: "",
+  testTemplateId: "",
 });
+
+interface TestTemplate {
+  id: string;
+  name: string;
+  code?: string;
+}
+
+const isAssessment = computed(
+  () => props.originalEvent?.eventType === "assessment",
+);
+const testTemplates = ref<TestTemplate[]>([]);
+const loadingTemplates = ref(false);
+// Шаблон оригинального занятия (для подсказки в списке)
+const originalTemplateId = ref("");
+// Шаблон, с которым пересдача открыта на редактирование
+const initialTemplateId = ref<string | null>(null);
+
+const templateChangedOnEdit = computed(
+  () =>
+    isEditMode.value &&
+    initialTemplateId.value !== null &&
+    form.testTemplateId !== initialTemplateId.value,
+);
+
+const fetchAssignmentTemplateId = async (
+  eventId: string,
+): Promise<string> => {
+  try {
+    const response = await authFetch<{ success: boolean; assignment: any }>(
+      `/api/tests/assignments/by-event/${eventId}`,
+    );
+    return response.success && response.assignment
+      ? response.assignment.test_template_id || ""
+      : "";
+  } catch {
+    return "";
+  }
+};
+
+const loadTestTemplates = async () => {
+  if (!isAssessment.value || !props.originalEvent) return;
+
+  loadingTemplates.value = true;
+  try {
+    const [templatesResponse, originalId, retakeId] = await Promise.all([
+      testTemplates.value.length > 0
+        ? Promise.resolve(null)
+        : authFetch<{ success: boolean; templates: TestTemplate[] }>(
+            "/api/test-bank/templates?is_active=true&limit=1000",
+          ),
+      fetchAssignmentTemplateId(props.originalEvent.id),
+      isEditMode.value && props.retakeEvent
+        ? fetchAssignmentTemplateId(props.retakeEvent.id)
+        : Promise.resolve(null),
+    ]);
+
+    if (templatesResponse?.success) {
+      testTemplates.value = templatesResponse.templates || [];
+    }
+
+    originalTemplateId.value = originalId;
+
+    if (isEditMode.value) {
+      form.testTemplateId = retakeId || "";
+      initialTemplateId.value = form.testTemplateId;
+    } else {
+      form.testTemplateId = originalId;
+    }
+  } catch (err) {
+    console.error("[RetakeModal] Error loading test templates:", err);
+  } finally {
+    loadingTemplates.value = false;
+  }
+};
 
 const errors = reactive({
   studentIds: "",
@@ -346,6 +474,9 @@ const loadData = async () => {
   if (!props.originalEvent) return;
 
   loadingStudents.value = true;
+
+  // Шаблоны тестов грузим параллельно, не блокируя форму
+  loadTestTemplates();
 
   try {
     // Загружаем студентов с оценками
@@ -520,6 +651,11 @@ const handleSubmit = async () => {
           instructorId: form.instructorId,
           classroomId: form.classroomId || null,
           allowedStudentIds: form.studentIds,
+          // Шаблон отправляем только если его реально поменяли,
+          // чтобы не удалить назначение теста из-за сбоя загрузки
+          ...(templateChangedOnEdit.value
+            ? { testTemplateId: form.testTemplateId }
+            : {}),
         },
       });
 
@@ -544,6 +680,10 @@ const handleSubmit = async () => {
           endTime: form.endTime,
           instructorId: form.instructorId,
           classroomId: form.classroomId || undefined,
+          testTemplateId:
+            isAssessment.value && form.testTemplateId
+              ? form.testTemplateId
+              : undefined,
         },
       });
 
@@ -572,6 +712,9 @@ const handleClose = () => {
   form.endTime = "";
   form.instructorId = "";
   form.classroomId = "";
+  form.testTemplateId = "";
+  originalTemplateId.value = "";
+  initialTemplateId.value = null;
 
   // Сброс ошибок
   errors.studentIds = "";
