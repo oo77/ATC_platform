@@ -57,6 +57,12 @@ export interface RegenerateOptions {
   template?: CertificateTemplate;
   /** Не перерисовывать, если шаблону нужен инструктор, а его негде взять */
   requireInstructor?: boolean;
+  /**
+   * Явно заменить инструктора в снимке этим значением (включая null — убрать
+   * инструктора), а не только подставлять fallbackInstructorId при его
+   * отсутствии в снимке
+   */
+  overrideInstructorId?: string | null;
   /** Сгенерировать PDF в память, ничего не сохраняя */
   dryRun?: boolean;
   /** Папка, куда скопировать прежний PDF перед заменой */
@@ -154,7 +160,9 @@ export async function regenerateIssuedCertificatePdf(
   }
 
   const instructor = await loadInstructor(
-    snapshot.instructorId || fallbackInstructorId || null,
+    opts.overrideInstructorId !== undefined
+      ? opts.overrideInstructorId
+      : snapshot.instructorId || fallbackInstructorId || null,
   );
   // Если инструктора нет, перерисовка стёрла бы его с сертификата
   if (opts.requireInstructor && !instructor && templateUsesInstructor(templateData)) {
