@@ -578,8 +578,8 @@ export function buildReportQuery(config: ReportConfig): BuiltReport {
       }
       expr = buildTimeScaleExpression(def.sqlExpression, scale);
       label = sanitizeLabel(grp.label, `${def.label} (${TIME_SCALE_LABELS[scale]})`);
+      // Год не помечаем числовым: иначе Excel/таблица покажут «2 026»
       def.requiredJoins.forEach((j) => required.add(j));
-      if (scale === "year") numericLabels.push(label);
     } else {
       const def = requireField(grp?.field_key, "группировка");
       expr = def.sqlExpression;

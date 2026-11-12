@@ -109,11 +109,17 @@ export default defineEventHandler(async (event) => {
     );
     for (const r of matrix) sheet.addRow(r);
 
-    // Числовой формат для числовых столбцов
+    // Числовой формат для числовых столбцов.
+    // Не «#,##0.##»: для целых Excel оставляет висячий разделитель («4 387,»).
+    // Целые столбцы (количества) — без дробной части, остальные — 2 знака.
     labels.forEach((label, idx) => {
       if (!numeric.has(label)) return;
+      const allInteger = rows.every((r) => {
+        const v = r[label];
+        return typeof v !== "number" || Number.isInteger(v);
+      });
       const column = sheet.getColumn(idx + 1);
-      column.numFmt = "#,##0.##";
+      column.numFmt = allInteger ? "#,##0" : "#,##0.00";
       column.alignment = { horizontal: "right" };
     });
 
