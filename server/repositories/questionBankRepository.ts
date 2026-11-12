@@ -3,6 +3,10 @@
  */
 
 import { executeQuery } from "../utils/db";
+import {
+  emptyLanguageCounts,
+  type TestLanguageCode,
+} from "../../shared/utils/testLanguages";
 import { v4 as uuidv4 } from "uuid";
 import type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
 import type {
@@ -379,11 +383,7 @@ export interface QuestionBankStats {
     medium: number;
     hard: number;
   };
-  language: {
-    ru: number;
-    uz: number;
-    en: number;
-  };
+  language: Record<TestLanguageCode, number>;
 }
 
 /**
@@ -423,11 +423,7 @@ export async function getQuestionBankStats(
     [bankId],
   );
 
-  const languageStats = {
-    ru: 0,
-    uz: 0,
-    en: 0,
-  };
+  const languageStats = emptyLanguageCounts();
 
   languageRows.forEach((row) => {
     // Handle null language as 'ru' (default)

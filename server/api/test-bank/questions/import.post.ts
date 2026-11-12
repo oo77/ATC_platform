@@ -13,6 +13,7 @@ import { executeQuery } from '../../../utils/db';
 import { QuestionType, QuestionLanguage } from '../../../types/testing';
 import type { CreateQuestionDTO, SingleChoiceOptions } from '../../../types/testing';
 import { Permission, requirePermission } from "../../../utils/permissions";
+import { isTestLanguage, TEST_LANGUAGE_CODES } from '../../../../shared/utils/testLanguages';
 
 // Старый формат (из Excel)
 interface LegacyImportedQuestion {
@@ -25,7 +26,7 @@ interface LegacyImportedQuestion {
     points?: number;
     difficulty?: string;
     explanation?: string;
-    language?: string; // en, ru, uz
+    language?: string; // код из shared/utils/testLanguages (ru, uz, uzlat, kaakir, kaalat, en)
 }
 
 // Новый формат (из компонента)
@@ -85,6 +86,17 @@ export default defineEventHandler(async (event) => {
             return {
                 success: false,
                 message: 'Банк вопросов не найден',
+            };
+        }
+
+        // Код языка должен быть из списка (иначе MariaDB молча запишет пустое значение)
+        const badLanguage = (body.questions as Array<{ language?: string }>).find(
+            (q) => q.language && !isTestLanguage(q.language)
+        );
+        if (badLanguage) {
+            return {
+                success: false,
+                message: `Неизвестный язык «${badLanguage.language}». Допустимые: ${TEST_LANGUAGE_CODES.join(', ')}`,
             };
         }
 

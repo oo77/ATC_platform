@@ -7,15 +7,20 @@
  * оформление, вопросы и таблица оценок остаются из шаблона. Заполняется только шапка —
  * таблица с реквизитами обучения; значение дописывается после постоянной подписи:
  *  - «Kurs nomi / Наименование курса» — название программы (на узбекском и русском);
- *  - «Guruh raqami / Номер группы» — код группы;
- *  - «Guruhdagi tinglovchilar soni» — число слушателей в группе;
+ *  - «Guruh raqami / Номер группы» — код группы (на обеих строках);
+ *  - «Guruhdagi tinglovchilar soni / Количество слушателей» — число слушателей в группе
+ *    (на обеих строках);
  *  - «O'qitish davri / Период обучения» — первый и последний день обучения группы;
- *  - «O'qituvchi-instruktorning F.I.Sh.» — инструктор, выбранный при скачивании;
+ *  - «O'qituvchi-instruktorning F.I.Sh. / Ф.И.О. Инструктора» — инструктор, выбранный при
+ *    скачивании: латиницей и на русском (full_name_ru; не заполнено — латиницей);
  *    без инструктора остаётся пустым;
  *  - «O'qitilgan fan / modul / Преподаваемая дисциплина» — всегда «Aviatsiya xavfsizligi /
  *    Авиационная безопасность»;
  *  - «O'qitish joyi / Место проведения» и «To'ldirilgan sana / Дата заполнения» —
  *    вводит пользователь перед скачиванием (место — на двух языках).
+ *
+ * Чтобы вопросник умещался на 2 страницы: нижний колонтитул убран, в таблице открытых
+ * вопросов (последняя таблица) удалены 2 последние строки.
  */
 
 import fs from "fs/promises";
@@ -60,8 +65,15 @@ export interface QuestionnaireInput {
   placeRu: string;
   /** Дата заполнения, ГГГГ-ММ-ДД */
   filledDate: string;
-  /** «Rasulov Kamol Abduxalikovich»; null — поле остаётся пустым */
-  instructor: string | null;
+  /** null — поле остаётся пустым */
+  instructor: QuestionnaireInstructor | null;
+}
+
+export interface QuestionnaireInstructor {
+  /** «Rasulov Kamol Abduxalikovich» */
+  uz: string;
+  /** «Расулов Камол Абдухаликович»; нет русского ФИО — как uz */
+  ru: string;
 }
 
 interface GroupRow extends RowDataPacket {
@@ -110,19 +122,25 @@ export async function loadQuestionnaireGroup(
 }
 
 /**
- * ФИО инструктора по его id; null — инструктор не указан.
+ * ФИО инструктора по его id (латиницей и на русском); null — инструктор не указан.
  * Инструктор не из расписания группы — UnknownInstructorError.
  */
 export async function loadQuestionnaireInstructor(
   groupId: string,
   instructorId: string | null,
-): Promise<string | null> {
+): Promise<QuestionnaireInstructor | null> {
   if (!instructorId) return null;
   const found = (await loadEmptyJournalInstructors(groupId)).find(
     (candidate) => candidate.id === instructorId,
   );
   if (!found) throw new UnknownInstructorError("Инструктор не ведёт занятия этой группы");
-  return formatFullName(found.fullName);
+  const rows = await executeQuery<RowDataPacket[]>(
+    `SELECT full_name_ru FROM instructors WHERE id = ? LIMIT 1`,
+    [instructorId],
+  );
+  const uz = formatFullName(found.fullName);
+  const ru = collapseSpaces(rows[0]?.full_name_ru);
+  return { uz, ru: ru ? formatFullName(ru) : uz };
 }
 
 const UZ_MONTHS = [
@@ -213,6 +231,39 @@ function replaceBlank(p: string, blankStart: string, value: string, props: strin
   return result;
 }
 
+/** Строк для ответов, которые убираются из таблицы открытых вопросов */
+const OPEN_QUESTIONS_ROWS_REMOVED = 2;
+
+/**
+ * Вопросник — на 2 страницы: без нижнего колонтитула и без 2 последних строк
+ * таблицы открытых вопросов (последняя таблица документа).
+ */
+function fitToTwoPages(xml: string): string {
+  const FOOTER_REF_RE = /<w:footerReference [^>]*\/>/g;
+  if (!FOOTER_REF_RE.test(xml)) throw templateError("нет нижнего колонтитула");
+  const result = xml.replace(FOOTER_REF_RE, "");
+
+  const tableStart = result.lastIndexOf("<w:tbl>");
+  const tableEnd = result.indexOf("</w:tbl>", tableStart);
+  if (tableStart < 0 || tableEnd < 0) throw templateError("нет таблицы открытых вопросов");
+  const table = result.slice(tableStart, tableEnd);
+  const rows = table.match(/<w:tr[ >][\s\S]*?<\/w:tr>/g) ?? [];
+  // Шапка таблицы + строки для ответов (пустые)
+  const answerRows = rows.filter((row) => !textOf(row).trim());
+  if (answerRows.length <= OPEN_QUESTIONS_ROWS_REMOVED) {
+    throw templateError("в таблице открытых вопросов слишком мало строк");
+  }
+  const lastRows = rows.slice(-OPEN_QUESTIONS_ROWS_REMOVED);
+  if (lastRows.some((row) => textOf(row).trim())) {
+    throw templateError("последние строки таблицы открытых вопросов не пустые");
+  }
+  // Последние строки идут подряд в конце таблицы
+  const removed = lastRows.join("");
+  const cutFrom = table.lastIndexOf(removed);
+  const trimmed = table.slice(0, cutFrom) + table.slice(cutFrom + removed.length);
+  return result.slice(0, tableStart) + trimmed + result.slice(tableEnd);
+}
+
 export async function renderQuestionnaireDocx(
   group: QuestionnaireGroup,
   input: QuestionnaireInput,
@@ -238,8 +289,12 @@ export async function renderQuestionnaireDocx(
   uz("Место проведения:", (p) => appendValue(p, input.placeRu, RU_VALUE_PROPS));
 
   uz("Guruh raqami:", (p) => appendValue(p, group.groupCode, UZ_VALUE_PROPS));
+  uz("Номер группы:", (p) => appendValue(p, group.groupCode, RU_VALUE_PROPS));
   uz("Guruhdagi tinglovchilar soni:", (p) =>
     appendValue(p, String(group.studentsCount), UZ_VALUE_PROPS),
+  );
+  uz("Количество слушателей в группе:", (p) =>
+    appendValue(p, String(group.studentsCount), RU_VALUE_PROPS),
   );
 
   uz("O'qitish davri:", (p) =>
@@ -267,9 +322,9 @@ export async function renderQuestionnaireDocx(
   );
 
   if (input.instructor) {
-    uz("O'qituvchi-instruktorning F.I.Sh.:", (p) =>
-      appendValue(p, input.instructor!, UZ_VALUE_PROPS),
-    );
+    const { uz: nameUz, ru: nameRu } = input.instructor;
+    uz("O'qituvchi-instruktorning F.I.Sh.:", (p) => appendValue(p, nameUz, UZ_VALUE_PROPS));
+    uz("Ф.И.О. Инструктора-преподавателя:", (p) => appendValue(p, nameRu, RU_VALUE_PROPS));
   }
 
   uz("O'qitilgan fan / modul:", (p) => appendValue(p, DISCIPLINE_UZ, UZ_VALUE_PROPS));
@@ -277,6 +332,6 @@ export async function renderQuestionnaireDocx(
     appendValue(p, DISCIPLINE_RU, RU_VALUE_PROPS),
   );
 
-  zip.file("word/document.xml", xml.replace(table, () => filled));
+  zip.file("word/document.xml", fitToTwoPages(xml.replace(table, () => filled)));
   return zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
 }

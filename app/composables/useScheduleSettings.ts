@@ -114,6 +114,22 @@ const DEFAULT_PERIODS: SchedulePeriod[] = [
     isAfterBreak: false,
     isActive: true,
   },
+  {
+    id: 13,
+    periodNumber: 13,
+    startTime: "18:30",
+    endTime: "19:10",
+    isAfterBreak: false,
+    isActive: true,
+  },
+  {
+    id: 14,
+    periodNumber: 14,
+    startTime: "19:10",
+    endTime: "19:50",
+    isAfterBreak: false,
+    isActive: true,
+  },
 ];
 
 const DEFAULT_SETTINGS: Record<string, string> = {
@@ -249,9 +265,9 @@ export const useScheduleSettings = () => {
    * Получить время окончания последней пары
    */
   const getLastPeriodEnd = computed(() => {
-    if (periods.value.length === 0) return "18:20";
+    if (periods.value.length === 0) return "19:50";
     const lastPeriod = periods.value[periods.value.length - 1];
-    return lastPeriod?.endTime ?? "18:20";
+    return lastPeriod?.endTime ?? "19:50";
   });
 
   /**

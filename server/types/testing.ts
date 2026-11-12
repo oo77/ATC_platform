@@ -2,6 +2,12 @@
  * Типы для системы тестирования студентов
  */
 
+import {
+  TEST_LANGUAGE_CODES,
+  TEST_LANGUAGE_FLAGS,
+  TEST_LANGUAGE_LABELS,
+} from "../../shared/utils/testLanguages";
+
 // ============================================================================
 // Enums
 // ============================================================================
@@ -20,24 +26,27 @@ export enum QuestionDifficulty {
   HARD = "hard",
 }
 
+// Список и подписи языков — в shared/utils/testLanguages.ts
 export enum QuestionLanguage {
   EN = "en",
   RU = "ru",
-  UZ = "uz",
+  UZ = "uz", // Узбекский кир. (исторический код)
+  UZ_LAT = "uzlat", // Узбекский лат.
+  KAA_CYR = "kaakir", // Каракалпакский кир.
+  KAA_LAT = "kaalat", // Каракалпакский лат.
 }
 
 // Константы для отображения языков в UI
-export const LANGUAGE_LABELS: Record<QuestionLanguage, string> = {
-  [QuestionLanguage.EN]: "English",
-  [QuestionLanguage.RU]: "Русский",
-  [QuestionLanguage.UZ]: "O'zbek",
-};
+export const LANGUAGE_LABELS: Record<QuestionLanguage, string> =
+  TEST_LANGUAGE_LABELS;
 
-export const LANGUAGE_FLAGS: Record<QuestionLanguage, string> = {
-  [QuestionLanguage.EN]: "🇬🇧",
-  [QuestionLanguage.RU]: "🇷🇺",
-  [QuestionLanguage.UZ]: "🇺🇿",
-};
+export const LANGUAGE_FLAGS: Record<QuestionLanguage, string> =
+  TEST_LANGUAGE_FLAGS;
+
+/** Все языки тестирования в порядке отображения */
+export const ALL_QUESTION_LANGUAGES = [
+  ...TEST_LANGUAGE_CODES,
+] as unknown as QuestionLanguage[];
 
 export enum QuestionsMode {
   ALL = "all",

@@ -52,7 +52,7 @@
       </UiPageHeader>
 
       <!-- Метрики одной строкой UiStat: всего + сложность + языки (вместо двух рядов карточек с text-[11px] CAPS) -->
-      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
         <UiStat label="Всего" :value="stats.total" :icon="HelpCircle" tone="primary" />
         <UiStat label="Лёгкие" :value="stats.difficulty.easy" :icon="Zap" tone="success" />
         <UiStat label="Средние" :value="stats.difficulty.medium" :icon="TrendingUp" tone="warning" />
@@ -242,9 +242,7 @@
           <div>
             <label class="block text-xs font-bold text-gray-500 mb-1.5">Язык</label>
             <select v-model="questionForm.language" class="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 py-2.5 pl-4 pr-8 text-sm outline-none focus:border-primary appearance-none">
-              <option value="ru">🇷🇺 Русский</option>
-              <option value="uz">🇺🇿 Узбекский</option>
-              <option value="en">🇬🇧 English</option>
+              <option v-for="lang in TEST_LANGUAGES" :key="lang.value" :value="lang.value">{{ lang.flag }} {{ lang.label }}</option>
             </select>
           </div>
           <div>
@@ -322,6 +320,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
+import { TEST_LANGUAGES, TEST_LANGUAGE_FLAGS, emptyLanguageCounts } from "../../../shared/utils/testLanguages";
 import {
   ArrowLeft, Library, Plus, Upload, HelpCircle, Zap, TrendingUp, Flame, Tags, Search,
   ChevronDown, Filter, RotateCcw, Pencil, CheckCircle, XCircle, Trash2, Check, X,
@@ -342,7 +341,7 @@ const error = ref(null);
 
 const bank = ref<any>(null);
 const questions = ref<any[]>([]);
-const stats = ref({ total: 0, difficulty: { easy: 0, medium: 0, hard: 0 }, language: { ru: 0, uz: 0, en: 0 } });
+const stats = ref({ total: 0, difficulty: { easy: 0, medium: 0, hard: 0 }, language: emptyLanguageCounts() as Record<string, number> });
 
 const activeTab = ref("questions");
 const availableTabs = [
@@ -376,11 +375,14 @@ const onQuestionAction = (q: any, key: string) => {
 
 const hasActiveQuestionFilters = computed(() => questionFilters.value.search || questionFilters.value.type || questionFilters.value.difficulty);
 
-const languageStats = computed(() => [
-  { code: "ru", flag: "🇷🇺", label: "Русский", count: stats.value.language.ru || 0 },
-  { code: "uz", flag: "🇺🇿", label: "Узбекский", count: stats.value.language.uz || 0 },
-  { code: "en", flag: "🇬🇧", label: "English", count: stats.value.language.en || 0 },
-]);
+const languageStats = computed(() =>
+  TEST_LANGUAGES.map((l) => ({
+    code: l.value,
+    flag: l.flag,
+    label: l.label,
+    count: (stats.value.language as Record<string, number>)[l.value] || 0,
+  })),
+);
 
 const paginationRange = computed(() => {
   const total = pagination.value.totalPages;
@@ -397,7 +399,7 @@ const paginationRange = computed(() => {
 const difficultyLabels = { easy: "Лёгкий", medium: "Средний", hard: "Сложный" };
 const difficultyClasses = { easy: "bg-success/10 text-success", medium: "bg-warning/10 text-warning", hard: "bg-danger/10 text-danger" };
 const questionTypeLabels = { single: "Один", multiple: "Несколько", text: "Текст" };
-const languageFlags = { ru: "🇷🇺", uz: "🇺🇿", en: "🇬🇧" };
+const languageFlags: Record<string, string> = TEST_LANGUAGE_FLAGS;
 
 const questionModalOpen = ref(false);
 const deleteQuestionModalOpen = ref(false);

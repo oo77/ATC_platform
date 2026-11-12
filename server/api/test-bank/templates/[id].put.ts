@@ -6,6 +6,7 @@
 import { getTestTemplateById, updateTestTemplate, testTemplateCodeExists } from '../../../repositories/testTemplateRepository';
 import type { UpdateTestTemplateDTO } from '../../../types/testing';
 import { Permission, requirePermission } from "../../../utils/permissions";
+import { isTestLanguage } from '../../../../shared/utils/testLanguages';
 
 export default defineEventHandler(async (event) => {
   // P0-ACCESS: проверка прав доступа
@@ -59,7 +60,11 @@ export default defineEventHandler(async (event) => {
         if (body.allow_back !== undefined) updateData.allow_back = body.allow_back;
         if (body.proctoring_enabled !== undefined) updateData.proctoring_enabled = body.proctoring_enabled;
         if (body.proctoring_settings !== undefined) updateData.proctoring_settings = body.proctoring_settings;
-        if (body.allowed_languages !== undefined) updateData.allowed_languages = body.allowed_languages;
+        if (body.allowed_languages !== undefined) {
+            updateData.allowed_languages = (Array.isArray(body.allowed_languages)
+                ? body.allowed_languages.filter(isTestLanguage)
+                : body.allowed_languages) as UpdateTestTemplateDTO['allowed_languages'];
+        }
         if (body.is_active !== undefined) updateData.is_active = body.is_active;
 
         const updated = await updateTestTemplate(id, updateData);

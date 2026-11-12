@@ -51,7 +51,8 @@
             <p><strong>Правильный ответ:</strong> A, B, C или D (буква правильного варианта)</p>
             <p><strong>Сложность:</strong> easy, medium или hard (необязательно, по умолчанию medium)</p>
             <p><strong>Баллы:</strong> число от 1 до 100 (необязательно, по умолчанию 1)</p>
-            <p><strong>Язык:</strong> ru, uz или en (необязательно, по умолчанию язык, выбранный ниже)</p>
+            <p><strong>Язык:</strong> ru, uz (узб. кир.), uzlat (узб. лат.), kaakir (каракалп. кир.), kaalat (каракалп. лат.) или en — необязательно, по умолчанию язык, выбранный ниже</p>
+            <p><strong>Варианты:</strong> буквы в начале текста («A) …», «B. …») убираются автоматически — тест сам подставляет буквы.</p>
             <p><strong>Группа:</strong> номер (1, 2, 3…), необязательно. Вопросы с одним номером на разных языках связываются как переводы друг друга, и студент сможет переключать язык во время теста. Номера действуют в пределах банка: языки можно загружать разными файлами, главное — одинаковые номера групп. Порядок вариантов и правильный ответ в связанных вопросах должны совпадать.</p>
           </div>
 
@@ -60,18 +61,14 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Язык по умолчанию для импортируемых вопросов
             </label>
-            <div class="flex items-center gap-4">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" v-model="defaultLanguage" value="ru" class="w-4 h-4 text-primary" />
-                <span class="text-sm">🇷🇺 Русский</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" v-model="defaultLanguage" value="uz" class="w-4 h-4 text-primary" />
-                <span class="text-sm">🇺🇿 O'zbek</span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" v-model="defaultLanguage" value="en" class="w-4 h-4 text-primary" />
-                <span class="text-sm">🇬🇧 English</span>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <label
+                v-for="lang in TEST_LANGUAGES"
+                :key="lang.value"
+                class="flex items-center gap-2 cursor-pointer"
+              >
+                <input type="radio" v-model="defaultLanguage" :value="lang.value" class="w-4 h-4 text-primary" />
+                <span class="text-sm"><span class="font-semibold text-xs text-gray-500">{{ lang.flag }}</span> {{ lang.label }}</span>
               </label>
             </div>
             <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -314,6 +311,11 @@
 </template>
 
 <script setup>
+import {
+  TEST_LANGUAGES,
+  TEST_LANGUAGE_FLAGS,
+  isTestLanguage,
+} from '../../../shared/utils/testLanguages';
 import { ref, computed } from 'vue';
 import * as XLSX from 'xlsx';
 
@@ -345,15 +347,14 @@ const importResult = ref({
 });
 
 // Константы для языков
-const languageFlags = {
-  ru: '🇷🇺',
-  uz: '🇺🇿',
-  en: '🇬🇧',
-};
+const languageFlags = TEST_LANGUAGE_FLAGS;
 
 const languageBadgeClasses = {
   ru: 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   uz: 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  uzlat: 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
+  kaakir: 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  kaalat: 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
   en: 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
 };
 
@@ -489,19 +490,33 @@ const readFileAsArrayBuffer = (file) => {
   });
 };
 
+// Убираем букву варианта в начале текста («A) …», «B. …», «В) …»), если она совпадает
+// со столбцом: буквы ставит сам тест, а при перемешивании вариантов они бы съехали
+// (латинские A–D, русские А–Г; кириллические «В»/«С» похожи на латинские B/C)
+const OPTION_LETTERS = [['A', 'А'], ['B', 'Б', 'В'], ['C', 'В', 'С'], ['D', 'Г']];
+const stripOptionLetter = (value, index) => {
+  const text = String(value ?? '').trim();
+  // «A)» — всегда, «A.» — только если дальше пробел (не трогаем «A.B. Smith»)
+  const match = text.match(/^(\S)\s*(?:\)|\.(?=\s))\s*(.+)$/s);
+  if (match && OPTION_LETTERS[index].includes(match[1].toUpperCase())) {
+    return match[2].trim();
+  }
+  return text;
+};
+
 const parseRow = (row, rowNumber) => {
   // Определяем язык: из файла или по умолчанию
   let lang = String(row[8] || '').trim().toLowerCase();
-  if (!['ru', 'uz', 'en'].includes(lang)) {
+  if (!isTestLanguage(lang)) {
     lang = defaultLanguage.value;
   }
 
   const question = {
     question_text: String(row[0] || '').trim(),
-    optionA: String(row[1] || '').trim(),
-    optionB: String(row[2] || '').trim(),
-    optionC: String(row[3] || '').trim(),
-    optionD: String(row[4] || '').trim(),
+    optionA: stripOptionLetter(row[1], 0),
+    optionB: stripOptionLetter(row[2], 1),
+    optionC: stripOptionLetter(row[3], 2),
+    optionD: stripOptionLetter(row[4], 3),
     correctAnswer: String(row[5] || '').trim().toUpperCase(),
     points: parseInt(row[6]) || 1,
     difficulty: String(row[7] || 'medium').trim().toLowerCase(),

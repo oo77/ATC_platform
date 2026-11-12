@@ -1,13 +1,20 @@
 /**
- * GET /api/groups/:id/group-list
+ * GET /api/groups/:id/group-list?instructorId=…
  * «Список группы» — Word по образцу (server/assets/templates/group-list-template.docx):
- * код группы и даты обучения подставляются из базы, курс и таблица на 20 слушателей
- * остаются для заполнения от руки.
+ * код группы, даты обучения, Ф.И.О. (латиницей), должности (на русском) и организации слушателей
+ * подставляются из базы; остальные колонки и курс заполняются от руки.
+ *
+ * instructorId — инструктор из расписания группы для строки «Образец»
+ * (см. GET /api/groups/:id/empty-journal-instructors); без него строка остаётся пустой.
  *
  * Доступ: как к странице группы — GROUPS_VIEW_ALL / GROUPS_VIEW_OWN (инструктор — только своя группа).
  */
 
-import { loadGroupListModel, renderGroupListDocx } from "../../../services/groupListService";
+import {
+  loadGroupListModel,
+  renderGroupListDocx,
+  UnknownInstructorError,
+} from "../../../services/groupListService";
 import {
   canAccessGroup,
   getPermissionContext,
@@ -55,7 +62,11 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const model = await loadGroupListModel(groupId);
+    const { instructorId } = getQuery(event);
+    const model = await loadGroupListModel(
+      groupId,
+      typeof instructorId === "string" && instructorId ? instructorId : null,
+    );
     if (!model) {
       throw createError({
         statusCode: 404,
@@ -84,6 +95,13 @@ export default defineEventHandler(async (event) => {
     return send(event, buffer);
   } catch (error: any) {
     if (error.statusCode) throw error;
+    if (error instanceof UnknownInstructorError) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: "Bad Request",
+        message: error.message,
+      });
+    }
 
     console.error("[API] Ошибка формирования списка группы:", error);
     throw createError({

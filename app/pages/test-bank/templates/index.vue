@@ -513,7 +513,7 @@
                       template.allowed_languages &&
                       template.allowed_languages.length > 0
                     "
-                    class="flex items-center gap-1"
+                    class="flex flex-wrap items-center gap-1"
                   >
                     <span
                       v-for="lang in template.allowed_languages"
@@ -734,7 +734,7 @@
                   template.allowed_languages &&
                   template.allowed_languages.length > 0
                 "
-                class="flex items-center gap-1"
+                class="flex flex-wrap items-center gap-1"
               >
                 <span
                   v-for="lang in template.allowed_languages"
@@ -1074,7 +1074,7 @@
                   class="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
                   @change="onLanguageChange"
                 />
-                <span class="text-lg">{{ lang.flag }}</span>
+                <span class="text-[10px] font-semibold text-gray-500">{{ lang.flag }}</span>
                 <span
                   class="text-sm font-medium text-gray-700 dark:text-gray-300"
                   >{{ lang.label }}</span
@@ -1418,6 +1418,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import {
+  TEST_LANGUAGES,
+  TEST_LANGUAGE_LABELS,
+  TEST_LANGUAGE_FLAGS,
+} from "../../../../shared/utils/testLanguages";
+import { TEST_LANGUAGE_BADGE_CLASSES } from "../../../utils/testLanguageBadges";
 
 definePageMeta({
   layout: "default",
@@ -1469,29 +1475,18 @@ const editingTemplate = ref(null);
 const deletingTemplate = ref(null);
 
 // Языки
-const availableLanguages = [
-  { value: "ru", label: "Русский", flag: "🇷🇺" },
-  { value: "uz", label: "O'zbek", flag: "🇺🇿" },
-  { value: "en", label: "English", flag: "🇬🇧" },
-];
+const availableLanguages = TEST_LANGUAGES;
 
-const languageLabels = {
-  ru: "Русский",
-  uz: "O'zbek",
-  en: "English",
-};
+const languageLabels = TEST_LANGUAGE_LABELS;
 
-const languageFlags = {
-  ru: "🇷🇺",
-  uz: "🇺🇿",
-  en: "🇬🇧",
-};
+const languageFlags = TEST_LANGUAGE_FLAGS;
 
-const languageBadgeClasses = {
-  ru: "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30",
-  uz: "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs bg-green-100 dark:bg-green-900/30",
-  en: "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs bg-purple-100 dark:bg-purple-900/30",
-};
+const languageBadgeClasses = Object.fromEntries(
+  Object.entries(TEST_LANGUAGE_BADGE_CLASSES).map(([code, colors]) => [
+    code,
+    `inline-flex items-center justify-center h-6 min-w-[1.5rem] px-1.5 rounded-full text-[10px] font-semibold ${colors}`,
+  ]),
+);
 
 // Валидация языков
 const languageValidationLoading = ref(false);

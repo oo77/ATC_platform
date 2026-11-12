@@ -11,6 +11,7 @@ import { getQuestionBankById } from "../../../repositories/questionBankRepositor
 import { logActivity } from "../../../utils/activityLogger";
 import type { CreateQuestionDTO } from "../../../types/testing";
 import { Permission, roleHasPermission } from "../../../utils/permissions";
+import { isTestLanguage } from "../../../../shared/utils/testLanguages";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -80,6 +81,13 @@ export default defineEventHandler(async (event) => {
     // Получаем следующий порядковый номер
     if (body.order_index === undefined) {
       body.order_index = await getNextOrderIndex(body.bank_id);
+    }
+
+    if (body.language && !isTestLanguage(body.language)) {
+      return {
+        success: false,
+        message: `Неизвестный язык вопроса: ${body.language}`,
+      };
     }
 
     // Создаём вопрос

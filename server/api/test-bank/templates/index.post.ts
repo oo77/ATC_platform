@@ -6,6 +6,7 @@
 import { createTestTemplate, testTemplateCodeExists } from '../../../repositories/testTemplateRepository';
 import type { CreateTestTemplateDTO } from '../../../types/testing';
 import { Permission, requirePermission } from "../../../utils/permissions";
+import { isTestLanguage } from '../../../../shared/utils/testLanguages';
 
 export default defineEventHandler(async (event) => {
   // P0-ACCESS: проверка прав доступа
@@ -47,7 +48,12 @@ export default defineEventHandler(async (event) => {
             allow_back: body.allow_back ?? true,
             proctoring_enabled: body.proctoring_enabled ?? false,
             proctoring_settings: body.proctoring_settings,
-            allowed_languages: body.allowed_languages || ['ru'],
+            allowed_languages: (() => {
+                const langs = Array.isArray(body.allowed_languages)
+                    ? body.allowed_languages.filter(isTestLanguage)
+                    : [];
+                return langs.length > 0 ? langs : ['ru'];
+            })() as CreateTestTemplateDTO['allowed_languages'],
             is_active: body.is_active ?? true,
         };
 

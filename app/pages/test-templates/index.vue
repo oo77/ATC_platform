@@ -55,9 +55,7 @@
             @change="handleFilterChange"
           >
             <option value="">Все языки</option>
-            <option value="ru">🇷🇺 Русский</option>
-            <option value="uz">🇺🇿 Узбекский</option>
-            <option value="en">🇬🇧 Английский</option>
+            <option v-for="lang in TEST_LANGUAGES" :key="lang.value" :value="lang.value">{{ lang.flag }} {{ lang.label }}</option>
           </select>
         </label>
       </template>
@@ -133,11 +131,11 @@
                 <span class="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ template.use_five_point_scale ? 'оценка 4+' : template.passing_score + '%' }}</span>
               </td>
               <td class="px-4 py-3 align-middle">
-                <div class="flex items-center justify-center gap-1">
+                <div class="flex flex-wrap items-center justify-center gap-1">
                   <span
                     v-for="lang in (template.allowed_languages || ['ru'])"
                     :key="lang"
-                    class="inline-flex h-7 w-7 items-center justify-center rounded-full text-sm"
+                    class="inline-flex h-6 min-w-[1.75rem] items-center justify-center rounded-full px-1.5 text-[10px] font-semibold"
                     :class="languageBadgeClasses[lang]"
                     :title="languageLabels[lang]"
                   >
@@ -462,7 +460,7 @@
                   : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-500 hover:border-primary/50'
               ]"
             >
-              <span class="text-lg">{{ lang.flag }}</span>
+              <span class="text-[10px] font-semibold opacity-70">{{ lang.flag }}</span>
               {{ lang.label }}
             </button>
           </div>
@@ -507,6 +505,12 @@
 </template>
 
 <script setup>
+import {
+  TEST_LANGUAGES,
+  TEST_LANGUAGE_LABELS,
+  TEST_LANGUAGE_FLAGS,
+} from '../../../shared/utils/testLanguages';
+import { TEST_LANGUAGE_BADGE_CLASSES } from '../../utils/testLanguageBadges';
 import { ref, computed, onMounted } from 'vue';
 import { Plus, FileText, Library, CheckCircle, Globe, Filter, RotateCcw, Search, ChevronDown, Activity, Eye, Pencil, Trash2, Settings, Shuffle } from 'lucide-vue-next';
 
@@ -603,11 +607,7 @@ const deleteModalOpen = ref(false);
 const editingTemplate = ref(null);
 const deletingTemplate = ref(null);
 
-const availableLanguages = [
-  { value: 'ru', label: 'Русский', flag: '🇷🇺' },
-  { value: 'uz', label: "O'zbek", flag: '🇺🇿' },
-  { value: 'en', label: 'English', flag: '🇬🇧' },
-];
+const availableLanguages = TEST_LANGUAGES;
 
 const form = ref({
   name: '',
@@ -652,13 +652,9 @@ const notification = ref({
   message: '',
 });
 
-const languageLabels = { ru: 'Русский', uz: "O'zbek", en: 'English' };
-const languageFlags = { ru: '🇷🇺', uz: '🇺🇿', en: '🇬🇧' };
-const languageBadgeClasses = {
-  ru: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-  uz: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
-  en: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-};
+const languageLabels = TEST_LANGUAGE_LABELS;
+const languageFlags = TEST_LANGUAGE_FLAGS;
+const languageBadgeClasses = TEST_LANGUAGE_BADGE_CLASSES;
 
 const loadTemplates = async () => {
   loading.value = true;

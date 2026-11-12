@@ -853,6 +853,18 @@
       @submit="downloadAcquaintanceSheet"
     />
 
+    <!-- Инструктор для строки «Образец» в списке группы -->
+    <GroupsAcquaintanceSheetModal
+      v-if="group"
+      :is-open="showGroupListModal"
+      :group-id="group.id"
+      :loading="generatingGroupList"
+      title="Список группы"
+      hint="Номер группы, даты обучения, Ф.И.О. (латиницей), должности (на русском) и организации слушателей подставляются автоматически. Курс, год рождения, образование, телефон и подписи заполняются от руки. Выберите инструктора для строки «Образец»."
+      @close="showGroupListModal = false"
+      @submit="downloadGroupList"
+    />
+
     <!-- Место, дата заполнения и инструктор для обезличенного вопросника -->
     <GroupsQuestionnaireModal
       v-if="group"
@@ -1085,6 +1097,7 @@ const showAcquaintanceSheetModal = ref(false); // Выбор инструкто�
 const generatingQuestionnaire = ref(false); // Состояние генерации обезличенного вопросника
 const showQuestionnaireModal = ref(false); // Форма вопросника: место, дата, инструктор
 const generatingGroupList = ref(false); // Состояние генерации списка группы
+const showGroupListModal = ref(false); // Выбор инструктора для строки «Образец» списка группы
 const generatingGroupSchedule = ref(false); // Состояние генерации расписания группы
 
 // Состояния для просмотра и удаления документов
@@ -2182,8 +2195,9 @@ const downloadQuestionnaire = async (questionnaire: {
   }
 };
 
-// «Список группы» — бланк таблицы слушателей: заполнены только номер группы и даты обучения
-const downloadGroupList = async () => {
+// «Список группы» — таблица слушателей: номер группы, даты, Ф.И.О. и должности слушателей
+// подставляются на сервере, инструктора для строки «Образец» пользователь выбирает в форме
+const downloadGroupList = async ({ instructorId }: { instructorId: string | null }) => {
   if (generatingGroupList.value || !group.value) return;
 
   try {
@@ -2191,7 +2205,7 @@ const downloadGroupList = async () => {
 
     const blob = await authFetch<Blob>(
       `/api/groups/${group.value.id}/group-list`,
-      { responseType: "blob" },
+      { query: instructorId ? { instructorId } : {}, responseType: "blob" },
     );
 
     const url = window.URL.createObjectURL(blob);
@@ -2219,6 +2233,7 @@ const downloadGroupList = async () => {
       // Не показываем ошибку пользователю, это не критично
     }
 
+    showGroupListModal.value = false;
     toast.success("Список группы успешно сформирован (DOCX)");
   } catch (error: any) {
     console.error("Error generating group list:", error);
@@ -2542,7 +2557,7 @@ const documentGroups = computed(() => [
 const handleDocumentSelect = (key: string) => {
   switch (key) {
     case "groupList":
-      downloadGroupList();
+      showGroupListModal.value = true;
       break;
     case "registry":
       showRegistryModal.value = true;

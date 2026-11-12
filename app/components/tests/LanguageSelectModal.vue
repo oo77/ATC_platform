@@ -77,7 +77,10 @@
             ></div>
           </div>
 
-          <span class="text-2xl">{{ lang.flag }}</span>
+          <span
+            class="shrink-0 min-w-[3rem] rounded-md bg-gray-100 dark:bg-meta-4 px-2 py-1 text-center text-xs font-semibold text-gray-600 dark:text-gray-300"
+            >{{ lang.flag }}</span
+          >
 
           <div class="flex-1">
             <span class="block font-medium text-gray-900 dark:text-white">{{

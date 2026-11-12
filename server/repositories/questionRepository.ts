@@ -20,7 +20,7 @@ import type {
     LANGUAGE_LABELS,
     LANGUAGE_FLAGS,
 } from '../types/testing';
-import { QuestionLanguage as QLang, LANGUAGE_LABELS as LABELS, LANGUAGE_FLAGS as FLAGS } from '../types/testing';
+import { QuestionLanguage as QLang, LANGUAGE_LABELS as LABELS, LANGUAGE_FLAGS as FLAGS, ALL_QUESTION_LANGUAGES } from '../types/testing';
 
 // ============================================================================
 // ROW TYPES
@@ -635,7 +635,7 @@ export async function getFullLanguageStats(
     const stats = await getQuestionStatsByLanguage(bankId, activeOnly);
 
     // Добавляем языки с 0 вопросами
-    const allLanguages: QuestionLanguage[] = [QLang.RU, QLang.UZ, QLang.EN];
+    const allLanguages: QuestionLanguage[] = ALL_QUESTION_LANGUAGES;
     const existingLanguages = new Set(stats.map(s => s.language));
 
     for (const lang of allLanguages) {
@@ -649,9 +649,12 @@ export async function getFullLanguageStats(
         }
     }
 
-    // Сортируем: RU первый, затем UZ, затем EN
-    const order = { [QLang.RU]: 0, [QLang.UZ]: 1, [QLang.EN]: 2 };
-    stats.sort((a, b) => order[a.language] - order[b.language]);
+    // Сортируем в порядке общего списка языков (ru, uz, uzlat, kaakir, kaalat, en)
+    const order = (lang: QuestionLanguage) => {
+        const idx = allLanguages.indexOf(lang);
+        return idx === -1 ? allLanguages.length : idx;
+    };
+    stats.sort((a, b) => order(a.language) - order(b.language));
 
     return stats;
 }

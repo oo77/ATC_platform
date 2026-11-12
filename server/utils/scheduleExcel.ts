@@ -101,7 +101,7 @@ const MONTHS_GENITIVE = [
   "декабря",
 ];
 
-/** Запасная сетка (совпадает с настройками по умолчанию): 12 академических часов по 40 минут */
+/** Запасная сетка (совпадает с настройками по умолчанию): 14 академических часов по 40 минут (7 пар) */
 const FALLBACK_PERIODS: ExcelPeriod[] = [
   { periodNumber: 1, startTime: "09:00", endTime: "09:40" },
   { periodNumber: 2, startTime: "09:40", endTime: "10:20" },
@@ -115,6 +115,8 @@ const FALLBACK_PERIODS: ExcelPeriod[] = [
   { periodNumber: 10, startTime: "16:10", endTime: "16:50" },
   { periodNumber: 11, startTime: "17:00", endTime: "17:40" },
   { periodNumber: 12, startTime: "17:40", endTime: "18:20" },
+  { periodNumber: 13, startTime: "18:30", endTime: "19:10" },
+  { periodNumber: 14, startTime: "19:10", endTime: "19:50" },
 ];
 
 const UNASSIGNED_LOCATION = "Без аудитории";

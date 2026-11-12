@@ -7,6 +7,7 @@ import { updateQuestion } from "../../../repositories/questionRepository";
 import { logActivity } from "../../../utils/activityLogger";
 import type { UpdateQuestionDTO } from "../../../types/testing";
 import { Permission, roleHasPermission } from "../../../utils/permissions";
+import { isTestLanguage } from "../../../../shared/utils/testLanguages";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -48,6 +49,13 @@ export default defineEventHandler(async (event) => {
           message: "Необходимо указать правильный ответ",
         };
       }
+    }
+
+    if (body.language && !isTestLanguage(body.language)) {
+      return {
+        success: false,
+        message: `Неизвестный язык вопроса: ${body.language}`,
+      };
     }
 
     // Обновляем

@@ -6,6 +6,78 @@
     @close="handleClose"
   >
     <form @submit.prevent="handleSubmit" class="space-y-4">
+      <!-- Список занятий на день (пакетное создание) -->
+      <div
+        v-if="!isEditMode && queuedLessons.length > 0"
+        class="rounded-lg border border-success/30 bg-success/5 p-3"
+      >
+        <div class="flex items-center justify-between mb-2">
+          <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+            Занятия на {{ formatDate(form.date) }}
+            <span class="text-gray-500 dark:text-gray-400 font-normal">
+              ({{ queuedLessons.length }})
+            </span>
+          </h4>
+          <span class="text-xs text-gray-500 dark:text-gray-400">
+            Ещё не сохранены
+          </span>
+        </div>
+        <ul class="space-y-1.5">
+          <li
+            v-for="lesson in queuedLessons"
+            :key="lesson.key"
+            class="flex items-center gap-3 rounded-md bg-white dark:bg-boxdark px-3 py-2 text-xs border border-stroke dark:border-strokedark"
+          >
+            <span
+              class="shrink-0 rounded px-1.5 py-0.5 font-medium"
+              :class="eventTypeBadgeClass[lesson.eventType]"
+            >
+              {{ eventTypeLabels[lesson.eventType] }}
+            </span>
+            <div class="min-w-0 flex-1">
+              <div
+                class="font-medium text-gray-900 dark:text-white truncate"
+                :title="lesson.disciplineName"
+              >
+                {{ lesson.disciplineName }}
+              </div>
+              <div class="text-gray-500 dark:text-gray-400 truncate">
+                {{ lesson.timeRange }} • {{ lesson.pairs.length }} а-ч •
+                {{ lesson.instructorName }}
+                <template v-if="lesson.testTemplateName">
+                  • Тест: {{ lesson.testTemplateName }}
+                </template>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="shrink-0 p-1 text-gray-400 hover:text-danger transition-colors"
+              title="Убрать из списка"
+              :disabled="submitting"
+              @click="removeQueuedLesson(lesson.key)"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </li>
+        </ul>
+        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          Ниже можно добавить следующее занятие (в т.ч. по другой дисциплине)
+          или сразу нажать «Сохранить все».
+        </p>
+      </div>
+
       <!-- Ряд 1: Группа + Дисциплина -->
       <div class="grid grid-cols-2 gap-4">
         <!-- Группа -->
@@ -28,6 +100,7 @@
             placeholder="Выберите группу"
             search-placeholder="Поиск группы..."
             :invalid="!!errors.groupId"
+            :disabled="isDayLocked"
             @change="handleGroupChange"
           />
           <p v-if="errors.groupId" class="mt-1 text-xs text-danger">
@@ -98,17 +171,17 @@
       >
         <span class="text-gray-500 dark:text-gray-400">Осталось:</span>
         <span :class="getHoursClass('theory')"
-          >Теория: {{ selectedDiscipline.remainingHours.theory }}/{{
+          >Теория: {{ effectiveRemaining("theory") }}/{{
             selectedDiscipline.totalHours.theory
           }}ч</span
         >
         <span :class="getHoursClass('practice')"
-          >Практика: {{ selectedDiscipline.remainingHours.practice }}/{{
+          >Практика: {{ effectiveRemaining("practice") }}/{{
             selectedDiscipline.totalHours.practice
           }}ч</span
         >
         <span :class="getHoursClass('assessment')"
-          >Проверка: {{ selectedDiscipline.remainingHours.assessment }}/{{
+          >Проверка: {{ effectiveRemaining("assessment") }}/{{
             selectedDiscipline.totalHours.assessment
           }}ч</span
         >
@@ -296,7 +369,13 @@
             type="date"
             :min="!isRetake ? selectedGroupInfo?.startDate : undefined"
             :max="!isRetake ? selectedGroupInfo?.endDate : undefined"
-            class="w-full rounded-lg border border-stroke bg-transparent py-2.5 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm"
+            :disabled="isDayLocked"
+            :title="
+              isDayLocked
+                ? 'Чтобы сменить дату или группу, уберите занятия из списка'
+                : undefined
+            "
+            class="w-full rounded-lg border border-stroke bg-transparent py-2.5 px-3 outline-none focus:border-primary dark:border-strokedark dark:bg-meta-4 dark:focus:border-primary text-sm disabled:opacity-60 disabled:cursor-not-allowed"
             :class="{ 'border-danger': errors.date }"
           />
           <p v-if="errors.date" class="mt-1 text-xs text-danger">
@@ -355,17 +434,25 @@
             <label
               v-for="pair in lessonPairs"
               :key="pair.number"
-              class="relative flex items-center justify-center p-2 rounded-lg border cursor-pointer transition-all text-center"
+              class="relative flex items-center justify-center p-2 rounded-lg border transition-all text-center"
               :class="[
-                selectedPairs.includes(pair.number)
-                  ? 'border-primary bg-primary/10'
-                  : 'border-stroke dark:border-strokedark hover:border-primary/50',
+                occupiedPairs.has(pair.number)
+                  ? 'border-dashed border-stroke dark:border-strokedark bg-gray-100 dark:bg-meta-4 opacity-60 cursor-not-allowed'
+                  : selectedPairs.includes(pair.number)
+                    ? 'border-primary bg-primary/10 cursor-pointer'
+                    : 'border-stroke dark:border-strokedark hover:border-primary/50 cursor-pointer',
               ]"
+              :title="
+                occupiedPairs.has(pair.number)
+                  ? `Занято: ${occupiedPairs.get(pair.number)}`
+                  : undefined
+              "
             >
               <input
                 type="checkbox"
                 :value="pair.number"
                 v-model="selectedPairs"
+                :disabled="occupiedPairs.has(pair.number)"
                 @change="handlePairChange"
                 class="sr-only"
               />
@@ -373,6 +460,12 @@
                 <div class="text-xs font-medium">{{ pair.number }} а-ч</div>
                 <div class="text-[11px] text-gray-500">
                   {{ pair.startTime }}-{{ pair.endTime }}
+                </div>
+                <div
+                  v-if="occupiedPairs.has(pair.number)"
+                  class="text-[10px] text-gray-500 truncate max-w-[7rem]"
+                >
+                  {{ occupiedPairs.get(pair.number) }}
                 </div>
               </div>
               <div
@@ -470,6 +563,40 @@
           ></div>
           <span>Проверка лимита часов инструктора...</span>
         </div>
+
+        <!-- Добавить ещё занятие в этот же день -->
+        <div v-if="!isEditMode" class="mt-3">
+          <button
+            type="button"
+            class="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-primary/50 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="
+              submitting ||
+              selectedPairs.length === 0 ||
+              !!hoursWarning ||
+              !!instructorHoursWarning
+            "
+            @click="handleAddAnotherLesson"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Добавить ещё занятие в этот день
+          </button>
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center">
+            Текущее занятие уйдёт в список, группа и дата сохранятся — останется
+            выбрать тип, часы (и при необходимости другую дисциплину).
+          </p>
+        </div>
       </div>
 
       <!-- Описание (компактное) -->
@@ -543,7 +670,7 @@
               </svg>
               Сохранение...
             </span>
-            <span v-else>{{ isEditMode ? "Сохранить" : "Добавить" }}</span>
+            <span v-else>{{ submitButtonLabel }}</span>
           </UiButton>
         </div>
       </div>
@@ -844,6 +971,82 @@ const disciplineInstructors = computed(() => {
   return selectedDiscipline.value?.instructors || [];
 });
 
+// ===================
+// ПАКЕТНОЕ СОЗДАНИЕ: несколько занятий за один день
+// ===================
+
+type HoursType = "theory" | "practice" | "assessment";
+
+interface QueuedLesson {
+  key: string;
+  disciplineId: string;
+  disciplineName: string;
+  instructorId: string;
+  instructorName: string;
+  eventType: ScheduleEventType;
+  pairs: number[];
+  timeRange: string;
+  plannedHours: number; // а-ч, учитываемые в лимите дисциплины/инструктора
+  testTemplateName?: string;
+  // Готовые тела запросов POST /api/schedule (по одному на блок подряд идущих а-ч)
+  payloads: Array<Record<string, any>>;
+}
+
+const queuedLessons = ref<QueuedLesson[]>([]);
+// Если часть пакета уже сохранена — при закрытии нужно обновить календарь
+const lastSavedEvent = ref<ScheduleEvent | null>(null);
+
+const eventTypeLabels: Record<string, string> = {
+  theory: "Теория",
+  practice: "Практика",
+  assessment: "Проверка",
+  other: "Другое",
+};
+
+const eventTypeBadgeClass: Record<string, string> = {
+  theory: "bg-primary/10 text-primary",
+  practice: "bg-success/10 text-success",
+  assessment: "bg-warning/10 text-warning",
+  other: "bg-gray-100 text-gray-600",
+};
+
+// Группу и дату нельзя менять, пока в списке есть занятия
+const isDayLocked = computed(
+  () => !isEditMode.value && queuedLessons.value.length > 0,
+);
+
+// а-ч, уже занятые занятиями из списка: номер → подпись
+const occupiedPairs = computed(() => {
+  const map = new Map<number, string>();
+  for (const lesson of queuedLessons.value) {
+    const label = `${eventTypeLabels[lesson.eventType] ?? ""}: ${lesson.disciplineName}`;
+    for (const pair of lesson.pairs) map.set(pair, label);
+  }
+  return map;
+});
+
+// Часы из списка по дисциплине и типу (ещё не сохранены на сервере)
+const queuedHoursFor = (disciplineId: string, type: string): number =>
+  queuedLessons.value
+    .filter((l) => l.disciplineId === disciplineId && l.eventType === type)
+    .reduce((sum, l) => sum + l.plannedHours, 0);
+
+// Остаток часов дисциплины с учётом занятий из списка
+const effectiveRemaining = (type: HoursType): number => {
+  if (!selectedDiscipline.value) return 0;
+  return (
+    selectedDiscipline.value.remainingHours[type] -
+    queuedHoursFor(selectedDiscipline.value.id, type)
+  );
+};
+
+const submitButtonLabel = computed(() => {
+  if (isEditMode.value) return "Сохранить";
+  const total =
+    queuedLessons.value.length + (selectedPairs.value.length > 0 ? 1 : 0);
+  return total > 1 ? `Сохранить все (${total})` : "Добавить";
+});
+
 const computedTimeRange = computed(() => {
   if (selectedPairs.value.length === 0) return "";
 
@@ -980,11 +1183,11 @@ const hasNonConsecutivePairs = computed(() => {
 const getHoursClass = (type: "theory" | "practice" | "assessment"): string => {
   if (!selectedDiscipline.value) return "bg-gray-100 dark:bg-boxdark";
 
-  const remaining = selectedDiscipline.value.remainingHours[type];
+  const remaining = effectiveRemaining(type);
   const total = selectedDiscipline.value.totalHours[type];
 
   if (total === 0) return "bg-gray-100 dark:bg-boxdark";
-  if (remaining === 0) return "bg-danger/10 text-danger";
+  if (remaining <= 0) return "bg-danger/10 text-danger";
   if (remaining <= total * 0.2) return "bg-warning/10 text-warning";
   return "bg-success/10 text-success";
 };
@@ -1190,7 +1393,8 @@ const validateHours = () => {
     return;
   }
 
-  let remainingHours = selectedDiscipline.value.remainingHours[eventType];
+  // Вычитаем часы занятий, уже добавленных в список этого дня
+  let remainingHours = effectiveRemaining(eventType);
   const plannedHours = computedDuration.value;
 
   // При редактировании нужно добавить обратно часы текущего урока
@@ -1246,7 +1450,12 @@ const validateInstructorHours = async () => {
     scheduleSettings.value.academic_hour_minutes || "40",
     10,
   );
-  const durationMinutes = computedDuration.value * academicHourMinutes;
+  // + часы этого же инструктора из списка занятий дня (ещё не сохранены)
+  const queuedInstructorHours = queuedLessons.value
+    .filter((l) => l.instructorId === form.value.instructorId)
+    .reduce((sum, l) => sum + l.plannedHours, 0);
+  const durationMinutes =
+    (computedDuration.value + queuedInstructorHours) * academicHourMinutes;
 
   if (durationMinutes <= 0) return;
 
@@ -1419,10 +1628,152 @@ const getSubmitData = () => {
   return getSubmitDataForGroup(selectedPairs.value);
 };
 
+// Положить текущее занятие из формы в список дня
+const queueCurrentLesson = (): boolean => {
+  if (!validate()) {
+    notification.show({
+      type: "error",
+      title: "Ошибка валидации",
+      message: "Проверьте правильность заполнения формы",
+    });
+    return false;
+  }
+  if (instructorHoursWarning.value) {
+    notification.show({
+      type: "error",
+      title: "Лимит часов инструктора",
+      message: instructorHoursWarning.value,
+    });
+    return false;
+  }
+
+  const discipline = selectedDiscipline.value!;
+  const instructor = discipline.instructors.find(
+    (i) => i.id === form.value.instructorId,
+  );
+  const template = form.value.testTemplateId
+    ? allTestTemplates.value.find((t) => t.id === form.value.testTemplateId)
+    : undefined;
+  const pairs = [...selectedPairs.value].sort((a, b) => a - b);
+
+  queuedLessons.value.push({
+    key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    disciplineId: discipline.id,
+    disciplineName: discipline.name,
+    instructorId: form.value.instructorId,
+    instructorName: instructor?.fullName || "—",
+    eventType: form.value.eventType,
+    pairs,
+    timeRange: computedTimeRange.value,
+    plannedHours: computedDuration.value,
+    testTemplateName: template?.name,
+    payloads: consecutiveGroups.value.map((g) => getSubmitDataForGroup(g)),
+  });
+  queuedLessons.value.sort((a, b) => (a.pairs[0] ?? 0) - (b.pairs[0] ?? 0));
+  return true;
+};
+
+// Следующий тип занятия после добавленного: теория → практика → проверка
+const pickNextEventType = (current: ScheduleEventType): ScheduleEventType => {
+  const order: HoursType[] = ["theory", "practice", "assessment"];
+  const idx = order.indexOf(current as HoursType);
+  for (let i = idx + 1; i < order.length; i++) {
+    const type = order[i]!;
+    if (effectiveRemaining(type) > 0) return type;
+  }
+  return current;
+};
+
+const handleAddAnotherLesson = () => {
+  if (submitting.value) return;
+  if (!queueCurrentLesson()) return;
+
+  // Группа, дата, аудитория, дисциплина и инструктор остаются — сбрасываем только занятие
+  const nextType = pickNextEventType(form.value.eventType);
+  selectedPairs.value = [];
+  form.value.description = "";
+  form.value.testTemplateId = "";
+  form.value.eventType = nextType;
+  errors.value = {};
+  handleEventTypeChange();
+};
+
+const removeQueuedLesson = (key: string) => {
+  queuedLessons.value = queuedLessons.value.filter((l) => l.key !== key);
+  validateHours();
+};
+
+// Сохранение всех занятий из списка (последовательно — сервер сам проверяет лимиты и конфликты)
+const saveQueuedLessons = async () => {
+  let createdCount = 0;
+
+  while (queuedLessons.value.length > 0) {
+    const lesson = queuedLessons.value[0]!;
+    try {
+      while (lesson.payloads.length > 0) {
+        const response = await authFetch<{
+          success: boolean;
+          event: ScheduleEvent;
+        }>("/api/schedule", { method: "POST", body: lesson.payloads[0] });
+        if (!response.success) {
+          throw new Error("Сервер не подтвердил создание занятия");
+        }
+        lesson.payloads.shift();
+        lastSavedEvent.value = response.event;
+        createdCount++;
+      }
+      queuedLessons.value.shift();
+    } catch (error: any) {
+      console.error("Error saving queued lesson:", error);
+      notification.show({
+        type: "error",
+        title: createdCount > 0 ? `Сохранено: ${createdCount}, дальше ошибка` : "Ошибка",
+        message: `${eventTypeLabels[lesson.eventType]} «${lesson.disciplineName}» (${lesson.timeRange}): ${
+          error.data?.statusMessage ||
+          error.data?.message ||
+          error.message ||
+          "не удалось сохранить"
+        }`,
+      });
+      // Обновляем остатки часов — часть занятий уже на сервере
+      if (createdCount > 0 && form.value.groupId) {
+        loadGroupDisciplines(form.value.groupId, true);
+      }
+      return;
+    }
+  }
+
+  notification.show({
+    type: "success",
+    title: createdCount > 1 ? "Занятия созданы" : "Занятие создано",
+    message:
+      createdCount > 1
+        ? `Добавлено занятий в расписание: ${createdCount}`
+        : "Занятие успешно добавлено",
+  });
+  if (lastSavedEvent.value) emit("saved", lastSavedEvent.value);
+};
+
 // Отправка формы
 const handleSubmit = async () => {
   // Защита от двойного клика
   if (submitting.value) {
+    return;
+  }
+
+  // Создание: текущее занятие + всё из списка дня
+  if (!isEditMode.value) {
+    // Форму добавляем, если в ней выбраны часы (или список пуст — тогда покажем ошибки)
+    if (selectedPairs.value.length > 0 || queuedLessons.value.length === 0) {
+      if (!queueCurrentLesson()) return;
+      selectedPairs.value = [];
+    }
+    submitting.value = true;
+    try {
+      await saveQueuedLessons();
+    } finally {
+      submitting.value = false;
+    }
     return;
   }
 
@@ -1456,65 +1807,6 @@ const handleSubmit = async () => {
           type: "success",
           title: "Занятие обновлено",
           message: `Занятие "${response.event.title}" успешно обновлено`,
-        });
-        emit("saved", response.event);
-      }
-    }
-    // Режим создания - проверяем непоследовательные а-ч
-    else if (hasNonConsecutivePairs.value) {
-      // Создаём отдельные занятия для каждой группы последовательных а-ч
-      console.log(
-        "[Schedule] Создание нескольких занятий:",
-        consecutiveGroups.value,
-      );
-
-      const createdEvents: ScheduleEvent[] = [];
-
-      for (const group of consecutiveGroups.value) {
-        const data = getSubmitDataForGroup(group);
-        console.log("[Schedule] Создание занятия для группы а-ч:", group, data);
-
-        const response = await authFetch<{
-          success: boolean;
-          event: ScheduleEvent;
-        }>("/api/schedule", { method: "POST", body: data });
-
-        if (response.success) {
-          createdEvents.push(response.event);
-        }
-      }
-
-      if (createdEvents.length > 0) {
-        notification.show({
-          type: "success",
-          title: "Занятия созданы",
-          message: `Создано ${createdEvents.length} занятий`,
-        });
-        // Emit'им последнее созданное событие для обновления календаря
-        const lastEvent = createdEvents[createdEvents.length - 1];
-        if (lastEvent) {
-          emit("saved", lastEvent);
-        }
-      }
-    }
-    // Режим создания - одно занятие
-    else {
-      const data = getSubmitData();
-      console.log(
-        "[Schedule] Создание занятия:",
-        JSON.stringify(data, null, 2),
-      );
-
-      const response = await authFetch<{
-        success: boolean;
-        event: ScheduleEvent;
-      }>("/api/schedule", { method: "POST", body: data });
-
-      if (response.success) {
-        notification.show({
-          type: "success",
-          title: "Занятие создано",
-          message: `Занятие "${response.event.title}" успешно добавлено`,
         });
         emit("saved", response.event);
       }
@@ -1580,6 +1872,23 @@ const confirmDelete = async () => {
 };
 
 const handleClose = () => {
+  if (submitting.value) return;
+
+  if (
+    !isEditMode.value &&
+    queuedLessons.value.length > 0 &&
+    !window.confirm(
+      `В списке ${queuedLessons.value.length} несохранённых занятий. Закрыть без сохранения?`,
+    )
+  ) {
+    return;
+  }
+
+  // Часть пакета уже сохранена — календарь должен перезагрузиться
+  if (lastSavedEvent.value) {
+    emit("saved", lastSavedEvent.value);
+    return;
+  }
   emit("close");
 };
 
@@ -1622,6 +1931,8 @@ const initForm = () => {
 
   timeMode.value = "pairs";
   selectedPairs.value = [];
+  queuedLessons.value = [];
+  lastSavedEvent.value = null;
   hoursWarning.value = null;
   instructorHoursWarning.value = null;
   errors.value = {};

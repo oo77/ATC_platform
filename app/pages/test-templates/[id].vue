@@ -48,7 +48,7 @@
             <NuxtLink :to="`/test-bank/${template.bank_id}`" class="transition-colors hover:text-primary">{{ template.bank_name }}</NuxtLink>
           </span>
           <!-- Языки теста: флаги, подсказка — название языка -->
-          <span class="flex items-center gap-1">
+          <span class="flex flex-wrap items-center gap-1">
             <template v-if="template.allowed_languages && template.allowed_languages.length > 0">
               <span v-for="lang in template.allowed_languages" :key="lang" :class="languageBadgeClasses[lang]" :title="languageLabels[lang]">
                 {{ languageFlags[lang] }}
@@ -235,7 +235,7 @@
                   class="flex items-center justify-between"
                 >
                   <div class="flex items-center gap-2">
-                    <span class="text-lg">{{ languageFlags[stat.language] }}</span>
+                    <span class="text-[10px] font-semibold text-gray-500">{{ languageFlags[stat.language] }}</span>
                     <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ languageLabels[stat.language] }}</span>
                   </div>
                   <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ stat.count }} вопросов</span>
@@ -529,6 +529,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import {
+  TEST_LANGUAGES,
+  TEST_LANGUAGE_LABELS,
+  TEST_LANGUAGE_FLAGS,
+} from "../../../shared/utils/testLanguages";
+import { TEST_LANGUAGE_BADGE_CLASSES } from "../../utils/testLanguageBadges";
+import {
   ArrowLeft,
   FileText as FileTextIcon,
   Eye as EyeIcon,
@@ -608,11 +614,7 @@ const notification = ref<{
 const showLanguageModal = ref(false);
 const availableLanguagesForModal = computed(() => {
   if (!template.value?.allowed_languages || template.value.allowed_languages.length === 0) {
-    return [
-      { value: "ru", label: "Русский", flag: "🇷🇺" },
-      { value: "uz", label: "O'zbek", flag: "🇺🇿" },
-      { value: "en", label: "English", flag: "🇬🇧" },
-    ];
+    return [...TEST_LANGUAGES];
   }
   return template.value.allowed_languages.map((lang: string) => ({
     value: lang,
@@ -647,23 +649,16 @@ const difficultyClasses: Record<string, string> = {
   hard: "bg-danger/10 text-danger",
 };
 
-const languageLabels: Record<string, string> = {
-  ru: "Русский",
-  uz: "O'zbek",
-  en: "English",
-};
+const languageLabels: Record<string, string> = TEST_LANGUAGE_LABELS;
 
-const languageFlags: Record<string, string> = {
-  ru: "🇷🇺",
-  uz: "🇺🇿",
-  en: "🇬🇧",
-};
+const languageFlags: Record<string, string> = TEST_LANGUAGE_FLAGS;
 
-const languageBadgeClasses: Record<string, string> = {
-  ru: "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs bg-blue-100 dark:bg-blue-900/30",
-  uz: "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs bg-green-100 dark:bg-green-900/30",
-  en: "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs bg-purple-100 dark:bg-purple-900/30",
-};
+const languageBadgeClasses: Record<string, string> = Object.fromEntries(
+  Object.entries(TEST_LANGUAGE_BADGE_CLASSES).map(([code, colors]) => [
+    code,
+    `inline-flex items-center justify-center h-6 min-w-[1.5rem] px-1.5 rounded-full text-[10px] font-semibold ${colors}`,
+  ]),
+);
 
 // Usage (placeholder)
 const usage = ref({

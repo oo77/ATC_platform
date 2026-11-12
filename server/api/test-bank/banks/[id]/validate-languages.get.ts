@@ -7,6 +7,7 @@
 
 import { validateLanguagesQuestionCount } from '../../../../repositories/testTemplateRepository';
 import { QuestionLanguage } from '../../../../types/testing';
+import { isTestLanguage } from '../../../../../shared/utils/testLanguages';
 import { Permission, requireAnyPermission } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
@@ -28,7 +29,7 @@ export default defineEventHandler(async (event) => {
         // Получаем параметры из query
         const minCount = parseInt(query.min_count as string) || 1;
         const languagesStr = query.languages as string || 'ru';
-        const languages = languagesStr.split(',').filter(l => ['ru', 'uz', 'en'].includes(l)) as QuestionLanguage[];
+        const languages = languagesStr.split(',').filter(l => isTestLanguage(l)) as QuestionLanguage[];
 
         if (languages.length === 0) {
             return {

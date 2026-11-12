@@ -1,15 +1,18 @@
 <template>
   <UiModal
     :is-open="isOpen"
-    title="Лист ознакомления — инструктаж"
+    :title="title ?? 'Лист ознакомления — инструктаж'"
     size="md"
     @close="$emit('close')"
   >
     <div class="space-y-5">
       <div class="p-3 bg-primary/5 rounded-xl border border-primary/15 text-xs text-slate-600 dark:text-slate-300">
+        <template v-if="hint">{{ hint }}</template>
+        <template v-else>
         Группа, учебная программа и дата инструктажа (первый день обучения группы)
         подставляются автоматически. Таблица на 20 слушателей, строка «Ф.И.О., должность»
         и подпись остаются для заполнения от руки. Выберите, кто провёл инструктаж.
+        </template>
       </div>
 
       <div v-if="loadingInstructors" class="flex items-center justify-center py-8">
@@ -81,6 +84,9 @@ interface SheetInstructor {
 const props = defineProps<{
   isOpen: boolean;
   groupId: string;
+  /** Заголовок и пояснение — модалка используется и для «Списка группы» */
+  title?: string;
+  hint?: string;
   /** Идёт формирование файла */
   loading?: boolean;
 }>();

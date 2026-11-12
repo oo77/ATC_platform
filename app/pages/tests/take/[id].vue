@@ -331,10 +331,10 @@
                       ? 'bg-white dark:bg-boxdark text-primary shadow-sm'
                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white',
                   ]"
+                  :title="getLanguageLabel(lang)"
                   @click="switchLanguage(lang)"
                 >
-                  <span>{{ getLanguageFlag(lang) }}</span>
-                  <span>{{ lang.toUpperCase() }}</span>
+                  <span class="text-xs font-semibold">{{ getLanguageFlag(lang) }}</span>
                 </button>
               </div>
 
@@ -343,7 +343,7 @@
                 v-else-if="sessionLanguage"
                 class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-meta-4 text-sm"
               >
-                <span class="text-lg">{{
+                <span class="text-xs font-semibold text-gray-500">{{
                   getLanguageFlag(sessionLanguage)
                 }}</span>
                 <span class="font-medium text-gray-700 dark:text-gray-300">{{
@@ -691,6 +691,10 @@
 </template>
 
 <script setup>
+import {
+  testLanguageLabel,
+  testLanguageFlag,
+} from "../../../../shared/utils/testLanguages";
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 
@@ -825,19 +829,9 @@ const timerWarning = computed(
 const sessionLanguage = computed(() => session.value?.language || null);
 
 // Хелперы для отображения языка
-const LANGUAGE_DATA = {
-  en: { label: "English", flag: "🇬🇧" },
-  ru: { label: "Русский", flag: "🇷🇺" },
-  uz: { label: "O'zbek", flag: "🇺🇿" },
-};
+const getLanguageLabel = (lang) => testLanguageLabel(lang);
 
-const getLanguageLabel = (lang) => {
-  return LANGUAGE_DATA[lang]?.label || lang;
-};
-
-const getLanguageFlag = (lang) => {
-  return LANGUAGE_DATA[lang]?.flag || "";
-};
+const getLanguageFlag = (lang) => testLanguageFlag(lang);
 
 // Переключение языка во время теста
 const availableLanguages = ref([]);
