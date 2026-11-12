@@ -1,20 +1,47 @@
 <template>
   <ClientOnly>
-    <div v-if="isVisible" class="fixed bottom-5 right-5 z-[60] print:hidden">
+    <div
+      v-if="isVisible"
+      class="fixed z-[60] print:hidden"
+      :class="isDocked && !isOpen ? 'right-0 top-1/2 -translate-y-1/2' : 'bottom-5 right-5'"
+    >
+      <!-- Свёрнутый к краю ярлычок: не перекрывает кнопки внизу страницы -->
+      <button
+        v-if="!isOpen && isDocked"
+        type="button"
+        class="group flex h-14 w-3 items-center justify-center overflow-hidden rounded-l-xl bg-gradient-to-b from-violet-600 to-blue-600 text-white opacity-60 shadow-lg transition-all hover:w-10 hover:opacity-100"
+        title="AI Ассистент (нажмите, чтобы открыть)"
+        aria-label="Открыть AI Ассистента"
+        @click="openPanel"
+      >
+        <Sparkles class="h-4 w-4 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+      </button>
+
       <!-- Launcher -->
       <Transition name="ai-pop">
-        <button
-          v-if="!isOpen"
-          class="group relative w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 text-white shadow-xl shadow-indigo-600/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
-          title="AI Ассистент"
-          @click="openPanel"
-        >
-          <Sparkles class="w-6 h-6" />
-          <span class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-indigo-600" />
-          <span class="absolute right-full mr-3 px-2.5 py-1 rounded-lg bg-gray-900 text-white text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
-            AI Ассистент
-          </span>
-        </button>
+        <div v-if="!isOpen && !isDocked" class="group relative">
+          <button
+            class="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 text-white shadow-xl shadow-indigo-600/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+            title="AI Ассистент"
+            @click="openPanel"
+          >
+            <Sparkles class="w-6 h-6" />
+            <span class="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-indigo-600" />
+            <span class="absolute right-full mr-3 px-2.5 py-1 rounded-lg bg-gray-900 text-white text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+              AI Ассистент
+            </span>
+          </button>
+          <!-- Убрать кнопку к краю экрана -->
+          <button
+            type="button"
+            class="absolute -left-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-800 text-white opacity-0 shadow transition-opacity hover:bg-gray-950 focus-visible:opacity-100 group-hover:opacity-100"
+            title="Свернуть к краю экрана"
+            aria-label="Свернуть AI Ассистента к краю экрана"
+            @click.stop="setDocked(true)"
+          >
+            <X class="h-3 w-3" />
+          </button>
+        </div>
       </Transition>
 
       <!-- Panel -->
@@ -54,6 +81,14 @@
               </button>
               <button class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200" title="Открыть в полноэкранном чате" @click="openFullChat">
                 <ArrowUpRight class="w-4 h-4" />
+              </button>
+              <button
+                class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200"
+                :title="isDocked ? 'Показывать кнопку в углу экрана' : 'Прятать кнопку к краю экрана'"
+                @click="setDocked(!isDocked)"
+              >
+                <PanelRightOpen v-if="isDocked" class="w-4 h-4" />
+                <PanelRightClose v-else class="w-4 h-4" />
               </button>
               <button class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200" title="Закрыть" @click="isOpen = false">
                 <X class="w-4 h-4" />
@@ -199,8 +234,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
+  PanelRightClose,
+  PanelRightOpen,
   Sparkles,
   RotateCcw,
   Maximize2,
@@ -230,6 +267,30 @@ const isVisible = computed(() => !!user.value && user.value.role !== 'STUDENT' &
 
 const isOpen = ref(false);
 const isExpanded = ref(false);
+
+// ── Свёрнутый к краю режим ────────────────────────────────────────────
+// Плавающая кнопка в правом нижнем углу перекрывает пагинацию и кнопки
+// полноэкранных страниц. Её можно убрать в узкий ярлычок у правого края;
+// выбор запоминается. На полноэкранных страницах (конструктор отчётов)
+// ярлычок — по умолчанию.
+const DOCKED_KEY = 'atc_ai_widget_docked';
+const DOCKED_BY_DEFAULT = ['/reports/builder'];
+const dockedPref = ref<boolean | null>(null);
+const isDocked = computed(() =>
+  dockedPref.value ?? DOCKED_BY_DEFAULT.some((p) => route.path.startsWith(p)),
+);
+function setDocked(value: boolean) {
+  dockedPref.value = value;
+  try {
+    localStorage.setItem(DOCKED_KEY, value ? '1' : '0');
+  } catch {
+    /* localStorage недоступен */
+  }
+}
+onMounted(() => {
+  const stored = readStored(DOCKED_KEY);
+  if (stored === '1' || stored === '0') dockedPref.value = stored === '1';
+});
 const messages = ref<AiChatMessage[]>([]);
 const input = ref('');
 const isGenerating = ref(false);
