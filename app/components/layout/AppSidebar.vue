@@ -281,6 +281,7 @@ import { Permission } from "~/types/permissions";
 import {
   LayoutDashboard,
   CalendarRange,
+  DoorOpen,
   Users,
   GraduationCap,
   FileCheck,
@@ -384,6 +385,12 @@ const allMenuGroups: MenuGroup[] = [
           Permission.SCHEDULE_VIEW_ALL,
           Permission.SCHEDULE_VIEW_OWN,
         ],
+      },
+      {
+        icon: DoorOpen,
+        name: "Бронь аудиторий",
+        path: "/room-bookings",
+        permission: Permission.SCHEDULE_VIEW_ALL,
       },
     ],
   },

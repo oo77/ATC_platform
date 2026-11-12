@@ -100,6 +100,7 @@
             <WeekWidget v-else-if="dataOf(w)!.kind === 'week'" :data="dataOf(w) as any" />
             <StatusWidget v-else-if="dataOf(w)!.kind === 'status'" :data="dataOf(w) as any" />
             <AlertsWidget v-else-if="dataOf(w)!.kind === 'alerts'" :data="dataOf(w) as any" />
+            <BookingWidget v-else-if="dataOf(w)!.kind === 'booking'" :data="dataOf(w) as any" />
           </div>
         </template>
       </section>
@@ -123,6 +124,7 @@ import ClockWidget from "./ClockWidget.vue";
 import WeekWidget from "./WeekWidget.vue";
 import StatusWidget from "./StatusWidget.vue";
 import AlertsWidget from "./AlertsWidget.vue";
+import BookingWidget from "./BookingWidget.vue";
 
 const props = withDefaults(
   defineProps<{

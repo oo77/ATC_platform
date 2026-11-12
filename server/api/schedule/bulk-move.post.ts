@@ -8,12 +8,23 @@ import { isoToMySqlDatetime } from "../../utils/timeUtils";
 import { logActivity } from "../../utils/activityLogger";
 import type { RowDataPacket, PoolConnection } from "mysql2/promise";
 import { Permission, roleHasPermission } from "../../utils/permissions";
+import {
+  findBatchConflicts,
+  isRetakeRow,
+  throwScheduleConflict,
+} from "../../repositories/scheduleRepository";
+import { withScheduleWriteLock } from "../../utils/scheduleLock";
 
 interface ScheduleEventRow extends RowDataPacket {
   id: string;
   title: string;
   start_time: Date;
   end_time: Date;
+  group_id: string | null;
+  instructor_id: string | null;
+  classroom_id: string | null;
+  original_event_id: string | null;
+  allowed_student_ids: unknown;
 }
 
 export default defineEventHandler(async (event) => {
@@ -69,7 +80,8 @@ export default defineEventHandler(async (event) => {
     // Получаем исходные занятия
     const placeholders = eventIds.map(() => "?").join(",");
     const eventsQuery = `
-      SELECT id, title, start_time, end_time
+      SELECT id, title, start_time, end_time, group_id, instructor_id,
+             classroom_id, original_event_id, allowed_student_ids
       FROM schedule_events
       WHERE id IN (${placeholders})
       ORDER BY start_time ASC
@@ -90,84 +102,92 @@ export default defineEventHandler(async (event) => {
     const movedEventIds: string[] = [];
     const errors: string[] = [];
 
-    await executeTransaction(async (connection: PoolConnection) => {
-      // Определяем базовое время первого занятия
-      const firstEvent = sourceEvents[0];
-      const firstEventStart = new Date(firstEvent.start_time);
+    // Новое время всех занятий считаем заранее, до любой записи в БД
+    const firstEvent = sourceEvents[0];
+    const firstEventStart = new Date(firstEvent.start_time);
 
-      // Используем то же самое время первого занятия для новой даты
-      // (смещение от начала дня сохраняется)
+    const planned = sourceEvents.map((sourceEvent, i) => {
+      // Вычисляем новое время
+      let newStartTime: Date;
+      let newEndTime: Date;
 
-      for (let i = 0; i < sourceEvents.length; i++) {
-        const sourceEvent = sourceEvents[i];
+      if (preserveSequence && i > 0) {
+        // Сохраняем последовательность
+        const eventStart = new Date(sourceEvent.start_time);
+        const eventEnd = new Date(sourceEvent.end_time);
 
-        try {
-          // Вычисляем новое время
-          let newStartTime: Date;
-          let newEndTime: Date;
+        // Смещение от первого занятия
+        const offsetFromFirst =
+          eventStart.getTime() - firstEventStart.getTime();
 
-          if (preserveSequence && i > 0) {
-            // Сохраняем последовательность
-            const eventStart = new Date(sourceEvent.start_time);
-            const eventEnd = new Date(sourceEvent.end_time);
+        // Создаем новую дату начала на основе целевой даты и времени первого занятия
+        newStartTime = new Date(target);
+        newStartTime.setHours(
+          firstEventStart.getHours(),
+          firstEventStart.getMinutes(),
+          0,
+          0,
+        );
+        newStartTime = new Date(newStartTime.getTime() + offsetFromFirst);
 
-            // Смещение от первого занятия
-            const offsetFromFirst =
-              eventStart.getTime() - firstEventStart.getTime();
+        // Длительность занятия
+        const duration = eventEnd.getTime() - eventStart.getTime();
+        newEndTime = new Date(newStartTime.getTime() + duration);
+      } else {
+        // Просто переносим на новую дату, сохраняя время
+        const eventStart = new Date(sourceEvent.start_time);
+        const eventEnd = new Date(sourceEvent.end_time);
 
-            // Создаем новую дату начала на основе целевой даты и времени первого занятия
-            newStartTime = new Date(target);
-            newStartTime.setHours(
-              firstEventStart.getHours(),
-              firstEventStart.getMinutes(),
-              0,
-              0,
-            );
-            newStartTime = new Date(newStartTime.getTime() + offsetFromFirst);
+        newStartTime = new Date(target);
+        newStartTime.setHours(
+          eventStart.getHours(),
+          eventStart.getMinutes(),
+          eventStart.getSeconds(),
+          0,
+        );
 
-            // Длительность занятия
-            const duration = eventEnd.getTime() - eventStart.getTime();
-            newEndTime = new Date(newStartTime.getTime() + duration);
-          } else {
-            // Просто переносим на новую дату, сохраняя время
-            const eventStart = new Date(sourceEvent.start_time);
-            const eventEnd = new Date(sourceEvent.end_time);
+        const duration = eventEnd.getTime() - eventStart.getTime();
+        newEndTime = new Date(newStartTime.getTime() + duration);
+      }
 
-            newStartTime = new Date(target);
-            newStartTime.setHours(
-              eventStart.getHours(),
-              eventStart.getMinutes(),
-              eventStart.getSeconds(),
-              0,
-            );
+      return {
+        sourceEvent,
+        newStart: isoToMySqlDatetime(newStartTime.toISOString()),
+        newEnd: isoToMySqlDatetime(newEndTime.toISOString()),
+      };
+    });
 
-            const duration = eventEnd.getTime() - eventStart.getTime();
-            newEndTime = new Date(newStartTime.getTime() + duration);
-          }
+    // Проверка и запись — под общей блокировкой. Весь пакет переносится
+    // целиком или не переносится вовсе (как и одиночное занятие: 409, БД не тронута).
+    await withScheduleWriteLock(async () => {
+      const conflictMessages = await findBatchConflicts(
+        planned.map(({ sourceEvent, newStart, newEnd }) => ({
+          label: sourceEvent.title,
+          classroomId: sourceEvent.classroom_id,
+          instructorId: sourceEvent.instructor_id,
+          groupId: sourceEvent.group_id,
+          start: newStart,
+          end: newEnd,
+          skip: isRetakeRow(sourceEvent),
+        })),
+        // переносимые занятия освобождают свои старые слоты
+        { excludeEventIds: sourceEvents.map((e) => e.id) },
+      );
+      if (conflictMessages.length > 0) {
+        throwScheduleConflict(conflictMessages);
+      }
 
-          // Обновляем занятие
+      await executeTransaction(async (connection: PoolConnection) => {
+        for (const { sourceEvent, newStart, newEnd } of planned) {
           await connection.query(
-            `UPDATE schedule_events 
+            `UPDATE schedule_events
              SET start_time = ?, end_time = ?
              WHERE id = ?`,
-            [
-              isoToMySqlDatetime(newStartTime.toISOString()),
-              isoToMySqlDatetime(newEndTime.toISOString()),
-              sourceEvent.id,
-            ],
+            [newStart, newEnd, sourceEvent.id],
           );
-
           movedEventIds.push(sourceEvent.id);
-        } catch (err: any) {
-          console.error(
-            `[bulk-move] Error moving event ${sourceEvent.id}:`,
-            err,
-          );
-          errors.push(
-            `Ошибка перемещения "${sourceEvent.title}": ${err.message}`,
-          );
         }
-      }
+      });
     });
 
     // Логирование действия

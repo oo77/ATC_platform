@@ -199,7 +199,8 @@ const moveEvents = async () => {
     }
   } catch (e: any) {
     console.error("Move error:", e);
-    error.value = e.data?.message || e.message || "Ошибка перемещения";
+    error.value =
+      e.data?.statusMessage || e.data?.message || e.message || "Ошибка перемещения";
   } finally {
     loading.value = false;
   }

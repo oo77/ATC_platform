@@ -3,7 +3,10 @@
  * Обновление аудитории
  */
 
-import { updateClassroom } from "../../repositories/scheduleRepository";
+import {
+  assertClassroomHasNoUpcomingEvents,
+  updateClassroom,
+} from "../../repositories/scheduleRepository";
 import { z } from "zod";
 import { Permission, requirePermission } from "../../utils/permissions";
 
@@ -31,6 +34,10 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event);
     const validatedData = updateClassroomSchema.parse(body);
+
+    if (validatedData.isActive === false) {
+      await assertClassroomHasNoUpcomingEvents(id, "отключить");
+    }
 
     const classroom = await updateClassroom(id, validatedData);
 

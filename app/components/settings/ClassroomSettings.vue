@@ -360,7 +360,7 @@ const toggleClassroomStatus = async (classroom) => {
     notification.show({
       type: 'error',
       title: 'Ошибка',
-      message: 'Не удалось изменить статус аудитории',
+      message: error?.data?.statusMessage || 'Не удалось изменить статус аудитории',
     });
   }
 };
@@ -396,7 +396,9 @@ const deleteClassroomConfirmed = async () => {
     notification.show({
       type: 'error',
       title: 'Ошибка',
-      message: 'Не удалось удалить аудиторию. Возможно, она используется в расписании.',
+      message:
+        error?.data?.statusMessage ||
+        'Не удалось удалить аудиторию. Возможно, она используется в расписании.',
     });
   }
 };

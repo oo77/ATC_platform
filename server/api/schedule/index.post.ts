@@ -6,7 +6,11 @@
 import {
   createScheduleEvent,
   checkScheduleConflicts,
+  formatConflictMessages,
+  throwScheduleConflict,
 } from "../../repositories/scheduleRepository";
+import { withScheduleWriteLock } from "../../utils/scheduleLock";
+import { findBookingBlocks } from "../../repositories/roomBookingRepository";
 import type { CreateScheduleEventInput } from "../../repositories/scheduleRepository";
 import { checkInstructorHoursLimit } from "../../repositories/instructorRepository";
 import { createTestAssignment } from "../../repositories/testAssignmentRepository"; // New import
@@ -18,6 +22,7 @@ import {
   dateToLocalIso,
   formatDateOnly,
   formatDateForDisplay,
+  isoToMySqlDatetime,
 } from "../../utils/timeUtils";
 import type { RowDataPacket } from "mysql2/promise";
 import { Permission, requirePermission } from "../../utils/permissions";
@@ -243,55 +248,45 @@ export default defineEventHandler(async (event) => {
     // ПРОВЕРКА КОНФЛИКТОВ РАСПИСАНИЯ
     // ===============================
 
-    if (!isRetake && (body.classroomId || body.instructorId || body.groupId)) {
-      const conflicts = await checkScheduleConflicts(
-        body.startTime,
-        body.endTime,
-        {
-          classroomId: body.classroomId,
-          instructorId: body.instructorId,
-          groupId: body.groupId,
-        },
-      );
+    // Проверка и запись — под общей блокировкой, чтобы два одновременных
+    // запроса не заняли одну аудиторию (оба прошли бы проверку до записи).
+    const scheduleEvent = await withScheduleWriteLock(async () => {
+      if (!isRetake && (body.classroomId || body.instructorId || body.groupId)) {
+        const conflicts = await checkScheduleConflicts(
+          body.startTime,
+          body.endTime,
+          {
+            classroomId: body.classroomId,
+            instructorId: body.instructorId,
+            groupId: body.groupId,
+          },
+        );
 
-      if (conflicts.length > 0) {
-        const conflictMessages: string[] = [];
-
-        for (const conflict of conflicts) {
-          if (conflict.classroomId === body.classroomId && conflict.classroom) {
-            conflictMessages.push(
-              `Аудитория "${conflict.classroom.name}" занята`,
-            );
-          }
-          if (
-            conflict.instructorId === body.instructorId &&
-            conflict.instructor
-          ) {
-            conflictMessages.push(
-              `Инструктор "${conflict.instructor.fullName}" занят`,
-            );
-          }
-          if (conflict.groupId === body.groupId && conflict.group) {
-            conflictMessages.push(`Группа "${conflict.group.code}" занята`);
-          }
-        }
-
+        const conflictMessages = conflicts.flatMap((conflict) =>
+          formatConflictMessages(conflict, body),
+        );
+        // Бронь аудитории под другой курс тоже блокирует занятие
+        const blocks = await findBookingBlocks([
+          {
+            label: body.title,
+            classroomId: body.classroomId,
+            groupId: body.groupId,
+            start: isoToMySqlDatetime(body.startTime),
+            end: isoToMySqlDatetime(body.endTime),
+          },
+        ]);
+        conflictMessages.push(...blocks.map((b) => b.message));
         if (conflictMessages.length > 0) {
-          throw createError({
-            statusCode: 409,
-            statusMessage: `Конфликт расписания: ${[
-              ...new Set(conflictMessages),
-            ].join(", ")}`,
-          });
+          throwScheduleConflict(conflictMessages);
         }
       }
-    }
 
-    // ===============================
-    // СОЗДАНИЕ СОБЫТИЯ
-    // ===============================
+      // ===============================
+      // СОЗДАНИЕ СОБЫТИЯ
+      // ===============================
 
-    const scheduleEvent = await createScheduleEvent(body);
+      return createScheduleEvent({ ...body, createdBy: event.context.user?.id });
+    });
 
     // СОЗДАНИЕ НАЗНАЧЕНИЯ ТЕСТА (если выбрано и тип - assessment)
     if (

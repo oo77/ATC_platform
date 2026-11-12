@@ -9,6 +9,11 @@ import { isoToMySqlDatetime } from "../../../../utils/timeUtils";
 import { logActivity } from "../../../../utils/activityLogger";
 import type { RowDataPacket, PoolConnection } from "mysql2/promise";
 import { Permission, roleHasPermission } from "../../../../utils/permissions";
+import {
+  findBatchConflicts,
+  throwScheduleConflict,
+} from "../../../../repositories/scheduleRepository";
+import { withScheduleWriteLock } from "../../../../utils/scheduleLock";
 
 interface TemplateRow extends RowDataPacket {
   id: string;
@@ -126,42 +131,67 @@ export default defineEventHandler(async (event) => {
     const createdEventIds: string[] = [];
     const errors: string[] = [];
 
-    await executeTransaction(async (connection: PoolConnection) => {
-      // Сортируем по порядковому индексу
-      const sortedEvents = [...eventsData].sort(
-        (a, b) => a.orderIndex - b.orderIndex,
+    // Сортируем по порядковому индексу
+    const sortedEvents = [...eventsData].sort(
+      (a, b) => a.orderIndex - b.orderIndex,
+    );
+
+    // Всё считаем заранее, до любой записи в БД
+    const planned = sortedEvents.map((templateEvent) => {
+      // Вычисляем время начала и окончания
+      const startHours = Math.floor(templateEvent.startOffset / 60);
+      const startMinutes = templateEvent.startOffset % 60;
+
+      const newStartTime = new Date(target);
+      newStartTime.setHours(startHours, startMinutes, 0, 0);
+
+      const newEndTime = new Date(
+        newStartTime.getTime() + templateEvent.durationMinutes * 60 * 1000,
       );
 
-      for (const templateEvent of sortedEvents) {
-        try {
+      // Определяем инструктора (override или из шаблона)
+      const instructorId =
+        overrideInstructorId || templateEvent.instructorId || null;
+
+      // Определяем аудиторию (override или из шаблона)
+      const classroomId =
+        overrideClassroomId || templateEvent.classroomId || null;
+
+      return {
+        templateEvent,
+        instructorId,
+        classroomId,
+        newStart: isoToMySqlDatetime(newStartTime.toISOString()),
+        newEnd: isoToMySqlDatetime(newEndTime.toISOString()),
+      };
+    });
+
+    // Проверка и запись — под общей блокировкой. Шаблон применяется целиком
+    // или не применяется вовсе.
+    await withScheduleWriteLock(async () => {
+      const conflictMessages = await findBatchConflicts(
+        planned.map(({ templateEvent, instructorId, classroomId, newStart, newEnd }) => ({
+          label: templateEvent.title,
+          classroomId,
+          instructorId,
+          groupId: targetGroupId,
+          start: newStart,
+          end: newEnd,
+        })),
+      );
+      if (conflictMessages.length > 0) {
+        throwScheduleConflict(conflictMessages);
+      }
+
+      await executeTransaction(async (connection: PoolConnection) => {
+        for (const { templateEvent, instructorId, classroomId, newStart, newEnd } of planned) {
           const newId = uuidv4();
-
-          // Вычисляем время начала и окончания
-          const startHours = Math.floor(templateEvent.startOffset / 60);
-          const startMinutes = templateEvent.startOffset % 60;
-
-          const newStartTime = new Date(target);
-          newStartTime.setHours(startHours, startMinutes, 0, 0);
-
-          const newEndTime = new Date(
-            newStartTime.getTime() + templateEvent.durationMinutes * 60 * 1000,
-          );
-
-          // Определяем инструктора (override или из шаблона)
-          const instructorId =
-            overrideInstructorId || templateEvent.instructorId || null;
-
-          // Определяем аудиторию (override или из шаблона)
-          const classroomId =
-            overrideClassroomId || templateEvent.classroomId || null;
-
-          // Создаем занятие
           await connection.query(
             `INSERT INTO schedule_events (
               id, title, description, group_id, discipline_id, instructor_id,
               classroom_id, start_time, end_time, is_all_day, color, event_type,
-              duration_minutes, academic_hours
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              duration_minutes, academic_hours, created_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               newId,
               templateEvent.title,
@@ -170,24 +200,19 @@ export default defineEventHandler(async (event) => {
               templateEvent.disciplineId || null,
               instructorId,
               classroomId,
-              isoToMySqlDatetime(newStartTime.toISOString()),
-              isoToMySqlDatetime(newEndTime.toISOString()),
+              newStart,
+              newEnd,
               false,
               templateEvent.color || "primary",
               templateEvent.eventType || "theory",
               templateEvent.durationMinutes,
               templateEvent.academicHours || null,
+              user.id,
             ],
           );
-
           createdEventIds.push(newId);
-        } catch (err: any) {
-          console.error(`[templates.apply] Error creating event:`, err);
-          errors.push(
-            `Ошибка создания "${templateEvent.title}": ${err.message}`,
-          );
         }
-      }
+      });
     });
 
     // Логирование

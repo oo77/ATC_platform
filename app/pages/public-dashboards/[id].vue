@@ -136,6 +136,16 @@
                       <span class="pd-label">{{ opt.label }}</span>
                       <textarea v-model="w.options[opt.key]" rows="4" maxlength="2000" class="pd-input resize-y" />
                     </label>
+                    <div v-else-if="opt.type === 'multiselect'" class="block">
+                      <span class="pd-label">{{ opt.label }}</span>
+                      <div class="max-h-36 space-y-1 overflow-y-auto rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+                        <p v-if="!choicesFor(opt.source).length" class="text-xs text-gray-500">Список пуст</p>
+                        <label v-for="c in choicesFor(opt.source)" :key="c.id" class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <input v-model="w.options[opt.key]" type="checkbox" :value="c.id" class="rounded border-gray-300" />
+                          {{ c.name }}
+                        </label>
+                      </div>
+                    </div>
                     <label v-else-if="opt.type === 'boolean'" class="flex items-center justify-between gap-3">
                       <span class="text-sm text-gray-700 dark:text-gray-300">{{ opt.label }}</span>
                       <UiSwitch v-model="w.options[opt.key]" />
@@ -812,10 +822,23 @@ function onKey(e: KeyboardEvent) {
   }
 }
 
+// Варианты для опций типа multiselect (сейчас — список аудиторий)
+const classroomChoices = ref<{ id: string; name: string }[]>([]);
+const loadClassroomChoices = async () => {
+  try {
+    const res = await authFetch<{ classrooms: { id: string; name: string }[] }>("/api/classrooms");
+    classroomChoices.value = res.classrooms ?? [];
+  } catch (e) {
+    console.error("Не удалось загрузить список аудиторий для редактора:", e);
+  }
+};
+const choicesFor = (source?: string) => (source === "classrooms" ? classroomChoices.value : []);
+
 onMounted(async () => {
   origin.value = window.location.origin;
   window.addEventListener("beforeunload", beforeUnload);
   window.addEventListener("keydown", onKey);
+  void loadClassroomChoices();
   // Предпросмотр загрузится через watch(dataKey), когда появятся виджеты
   await loadDashboard();
 });

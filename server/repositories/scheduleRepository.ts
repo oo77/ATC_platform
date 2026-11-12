@@ -6,6 +6,8 @@ import { executeQuery, executeTransaction } from "../utils/db";
 import { isoToMySqlDatetime } from "../utils/timeUtils";
 import { GROUP_COLOR_PALETTE } from "../../shared/utils/groupColors";
 import { v4 as uuidv4 } from "uuid";
+import { createError } from "h3";
+import { countUpcomingBookings, findBookingBlocks } from "./roomBookingRepository";
 import type {
   PoolConnection,
   ResultSetHeader,
@@ -38,6 +40,9 @@ export interface ScheduleEvent {
   // Retake fields
   originalEventId?: string | null;
   allowedStudentIds?: string[] | null;
+  /** Кто создал занятие (автор брони) */
+  createdBy?: string | null;
+  createdByName?: string | null;
   // Joined fields
   group?: {
     id: string;
@@ -93,6 +98,7 @@ export interface CreateScheduleEventInput {
   testTemplateId?: string; // New: optional test template for assessment events
   allowedStudentIds?: string[]; // New: limit access to specific students
   originalEventId?: string; // New: link to original event for retakes
+  createdBy?: string; // Автор брони (id пользователя)
 }
 
 export interface UpdateScheduleEventInput {
@@ -153,7 +159,9 @@ interface ScheduleEventRow extends RowDataPacket {
   updated_at: Date;
   original_event_id?: string | null;
   allowed_student_ids?: any; // JSON string or object depending on driver parsing
+  created_by?: string | null;
   // Joined fields
+  created_by_name?: string | null;
   group_code?: string;
   group_is_archived?: boolean; // Используем number (0/1) или boolean в зависимости от драйвера, но тип boolean безопаснее
   course_name?: string;
@@ -205,6 +213,8 @@ function mapRowToScheduleEvent(row: ScheduleEventRow): ScheduleEvent {
         ? JSON.parse(row.allowed_student_ids)
         : row.allowed_student_ids
       : null,
+    createdBy: row.created_by ?? null,
+    createdByName: row.created_by_name ?? null,
   };
 
   if (row.group_code) {
@@ -513,8 +523,8 @@ export async function createScheduleEvent(
     `INSERT INTO schedule_events (
       id, title, description, group_id, discipline_id, instructor_id, classroom_id,
       start_time, end_time, duration_minutes, academic_hours, is_all_day, color, event_type, is_recurring, recurrence_rule, notes,
-      allowed_student_ids, original_event_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      allowed_student_ids, original_event_id, created_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.title,
@@ -535,6 +545,7 @@ export async function createScheduleEvent(
       data.notes || null,
       data.allowedStudentIds ? JSON.stringify(data.allowedStudentIds) : null,
       data.originalEventId || null,
+      data.createdBy || null,
     ],
   );
 
@@ -671,6 +682,8 @@ export async function checkScheduleConflicts(
     instructorId?: string;
     groupId?: string;
     excludeEventId?: string;
+    /** Исключить несколько занятий (пакетный перенос освобождает свои старые слоты) */
+    excludeEventIds?: string[];
   } = {},
 ): Promise<ScheduleEvent[]> {
   // Конвертируем ISO время в MySQL формат
@@ -710,15 +723,20 @@ export async function checkScheduleConflicts(
     conditions.push(`(${orConditions.join(" OR ")})`);
   }
 
-  if (options.excludeEventId) {
-    conditions.push("se.id != ?");
-    params.push(options.excludeEventId);
+  const excluded = [
+    ...(options.excludeEventId ? [options.excludeEventId] : []),
+    ...(options.excludeEventIds ?? []),
+  ];
+  if (excluded.length > 0) {
+    conditions.push(`se.id NOT IN (${excluded.map(() => "?").join(",")})`);
+    params.push(...excluded);
   }
 
   const query = `
-    SELECT 
+    SELECT
       se.*,
       se.allowed_student_ids,
+      u.name as created_by_name,
       sg.code as group_code,
       sg.is_archived as group_is_archived,
       c.name as course_name,
@@ -733,12 +751,175 @@ export async function checkScheduleConflicts(
     LEFT JOIN instructors i ON se.instructor_id = i.id
     LEFT JOIN classrooms cr ON se.classroom_id = cr.id
     LEFT JOIN disciplines d ON se.discipline_id = d.id
+    LEFT JOIN users u ON se.created_by = u.id
     WHERE ${conditions.join(" AND ")}
     ORDER BY se.start_time ASC
   `;
 
   const rows = await executeQuery<ScheduleEventRow[]>(query, params);
   return rows.map(mapRowToScheduleEvent);
+}
+
+// ----------------------------------------------------------------------------
+// Конфликты: единые сообщения и пакетная проверка
+// ----------------------------------------------------------------------------
+
+export type ConflictResource = "classroom" | "instructor" | "group";
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const fmtDay = (d: Date) => `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}`;
+const fmtTime = (d: Date) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+
+/**
+ * Человекочитаемое описание существующего занятия, которое мешает:
+ * «ПБ-12 (Пожарная безопасность), 10.11 09:00–13:00, бронь: Ильхом (05.11)»
+ */
+export function describeConflictingEvent(conflict: ScheduleEvent): string {
+  const start = new Date(conflict.startTime);
+  const end = new Date(conflict.endTime);
+  const parts: string[] = [];
+  if (conflict.group) {
+    parts.push(
+      conflict.group.courseName
+        ? `${conflict.group.code} (${conflict.group.courseName})`
+        : conflict.group.code,
+    );
+  } else if (conflict.title) {
+    parts.push(conflict.title);
+  }
+  parts.push(`${fmtDay(start)} ${fmtTime(start)}–${fmtTime(end)}`);
+  if (conflict.createdByName) {
+    parts.push(`бронь: ${conflict.createdByName} (${fmtDay(new Date(conflict.createdAt))})`);
+  }
+  return parts.join(", ");
+}
+
+/** Сообщения о занятых ресурсах для одного пересекающегося занятия */
+export function formatConflictMessages(
+  conflict: ScheduleEvent,
+  wanted: { classroomId?: string | null; instructorId?: string | null; groupId?: string | null },
+): string[] {
+  const detail = describeConflictingEvent(conflict);
+  const out: string[] = [];
+  if (wanted.classroomId && conflict.classroomId === wanted.classroomId && conflict.classroom) {
+    out.push(`Аудитория «${conflict.classroom.name}» занята: ${detail}`);
+  }
+  if (wanted.instructorId && conflict.instructorId === wanted.instructorId && conflict.instructor) {
+    out.push(`Инструктор «${conflict.instructor.fullName}» занят: ${detail}`);
+  }
+  if (wanted.groupId && conflict.groupId === wanted.groupId && conflict.group) {
+    out.push(`Группа «${conflict.group.code}» занята: ${detail}`);
+  }
+  return out;
+}
+
+/** Бросает 409 с общим текстом; не более `limit` строк, остальные — «и ещё N» */
+export function throwScheduleConflict(messages: string[], limit = 5): never {
+  const unique = [...new Set(messages)];
+  const shown = unique.slice(0, limit);
+  const rest = unique.length - shown.length;
+  throw createError({
+    statusCode: 409,
+    statusMessage: `Конфликт расписания: ${shown.join("; ")}${rest > 0 ? `; и ещё ${rest}` : ""}`,
+  });
+}
+
+/** Пересдача: связана с исходным занятием или ограничена списком студентов */
+export function isRetakeRow(row: {
+  original_event_id?: string | null;
+  allowed_student_ids?: unknown;
+}): boolean {
+  if (row.original_event_id) return true;
+  let ids = row.allowed_student_ids;
+  if (typeof ids === "string") {
+    try {
+      ids = JSON.parse(ids);
+    } catch {
+      ids = null;
+    }
+  }
+  return Array.isArray(ids) && ids.length > 0;
+}
+
+export interface BatchCandidate {
+  /** Подпись для сообщения: название занятия или шаблона */
+  label: string;
+  classroomId?: string | null;
+  instructorId?: string | null;
+  groupId?: string | null;
+  /** Ровно те значения, которые будут записаны в БД: "YYYY-MM-DD HH:MM:SS" */
+  start: string;
+  end: string;
+  /** Пересдачи (занятие для отдельных студентов) конфликты не проверяют */
+  skip?: boolean;
+}
+
+const sqlDay = (s: string) => `${s.slice(8, 10)}.${s.slice(5, 7)}`;
+const sqlTime = (s: string) => s.slice(11, 16);
+const sqlToIso = (s: string) => s.replace(" ", "T");
+
+/**
+ * Проверяет пачку будущих занятий на конфликты: с уже сохранёнными занятиями
+ * (минус `excludeEventIds`) и друг с другом. Возвращает список сообщений
+ * (пустой — конфликтов нет). Ничего не пишет в БД.
+ */
+export async function findBatchConflicts(
+  candidates: BatchCandidate[],
+  options: { excludeEventIds?: string[] } = {},
+): Promise<string[]> {
+  const messages: string[] = [];
+  const active = candidates.filter((c) => !c.skip);
+
+  for (const c of active) {
+    if (!c.classroomId && !c.instructorId && !c.groupId) continue;
+    const conflicts = await checkScheduleConflicts(
+      sqlToIso(c.start),
+      sqlToIso(c.end),
+      {
+        classroomId: c.classroomId || undefined,
+        instructorId: c.instructorId || undefined,
+        groupId: c.groupId || undefined,
+        excludeEventIds: options.excludeEventIds,
+      },
+    );
+    for (const conflict of conflicts) {
+      for (const m of formatConflictMessages(conflict, c)) {
+        messages.push(`«${c.label}»: ${m}`);
+      }
+    }
+  }
+
+  for (let i = 0; i < active.length; i++) {
+    for (let j = i + 1; j < active.length; j++) {
+      const a = active[i]!;
+      const b = active[j]!;
+      if (!(a.start < b.end && a.end > b.start)) continue;
+      const when = `${sqlDay(a.start)} ${sqlTime(a.start)}–${sqlTime(a.end)}`;
+      if (a.classroomId && a.classroomId === b.classroomId) {
+        messages.push(`Аудитория занята дважды в одной операции: «${a.label}» и «${b.label}», ${when}`);
+      }
+      if (a.instructorId && a.instructorId === b.instructorId) {
+        messages.push(`Инструктор занят дважды в одной операции: «${a.label}» и «${b.label}», ${when}`);
+      }
+      if (a.groupId && a.groupId === b.groupId) {
+        messages.push(`Группа занята дважды в одной операции: «${a.label}» и «${b.label}», ${when}`);
+      }
+    }
+  }
+
+  // Бронь аудитории под курс блокирует занятия других курсов
+  const blocks = await findBookingBlocks(
+    active.map((c) => ({
+      label: c.label,
+      classroomId: c.classroomId,
+      groupId: c.groupId,
+      start: c.start,
+      end: c.end,
+    })),
+  );
+  for (const b of blocks) messages.push(`«${b.label}»: ${b.message}`);
+
+  return messages;
 }
 
 // ============================================================================
@@ -849,6 +1030,48 @@ export async function updateClassroom(
   );
 
   return getClassroomById(id);
+}
+
+/**
+ * Нельзя удалить или отключить аудиторию, в которой ещё есть занятия:
+ * внешний ключ молча обнулил бы аудиторию у всех будущих броней.
+ */
+export async function assertClassroomHasNoUpcomingEvents(
+  classroomId: string,
+  action: "удалить" | "отключить",
+): Promise<void> {
+  const [countRows, nextRows] = await Promise.all([
+    executeQuery<RowDataPacket[]>(
+      "SELECT COUNT(*) AS n FROM schedule_events WHERE classroom_id = ? AND end_time > NOW()",
+      [classroomId],
+    ),
+    executeQuery<RowDataPacket[]>(
+      `SELECT se.title, se.start_time, sg.code AS group_code, cr.name AS classroom_name
+       FROM schedule_events se
+       LEFT JOIN study_groups sg ON sg.id = se.group_id
+       LEFT JOIN classrooms cr ON cr.id = se.classroom_id
+       WHERE se.classroom_id = ? AND se.end_time > NOW()
+       ORDER BY se.start_time ASC LIMIT 1`,
+      [classroomId],
+    ),
+  ]);
+
+  const count = Number(countRows[0]?.n ?? 0);
+  const bookingCount = await countUpcomingBookings(classroomId);
+  if (bookingCount > 0 && count === 0) {
+    throw createError({
+      statusCode: 409,
+      statusMessage: `Нельзя ${action} аудиторию: на неё есть брони под курсы (${bookingCount}). Сначала измените или удалите брони`,
+    });
+  }
+  if (count === 0) return;
+
+  const next = nextRows[0];
+  const when = next ? ` (ближайшее ${fmtDay(new Date(next.start_time))} — ${next.group_code || next.title})` : "";
+  throw createError({
+    statusCode: 409,
+    statusMessage: `Нельзя ${action} аудиторию «${next?.classroom_name ?? ""}»: в ней запланировано занятий — ${count}${when}. Сначала перенесите их в другую аудиторию`,
+  });
 }
 
 /**

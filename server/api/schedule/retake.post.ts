@@ -138,8 +138,8 @@ export default defineEventHandler(async (event) => {
           id, title, description, group_id, discipline_id, 
           instructor_id, classroom_id, start_time, end_time,
           is_all_day, color, event_type, is_recurring, 
-          recurrence_rule, notes, original_event_id, allowed_student_ids, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))`,
+          recurrence_rule, notes, original_event_id, allowed_student_ids, created_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))`,
           [
             retakeEventId,
             retakeTitle,
@@ -161,6 +161,7 @@ export default defineEventHandler(async (event) => {
             `Студенты на пересдаче: ${body.studentIds.length}`,
             body.originalEventId, // Связь с оригинальным занятием!
             JSON.stringify(body.studentIds), // <--- ВАЖНО: записываем список студентов
+            user?.id || null, // автор брони
           ]
         );
 
