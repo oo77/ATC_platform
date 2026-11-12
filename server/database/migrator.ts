@@ -63,6 +63,8 @@ import * as publicDashboards from "./migrations/20261108_052_public_dashboards";
 import * as libraryAnalytics from "./migrations/20261108_053_library_analytics";
 import * as rolesAndAudit from "./migrations/20261109_054_roles_and_audit";
 import * as studyGroupsPlannerLink from "./migrations/20261109_055_study_groups_planner_link";
+import * as scheduleEventsCreatedBy from "./migrations/20261112_056_schedule_events_created_by";
+import * as roomBookings from "./migrations/20261112_057_room_bookings";
 
 /**
  * ============================================================================
@@ -554,6 +556,18 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: studyGroupsPlannerLink.up,
     down: studyGroupsPlannerLink.down,
     description: studyGroupsPlannerLink.description,
+  },
+  {
+    name: "20261112_056_schedule_events_created_by",
+    up: scheduleEventsCreatedBy.up,
+    down: scheduleEventsCreatedBy.down,
+    description: scheduleEventsCreatedBy.description,
+  },
+  {
+    name: "20261112_057_room_bookings",
+    up: roomBookings.up,
+    down: roomBookings.down,
+    description: roomBookings.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

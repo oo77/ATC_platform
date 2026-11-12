@@ -6,8 +6,12 @@
 import {
   updateScheduleEvent,
   checkScheduleConflicts,
+  formatConflictMessages,
+  throwScheduleConflict,
   getScheduleEventById,
 } from "../../repositories/scheduleRepository";
+import { withScheduleWriteLock } from "../../utils/scheduleLock";
+import { findBookingBlocks } from "../../repositories/roomBookingRepository";
 import type { UpdateScheduleEventInput } from "../../repositories/scheduleRepository";
 import { checkInstructorHoursLimit } from "../../repositories/instructorRepository";
 import {
@@ -24,6 +28,7 @@ import {
   dateToLocalIsoString,
   formatDateOnly,
   formatDateForDisplay,
+  isoToMySqlDatetime,
 } from "../../utils/timeUtils";
 import type { RowDataPacket } from "mysql2/promise";
 import { Permission, requirePermission } from "../../utils/permissions";
@@ -311,58 +316,49 @@ export default defineEventHandler(async (event) => {
 
     // Пересдачи не проверяем на конфликты: они проводятся для отдельных студентов
     // и могут ставиться на занятых инструкторов и аудитории (как в /api/schedule/retake)
-    if (!isRetake && (checkClassroom || checkInstructor || finalGroupId)) {
-      const conflicts = await checkScheduleConflicts(
-        dateToLocalIsoString(startTime),
-        dateToLocalIsoString(endTime),
-        {
-          classroomId: checkClassroom || undefined,
-          instructorId: checkInstructor || undefined,
-          groupId: finalGroupId || undefined,
-          excludeEventId: id,
-        },
-      );
+    // Проверка и запись — под общей блокировкой (защита от гонок двух менеджеров)
+    const scheduleEvent = await withScheduleWriteLock(async () => {
+      if (!isRetake && (checkClassroom || checkInstructor || finalGroupId)) {
+        const conflicts = await checkScheduleConflicts(
+          dateToLocalIsoString(startTime),
+          dateToLocalIsoString(endTime),
+          {
+            classroomId: checkClassroom || undefined,
+            instructorId: checkInstructor || undefined,
+            groupId: finalGroupId || undefined,
+            excludeEventId: id,
+          },
+        );
 
-      if (conflicts.length > 0) {
-        const conflictMessages: string[] = [];
-
-        for (const conflict of conflicts) {
-          if (conflict.classroomId === checkClassroom && conflict.classroom) {
-            conflictMessages.push(
-              `Аудитория "${conflict.classroom.name}" занята`,
-            );
-          }
-          if (
-            conflict.instructorId === checkInstructor &&
-            conflict.instructor
-          ) {
-            conflictMessages.push(
-              `Инструктор "${conflict.instructor.fullName}" занят`,
-            );
-          }
-          if (conflict.groupId === finalGroupId && conflict.group) {
-            conflictMessages.push(`Группа "${conflict.group.code}" занята`);
-          }
-        }
-
+        const conflictMessages = conflicts.flatMap((conflict) =>
+          formatConflictMessages(conflict, {
+            classroomId: checkClassroom,
+            instructorId: checkInstructor,
+            groupId: finalGroupId,
+          }),
+        );
+        // Бронь аудитории под другой курс тоже блокирует занятие
+        const blocks = await findBookingBlocks([
+          {
+            label: body.title ?? existing.title,
+            classroomId: checkClassroom,
+            groupId: finalGroupId,
+            start: isoToMySqlDatetime(dateToLocalIsoString(startTime)),
+            end: isoToMySqlDatetime(dateToLocalIsoString(endTime)),
+          },
+        ]);
+        conflictMessages.push(...blocks.map((b) => b.message));
         if (conflictMessages.length > 0) {
-          throw createError({
-            statusCode: 409,
-            statusMessage: `Конфликт расписания: ${[
-              ...new Set(conflictMessages),
-            ].join(", ")}`,
-          });
+          throwScheduleConflict(conflictMessages);
         }
       }
-    }
 
-    // ... (existing imports)
+      // ===============================
+      // ОБНОВЛЕНИЕ СОБЫТИЯ
+      // ===============================
 
-    // ===============================
-    // ОБНОВЛЕНИЕ СОБЫТИЯ
-    // ===============================
-
-    const scheduleEvent = await updateScheduleEvent(id, body);
+      return updateScheduleEvent(id, body);
+    });
 
     if (!scheduleEvent) {
       throw createError({

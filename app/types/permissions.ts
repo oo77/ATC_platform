@@ -494,6 +494,12 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
     ],
   },
 
+  // Бронь аудиторий под курсы
+  {
+    path: "/room-bookings",
+    requiredPermissions: [Permission.SCHEDULE_VIEW_ALL],
+  },
+
   // Database (Students/Instructors)
   {
     path: "/database",

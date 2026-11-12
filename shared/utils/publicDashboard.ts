@@ -5,18 +5,20 @@
 
 export type WidgetCategory = "ops" | "kpi" | "chart" | "list" | "other";
 
-export type WidgetKind = "kpi" | "chart" | "list" | "clock" | "text" | "week" | "status" | "alerts";
+export type WidgetKind = "kpi" | "chart" | "list" | "clock" | "text" | "week" | "status" | "alerts" | "booking";
 
-export type WidgetOptionType = "select" | "number" | "text" | "textarea" | "boolean";
+export type WidgetOptionType = "select" | "number" | "text" | "textarea" | "boolean" | "multiselect";
 
 export interface WidgetOptionDef {
   key: string;
   label: string;
   type: WidgetOptionType;
-  default: string | number | boolean;
+  default: string | number | boolean | string[];
   choices?: { value: string | number; label: string }[];
   min?: number;
   max?: number;
+  /** multiselect: откуда редактор берёт варианты (список подгружается с сервера) */
+  source?: "classrooms";
 }
 
 export interface WidgetDef {
@@ -206,6 +208,92 @@ export const WIDGET_CATALOG: WidgetDef[] = [
     options: [
       { key: "onlyUsedToday", label: "Только аудитории с занятиями сегодня", type: "boolean", default: false },
       { key: "soonMinutes", label: "«Скоро» — минут до начала", type: "number", default: 30, min: 5, max: 120 },
+    ],
+  },
+  {
+    type: "rooms_booking",
+    kind: "booking",
+    category: "ops",
+    title: "Бронь аудиторий",
+    description: "Кто, когда и для какого курса занял каждую аудиторию — по неделям или дням вперёд",
+    icon: "CalendarDays",
+    defaultW: 4,
+    defaultH: 3,
+    options: [
+      {
+        key: "source",
+        label: "Что показывать",
+        type: "select",
+        default: "bookings",
+        choices: [
+          { value: "bookings", label: "Брони под курсы (планирование)" },
+          { value: "events", label: "Занятия из расписания" },
+        ],
+      },
+      {
+        key: "period",
+        label: "Период",
+        type: "select",
+        default: "6w",
+        choices: [
+          { value: "1w", label: "1 неделя" },
+          { value: "2w", label: "2 недели" },
+          { value: "4w", label: "4 недели" },
+          { value: "6w", label: "6 недель" },
+          { value: "8w", label: "8 недель" },
+          { value: "12w", label: "12 недель" },
+          { value: "month", label: "Текущий месяц" },
+          { value: "nextMonth", label: "Следующий месяц" },
+        ],
+      },
+      {
+        key: "startFrom",
+        label: "Начинать с",
+        type: "select",
+        default: "weekStart",
+        choices: [
+          { value: "weekStart", label: "Начала текущей недели" },
+          { value: "today", label: "Сегодняшнего дня" },
+        ],
+      },
+      {
+        key: "step",
+        label: "Колонки",
+        type: "select",
+        default: "week",
+        choices: [
+          { value: "week", label: "По неделям" },
+          { value: "day", label: "По дням" },
+        ],
+      },
+      {
+        key: "classrooms",
+        label: "Аудитории (пусто — все)",
+        type: "multiselect",
+        default: [],
+        source: "classrooms",
+      },
+      { key: "hideEmptyRooms", label: "Скрывать аудитории без брони", type: "boolean", default: false },
+      { key: "mergeBookings", label: "Сводить занятия группы в одну бронь (для занятий)", type: "boolean", default: true },
+      {
+        key: "eventType",
+        label: "Тип занятий (для занятий)",
+        type: "select",
+        default: "all",
+        choices: [
+          { value: "all", label: "Все" },
+          { value: "theory", label: "Теория" },
+          { value: "practice", label: "Практика" },
+          { value: "assessment", label: "Проверка знаний" },
+        ],
+      },
+      { key: "showCourse", label: "Показывать курс", type: "boolean", default: true },
+      { key: "showGroup", label: "Показывать группу", type: "boolean", default: true },
+      { key: "showInstructor", label: "Показывать инструктора", type: "boolean", default: true },
+      { key: "showBookedBy", label: "Показывать, кто забронировал", type: "boolean", default: true },
+      { key: "showBookedAt", label: "Показывать дату брони", type: "boolean", default: false },
+      { key: "showHours", label: "Показывать часы (для занятий)", type: "boolean", default: true },
+      { key: "highlightClashes", label: "Подсвечивать накладки (для занятий)", type: "boolean", default: true },
     ],
   },
   {
@@ -641,6 +729,11 @@ export function normalizeWidgetOptions(def: WidgetDef, raw: Record<string, any> 
         out[opt.key] = match ? match.value : opt.default;
         break;
       }
+      case "multiselect":
+        out[opt.key] = Array.isArray(v)
+          ? [...new Set(v.map(String).filter((s) => /^[a-zA-Z0-9_-]{1,64}$/.test(s)))].slice(0, 50)
+          : [];
+        break;
       default:
         out[opt.key] = typeof v === "string" ? v.slice(0, 2000) : opt.default;
     }
@@ -717,6 +810,30 @@ export const DEFAULT_WIDGET_SET: { type: string; w?: number; h?: number }[] = [
 
 export type StatusTone = "danger" | "warning" | "success" | "info" | "muted";
 
+/** Одна бронь аудитории в ячейке «аудитория × период». Скрытые настройками поля пустые */
+export interface BookingItem {
+  /** Курс (название) */
+  course: string;
+  /** Код группы или название занятия, если группы нет */
+  group: string;
+  /** Дни: «Пн–Пт», «Пн, Ср» (пусто при колонках по дням) */
+  days: string;
+  /** Время: «09:00–13:00» или несколько интервалов */
+  time: string;
+  /** Сумма академических часов; null — не указаны */
+  hours: number | null;
+  /** Занятий в брони */
+  count: number;
+  instructors: string;
+  bookedBy: string;
+  bookedAt: string;
+  type: string;
+  retake: boolean;
+  clash: boolean;
+  /** Идёт прямо сейчас */
+  now: boolean;
+}
+
 /** Данные, которые сервер возвращает для одного виджета */
 export type WidgetData =
   | { kind: "kpi"; value: number; suffix?: string; hint?: string }
@@ -767,6 +884,20 @@ export type WidgetData =
   | {
       kind: "alerts";
       items: { level: "critical" | "warning" | "info"; title: string; detail?: string; count: number }[];
+    }
+  | {
+      kind: "booking";
+      columns: { key: string; label: string; sub: string; isCurrent: boolean }[];
+      rooms: {
+        id: string;
+        name: string;
+        subtitle?: string;
+        /** Брони по ключу колонки */
+        cells: Record<string, BookingItem[]>;
+      }[];
+      /** Сколько занятий пересекаются с другим занятием в той же аудитории */
+      clashCount: number;
+      empty?: string;
     }
   | { kind: "static" }
   | { kind: "error"; message: string };

@@ -4,6 +4,7 @@ import {
   ENTITY_GROUPS,
   TIME_SCALE_LABELS,
 } from "../../../../utils/reports/fieldRegistry";
+import { conditionOpsFor } from "../../../../utils/reports/queryBuilder";
 import { Permission, requirePermission } from "../../../../utils/permissions";
 
 /**
@@ -30,6 +31,8 @@ export default defineEventHandler(async (event) => {
         defaultAggregation: f.defaultAggregation,
         isDateField: f.isDateField || false,
         enumValues: f.enumValues || [],
+        requiredJoins: f.requiredJoins,
+        conditionOps: conditionOpsFor(f),
       })),
     }));
 

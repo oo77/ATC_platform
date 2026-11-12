@@ -8,7 +8,9 @@
 
 import { executeQuery } from "../utils/db";
 import { addDays, dayLabel, int, maskName, num } from "../utils/publicDashboardFormat";
-import type { StatusTone, WidgetData } from "../../shared/utils/publicDashboard";
+import { getClassrooms } from "../repositories/scheduleRepository";
+import { bookingDays, listBookings } from "../repositories/roomBookingRepository";
+import type { BookingItem, StatusTone, WidgetData } from "../../shared/utils/publicDashboard";
 
 interface Ctx {
   options: Record<string, any>;
@@ -119,6 +121,69 @@ const minutesLeft = (from: number, to: number) => {
   const m = Math.max(0, Math.round(to - from));
   return m < 60 ? `${m} мин` : `${Math.floor(m / 60)} ч ${m % 60 ? `${m % 60} мин` : ""}`.trim();
 };
+
+// ───────────────────────── бронь аудиторий ─────────────────────────
+
+type BookingData = Extract<WidgetData, { kind: "booking" }>;
+
+const MAX_BOOKING_COLUMNS = 62;
+
+/** 0 = понедельник */
+const weekdayIndex = (ymd: string) => {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return (new Date(Date.UTC(y!, m! - 1, d!)).getUTCDay() + 6) % 7;
+};
+
+const monthStart = (ymd: string, offset: number) => {
+  const [y, m] = ymd.split("-").map(Number);
+  return new Date(Date.UTC(y!, m! - 1 + offset, 1)).toISOString().slice(0, 10);
+};
+
+/** [0,1,2,4] → «Пн–Ср, Пт»; одиночные и пары перечисляются через запятую */
+function weekdaysLabel(indexes: number[]): string {
+  const names = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+  const sorted = [...new Set(indexes)].sort((a, b) => a - b);
+  const parts: string[] = [];
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i;
+    while (j + 1 < sorted.length && sorted[j + 1] === sorted[j]! + 1) j++;
+    if (j - i >= 2) parts.push(`${names[sorted[i]!]}–${names[sorted[j]!]}`);
+    else for (let k = i; k <= j; k++) parts.push(names[sorted[k]!]!);
+    i = j + 1;
+  }
+  return parts.join(", ");
+}
+
+const shortRange = (from: string, to: string) => {
+  const a = dayLabel(from);
+  const b = dayLabel(to);
+  const [ad, am = ""] = a.date.split(" ");
+  const [bd, bm = ""] = b.date.split(" ");
+  return am === bm ? `${ad}–${bd} ${bm}` : `${a.date} – ${b.date}`;
+};
+
+interface BookingEvent {
+  id: string;
+  roomId: string;
+  date: string;
+  start: string;
+  end: string;
+  sFull: string;
+  eFull: string;
+  title: string;
+  type: string;
+  retake: boolean;
+  hours: number | null;
+  groupId: string | null;
+  group: string;
+  course: string;
+  instructor: string;
+  bookedBy: string;
+  bookedAtDate: string;
+  now: boolean;
+  clash: boolean;
+}
 
 // ───────────────────────── резолверы ─────────────────────────
 
@@ -254,6 +319,264 @@ export const opsResolvers: Record<string, Resolver> = {
       summary: summarize(items, { danger: "Заняты", warning: "Скоро занятие", success: "Свободны", muted: "Без занятий" }),
       items: items.map(({ _order, ...it }) => it),
       empty: "Нет активных аудиторий",
+    };
+  },
+
+  // ── Бронь аудиторий: кто, когда и для какого курса ──
+  rooms_booking: async ({ options, maskNames }): Promise<BookingData> => {
+    const [t] = await executeQuery<any[]>("SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS today");
+    const today: string = t.today;
+    const step: "week" | "day" = options.step === "day" ? "day" : "week";
+
+    // Диапазон дат [rangeStart, rangeEnd)
+    const period = String(options.period || "6w");
+    let rangeStart: string;
+    let rangeEnd: string;
+    if (period === "month" || period === "nextMonth") {
+      const off = period === "month" ? 0 : 1;
+      rangeStart = monthStart(today, off);
+      rangeEnd = monthStart(today, off + 1);
+    } else {
+      const weeks = int(period.replace("w", ""), 1, 12);
+      rangeStart = options.startFrom === "today" ? today : addDays(today, -weekdayIndex(today));
+      rangeEnd = addDays(rangeStart, weeks * 7);
+    }
+
+    // Колонки
+    const columns: BookingData["columns"] = [];
+    if (step === "week") {
+      for (let k = addDays(rangeStart, -weekdayIndex(rangeStart)); k < rangeEnd; k = addDays(k, 7)) {
+        const last = addDays(k, 6);
+        columns.push({ key: k, label: shortRange(k, last), sub: "", isCurrent: today >= k && today <= last });
+      }
+    } else {
+      for (let k = rangeStart, n = 0; k < rangeEnd && n < MAX_BOOKING_COLUMNS; k = addDays(k, 1), n++) {
+        const l = dayLabel(k);
+        columns.push({ key: k, label: l.weekday, sub: l.date, isCurrent: k === today });
+      }
+    }
+    const columnKeys = new Set(columns.map((c) => c.key));
+    const columnOf = (ymd: string) => (step === "week" ? addDays(ymd, -weekdayIndex(ymd)) : ymd);
+
+    // Аудитории
+    const picked: string[] = Array.isArray(options.classrooms) ? options.classrooms.map(String) : [];
+    const allRooms = await getClassrooms(true);
+    const rooms = picked.length ? allRooms.filter((r) => picked.includes(r.id)) : allRooms;
+    if (!rooms.length) {
+      return { kind: "booking", columns, rooms: [], clashCount: 0, empty: "Нет активных аудиторий" };
+    }
+
+    // ── Источник «Брони под курсы»: планирование без группы и времени ──
+    if (options.source !== "events") {
+      const lastDay = addDays(rangeEnd, -1);
+      const list = await listBookings({ from: rangeStart, to: lastDay, classroomIds: rooms.map((r) => r.id) });
+      const person = (name: string | null) => (name ? (maskNames ? maskName(name) : name) : "");
+      const colEnd = (key: string) => (step === "week" ? addDays(key, 6) : key);
+
+      const planned: BookingData["rooms"] = rooms.map((room) => {
+        const cells: Record<string, BookingItem[]> = {};
+        for (const b of list) {
+          if (b.classroomId !== room.id) continue;
+          for (const col of columns) {
+            const days = bookingDays(b, {
+              from: col.key < rangeStart ? rangeStart : col.key,
+              to: colEnd(col.key) > lastDay ? lastDay : colEnd(col.key),
+            });
+            if (!days.length) continue;
+            (cells[col.key] ??= []).push({
+              course: options.showCourse !== false ? b.courseName : "",
+              group: options.showGroup !== false ? (b.groupCode ?? "") : "",
+              days: step === "week" ? weekdaysLabel(days.map(weekdayIndex)) : "",
+              time: "",
+              hours: null,
+              count: days.length,
+              instructors: options.showInstructor !== false ? person(b.instructorName) : "",
+              bookedBy: options.showBookedBy !== false ? person(b.createdByName) : "",
+              bookedAt: options.showBookedAt === true && b.createdDay ? dayLabel(b.createdDay).date : "",
+              type: "theory",
+              retake: false,
+              clash: false,
+              now: days.includes(today),
+            });
+          }
+        }
+        return {
+          id: room.id,
+          name: room.name,
+          subtitle: room.capacity ? `${room.capacity} мест` : undefined,
+          cells,
+        };
+      });
+      return {
+        kind: "booking",
+        columns,
+        rooms: options.hideEmptyRooms ? planned.filter((r) => Object.keys(r.cells).length) : planned,
+        clashCount: 0,
+        empty: options.hideEmptyRooms ? "В этот период нет броней" : "Нет активных аудиторий",
+      };
+    }
+
+    // Занятия за период в выбранных аудиториях
+    const params: any[] = [rangeStart, rangeEnd, ...rooms.map((r) => r.id)];
+    let typeSql = "";
+    if (["theory", "practice", "assessment"].includes(options.eventType)) {
+      typeSql = "AND se.event_type = ?";
+      params.push(options.eventType);
+    }
+    const rows = await executeQuery<any[]>(
+      `SELECT se.id, se.title, COALESCE(se.event_type, 'other') AS type,
+              se.original_event_id IS NOT NULL AS retake,
+              se.classroom_id, se.academic_hours,
+              DATE_FORMAT(se.start_time, '%Y-%m-%d') AS d,
+              DATE_FORMAT(se.start_time, '%H:%i') AS sl, DATE_FORMAT(se.end_time, '%H:%i') AS el,
+              DATE_FORMAT(se.start_time, '%Y-%m-%d %H:%i:%s') AS s_full,
+              DATE_FORMAT(se.end_time, '%Y-%m-%d %H:%i:%s') AS e_full,
+              (se.start_time <= NOW() AND se.end_time > NOW()) AS is_now,
+              se.group_id, sg.code AS group_code, c.name AS course_name,
+              i.full_name AS instructor, u.name AS booked_by,
+              DATE_FORMAT(se.created_at, '%Y-%m-%d') AS created_day
+       FROM schedule_events se
+       LEFT JOIN study_groups sg ON sg.id = se.group_id
+       LEFT JOIN courses c ON c.id = sg.course_id
+       LEFT JOIN instructors i ON i.id = se.instructor_id
+       LEFT JOIN users u ON u.id = se.created_by
+       WHERE se.start_time >= ? AND se.start_time < ?
+         AND se.classroom_id IN (${rooms.map(() => "?").join(",")})
+         ${typeSql}
+       ORDER BY se.start_time ASC
+       LIMIT 5000`,
+      params,
+    );
+
+    const events: BookingEvent[] = rows.map((r) => ({
+      id: r.id,
+      roomId: r.classroom_id,
+      date: r.d,
+      start: r.sl,
+      end: r.el,
+      sFull: r.s_full,
+      eFull: r.e_full,
+      title: r.title || "Занятие",
+      type: r.type,
+      retake: Boolean(num(r.retake)),
+      hours: r.academic_hours == null ? null : num(r.academic_hours),
+      groupId: r.group_id,
+      group: r.group_code || "",
+      course: r.course_name || "",
+      instructor: r.instructor ? (maskNames ? maskName(r.instructor) : r.instructor) : "",
+      bookedBy: r.booked_by ? (maskNames ? maskName(r.booked_by) : r.booked_by) : "",
+      bookedAtDate: r.created_day || "",
+      now: Boolean(num(r.is_now)),
+      clash: false,
+    }));
+
+    // Накладки: занятия в одной аудитории, пересекающиеся по времени.
+    // Пересдачи не считаем — им разрешено занимать занятые аудитории.
+    let clashCount = 0;
+    if (options.highlightClashes !== false) {
+      const byRoom = new Map<string, BookingEvent[]>();
+      for (const e of events) {
+        if (e.retake) continue;
+        const list = byRoom.get(e.roomId) ?? [];
+        list.push(e);
+        byRoom.set(e.roomId, list);
+      }
+      for (const list of byRoom.values()) {
+        let latest: BookingEvent | null = null;
+        for (const e of list) {
+          if (latest && e.sFull < latest.eFull) {
+            e.clash = true;
+            latest.clash = true;
+            clashCount++;
+          }
+          if (!latest || e.eFull > latest.eFull) latest = e;
+        }
+      }
+    }
+
+    const merge = options.mergeBookings !== false;
+    const show = {
+      course: options.showCourse !== false,
+      group: options.showGroup !== false,
+      instructor: options.showInstructor !== false,
+      bookedBy: options.showBookedBy !== false,
+      bookedAt: options.showBookedAt === true,
+      hours: options.showHours !== false,
+    };
+
+    const buildItem = (list: BookingEvent[]): BookingItem => {
+      const first = list[0]!;
+      const times = [...new Set(list.map((e) => `${e.start}–${e.end}`))];
+      const time =
+        times.length <= 2
+          ? times.join(", ")
+          : `${list.map((e) => e.start).sort()[0]}–${list.map((e) => e.end).sort().at(-1)}`;
+      const hourValues = list.map((e) => e.hours).filter((h): h is number => h != null);
+      const typeCount = new Map<string, number>();
+      for (const e of list) typeCount.set(e.type, (typeCount.get(e.type) ?? 0) + 1);
+      const type = [...typeCount.entries()].sort((a, b) => b[1] - a[1])[0]![0];
+      const instructors = [...new Set(list.map((e) => e.instructor).filter(Boolean))];
+      const authors = [...new Set(list.map((e) => e.bookedBy).filter(Boolean))];
+      const bookedDay = list.map((e) => e.bookedAtDate).filter(Boolean).sort()[0];
+
+      return {
+        course: show.course ? first.course : "",
+        group: show.group || !first.group ? first.group || first.title : "",
+        days: step === "week" ? weekdaysLabel(list.map((e) => weekdayIndex(e.date))) : "",
+        time,
+        hours: show.hours && hourValues.length ? hourValues.reduce((a, b) => a + b, 0) : null,
+        count: list.length,
+        instructors: show.instructor ? instructors.join(", ") : "",
+        bookedBy: show.bookedBy ? authors.join(", ") : "",
+        bookedAt: show.bookedAt && bookedDay ? dayLabel(bookedDay).date : "",
+        type,
+        retake: first.retake,
+        clash: list.some((e) => e.clash),
+        now: list.some((e) => e.now),
+      };
+    };
+
+    const result: BookingData["rooms"] = rooms.map((room) => {
+      const roomEvents = events.filter((e) => e.roomId === room.id && columnKeys.has(columnOf(e.date)));
+      const cells: Record<string, BookingItem[]> = {};
+
+      const byColumn = new Map<string, BookingEvent[]>();
+      for (const e of roomEvents) {
+        const key = columnOf(e.date);
+        const list = byColumn.get(key) ?? [];
+        list.push(e);
+        byColumn.set(key, list);
+      }
+      for (const [key, list] of byColumn) {
+        if (!merge) {
+          cells[key] = list.map((e) => buildItem([e]));
+          continue;
+        }
+        const groups = new Map<string, BookingEvent[]>();
+        for (const e of list) {
+          const gk = `${e.groupId ?? `t:${e.title}`}|${e.retake ? 1 : 0}`;
+          const arr = groups.get(gk) ?? [];
+          arr.push(e);
+          groups.set(gk, arr);
+        }
+        cells[key] = [...groups.values()].map(buildItem);
+      }
+
+      return {
+        id: room.id,
+        name: room.name,
+        subtitle: room.capacity ? `${room.capacity} мест` : undefined,
+        cells,
+      };
+    });
+
+    const visible = options.hideEmptyRooms ? result.filter((r) => Object.keys(r.cells).length) : result;
+    return {
+      kind: "booking",
+      columns,
+      rooms: visible,
+      clashCount,
+      empty: options.hideEmptyRooms ? "В этот период нет броней" : "Нет активных аудиторий",
     };
   },
 

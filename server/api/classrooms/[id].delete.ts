@@ -3,7 +3,10 @@
  * Удаление аудитории
  */
 
-import { deleteClassroom } from '../../repositories/scheduleRepository';
+import {
+  assertClassroomHasNoUpcomingEvents,
+  deleteClassroom,
+} from '../../repositories/scheduleRepository';
 import { Permission, requirePermission } from "../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
@@ -18,6 +21,8 @@ export default defineEventHandler(async (event) => {
                 statusMessage: 'ID аудитории обязателен',
             });
         }
+
+        await assertClassroomHasNoUpcomingEvents(id, 'удалить');
 
         const success = await deleteClassroom(id);
 
