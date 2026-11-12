@@ -18,21 +18,23 @@ export default defineEventHandler(async (event) => {
 
     // courses: short_name есть (VARCHAR(10) из initial_schema)
     const [courses] = await db.query<any[]>(
-      `SELECT id, name, short_name, code FROM courses WHERE is_active = 1 ORDER BY name`,
+      `SELECT id, name, short_name, code, is_active FROM courses ORDER BY is_active DESC, name`,
     );
 
     // organizations: short_name удалена миграцией 018, теперь name_ru/name_uz/name_en
     // Используем COALESCE(name_ru, name) как отображаемое краткое имя
     const [organizations] = await db.query<any[]>(
-      `SELECT id, name, COALESCE(name_ru, name) AS short_name, code FROM organizations WHERE is_active = 1 ORDER BY name`,
+      `SELECT id, name, COALESCE(name_ru, name) AS short_name, code, is_active FROM organizations ORDER BY is_active DESC, name`,
     );
 
     const [instructors] = await db.query<any[]>(
-      `SELECT id, full_name, email FROM instructors WHERE is_active = 1 ORDER BY full_name`,
+      `SELECT id, full_name, email, is_active FROM instructors ORDER BY is_active DESC, full_name`,
     );
 
     const [groups] = await db.query<any[]>(
-      `SELECT id, code, start_date, end_date FROM study_groups ORDER BY start_date DESC LIMIT 200`,
+      `SELECT sg.id, sg.code, sg.start_date, sg.end_date, c.short_name AS course_short_name, c.name AS course_name
+       FROM study_groups sg LEFT JOIN courses c ON c.id = sg.course_id
+       ORDER BY sg.start_date DESC LIMIT 3000`,
     );
 
     await logActivity(

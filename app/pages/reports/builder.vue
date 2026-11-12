@@ -1,36 +1,24 @@
 <template>
-  <div class="flex flex-col h-full overflow-hidden bg-gray-50 dark:bg-gray-900">
+  <div class="flex h-full flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
     <!-- ── Хедер ─────────────────────────────────────────────────── -->
-    <div
-      class="flex items-center gap-3 px-5 py-3 bg-white dark:bg-boxdark border-b border-stroke dark:border-strokedark shrink-0 z-20"
-    >
+    <div class="z-20 flex shrink-0 flex-wrap items-center gap-3 border-b border-stroke bg-white px-5 py-3 dark:border-strokedark dark:bg-boxdark">
       <NuxtLink
         to="/reports"
-        class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-all"
+        class="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-300"
         title="Назад к отчётам"
+        aria-label="Назад к отчётам"
       >
-        <svg
-          class="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
+        <ChevronLeft class="h-5 w-5" />
       </NuxtLink>
 
       <!-- Название (inline-редактирование) -->
-      <div class="flex-1 min-w-0">
+      <div class="flex min-w-0 flex-1 items-center gap-2">
         <input
           v-if="editingTitle"
           ref="titleInput"
           v-model="config.name"
-          class="w-full max-w-sm text-base font-semibold bg-transparent border-b-2 border-primary text-gray-900 dark:text-white outline-none px-1"
+          maxlength="200"
+          class="w-full max-w-sm border-b-2 border-primary bg-transparent px-1 text-base font-semibold text-gray-900 outline-none dark:text-white"
           placeholder="Название отчёта"
           @blur="editingTitle = false"
           @keydown.enter="editingTitle = false"
@@ -38,964 +26,500 @@
         />
         <button
           v-else
-          class="group flex items-center gap-2 font-semibold text-gray-900 dark:text-white hover:text-primary dark:hover:text-primary transition-colors"
+          type="button"
+          class="group flex min-w-0 items-center gap-2 font-semibold text-gray-900 transition-colors hover:text-primary dark:text-white"
+          title="Переименовать"
           @click="startEditTitle"
         >
-          {{ config.name || "Новый отчёт" }}
-          <svg
-            class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-            />
-          </svg>
+          <span class="truncate">{{ config.name || "Новый отчёт" }}</span>
+          <Pencil class="h-3.5 w-3.5 shrink-0 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
         </button>
+        <span
+          v-if="templateId && isDirty"
+          class="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"
+        >не сохранено</span>
+        <span
+          v-else-if="templateId"
+          class="hidden shrink-0 items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[11px] text-green-700 sm:flex dark:bg-green-900/20 dark:text-green-300"
+        ><Check class="h-3 w-3" /> сохранён</span>
+        <span v-else-if="draftSavedHint" class="hidden shrink-0 text-[11px] text-gray-400 sm:inline">черновик сохранён</span>
       </div>
 
-      <!-- Кол-во выбранных полей -->
-      <div
-        v-if="config.columns.length > 0"
-        class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full"
-      >
-        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z" />
-        </svg>
-        {{ config.columns.length }} {{ pluralFields(config.columns.length) }}
-      </div>
-
-      <!-- Активные фильтры-чипы (компактные) -->
-      <div
-        v-if="activeFilterChips.length > 0"
-        class="hidden md:flex items-center gap-1.5 max-w-xs overflow-hidden"
-      >
-        <div
-          v-for="chip in activeFilterChips.slice(0, 2)"
+      <!-- Чипы активных фильтров -->
+      <div v-if="activeFilterChips.length" class="hidden max-w-md items-center gap-1.5 overflow-hidden lg:flex">
+        <span
+          v-for="chip in activeFilterChips.slice(0, 3)"
           :key="chip.key"
-          class="flex items-center gap-1 px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-xs rounded-full border border-amber-200 dark:border-amber-700/40 shrink-0"
+          class="flex shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-700 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-300"
         >
-          <span class="truncate max-w-[80px]">{{ chip.label }}</span>
-          <button
-            class="shrink-0 hover:text-red-500 transition-colors"
-            @click="removeFilterChip(chip.key)"
-          >
-            <svg
-              class="w-2.5 h-2.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="3"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+          <span class="max-w-[140px] truncate" :title="chip.label">{{ chip.label }}</span>
+          <button type="button" class="hover:text-red-500" :aria-label="`Убрать фильтр ${chip.label}`" @click="removeFilterChip(chip.key)">
+            <X class="h-3 w-3" />
           </button>
-        </div>
-        <span v-if="activeFilterChips.length > 2" class="text-xs text-gray-400"
-          >+{{ activeFilterChips.length - 2 }}</span
-        >
+        </span>
+        <button
+          v-if="activeFilterChips.length > 3"
+          type="button"
+          class="text-xs text-gray-400 hover:text-primary"
+          @click="drawerOpen = true"
+        >+{{ activeFilterChips.length - 3 }}</button>
       </div>
 
       <!-- Кнопки -->
-      <div class="flex items-center gap-2 shrink-0">
-        <!-- Переключатель is_public -->
+      <div class="flex shrink-0 items-center gap-2">
         <label
-          class="flex items-center gap-2 cursor-pointer select-none px-3 py-1.5 rounded-lg border border-stroke dark:border-strokedark hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+          class="flex cursor-pointer select-none items-center gap-2 rounded-lg border border-stroke px-3 py-1.5 hover:bg-gray-50 dark:border-strokedark dark:hover:bg-gray-700"
           title="Публичный шаблон виден всем сотрудникам"
         >
-          <div
-            class="relative w-8 h-4 rounded-full transition-colors duration-200"
-            :class="
-              config.is_public ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'
-            "
-          >
-            <div
-              class="absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200"
-              :class="config.is_public ? 'trangray-x-4' : 'trangray-x-0'"
-            />
-            <input type="checkbox" v-model="config.is_public" class="sr-only" />
-          </div>
+          <input v-model="config.is_public" type="checkbox" class="peer sr-only" />
           <span
-            class="text-xs text-gray-600 dark:text-gray-400 hidden sm:inline"
-            >Публичный</span
+            class="relative h-4 w-8 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40"
+            :class="config.is_public ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'"
           >
+            <span
+              class="absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform"
+              :class="config.is_public ? 'translate-x-4' : 'translate-x-0'"
+            />
+          </span>
+          <span class="hidden text-xs text-gray-600 sm:inline dark:text-gray-400">Публичный</span>
         </label>
 
-        <!-- Excel — вторичное действие результата: спокойная обводка вместо яркой зелёной кнопки (главное действие — «Конструктор») -->
         <button
-          v-if="result.rows.length > 0"
+          v-if="result.generated && result.rows.length > 0"
+          type="button"
           :disabled="exporting"
-          class="flex h-9 items-center gap-1.5 px-3 border border-stroke dark:border-strokedark text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 transition-colors"
+          class="flex h-9 items-center gap-1.5 rounded-lg border border-stroke px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60 dark:border-strokedark dark:text-gray-300 dark:hover:bg-gray-700"
+          title="Скачать весь отчёт в Excel"
           @click="exportExcel"
         >
-          <svg
-            v-if="!exporting"
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <svg
-            v-else
-            class="w-4 h-4 animate-spin"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
+          <Loader2 v-if="exporting" class="h-4 w-4 animate-spin" />
+          <FileSpreadsheet v-else class="h-4 w-4" />
           <span class="hidden sm:inline">Excel</span>
         </button>
 
-        <!-- Сохранить -->
-        <button
-          :disabled="saving"
-          class="flex h-9 items-center gap-1.5 px-3 border border-stroke dark:border-strokedark text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60 transition-colors"
-          @click="saveTemplate"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div ref="saveMenuRef" class="relative flex">
+          <button
+            type="button"
+            :disabled="saving"
+            class="flex h-9 items-center gap-1.5 rounded-l-lg border border-stroke px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60 dark:border-strokedark dark:text-gray-300 dark:hover:bg-gray-700"
+            @click="saveTemplate(false)"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-            />
-          </svg>
-          <span class="hidden sm:inline">{{
-            saving ? "Сохранение..." : "Сохранить"
-          }}</span>
-        </button>
+            <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+            <Save v-else class="h-4 w-4" />
+            <span class="hidden sm:inline">{{ saving ? "Сохранение…" : "Сохранить" }}</span>
+          </button>
+          <button
+            type="button"
+            class="flex h-9 items-center rounded-r-lg border border-l-0 border-stroke px-1.5 text-gray-500 hover:bg-gray-50 dark:border-strokedark dark:hover:bg-gray-700"
+            aria-label="Другие варианты сохранения"
+            :aria-expanded="saveMenuOpen"
+            @click="saveMenuOpen = !saveMenuOpen"
+          >
+            <ChevronDown class="h-4 w-4" />
+          </button>
+          <div
+            v-if="saveMenuOpen"
+            class="absolute right-0 top-full z-50 mt-1 w-56 overflow-hidden rounded-xl border border-stroke bg-white py-1 shadow-xl dark:border-strokedark dark:bg-boxdark"
+          >
+            <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800" @click="saveTemplate(true)">
+              <CopyPlus class="h-4 w-4 text-gray-400" /> Сохранить как новый
+            </button>
+            <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" @click="resetAll">
+              <RotateCcw class="h-4 w-4" /> Начать заново
+            </button>
+          </div>
+        </div>
 
-        <!-- Кнопка открытия конструктора -->
         <button
-          class="relative flex h-9 items-center gap-2 px-4 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+          type="button"
+          class="relative flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-white transition-colors hover:bg-primary/90"
           @click="drawerOpen = true"
         >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-            />
-          </svg>
+          <SlidersHorizontal class="h-4 w-4" />
           Конструктор
-          <!-- Бейдж если есть активные настройки -->
           <span
             v-if="config.columns.length > 0"
-            class="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 min-w-[18px] min-h-[18px] flex items-center justify-center bg-amber-400 text-white text-[11px] font-bold rounded-full leading-none"
-            >{{ config.columns.length }}</span
-          >
+            class="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-400 px-1 text-[11px] font-bold leading-none text-white"
+          >{{ config.columns.length }}</span>
         </button>
       </div>
     </div>
 
     <!-- ── Предупреждения ──────────────────────────────────────────── -->
-    <div
-      v-if="validationWarning || compatibilityWarning || draftSavedHint"
-      class="shrink-0 px-5 pt-3 space-y-2"
-    >
+    <div v-if="bannerVisible" class="shrink-0 space-y-2 px-5 pt-3">
       <div
         v-if="validationWarning"
-        class="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-xl flex items-start gap-3"
+        role="alert"
+        class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 dark:border-amber-700/40 dark:bg-amber-900/20"
       >
-        <svg
-          class="w-4 h-4 text-amber-500 shrink-0 mt-0.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-        <p class="text-xs text-amber-700 dark:text-amber-300 flex-1">
-          {{ validationWarning }}
-        </p>
-        <button
-          class="text-amber-400 hover:text-amber-600 transition-colors"
-          @click="validationWarning = ''"
-        >
-          <svg
-            class="w-3.5 h-3.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+        <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+        <p class="flex-1 text-xs text-amber-700 dark:text-amber-300">{{ validationWarning }}</p>
+        <button type="button" class="text-amber-400 hover:text-amber-600" aria-label="Закрыть" @click="validationWarning = ''">
+          <X class="h-3.5 w-3.5" />
         </button>
       </div>
-
       <div
-        v-if="compatibilityWarning"
-        class="p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700/40 rounded-xl flex items-start gap-3"
+        v-for="(w, i) in shownWarnings"
+        :key="i"
+        class="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3 dark:border-orange-700/40 dark:bg-orange-900/20"
       >
-        <svg
-          class="w-4 h-4 text-orange-500 shrink-0 mt-0.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M13 10V3L4 14h7v7l9-11h-7z"
-          />
-        </svg>
-        <p class="text-xs text-orange-600 dark:text-orange-400 flex-1">
-          <strong class="text-orange-700 dark:text-orange-300"
-            >Несовместимые источники:</strong
-          >
-          {{
-            compatibilityWarning.branches
-              .map((b: string) =>
-                b === "students"
-                  ? "Слушатели"
-                  : b === "schedule"
-                    ? "Расписание"
-                    : "Тестирование",
-              )
-              .join(" + ")
-          }}
-          — возможны дублированные строки.
-        </p>
+        <AlertTriangle class="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+        <p class="flex-1 text-xs text-orange-700 dark:text-orange-300">{{ w }}</p>
       </div>
-
       <div
-        v-if="draftSavedHint"
-        class="px-3 py-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/40 rounded-lg flex items-center gap-2"
+        v-if="isStale"
+        class="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 p-2.5 pl-3 dark:border-blue-700/40 dark:bg-blue-900/20"
       >
-        <svg
-          class="w-3.5 h-3.5 text-green-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+        <RefreshCw class="h-4 w-4 shrink-0 text-blue-500" />
+        <p class="flex-1 text-xs text-blue-700 dark:text-blue-300">Настройки изменились — таблица показывает прежний результат.</p>
+        <button
+          type="button"
+          class="rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+          :disabled="generating"
+          @click="generate(true)"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M5 13l4 4L19 7"
-          />
-        </svg>
-        <span class="text-xs text-green-700 dark:text-green-300"
-          >Черновик автосохранён</span
-        >
+          Обновить
+        </button>
       </div>
     </div>
 
-    <!-- ── Тело — полная ширина ──────────────────────────────────── -->
-    <div class="flex-1 min-h-0 overflow-hidden relative flex flex-col">
-      <!-- Пустое состояние (нет данных) -->
-      <div
-        v-if="!result.generated"
-        class="h-full flex flex-col items-center justify-center text-center p-10"
-      >
-        <div
-          class="w-20 h-20 rounded-xl bg-primary/5 dark:bg-primary/10 flex items-center justify-center mb-5 border border-primary/10"
-        >
-          <svg
-            class="w-10 h-10 text-primary/40"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="1.5"
-              d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+    <!-- ── Тело ──────────────────────────────────────────────────── -->
+    <div class="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+      <!-- Пустое состояние -->
+      <div v-if="!result.generated" class="h-full overflow-y-auto">
+        <div class="mx-auto flex max-w-4xl flex-col items-center px-6 py-10 text-center">
+          <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/10 bg-primary/5">
+            <TableProperties class="h-8 w-8 text-primary/50" />
+          </div>
+          <p class="mb-1 text-base font-medium text-gray-700 dark:text-gray-200">
+            {{ templateId || config.columns.length ? "Отчёт готов к формированию" : "Соберите отчёт за пару кликов" }}
+          </p>
+          <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">
+            <template v-if="templateId || config.columns.length">Нажмите «Сформировать», чтобы получить актуальные данные</template>
+            <template v-else>Начните с готового шаблона или откройте конструктор и выберите поля</template>
+          </p>
+          <div class="flex flex-wrap justify-center gap-2">
+            <button
+              v-if="templateId || config.columns.length"
+              type="button"
+              :disabled="generating"
+              class="flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 font-medium text-white shadow-md hover:bg-primary/90 disabled:opacity-60"
+              @click="generate(true)"
+            >
+              <Loader2 v-if="generating" class="h-4 w-4 animate-spin" />
+              <Play v-else class="h-4 w-4" />
+              {{ generating ? "Формирование…" : "Сформировать" }}
+            </button>
+            <button
+              type="button"
+              class="flex items-center gap-2 rounded-xl border border-stroke bg-white px-5 py-2.5 font-medium text-gray-700 hover:border-primary hover:text-primary dark:border-strokedark dark:bg-boxdark dark:text-gray-200"
+              @click="drawerOpen = true"
+            >
+              <SlidersHorizontal class="h-4 w-4" /> Открыть конструктор
+            </button>
+          </div>
+
+          <div v-if="!templateId" class="mt-10 w-full text-left">
+            <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Быстрый старт</p>
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <button
+                v-for="p in REPORT_PRESETS"
+                :key="p.id"
+                type="button"
+                class="group rounded-xl border border-stroke bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md dark:border-strokedark dark:bg-boxdark"
+                @click="applyPreset(p)"
+              >
+                <p class="text-sm font-semibold text-gray-800 group-hover:text-primary dark:text-gray-100">{{ p.title }}</p>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ p.description }}</p>
+              </button>
+            </div>
+          </div>
         </div>
-        <p class="text-gray-600 dark:text-gray-300 font-medium text-base mb-1">
-          {{
-            templateId
-              ? "Отчёт готов к формированию"
-              : "Таблица отчёта появится здесь"
-          }}
-        </p>
-        <p class="text-sm text-gray-400 dark:text-gray-500 mb-6">
-          <template v-if="templateId">
-            Нажмите кнопку ниже, чтобы получить актуальные данные по шаблону
-          </template>
-          <template v-else>
-            Откройте
-            <strong class="text-gray-500 dark:text-gray-400">Конструктор</strong
-            >, выберите поля и нажмите «Сформировать»
-          </template>
-        </p>
-        <button
-          :disabled="generating"
-          class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white font-medium rounded-xl hover:bg-primary/90 transition-all shadow-md disabled:opacity-60"
-          @click="templateId ? generate() : (drawerOpen = true)"
-        >
-          <svg
-            v-if="!generating"
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              v-if="templateId"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-            <path
-              v-else
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-            />
-          </svg>
-          <svg
-            v-else
-            class="w-4 h-4 animate-spin"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          {{
-            templateId
-              ? generating
-                ? "Формирование..."
-                : "Сформировать"
-              : "Открыть конструктор"
-          }}
-        </button>
       </div>
 
-      <!-- Таблица результата -->
       <ReportsPreviewTable
         v-else
         :rows="result.rows"
         :columns="result.column_labels"
+        :numeric-columns="result.numeric_columns"
         :total="result.total"
         :loading="generating"
         :page="pagination.page"
         :limit="pagination.limit"
         :total-row="result.total_row"
+        :sort-field="config.sort_field"
+        :sort-direction="config.sort_direction"
+        :duration-ms="result.duration_ms"
         @page-change="handlePageChange"
+        @limit-change="handleLimitChange"
+        @sort="handleSort"
       />
     </div>
 
-    <!-- ══ DRAWER — Конструктор (справа) ════════════════════════════ -->
-    <!-- Затемнение фона -->
+    <!-- ══ DRAWER — Конструктор ════════════════════════════════════ -->
     <Transition
       enter-active-class="transition-opacity duration-300"
       enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
       leave-active-class="transition-opacity duration-200"
-      leave-from-class="opacity-100"
       leave-to-class="opacity-0"
     >
-      <div
-        v-if="drawerOpen"
-        class="fixed inset-0 bg-black/30-[1px] z-100000"
-        @click="drawerOpen = false"
-      />
+      <div v-if="drawerOpen" class="fixed inset-0 z-[100000] bg-black/30 backdrop-blur-[1px]" @click="drawerOpen = false" />
     </Transition>
 
-    <!-- Сам drawer -->
     <Transition
       enter-active-class="transition-transform duration-300 ease-out"
-      enter-from-class="trangray-x-full"
-      enter-to-class="trangray-x-0"
+      enter-from-class="translate-x-full"
       leave-active-class="transition-transform duration-200 ease-in"
-      leave-from-class="trangray-x-0"
-      leave-to-class="trangray-x-full"
+      leave-to-class="translate-x-full"
     >
-      <div
+      <aside
         v-if="drawerOpen"
-        class="fixed top-0 right-0 h-full w-[85%] max-w-[1100px] z-100001 flex flex-col bg-white dark:bg-boxdark border-l border-stroke dark:border-strokedark"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Настройка отчёта"
+        class="fixed right-0 top-0 z-[100001] flex h-full w-full max-w-[1180px] flex-col border-l border-stroke bg-white sm:w-[92%] dark:border-strokedark dark:bg-boxdark"
+        @keydown.escape="drawerOpen = false"
       >
-        <!-- Шапка drawer -->
-        <div
-          class="flex items-center justify-between px-5 py-3 border-b border-stroke dark:border-strokedark shrink-0 bg-gray-50/50 dark:bg-gray-800/20"
-        >
+        <!-- Шапка -->
+        <div class="flex shrink-0 items-center justify-between border-b border-stroke bg-gray-50/50 px-5 py-3 dark:border-strokedark dark:bg-gray-800/20">
           <div class="flex items-center gap-2.5">
-            <div
-              class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center"
-            >
-              <svg
-                class="w-4.5 h-4.5 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-                />
-              </svg>
+            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+              <SlidersHorizontal class="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h2
-                class="text-sm font-bold text-gray-900 dark:text-white leading-none"
-              >
-                Настройка отчёта
-              </h2>
-              <div class="flex items-center gap-2 mt-0.5">
-                <span class="text-[11px] text-gray-400"
-                  >Сконструируйте структуру и фильтры</span
-                >
-                <span
-                  v-if="config.columns.length > 0"
-                  class="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary text-[11px] font-bold rounded-md leading-none"
-                >
-                  {{ config.columns.length }}
-                  {{ pluralFields(config.columns.length) }}
-                </span>
-              </div>
+              <h2 class="text-sm font-bold leading-none text-gray-900 dark:text-white">Настройка отчёта</h2>
+              <p class="mt-1 text-[11px] text-gray-500">{{ summary }}</p>
             </div>
           </div>
           <button
-            class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+            type="button"
+            class="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+            aria-label="Закрыть конструктор"
             @click="drawerOpen = false"
           >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X class="h-5 w-5" />
           </button>
         </div>
 
-        <!-- Скроллируемое тело конструктора (Горизонтальное) -->
-        <div class="flex-1 overflow-y-auto w-full">
-          <div class="p-4.5">
-            <!-- 1. ВЫБОР БАЗОВОЙ СУЩНОСТИ (Компактный) -->
-            <div class="mb-4">
-              <div class="flex items-center gap-2 mb-2">
-                <span
-                  class="text-[11px] font-semibold tracking-[0.15em] text-gray-400 dark:text-gray-500"
-                  >1. Базовая сущность</span
-                >
-                <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+        <!-- Тело -->
+        <div class="flex-1 overflow-y-auto p-4">
+          <!-- 1. Базовая сущность -->
+          <section class="mb-4">
+            <SectionTitle n="1" title="Что считается строкой отчёта" />
+            <div class="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Базовая сущность">
+              <button
+                v-for="root in ROOTS"
+                :key="root.key"
+                type="button"
+                role="radio"
+                :aria-checked="config.primary_entity === root.key"
+                :title="root.hint"
+                class="rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors"
+                :class="config.primary_entity === root.key
+                  ? 'border-primary bg-primary text-white shadow-sm'
+                  : 'border-gray-200 text-gray-600 hover:border-primary/50 dark:border-gray-700 dark:text-gray-300'"
+                @click="config.primary_entity = root.key"
+              >
+                {{ root.label }}
+              </button>
+            </div>
+            <p class="mt-1.5 text-[11px] text-gray-500">{{ currentRoot?.hint }}</p>
+          </section>
+
+          <div class="grid grid-cols-1 items-start gap-5 xl:grid-cols-12">
+            <!-- 2. Поля -->
+            <section class="xl:col-span-4">
+              <SectionTitle n="2" title="Поля данных" />
+              <div v-if="metaLoading" class="flex justify-center rounded-xl border border-dashed border-gray-200 py-10 dark:border-gray-700">
+                <Loader2 class="h-6 w-6 animate-spin text-primary" />
               </div>
-              <div class="flex flex-wrap gap-1.5">
-                <button
-                  v-for="root in [
-                    {
-                      key: 'study_groups',
-                      label: 'Группы',
-                      icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
-                    },
-                    {
-                      key: 'students',
-                      label: 'Слушатели',
-                      icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197',
-                    },
-                    {
-                      key: 'courses',
-                      label: 'Курсы',
-                      icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5S19.832 5.477 21 6.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-                    },
-                    {
-                      key: 'organizations',
-                      label: 'Орг.',
-                      icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-                    },
-                    {
-                      key: 'issued_certificates',
-                      label: 'Серт.',
-                      icon: 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z',
-                    },
-                  ]"
-                  :key="root.key"
-                  class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all text-[11px] font-bold"
-                  :class="
-                    config.primary_entity === root.key
-                      ? 'border-primary bg-primary text-white shadow-sm'
-                      : 'border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-400 hover:border-gray-200 dark:hover:border-gray-700'
-                  "
-                  @click="config.primary_entity = root.key as any"
-                >
-                  <svg
-                    class="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              <ReportsFieldPicker
+                v-else
+                ref="fieldPicker"
+                :groups="entityGroups"
+                :selected-keys="selectedKeys"
+                @toggle="toggleField"
+              />
+            </section>
+
+            <!-- 3–4. Структура и группировка -->
+            <div class="space-y-5 xl:col-span-4">
+              <section>
+                <SectionTitle n="3" title="Столбцы">
+                  <button
+                    v-if="config.columns.length"
+                    type="button"
+                    class="text-[11px] text-gray-400 hover:text-red-500"
+                    @click="config.columns = []"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      :d="root.icon"
-                    />
-                  </svg>
-                  {{ root.label }}
-                </button>
-              </div>
+                    Очистить
+                  </button>
+                </SectionTitle>
+                <ReportsColumnList
+                  :columns="config.columns"
+                  :field-map="fieldMap"
+                  :grouping-labels="config.groupings.map((g) => g.label)"
+                  @remove="removeColumn"
+                  @reorder="(a, b) => moveItem(config.columns, a, b)"
+                />
+              </section>
+              <section>
+                <SectionTitle n="4" title="Группировка строк" />
+                <ReportsGroupingSection
+                  :groupings="config.groupings"
+                  :entity-groups="entityGroups"
+                  @add="(g) => config.groupings.push(g)"
+                  @remove="(i) => config.groupings.splice(i, 1)"
+                  @reorder="(a, b) => moveItem(config.groupings, a, b)"
+                />
+                <p v-if="config.groupings.length && !hasAggregatedColumn" class="mt-2 text-[11px] text-gray-500">
+                  Подсказка: добавьте столбец с агрегацией (например «Количество слушателей»), чтобы посчитать значения по каждой группе.
+                </p>
+              </section>
             </div>
 
-            <!-- ГРИД для остальных настроек -->
-            <div class="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
-              <!-- Левая колонка: Выбор полей (4/12) -->
-              <div class="xl:col-span-4 space-y-4">
-                <div>
-                  <div class="flex items-center gap-2 mb-2">
-                    <span
-                      class="text-[11px] font-semibold tracking-[0.15em] text-gray-400 dark:text-gray-500"
-                      >2. Поля данных</span
-                    >
-                    <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
-                  </div>
-
-                  <div
-                    v-if="metaLoading"
-                    class="flex justify-center py-10 bg-gray-50/50 dark:bg-gray-800/20 rounded-xl border border-dashed border-gray-200 dark:border-gray-700"
-                  >
-                    <div
-                      class="h-7 w-7 animate-spin rounded-full border-3 border-primary border-r-transparent"
-                    />
-                  </div>
-                  <div
-                    v-else
-                    class="bg-white dark:bg-boxdark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden"
-                  >
-                    <ReportsEntitySection
-                      v-for="group in entityGroups"
-                      :key="group.key"
-                      :group="group"
-                      :selected-columns="config.columns"
-                      @toggle-field="toggleField"
-                      @update-column="updateColumn"
-                    />
-                  </div>
-                </div>
+            <!-- 5. Фильтры -->
+            <section class="xl:col-span-4">
+              <SectionTitle n="5" title="Фильтры" />
+              <div class="rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+                <ReportsFiltersSection
+                  :filters="config.filters"
+                  :lookup="lookup"
+                  :entity-groups="entityGroups"
+                  :field-map="fieldMap"
+                  :sort-options="sortOptions"
+                  :sort-field="config.sort_field"
+                  :sort-direction="config.sort_direction"
+                  @update="(f) => (config.filters = f)"
+                  @update:sort="setSort"
+                />
               </div>
-
-              <!-- Центральная колонка: Столбцы и Группировка (4/12) -->
-              <div class="xl:col-span-4 space-y-6">
-                <!-- Порядок столбцов -->
-                <div>
-                  <div class="flex items-center gap-2 mb-2">
-                    <span
-                      class="text-[11px] font-semibold tracking-[0.15em] text-gray-400 dark:text-gray-500"
-                      >3. Структура</span
-                    >
-                    <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
-                  </div>
-
-                  <div
-                    v-if="config.columns.length === 0"
-                    class="py-10 text-center bg-gray-50/50 dark:bg-gray-800/10 rounded-xl border border-dashed border-gray-200 dark:border-gray-700"
-                  >
-                    <p class="text-xs text-gray-400">
-                      Выберите поля слева, чтобы настроить их порядок
-                    </p>
-                  </div>
-                  <div v-else class="space-y-1.5 p-1">
-                    <div
-                      v-for="(col, idx) in config.columns"
-                      :key="col.field_key"
-                      draggable="true"
-                      class="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing group"
-                      :class="
-                        dragOverIdx === idx
-                          ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-boxdark'
-                          : ''
-                      "
-                      @dragstart="onDragStart(idx, $event)"
-                      @dragover.prevent="onDragOver(idx)"
-                      @dragend="onDragEnd"
-                      @drop.prevent="onDrop(idx)"
-                    >
-                      <svg
-                        class="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M4 8h16M4 16h16"
-                        />
-                      </svg>
-
-                      <div class="flex-1 min-w-0">
-                        <p
-                          class="text-xs font-semibold text-gray-700 dark:text-gray-200 truncate"
-                        >
-                          {{ col.label }}
-                        </p>
-                        <p
-                          class="text-[11px] text-gray-400 tracking-tighter"
-                        >
-                          {{ col.field_key }}
-                        </p>
-                      </div>
-
-                      <div class="flex items-center gap-2">
-                        <!-- Основная агрегация (группировка) -->
-                        <div
-                          class="relative group/agg flex items-center bg-gray-50 dark:bg-gray-800/80 rounded-lg p-0.5 border border-gray-100 dark:border-gray-700 hover:border-primary/30 transition-all"
-                        >
-                          <div
-                            class="flex items-center gap-1 px-1.5 py-0.5 text-[11px] text-primary/60 font-semibold tracking-tighter border-r border-gray-200 dark:border-gray-700 mr-1"
-                          >
-                            Σ
-                          </div>
-                          <select
-                            v-model="col.aggregation"
-                            class="text-[11px] font-bold text-primary bg-transparent border-none px-1 py-0.5 outline-none cursor-pointer appearance-none pr-4"
-                          >
-                            <option value="none">НЕТ</option>
-                            <option value="count">COUNT</option>
-                            <option value="count_distinct">DISTINCT</option>
-                            <option value="sum">SUM</option>
-                            <option value="avg">AVG</option>
-                            <option value="min">MIN</option>
-                            <option value="max">MAX</option>
-                            <option value="list">LIST</option>
-                          </select>
-                          <svg
-                            class="w-2.5 h-2.5 absolute right-1.5 pointer-events-none text-primary/40"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="3"
-                              d="M19 9l-7 7-7-7"
-                            />
-                          </svg>
-                        </div>
-
-                        <!-- Настройка ИТОГО -->
-                        <div
-                          class="flex items-center bg-orange-50/50 dark:bg-orange-950/20 rounded-lg p-0.5 border border-orange-100 dark:border-orange-900/40"
-                        >
-                          <button
-                            class="px-1.5 py-0.5 rounded-md transition-all flex items-center gap-1 group/sigma"
-                            :class="
-                              col.show_in_total
-                                ? 'text-orange-600 bg-orange-100 shadow-sm'
-                                : 'text-gray-400 hover:text-orange-500'
-                            "
-                            @click="col.show_in_total = !col.show_in_total"
-                            title="Показывать в строке ИТОГО (Σ)"
-                          >
-                            <span class="text-[11px] font-semibold"
-                              >Σ</span
-                            >
-                          </button>
-                          <div
-                            v-if="col.show_in_total"
-                            class="flex items-center ml-1 border-l border-orange-200/50 dark:border-orange-800/50 pl-1"
-                          >
-                            <select
-                              v-model="col.total_aggregation"
-                              class="text-[11px] font-bold text-orange-600 bg-transparent border-none px-1 py-0.5 outline-none cursor-pointer appearance-none pr-3"
-                            >
-                              <option value="sum">SUM</option>
-                              <option value="avg">AVG</option>
-                              <option value="count">COUNT</option>
-                              <option value="min">MIN</option>
-                              <option value="max">MAX</option>
-                            </select>
-                            <svg
-                              class="w-2 h-2 pointer-events-none text-orange-400"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="3"
-                                d="M19 9l-7 7-7-7"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-
-                        <button
-                          class="p-1 text-gray-300 hover:text-red-500 transition-colors"
-                          @click="
-                            toggleField(
-                              col.field_key,
-                              col.label,
-                              col.aggregation,
-                            )
-                          "
-                        >
-                          <svg
-                            class="w-3.5 h-3.5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Группировка -->
-                <div>
-                  <div class="flex items-center gap-2 mb-3">
-                    <span
-                      class="text-[11px] font-bold text-gray-400 dark:text-gray-500"
-                      >4. Группировка строк</span
-                    >
-                    <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
-                  </div>
-                  <div
-                    class="bg-white dark:bg-boxdark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm p-4"
-                  >
-                    <ReportsGroupingSection
-                      :groupings="config.groupings"
-                      :entity-groups="entityGroups"
-                      @add="addGrouping"
-                      @remove="removeGrouping"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Правая колонка: Фильтры (4/12) -->
-              <div class="xl:col-span-4">
-                <div class="flex items-center gap-2 mb-3">
-                  <span
-                    class="text-[11px] font-bold text-gray-400 dark:text-gray-500"
-                    >5. Фильтрация данных</span
-                  >
-                  <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
-                </div>
-                <div
-                  class="bg-white dark:bg-boxdark rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 h-full min-h-[400px]"
-                >
-                  <ReportsFiltersSection
-                    :filters="config.filters"
-                    :lookup="lookup"
-                    @update="(f) => (config.filters = f)"
-                  />
-
-                  <div
-                    class="mt-8 pt-6 border-t border-gray-50 dark:border-gray-800"
-                  >
-                    <button
-                      class="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[11px] font-bold text-red-500 hover:text-white border border-red-200 dark:border-red-900/40 rounded-xl hover:bg-red-500 dark:hover:bg-red-600 transition-all"
-                      @click="resetAll"
-                    >
-                      <svg
-                        class="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                      Полный сброс
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            </section>
           </div>
         </div>
 
-        <!-- ── Нижняя панель: Сформировать ───────────── -->
-        <div
-          class="shrink-0 border-t border-stroke dark:border-strokedark bg-gray-50 dark:bg-gray-800/50 px-4 py-4"
-        >
+        <!-- Низ -->
+        <div class="flex shrink-0 items-center gap-3 border-t border-stroke bg-gray-50 px-4 py-3 dark:border-strokedark dark:bg-gray-800/50">
+          <p v-if="validationWarning" class="hidden flex-1 text-xs text-amber-600 md:block">{{ validationWarning }}</p>
+          <p v-else-if="compatibility" class="hidden flex-1 text-xs text-orange-600 md:block">{{ compatibility }}</p>
+          <p v-else class="hidden flex-1 text-[11px] text-gray-400 md:block">Ctrl + Enter — сформировать · Esc — закрыть</p>
           <button
+            type="button"
             :disabled="generating"
-            class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white font-semibold rounded-xl hover:bg-primary/90 disabled:opacity-60 transition-all shadow-md text-sm"
+            class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-primary/90 disabled:opacity-60 md:max-w-xs"
             @click="generateAndClose"
           >
-            <svg
-              v-if="!generating"
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <svg
-              v-else
-              class="w-4 h-4 animate-spin"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-            {{ generating ? "Формирование..." : "Сформировать отчёт" }}
+            <Loader2 v-if="generating" class="h-4 w-4 animate-spin" />
+            <Play v-else class="h-4 w-4" />
+            {{ generating ? "Формирование…" : "Сформировать отчёт" }}
           </button>
         </div>
-      </div>
+      </aside>
     </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed, defineComponent, h, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {
-  ref,
-  reactive,
-  computed,
-  nextTick,
-  onMounted,
-  onUnmounted,
-  watch,
-} from "vue";
-import { useRoute } from "vue-router";
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  CopyPlus,
+  FileSpreadsheet,
+  Loader2,
+  Pencil,
+  Play,
+  RefreshCw,
+  RotateCcw,
+  Save,
+  SlidersHorizontal,
+  TableProperties,
+  X,
+} from "lucide-vue-next";
 import { useToast } from "~/composables/useToast";
 import { checkColumnsCompatibility } from "~/composables/useCompatibilityCheck";
+import {
+  DATE_FIELD_OPTIONS,
+  OP_LABELS,
+  REPORT_PRESETS,
+  ROOTS,
+  VALUELESS_OPS,
+  type ColumnConfig,
+  type EntityGroupMeta,
+  type FieldMeta,
+  type GroupingItem,
+  type ReportFilters,
+  type ReportPreset,
+  type RootEntity,
+} from "~/utils/reportBuilder";
 
 definePageMeta({ layout: "report-builder" as any });
 
+/** Заголовок секции конструктора: «1. Название ———— [слот]» */
+const SectionTitle = defineComponent({
+  props: { n: { type: String, required: true }, title: { type: String, required: true } },
+  setup(props, { slots }) {
+    return () =>
+      h("div", { class: "mb-2 flex items-center gap-2" }, [
+        h("span", { class: "text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400" }, `${props.n}. ${props.title}`),
+        h("div", { class: "h-px flex-1 bg-gray-100 dark:bg-gray-800" }),
+        slots.default?.(),
+      ]);
+  },
+});
+
 const route = useRoute();
+const router = useRouter();
 const toast = useToast();
 
-const apiFetch = (url: string, opts?: Record<string, any>): Promise<any> =>
-  ($fetch as any)(url, opts);
-
-// ── Типы ──────────────────────────────────────────────────────────────
-interface ColumnConfig {
-  field_key: string;
-  label: string;
-  aggregation: string;
-  show_in_total: boolean;
-  total_aggregation: string;
-  width: number;
-  align: string;
-}
-
-interface GroupingItem {
-  type: "field" | "time_scale";
-  field_key?: string;
-  time_scale?: string;
-  date_field_key?: string;
-  label: string;
-}
+const apiFetch = (url: string, opts?: Record<string, any>): Promise<any> => ($fetch as any)(url, opts);
 
 const DRAFT_KEY = "report_builder_draft";
+const ROOT_KEYS = ROOTS.map((r) => r.key);
 
 const defaultConfig = () => ({
   name: "Новый отчёт",
   description: "",
   is_public: false,
-  primary_entity: "study_groups" as any,
+  primary_entity: "study_groups" as RootEntity,
   columns: [] as ColumnConfig[],
   groupings: [] as GroupingItem[],
-  filters: {} as Record<string, any>,
+  filters: {} as ReportFilters,
   sort_field: "",
-  sort_direction: "asc",
+  sort_direction: "asc" as "asc" | "desc",
 });
 
 const config = reactive(defaultConfig());
 
 const result = reactive({
   generated: false,
-  rows: [] as any[],
+  rows: [] as Record<string, unknown>[],
   column_labels: [] as string[],
+  numeric_columns: [] as string[],
   total: 0,
-  total_row: null as Record<string, any> | null,
+  total_row: null as Record<string, unknown> | null,
+  warnings: [] as string[],
+  duration_ms: null as number | null,
 });
 
 const pagination = reactive({ page: 1, limit: 50 });
 
 // ── Метаданные ─────────────────────────────────────────────────────────
 const metaLoading = ref(false);
-const entityGroups = ref<any[]>([]);
-const lookup = ref<any>({
-  courses: [],
-  organizations: [],
-  instructors: [],
-  groups: [],
-});
+const entityGroups = ref<EntityGroupMeta[]>([]);
+const lookup = ref<any>({ courses: [], organizations: [], instructors: [], groups: [] });
 const templateId = ref<string | null>(null);
+
+const fieldMap = computed(() => {
+  const m = new Map<string, FieldMeta>();
+  for (const g of entityGroups.value) for (const f of g.fields) m.set(f.key, f);
+  return m;
+});
+const selectedKeys = computed(() => new Set(config.columns.map((c) => c.field_key)));
+const currentRoot = computed(() => ROOTS.find((r) => r.key === config.primary_entity));
 
 // ── UI-состояние ───────────────────────────────────────────────────────
 const generating = ref(false);
@@ -1005,114 +529,125 @@ const editingTitle = ref(false);
 const titleInput = ref<HTMLInputElement | null>(null);
 const validationWarning = ref("");
 const draftSavedHint = ref(false);
-const isMounted = ref(false);
 const drawerOpen = ref(false);
+const saveMenuOpen = ref(false);
+const saveMenuRef = ref<HTMLElement | null>(null);
+const fieldPicker = ref<{ focus: () => void } | null>(null);
+let mounted = false;
 
-// ── Drag & Drop ────────────────────────────────────────────────────────
-const dragIdx = ref<number | null>(null);
-const dragOverIdx = ref<number | null>(null);
+// ── Снимки конфигурации: «не сохранено» и «результат устарел» ─────────
+const savedSnapshot = (): string =>
+  JSON.stringify({
+    name: config.name,
+    description: config.description,
+    is_public: !!config.is_public,
+    primary_entity: config.primary_entity,
+    columns: config.columns.map((c) => [c.field_key, c.label, c.aggregation, !!c.show_in_total, c.total_aggregation]),
+    groupings: config.groupings,
+    filters: config.filters,
+    sort_field: config.sort_field,
+    sort_direction: config.sort_direction,
+  });
 
-const onDragStart = (idx: number, event: DragEvent) => {
-  dragIdx.value = idx;
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", String(idx));
-  }
+const querySnapshot = (): string =>
+  JSON.stringify({
+    primary_entity: config.primary_entity,
+    columns: config.columns.map((c) => [c.field_key, c.label, c.aggregation, !!c.show_in_total, c.total_aggregation]),
+    groupings: config.groupings,
+    filters: config.filters,
+  });
+
+const savedFingerprint = ref("");
+const lastRunFingerprint = ref("");
+const isDirty = computed(() => !!templateId.value && savedSnapshot() !== savedFingerprint.value);
+const isStale = computed(() => result.generated && !generating.value && querySnapshot() !== lastRunFingerprint.value);
+
+// ── Производные ────────────────────────────────────────────────────────
+const hasAggregatedColumn = computed(() => config.columns.some((c) => c.aggregation !== "none"));
+
+const sortOptions = computed(() => [...config.groupings.map((g) => g.label), ...config.columns.map((c) => c.label)]);
+
+const compatibility = computed(() => {
+  if (config.columns.length < 2) return "";
+  const w = checkColumnsCompatibility(config.columns, entityGroups.value);
+  return w ? "Поля из независимых разделов — строки могут дублироваться, суммы завышаться. Для подсчётов используйте «Уникальных»." : "";
+});
+
+const shownWarnings = computed(() => (isStale.value ? [] : result.warnings));
+const bannerVisible = computed(() => !!validationWarning.value || shownWarnings.value.length > 0 || isStale.value);
+
+const plural = (n: number, forms: [string, string, string]) => {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return forms[0];
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return forms[1];
+  return forms[2];
 };
 
-const onDragOver = (idx: number) => {
-  dragOverIdx.value = idx;
-};
+const summary = computed(() => {
+  const parts = [
+    `${config.columns.length} ${plural(config.columns.length, ["столбец", "столбца", "столбцов"])}`,
+  ];
+  if (config.groupings.length) parts.push(`${config.groupings.length} ${plural(config.groupings.length, ["уровень", "уровня", "уровней"])} группировки`);
+  const nf = activeFilterChips.value.length;
+  if (nf) parts.push(`${nf} ${plural(nf, ["фильтр", "фильтра", "фильтров"])}`);
+  return parts.join(" · ");
+});
 
-const onDragEnd = () => {
-  dragIdx.value = null;
-  dragOverIdx.value = null;
-};
+// ── Чипы фильтров ──────────────────────────────────────────────────────
+const nameList = (ids: string[] | undefined, list: any[], key: (x: any) => string) =>
+  (ids ?? []).map((id) => key(list.find((x: any) => String(x.id) === String(id))) || "?").join(", ");
 
-const onDrop = (targetIdx: number) => {
-  if (dragIdx.value === null || dragIdx.value === targetIdx) {
-    dragOverIdx.value = null;
-    return;
-  }
-  const cols = [...config.columns];
-  const [moved] = cols.splice(dragIdx.value, 1) as [ColumnConfig];
-  cols.splice(targetIdx, 0, moved);
-  config.columns = cols;
-  dragIdx.value = null;
-  dragOverIdx.value = null;
-};
+const fmtDate = (s: string) => s.split("-").reverse().join(".");
 
-// ── Плюрализация ───────────────────────────────────────────────────────
-const pluralFields = (n: number): string => {
-  if (n % 10 === 1 && n % 100 !== 11) return "поле";
-  if ([2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100))
-    return "поля";
-  return "полей";
-};
-
-// ── Chips активных фильтров ────────────────────────────────────────────
 const activeFilterChips = computed(() => {
-  const chips: { key: string; label: string }[] = [];
   const f = config.filters;
-  if (f.date_from)
-    chips.push({ key: "date_from", label: `От: ${f.date_from}` });
-  if (f.date_to) chips.push({ key: "date_to", label: `До: ${f.date_to}` });
-  if (f.course_ids?.length > 0) {
-    const names = f.course_ids
-      .map(
-        (id: string) =>
-          lookup.value.courses.find((c: any) => c.id === id)?.short_name || id,
-      )
-      .join(", ");
-    chips.push({ key: "course_ids", label: `Курсы: ${names}` });
+  const chips: { key: string; label: string }[] = [];
+  if (f.date_from || f.date_to) {
+    const field = DATE_FIELD_OPTIONS.find((o) => o.key === (f.date_field || "group.start_date"))?.label ?? "";
+    const range = [f.date_from ? `с ${fmtDate(f.date_from)}` : "", f.date_to ? `по ${fmtDate(f.date_to)}` : ""].filter(Boolean).join(" ");
+    chips.push({ key: "date", label: `${field}: ${range}` });
   }
-  if (f.org_ids?.length > 0) {
-    const names = f.org_ids
-      .map(
-        (id: string) =>
-          lookup.value.organizations.find((o: any) => o.id === id)
-            ?.short_name || id,
-      )
-      .join(", ");
-    chips.push({ key: "org_ids", label: `Орг.: ${names}` });
-  }
+  if (f.course_ids?.length) chips.push({ key: "course_ids", label: `Курсы: ${nameList(f.course_ids, lookup.value.courses, (c) => c?.short_name || c?.name)}` });
+  if (f.group_ids?.length) chips.push({ key: "group_ids", label: `Группы: ${nameList(f.group_ids, lookup.value.groups, (g) => g?.code)}` });
+  if (f.org_ids?.length) chips.push({ key: "org_ids", label: `Орг.: ${nameList(f.org_ids, lookup.value.organizations, (o) => o?.short_name || o?.name)}` });
+  if (f.instructor_ids?.length) chips.push({ key: "instructor_ids", label: `Инструкторы: ${nameList(f.instructor_ids, lookup.value.instructors, (i) => i?.full_name)}` });
+  (f.conditions ?? []).forEach((c, i) => {
+    const field = fieldMap.value.get(c.field_key)?.label ?? c.field_key;
+    const val = VALUELESS_OPS.includes(c.op) ? "" : ` ${c.value ?? ""}${c.op === "between" ? `–${c.value2 ?? ""}` : ""}`;
+    chips.push({ key: `cond:${i}`, label: `${field} ${OP_LABELS[c.op] ?? c.op}${val}` });
+  });
+  if (f.row_limit) chips.push({ key: "row_limit", label: `Первые ${f.row_limit}` });
   return chips;
 });
 
 const removeFilterChip = (key: string) => {
-  const f = { ...config.filters };
-  delete f[key];
+  const f: ReportFilters = { ...config.filters };
+  if (key === "date") {
+    delete f.date_from;
+    delete f.date_to;
+  } else if (key.startsWith("cond:")) {
+    const idx = Number(key.slice(5));
+    f.conditions = (f.conditions ?? []).filter((_, i) => i !== idx);
+    if (!f.conditions.length) delete f.conditions;
+  } else {
+    delete (f as any)[key];
+  }
   config.filters = f;
+  if (result.generated) generate(true);
 };
 
-// ── localStorage: автосохранение черновика ─────────────────────────────
+// ── Черновик в localStorage ────────────────────────────────────────────
 let draftTimer: ReturnType<typeof setTimeout> | null = null;
 let draftHintTimer: ReturnType<typeof setTimeout> | null = null;
 
 const saveDraft = () => {
-  if (!isMounted.value || templateId.value) return;
+  if (!mounted || templateId.value) return;
   try {
-    localStorage.setItem(
-      DRAFT_KEY,
-      JSON.stringify({
-        name: config.name,
-        description: config.description,
-        is_public: config.is_public,
-        primary_entity: config.primary_entity,
-        columns: config.columns,
-        groupings: config.groupings,
-        filters: config.filters,
-        sort_field: config.sort_field,
-        sort_direction: config.sort_direction,
-      }),
-    );
-    if (!isMounted.value) return;
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...config }));
     draftSavedHint.value = true;
     if (draftHintTimer) clearTimeout(draftHintTimer);
-    draftHintTimer = setTimeout(() => {
-      if (!isMounted.value) return;
-      draftSavedHint.value = false;
-    }, 2500);
+    draftHintTimer = setTimeout(() => (draftSavedHint.value = false), 2500);
   } catch {
     /* localStorage недоступен */
   }
@@ -1123,7 +658,7 @@ const loadDraft = () => {
     const raw = localStorage.getItem(DRAFT_KEY);
     if (!raw) return;
     const draft = JSON.parse(raw);
-    Object.assign(config, draft);
+    applyConfig({ ...defaultConfig(), ...draft });
   } catch {
     /* повреждённый черновик — игнорируем */
   }
@@ -1132,41 +667,49 @@ const loadDraft = () => {
 const clearDraft = () => {
   try {
     localStorage.removeItem(DRAFT_KEY);
-  } catch {}
-};
-
-const scheduleDraftSave = () => {
-  if (draftTimer) clearTimeout(draftTimer);
-  draftTimer = setTimeout(saveDraft, 1500);
+  } catch {
+    /* noop */
+  }
 };
 
 watch(
-  () => ({
-    name: config.name,
-    primary_entity: config.primary_entity,
-    columns: [...config.columns],
-    groupings: [...config.groupings],
-    filters: { ...config.filters },
-    is_public: config.is_public,
-    sort_field: config.sort_field,
-    sort_direction: config.sort_direction,
-  }),
-  scheduleDraftSave,
-  { deep: true },
+  () => savedSnapshot(),
+  () => {
+    if (draftTimer) clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 1200);
+  },
 );
 
-// ── Сброс всех настроек ────────────────────────────────────────────────
-const resetAll = () => {
-  const defaults = defaultConfig();
-  Object.assign(config, defaults);
-  result.generated = false;
-  result.rows = [];
-  result.column_labels = [];
-  result.total = 0;
-  result.total_row = null;
-  validationWarning.value = "";
-  clearDraft();
-  toast.success("Настройки сброшены");
+// ── Применение конфигурации (черновик / шаблон / пресет) ──────────────
+const knownField = (key?: string) => !!key && (fieldMap.value.size === 0 || fieldMap.value.has(key));
+
+const applyConfig = (src: any) => {
+  config.name = src.name || "Новый отчёт";
+  config.description = src.description || "";
+  config.is_public = !!src.is_public;
+  config.primary_entity = ROOT_KEYS.includes(src.primary_entity) ? src.primary_entity : "study_groups";
+  const dropped: string[] = [];
+  config.columns = (src.columns || [])
+    .filter((c: any) => (knownField(c.field_key) ? true : (dropped.push(c.field_key), false)))
+    .map((c: any) => ({
+      field_key: c.field_key,
+      label: c.label || fieldMap.value.get(c.field_key)?.label || c.field_key,
+      aggregation: c.aggregation || "none",
+      show_in_total: !!c.show_in_total,
+      total_aggregation: c.total_aggregation || "sum",
+      width: c.width || 150,
+      align: c.align || "left",
+    }));
+  config.groupings = (src.groupings || []).filter((g: any) => knownField(g.field_key || g.date_field_key));
+  config.filters = src.filters && typeof src.filters === "object" ? { ...src.filters } : {};
+  config.sort_field = src.sort_field || "";
+  config.sort_direction = src.sort_direction === "desc" ? "desc" : "asc";
+  if (dropped.length) toast.warning(`Поля больше не поддерживаются и убраны: ${dropped.join(", ")}`);
+};
+
+const applyPreset = (p: ReportPreset) => {
+  applyConfig(JSON.parse(JSON.stringify(p.config)));
+  generate(true);
 };
 
 // ── Инициализация ──────────────────────────────────────────────────────
@@ -1186,7 +729,7 @@ const fetchMeta = async () => {
     ]);
     entityGroups.value = fields.data;
     lookup.value = lookupData.data;
-  } catch (e: any) {
+  } catch {
     toast.error("Ошибка загрузки полей");
   } finally {
     metaLoading.value = false;
@@ -1197,218 +740,316 @@ const loadTemplate = async (id: string) => {
   try {
     const res = await apiFetch(`/api/reports/builder/templates/${id}`);
     const tpl = res.data;
+    // primary_entity хранится первым элементом data_sources
+    const root = (tpl.data_sources || []).find((s: string) => ROOT_KEYS.includes(s as RootEntity));
+    applyConfig({
+      ...tpl,
+      primary_entity: root || "study_groups",
+      groupings: tpl.row_grouping || [],
+    });
     templateId.value = id;
-    config.name = tpl.name;
-    config.description = tpl.description || "";
-    config.is_public = tpl.is_public;
-    config.primary_entity = tpl.primary_entity || "study_groups";
-    config.columns = tpl.columns || [];
-    config.groupings = tpl.row_grouping || [];
-    config.filters = tpl.filters || {};
-    config.sort_field = tpl.sort_field || "";
-    config.sort_direction = tpl.sort_direction || "asc";
+    savedFingerprint.value = savedSnapshot();
+    clearDraft();
   } catch {
     toast.error("Ошибка загрузки шаблона");
   }
 };
 
+const onGlobalKeydown = (e: KeyboardEvent) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    generateAndClose();
+  } else if (e.key === "Escape" && drawerOpen.value) {
+    drawerOpen.value = false;
+  }
+};
+
+const onDocMousedown = (e: MouseEvent) => {
+  if (saveMenuRef.value && !saveMenuRef.value.contains(e.target as Node)) saveMenuOpen.value = false;
+};
+
 onMounted(async () => {
-  isMounted.value = true;
+  window.addEventListener("keydown", onGlobalKeydown);
+  document.addEventListener("mousedown", onDocMousedown);
   await fetchMeta();
   if (route.query.template) {
-    await loadTemplate(route.query.template as string);
+    await loadTemplate(String(route.query.template));
   } else {
     loadDraft();
   }
+  mounted = true;
 });
 
 onUnmounted(() => {
-  isMounted.value = false;
+  mounted = false;
+  window.removeEventListener("keydown", onGlobalKeydown);
+  document.removeEventListener("mousedown", onDocMousedown);
   if (draftTimer) clearTimeout(draftTimer);
   if (draftHintTimer) clearTimeout(draftHintTimer);
 });
 
-// ── Работа с полями ────────────────────────────────────────────────────
-const toggleField = (
-  fieldKey: string,
-  label: string,
-  defaultAggregation: string,
-) => {
-  const idx = config.columns.findIndex((c) => c.field_key === fieldKey);
-  if (idx !== -1) {
-    config.columns.splice(idx, 1);
-  } else {
-    config.columns.push({
-      field_key: fieldKey,
-      label,
-      aggregation: defaultAggregation,
-      show_in_total: false,
-      total_aggregation: "sum",
-      width: 150,
-      align: "left",
-    });
+watch(drawerOpen, async (open) => {
+  if (open) {
+    await nextTick();
+    fieldPicker.value?.focus();
   }
+});
+
+// ── Поля / столбцы ─────────────────────────────────────────────────────
+const toggleField = (field: FieldMeta) => {
+  const idx = config.columns.findIndex((c) => c.field_key === field.key);
+  if (idx !== -1) {
+    removeColumn(field.key);
+    return;
+  }
+  config.columns.push({
+    field_key: field.key,
+    label: field.label,
+    aggregation: field.defaultAggregation,
+    show_in_total: false,
+    total_aggregation: "sum",
+    width: 150,
+    align: "left",
+  });
+  validationWarning.value = "";
 };
 
-const updateColumn = (fieldKey: string, updates: Partial<ColumnConfig>) => {
-  const col = config.columns.find((c) => c.field_key === fieldKey);
-  if (col) Object.assign(col, updates);
+const removeColumn = (key: string) => {
+  const col = config.columns.find((c) => c.field_key === key);
+  config.columns = config.columns.filter((c) => c.field_key !== key);
+  if (col && config.sort_field === col.label) config.sort_field = "";
 };
 
-// ── Группировка ────────────────────────────────────────────────────────
-const addGrouping = (item: GroupingItem) => {
-  config.groupings.push(item);
+const moveItem = <T,>(list: T[], from: number, to: number) => {
+  if (to < 0 || to >= list.length || from === to) return;
+  const [moved] = list.splice(from, 1);
+  list.splice(to, 0, moved as T);
 };
 
-const removeGrouping = (index: number) => {
-  config.groupings.splice(index, 1);
-};
-
-// ── Проверка совместимости ──────────────────────────────────────────────
-const compatibilityWarning = computed(() => {
-  if (config.columns.length < 2) return null;
-  return checkColumnsCompatibility(config.columns, entityGroups.value);
+// Переименование столбца/уровня не должно «терять» сортировку
+watch(sortOptions, (labels, prev) => {
+  if (!config.sort_field || labels.includes(config.sort_field)) return;
+  const oldIdx = prev?.indexOf(config.sort_field) ?? -1;
+  config.sort_field = oldIdx >= 0 && labels[oldIdx] ? labels[oldIdx]! : "";
 });
 
 // ── Валидация ──────────────────────────────────────────────────────────
 const validateBeforeGenerate = (): boolean => {
   if (config.columns.length === 0 && config.groupings.length === 0) {
-    validationWarning.value =
-      "Выберите хотя бы одно поле данных или добавьте группировку строк.";
+    validationWarning.value = "Выберите хотя бы одно поле данных или добавьте группировку строк.";
+    return false;
+  }
+  const bad = (config.filters.conditions ?? []).find(
+    (c) =>
+      !VALUELESS_OPS.includes(c.op) &&
+      (c.value === undefined || c.value === null || c.value === "" || (c.op === "between" && (c.value2 === undefined || c.value2 === ""))),
+  );
+  if (bad) {
+    validationWarning.value = `Заполните значение условия «${fieldMap.value.get(bad.field_key)?.label ?? bad.field_key}» или удалите его.`;
+    return false;
+  }
+  const { date_from, date_to } = config.filters;
+  if (date_from && date_to && date_from > date_to) {
+    validationWarning.value = "Дата начала периода позже даты окончания.";
     return false;
   }
   validationWarning.value = "";
   return true;
 };
 
-// ── Формирование отчёта ────────────────────────────────────────────────
-const generate = async () => {
-  if (!validateBeforeGenerate()) return;
+const requestBody = () => ({
+  name: config.name,
+  columns: config.columns,
+  groupings: config.groupings,
+  filters: config.filters,
+  primary_entity: config.primary_entity,
+  sort_field: config.sort_field || undefined,
+  sort_direction: config.sort_direction,
+});
+
+// ── Формирование ───────────────────────────────────────────────────────
+let requestSeq = 0;
+
+const generate = async (resetPage = false) => {
+  if (!validateBeforeGenerate()) {
+    drawerOpen.value = true;
+    return;
+  }
+  if (resetPage) pagination.page = 1;
+  const seq = ++requestSeq;
+  const snapshot = querySnapshot();
   generating.value = true;
   try {
     const res = await apiFetch("/api/reports/builder/preview", {
       method: "POST",
-      body: {
-        columns: config.columns,
-        groupings: config.groupings,
-        filters: config.filters,
-        primary_entity: config.primary_entity,
-        sort_field: config.sort_field || undefined,
-        sort_direction: config.sort_direction,
-        limit: pagination.limit,
-        offset: (pagination.page - 1) * pagination.limit,
-      },
+      body: { ...requestBody(), limit: pagination.limit, offset: (pagination.page - 1) * pagination.limit },
     });
-    result.rows = res.data.rows;
-    result.column_labels = res.data.column_labels;
-    result.total = res.data.total;
-    result.total_row = res.data.total_row || null;
+    if (seq !== requestSeq) return; // пришёл ответ на устаревший запрос
+    const d = res.data;
+    result.rows = d.rows;
+    result.column_labels = d.column_labels;
+    result.numeric_columns = d.numeric_columns || [];
+    result.total = d.total;
+    result.total_row = d.total_row || null;
+    result.warnings = d.warnings || [];
+    result.duration_ms = d.duration_ms ?? null;
     result.generated = true;
+    lastRunFingerprint.value = snapshot;
+    // Страница «уехала» за конец (например, после смены фильтров)
+    if (d.rows.length === 0 && d.total > 0 && pagination.page > 1) {
+      pagination.page = Math.ceil(d.total / pagination.limit);
+      await generate(false);
+    }
   } catch (e: any) {
-    toast.error(e.data?.statusMessage || "Ошибка формирования отчёта");
+    if (seq !== requestSeq) return;
+    const msg = e?.data?.statusMessage || e?.statusMessage || "Ошибка формирования отчёта";
+    validationWarning.value = msg;
+    toast.error(msg);
   } finally {
-    generating.value = false;
+    if (seq === requestSeq) generating.value = false;
   }
 };
 
-// Сформировать + закрыть drawer
 const generateAndClose = async () => {
-  await generate();
-  if (result.generated) {
-    drawerOpen.value = false;
-  }
+  await generate(true);
+  if (result.generated && !validationWarning.value) drawerOpen.value = false;
 };
 
 const handlePageChange = (page: number) => {
   pagination.page = page;
-  generate();
+  generate(false);
+};
+
+const handleLimitChange = (limit: number) => {
+  pagination.limit = limit;
+  generate(true);
+};
+
+const setSort = (field: string, direction: "asc" | "desc") => {
+  config.sort_field = field;
+  config.sort_direction = field ? direction : "asc";
+};
+
+const handleSort = (field: string, direction: "asc" | "desc" = "asc") => {
+  setSort(field, direction);
+  generate(true);
 };
 
 // ── Экспорт Excel ──────────────────────────────────────────────────────
+const readBlobError = async (e: any): Promise<string> => {
+  try {
+    if (e?.data instanceof Blob) {
+      const j = JSON.parse(await e.data.text());
+      return j.statusMessage || j.message || "";
+    }
+    return e?.data?.statusMessage || "";
+  } catch {
+    return "";
+  }
+};
+
+const safeName = (s: string) => s.replace(/[\\/:*?"<>|]+/g, "_").trim() || "report";
+
 const exportExcel = async () => {
+  if (!validateBeforeGenerate()) return;
   exporting.value = true;
   try {
     const blob = (await apiFetch("/api/reports/builder/export/excel", {
       method: "POST",
-      body: {
-        columns: config.columns,
-        groupings: config.groupings,
-        filters: config.filters,
-        primary_entity: config.primary_entity,
-        sort_field: config.sort_field || undefined,
-        sort_direction: config.sort_direction,
-      },
+      body: requestBody(),
       responseType: "blob",
     })) as Blob;
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${config.name}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.download = `${safeName(config.name)}_${new Date().toISOString().slice(0, 10)}.xlsx`;
     a.click();
-    window.URL.revokeObjectURL(url);
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
     toast.success("Excel-файл скачан");
-  } catch {
-    toast.error("Ошибка экспорта Excel");
+  } catch (e: any) {
+    toast.error((await readBlobError(e)) || "Ошибка экспорта Excel");
   } finally {
     exporting.value = false;
   }
 };
 
 // ── Сохранение шаблона ─────────────────────────────────────────────────
-const saveTemplate = async () => {
+const saveTemplate = async (asNew: boolean) => {
+  saveMenuOpen.value = false;
   if (!config.name.trim()) {
     toast.error("Введите название отчёта");
     startEditTitle();
     return;
   }
   if (config.columns.length === 0) {
-    validationWarning.value =
-      "Необходимо выбрать хотя бы один столбец перед сохранением шаблона.";
+    validationWarning.value = "Выберите хотя бы один столбец перед сохранением шаблона.";
     toast.error("Выберите хотя бы один столбец");
     return;
   }
   saving.value = true;
+  const body = {
+    name: asNew && templateId.value ? `${config.name.trim()} (копия)` : config.name.trim(),
+    description: config.description,
+    primary_entity: config.primary_entity,
+    // Первый элемент — базовая сущность (по нему она восстанавливается при загрузке)
+    data_sources: [...new Set([config.primary_entity, ...config.columns.map((c) => c.field_key.split(".")[0]!)])],
+    row_grouping: config.groupings,
+    filters: config.filters,
+    sort_field: config.sort_field || null,
+    sort_direction: config.sort_direction,
+    is_public: config.is_public,
+    columns: config.columns,
+  };
+  const create = async () => {
+    const res = await apiFetch("/api/reports/builder/templates", { method: "POST", body });
+    templateId.value = res.data.id;
+    config.name = body.name;
+    clearDraft();
+    router.replace({ query: { ...route.query, template: res.data.id } });
+  };
   try {
-    const body = {
-      name: config.name.trim(),
-      description: config.description,
-      primary_entity: config.primary_entity,
-      data_sources: [
-        ...new Set(
-          [
-            config.primary_entity,
-            ...config.columns.flatMap((c) =>
-              c.field_key.split(".").slice(0, 1),
-            ),
-          ].filter(Boolean),
-        ),
-      ],
-      row_grouping: config.groupings,
-      filters: config.filters,
-      sort_field: config.sort_field || null,
-      sort_direction: config.sort_direction,
-      is_public: config.is_public,
-      columns: config.columns,
-    };
-    if (templateId.value) {
-      await apiFetch(`/api/reports/builder/templates/${templateId.value}`, {
-        method: "PUT",
-        body,
-      });
-      toast.success("Шаблон обновлён");
+    if (templateId.value && !asNew) {
+      try {
+        await apiFetch(`/api/reports/builder/templates/${templateId.value}`, { method: "PUT", body });
+        toast.success("Шаблон обновлён");
+      } catch (e: any) {
+        if (e?.statusCode !== 403 && e?.response?.status !== 403) throw e;
+        // Чужой публичный шаблон — сохраняем свою копию
+        body.name = `${config.name.trim()} (копия)`;
+        await create();
+        toast.info("Это чужой шаблон — сохранена ваша копия");
+      }
     } else {
-      const res = await apiFetch("/api/reports/builder/templates", {
-        method: "POST",
-        body,
-      });
-      templateId.value = res.data.id;
-      clearDraft();
-      toast.success("Шаблон сохранён");
+      await create();
+      toast.success(asNew ? "Сохранено как новый отчёт" : "Шаблон сохранён");
     }
+    savedFingerprint.value = savedSnapshot();
   } catch (e: any) {
-    toast.error(e.data?.statusMessage || "Ошибка сохранения");
+    toast.error(e?.data?.statusMessage || "Ошибка сохранения");
   } finally {
     saving.value = false;
   }
+};
+
+const resetAll = () => {
+  saveMenuOpen.value = false;
+  applyConfig(defaultConfig());
+  templateId.value = null;
+  savedFingerprint.value = "";
+  Object.assign(result, {
+    generated: false,
+    rows: [],
+    column_labels: [],
+    numeric_columns: [],
+    total: 0,
+    total_row: null,
+    warnings: [],
+    duration_ms: null,
+  });
+  validationWarning.value = "";
+  pagination.page = 1;
+  clearDraft();
+  if (route.query.template) router.replace({ query: {} });
+  toast.success("Настройки сброшены");
 };
 </script>

@@ -1,391 +1,286 @@
 <template>
-  <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
-    <!-- Тулбар над таблицей -->
-    <div
-      class="flex items-center justify-between px-5 py-3 bg-white dark:bg-boxdark border-b border-stroke dark:border-strokedark shrink-0"
-    >
-      <div class="flex items-center gap-3">
-        <span class="text-sm font-medium text-gray-700 dark:text-gray-300"
-          >Результат</span
-        >
-        <span
-          class="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full"
-        >
-          {{ total }} строк
+  <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <!-- Тулбар -->
+    <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-stroke bg-white px-5 py-2.5 dark:border-strokedark dark:bg-boxdark">
+      <div class="flex items-center gap-2 text-sm">
+        <span class="font-medium text-gray-700 dark:text-gray-300">Результат</span>
+        <span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs tabular-nums text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+          {{ total.toLocaleString("ru-RU") }} {{ plural(total, "строка", "строки", "строк") }}
         </span>
-        <span
-          v-if="total > rows.length"
-          class="text-xs text-amber-600 dark:text-amber-400"
-        >
-          Показано {{ rows.length }} из {{ total }}
-        </span>
+        <span v-if="durationMs !== null" class="text-[11px] tabular-nums text-gray-400">{{ durationMs }} мс</span>
       </div>
 
-      <!-- Сортировка-инфо -->
-      <div
-        v-if="localSort.col"
-        class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400"
+      <span
+        v-if="sortField"
+        class="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary"
       >
-        <svg
-          class="w-3.5 h-3.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
-          />
-        </svg>
-        <span class="truncate max-w-[140px]">{{ localSort.col }}</span>
-        <span class="font-medium">{{
-          localSort.dir === "asc" ? "↑" : "↓"
-        }}</span>
-        <button
-          class="ml-1 text-gray-400 hover:text-red-500 transition-colors"
-          title="Сбросить сортировку"
-          @click="clearSort"
-        >
-          <svg
-            class="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+        <ArrowUpNarrowWide v-if="sortDirection === 'asc'" class="h-3 w-3" />
+        <ArrowDownWideNarrow v-else class="h-3 w-3" />
+        <span class="max-w-[160px] truncate">{{ sortField }}</span>
+        <button type="button" class="hover:text-red-500" aria-label="Сбросить сортировку" @click="$emit('sort', '')">
+          <X class="h-3 w-3" />
         </button>
-      </div>
-    </div>
+      </span>
 
-    <!-- Загрузка -->
-    <div v-if="loading" class="flex-1 flex items-center justify-center">
-      <div
-        class="inline-block h-8 w-8 animate-spin rounded-full border-3 border-solid border-primary border-r-transparent"
-      />
-    </div>
+      <div class="flex-1" />
 
-    <!-- Пустой результат -->
-    <div
-      v-else-if="rows.length === 0"
-      class="flex-1 flex flex-col items-center justify-center text-center p-10"
-    >
-      <svg
-        class="w-10 h-10 text-gray-300 dark:text-gray-600 mb-3"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.5"
-          d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      <div class="relative">
+        <Search class="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+        <input
+          v-model="search"
+          type="search"
+          placeholder="Найти на странице…"
+          aria-label="Поиск по строкам текущей страницы"
+          class="w-48 rounded-lg border border-gray-200 bg-gray-50 py-1 pl-7 pr-2 text-xs outline-none focus:border-primary focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
         />
-      </svg>
-      <p class="text-gray-500 dark:text-gray-400 text-sm">
-        Нет данных по выбранным критериям
-      </p>
-      <p class="text-xs text-gray-400 mt-1">
-        Попробуйте изменить фильтры или добавить поля
-      </p>
+      </div>
+      <button
+        type="button"
+        class="flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:border-primary hover:text-primary dark:border-gray-700 dark:text-gray-300"
+        title="Скопировать страницу как таблицу (вставляется в Excel)"
+        :disabled="rows.length === 0"
+        @click="copy"
+      >
+        <ClipboardCopy class="h-3.5 w-3.5" />
+        {{ copied ? "Скопировано" : "Копировать" }}
+      </button>
+    </div>
+
+    <!-- Пусто -->
+    <div v-if="!loading && rows.length === 0" class="flex flex-1 flex-col items-center justify-center p-10 text-center">
+      <SearchX class="mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" />
+      <p class="text-sm text-gray-500 dark:text-gray-400">Нет данных по выбранным критериям</p>
+      <p class="mt-1 text-xs text-gray-400">Ослабьте фильтры или условия, расширьте период</p>
     </div>
 
     <!-- Таблица -->
-    <div v-else class="flex-1 overflow-auto">
-      <table class="w-full text-sm border-collapse">
+    <div v-else class="relative flex-1 overflow-auto">
+      <div v-if="loading" class="absolute inset-0 z-20 flex items-start justify-center bg-white/60 pt-24 dark:bg-boxdark/60">
+        <Loader2 class="h-7 w-7 animate-spin text-primary" />
+      </div>
+      <table class="w-full border-collapse text-sm">
         <thead class="sticky top-0 z-10">
           <tr class="bg-gray-50 dark:bg-gray-800">
+            <th class="w-10 border-b border-stroke px-2 py-2.5 text-right text-[11px] font-medium text-gray-400 dark:border-strokedark">#</th>
             <th
               v-for="col in columns"
               :key="col"
-              class="relative px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-400 border-b border-stroke dark:border-strokedark whitespace-nowrap cursor-pointer select-none group transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/60 max-w-[300px]"
-              :style="colWidths[col] ? { width: colWidths[col] + 'px', minWidth: colWidths[col] + 'px', maxWidth: colWidths[col] + 'px' } : {}"
+              scope="col"
+              class="group relative max-w-[320px] cursor-pointer select-none whitespace-nowrap border-b border-stroke px-4 py-2.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-100 dark:border-strokedark dark:text-gray-300 dark:hover:bg-gray-700/60"
+              :class="isNumeric(col) ? 'text-right' : 'text-left'"
+              :style="widthStyle(col)"
+              :aria-sort="sortField === col ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'"
+              :title="'Сортировать по «' + col + '» (по всему отчёту)'"
               @click="toggleSort(col)"
             >
-              <div class="flex items-center gap-1.5 overflow-hidden">
-                <span class="uppercase tracking-wide truncate">{{ col }}</span>
-                <!-- Иконки сортировки -->
-                <span
-                  class="flex flex-col shrink-0 opacity-40 group-hover:opacity-100 transition-opacity"
-                  :class="localSort.col === col ? 'opacity-100' : ''"
-                >
-                  <svg
-                    class="w-2.5 h-2.5 -mb-0.5 transition-colors"
-                    :class="
-                      localSort.col === col && localSort.dir === 'asc'
-                        ? 'text-primary'
-                        : 'text-gray-400 dark:text-gray-600'
-                    "
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 4l8 8H4z" />
-                  </svg>
-                  <svg
-                    class="w-2.5 h-2.5 transition-colors"
-                    :class="
-                      localSort.col === col && localSort.dir === 'desc'
-                        ? 'text-primary'
-                        : 'text-gray-400 dark:text-gray-600'
-                    "
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M12 20l-8-8h16z" />
-                  </svg>
-                </span>
-              </div>
-              <!-- Resizer handle -->
-              <div 
-                class="absolute right-0 top-0 w-2 h-full cursor-col-resize hover:bg-primary/50 transition-colors z-20"
+              <span class="inline-flex max-w-full items-center gap-1" :class="isNumeric(col) ? 'flex-row-reverse' : ''">
+                <span class="truncate">{{ col }}</span>
+                <ArrowUp v-if="sortField === col && sortDirection === 'asc'" class="h-3 w-3 shrink-0 text-primary" />
+                <ArrowDown v-else-if="sortField === col" class="h-3 w-3 shrink-0 text-primary" />
+                <ArrowUpDown v-else class="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-40" />
+              </span>
+              <span
+                class="absolute right-0 top-0 z-20 h-full w-1.5 cursor-col-resize hover:bg-primary/50"
                 @click.stop
                 @mousedown.prevent="startResize(col, $event)"
-              ></div>
+              />
             </th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
           <tr
-            v-for="(row, rowIdx) in sortedRows"
-            :key="rowIdx"
-            class="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-colors"
+            v-for="item in visibleRows"
+            :key="item.idx"
+            class="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40"
           >
+            <td class="px-2 py-2 text-right text-[11px] tabular-nums text-gray-400">{{ (page - 1) * limit + item.idx + 1 }}</td>
             <td
               v-for="col in columns"
               :key="col"
-              class="px-4 py-2.5 text-gray-700 dark:text-gray-300 whitespace-nowrap text-sm truncate max-w-[300px]"
-              :style="colWidths[col] ? { width: colWidths[col] + 'px', minWidth: colWidths[col] + 'px', maxWidth: colWidths[col] + 'px' } : {}"
-              :title="formatValue(row[col])"
+              class="max-w-[320px] truncate whitespace-nowrap px-4 py-2 text-gray-700 dark:text-gray-300"
+              :class="isNumeric(col) ? 'text-right tabular-nums' : ''"
+              :style="widthStyle(col)"
+              :title="formatValue(item.row[col], col)"
             >
-              {{ formatValue(row[col]) }}
+              <template v-if="search">
+                <template v-for="(p, i) in highlightParts(formatValue(item.row[col], col), search)" :key="i">
+                  <mark v-if="p.hit" class="rounded bg-amber-200/70 text-inherit dark:bg-amber-500/30">{{ p.text }}</mark>
+                  <template v-else>{{ p.text }}</template>
+                </template>
+              </template>
+              <template v-else>{{ formatValue(item.row[col], col) }}</template>
+            </td>
+          </tr>
+          <tr v-if="search && visibleRows.length === 0">
+            <td :colspan="columns.length + 1" class="px-4 py-6 text-center text-xs text-gray-400">
+              На этой странице нет совпадений с «{{ search }}»
             </td>
           </tr>
         </tbody>
-
-        <!-- СТРОКА TOTAL -->
         <tfoot v-if="totalRow" class="sticky bottom-0 z-10">
           <tr class="total-row">
+            <td class="border-t-2 border-primary/40 px-2 py-2.5" />
             <td
-              v-for="col in columns"
+              v-for="(col, i) in columns"
               :key="col"
-              class="px-4 py-3 text-sm font-bold whitespace-nowrap border-t-2 border-primary/40 truncate max-w-[300px]"
-              :style="colWidths[col] ? { width: colWidths[col] + 'px', minWidth: colWidths[col] + 'px', maxWidth: colWidths[col] + 'px' } : {}"
-              :title="totalRow[col] !== undefined && totalRow[col] !== null && col !== columns[0] ? formatValue(totalRow[col]) : ''"
+              class="max-w-[320px] truncate whitespace-nowrap border-t-2 border-primary/40 px-4 py-2.5 text-sm font-bold"
+              :class="isNumeric(col) ? 'text-right tabular-nums' : ''"
+              :style="widthStyle(col)"
             >
-              <template v-if="col === columns[0]">
-                <span class="flex items-center gap-2 text-primary">
-                  <svg
-                    class="w-3.5 h-3.5 shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2.5"
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                    />
-                  </svg>
-                  ИТОГО
-                </span>
-              </template>
-              <template
-                v-else-if="
-                  totalRow[col] !== undefined && totalRow[col] !== null
-                "
-              >
-                <span class="text-primary">{{
-                  formatValue(totalRow[col])
-                }}</span>
-              </template>
-              <template v-else>
-                <span class="text-gray-300 dark:text-gray-600 font-normal"
-                  >—</span
-                >
-              </template>
+              <span v-if="totalRow[col] !== undefined && totalRow[col] !== null" class="text-primary">{{ formatValue(totalRow[col], col) }}</span>
+              <span v-else-if="i === 0" class="flex items-center gap-1.5 text-primary">
+                <Sigma class="h-3.5 w-3.5" /> ИТОГО
+              </span>
             </td>
           </tr>
         </tfoot>
       </table>
     </div>
 
-    <!-- Пагинация -->
-    <div
-      v-if="total > limit"
-      class="shrink-0 border-t border-stroke dark:border-strokedark bg-white dark:bg-boxdark"
-    >
+    <div v-if="total > 0" class="shrink-0 border-t border-stroke bg-white dark:border-strokedark dark:bg-boxdark">
       <UiPagination
         :current-page="page"
-        :total-pages="Math.ceil(total / limit)"
+        :total-pages="Math.max(1, Math.ceil(total / limit))"
         :total="total"
         :limit="limit"
+        :limit-options="[25, 50, 100, 200]"
         @update:page="$emit('page-change', $event)"
+        @update:limit="$emit('limit-change', $event)"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { computed, ref } from "vue";
+import {
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  ArrowUpNarrowWide,
+  ArrowDownWideNarrow,
+  ClipboardCopy,
+  Loader2,
+  Search,
+  SearchX,
+  Sigma,
+  X,
+} from "lucide-vue-next";
+import { buildMatcher, highlightParts, toTsv } from "~/utils/reportBuilder";
 
 const props = defineProps<{
-  rows: any[];
+  rows: Record<string, unknown>[];
   columns: string[];
+  numericColumns: string[];
   total: number;
   loading: boolean;
   page: number;
   limit: number;
-  totalRow?: Record<string, any> | null;
+  totalRow?: Record<string, unknown> | null;
+  sortField: string;
+  sortDirection: "asc" | "desc";
+  durationMs: number | null;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   (e: "page-change", page: number): void;
+  (e: "limit-change", limit: number): void;
+  (e: "sort", field: string, direction?: "asc" | "desc"): void;
 }>();
 
-// ── Ресайз столбцов ───────────────────────────────────────────────────
-const colWidths = ref<Record<string, number>>({});
+const numericSet = computed(() => new Set(props.numericColumns));
+const isNumeric = (col: string) => numericSet.value.has(col);
 
-const startResize = (col: string, event: MouseEvent) => {
-  event.stopPropagation();
-  const startX = event.clientX;
-  const target = event.target as HTMLElement;
-  const th = target.closest('th');
-  const startWidth = colWidths.value[col] || th?.offsetWidth || 200;
-  
-  const onMouseMove = (e: MouseEvent) => {
-    colWidths.value[col] = Math.max(80, startWidth + (e.clientX - startX));
-  };
-  
-  const onMouseUp = () => {
-    window.removeEventListener('mousemove', onMouseMove);
-    window.removeEventListener('mouseup', onMouseUp);
-  };
-  
-  window.addEventListener('mousemove', onMouseMove);
-  window.addEventListener('mouseup', onMouseUp);
+const plural = (n: number, one: string, few: string, many: string) => {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
 };
 
-// ── Локальная сортировка (клиент-сайд по текущей странице) ─────────────
-const localSort = ref<{ col: string | null; dir: "asc" | "desc" }>({
-  col: null,
-  dir: "asc",
-});
-
+// ── Сортировка на сервере: по возрастанию → по убыванию → сброс ────────
 const toggleSort = (col: string) => {
-  if (localSort.value.col === col) {
-    if (localSort.value.dir === "asc") {
-      localSort.value.dir = "desc";
-    } else {
-      // третий клик — сброс
-      localSort.value.col = null;
-      localSort.value.dir = "asc";
-    }
-  } else {
-    localSort.value.col = col;
-    localSort.value.dir = "asc";
-  }
+  if (props.sortField !== col) emit("sort", col, "asc");
+  else if (props.sortDirection === "asc") emit("sort", col, "desc");
+  else emit("sort", "");
 };
 
-const clearSort = () => {
-  localSort.value.col = null;
-  localSort.value.dir = "asc";
-};
-
-const sortedRows = computed(() => {
-  const { col, dir } = localSort.value;
-  if (!col) return props.rows;
-
-  return [...props.rows].sort((a, b) => {
-    const av = a[col];
-    const bv = b[col];
-
-    // null/undefined — в конец
-    if (av === null || av === undefined) return 1;
-    if (bv === null || bv === undefined) return -1;
-
-    // числа
-    if (typeof av === "number" && typeof bv === "number") {
-      return dir === "asc" ? av - bv : bv - av;
-    }
-
-    // даты
-    const da = new Date(av);
-    const db = new Date(bv);
-    if (!isNaN(da.getTime()) && !isNaN(db.getTime())) {
-      return dir === "asc"
-        ? da.getTime() - db.getTime()
-        : db.getTime() - da.getTime();
-    }
-
-    // строки
-    const sa = String(av).toLowerCase();
-    const sb = String(bv).toLowerCase();
-    if (sa < sb) return dir === "asc" ? -1 : 1;
-    if (sa > sb) return dir === "asc" ? 1 : -1;
-    return 0;
-  });
+// ── Поиск по текущей странице ─────────────────────────────────────────
+const search = ref("");
+const visibleRows = computed(() => {
+  const all = props.rows.map((row, idx) => ({ row, idx }));
+  const match = buildMatcher(search.value);
+  if (!match) return all;
+  return all.filter(({ row }) => match(props.columns.map((c) => formatValue(row[c], c)).join(" ")));
 });
 
-// ── Форматирование значений ────────────────────────────────────────────
-const formatValue = (value: any): string => {
-  if (value === null || value === undefined) return "—";
+// ── Форматирование ────────────────────────────────────────────────────
+const DATE_RE = /^\d{4}-\d{2}-\d{2}(T|\s|$)/;
+const formatValue = (value: unknown, col?: string): string => {
+  if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? "Да" : "Нет";
   if (typeof value === "number") {
-    if (Number.isInteger(value)) return value.toLocaleString("ru-RU");
+    // Год из шкалы «По годам» не форматируем с пробелом
+    if (col && /год/i.test(col) && Number.isInteger(value) && value > 1900 && value < 2200) return String(value);
     return value.toLocaleString("ru-RU", { maximumFractionDigits: 2 });
   }
-  if (
-    value instanceof Date ||
-    (typeof value === "string" && value.match(/^\d{4}-\d{2}-\d{2}/))
-  ) {
+  if (typeof value === "string" && DATE_RE.test(value)) {
     const d = new Date(value);
     if (!isNaN(d.getTime())) {
-      return d.toLocaleDateString("ru-RU");
+      // DATE из MySQL приходит как локальная полночь в ISO (…T19:00:00Z для UTC+5),
+      // поэтому время определяем по локальным часам, а не по строке
+      const hasTime = /[T\s]\d{2}:\d{2}/.test(value) && (d.getHours() !== 0 || d.getMinutes() !== 0);
+      return hasTime
+        ? d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+        : d.toLocaleDateString("ru-RU");
     }
   }
   return String(value);
+};
+
+// ── Копирование ───────────────────────────────────────────────────────
+const copied = ref(false);
+const copy = async () => {
+  const rows = visibleRows.value.map(({ row }) =>
+    Object.fromEntries(props.columns.map((c) => [c, isNumeric(c) ? row[c] : formatValue(row[c], c)])),
+  );
+  try {
+    await navigator.clipboard.writeText(toTsv(props.columns, rows));
+    copied.value = true;
+    setTimeout(() => (copied.value = false), 1500);
+  } catch {
+    /* буфер обмена недоступен */
+  }
+};
+
+// ── Ресайз столбцов ───────────────────────────────────────────────────
+const colWidths = ref<Record<string, number>>({});
+const widthStyle = (col: string) => {
+  const w = colWidths.value[col];
+  return w ? { width: `${w}px`, minWidth: `${w}px`, maxWidth: `${w}px` } : undefined;
+};
+const startResize = (col: string, event: MouseEvent) => {
+  const startX = event.clientX;
+  const th = (event.target as HTMLElement).closest("th");
+  const startWidth = colWidths.value[col] || th?.offsetWidth || 160;
+  const onMove = (e: MouseEvent) => {
+    colWidths.value = { ...colWidths.value, [col]: Math.max(70, startWidth + (e.clientX - startX)) };
+  };
+  const onUp = () => {
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("mouseup", onUp);
+  };
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
 };
 </script>
 
 <style scoped>
 .total-row {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--color-primary, #3c50e0) 8%, transparent),
-    color-mix(in srgb, var(--color-primary, #3c50e0) 4%, transparent)
-  );
+  background: color-mix(in srgb, var(--color-primary, #3c50e0) 8%, white);
 }
-
-:root.dark .total-row {
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--color-primary, #3c50e0) 15%, transparent),
-    color-mix(in srgb, var(--color-primary, #3c50e0) 8%, transparent)
-  );
-}
-
-/* Thin scrollbar для таблицы */
-.overflow-auto::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-.overflow-auto::-webkit-scrollbar-track {
-  background: transparent;
-}
-.overflow-auto::-webkit-scrollbar-thumb {
-  background: rgb(203 213 225 / 0.6);
-  border-radius: 4px;
-}
-:root.dark .overflow-auto::-webkit-scrollbar-thumb {
-  background: rgb(55 65 81 / 0.8);
+:global(.dark) .total-row {
+  background: color-mix(in srgb, var(--color-primary, #3c50e0) 18%, #1a222c);
 }
 </style>

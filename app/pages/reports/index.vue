@@ -169,9 +169,12 @@ const quickExport = async (templateId: string) => {
     const blob = await $fetch<Blob>("/api/reports/builder/export/excel", {
       method: "POST",
       body: {
+        name: tpl.data.name,
         columns: tpl.data.columns,
         groupings: tpl.data.row_grouping,
         filters: tpl.data.filters,
+        // базовая сущность хранится первым элементом data_sources
+        primary_entity: (tpl.data.data_sources || [])[0],
         sort_field: tpl.data.sort_field,
         sort_direction: tpl.data.sort_direction,
       },
@@ -181,7 +184,7 @@ const quickExport = async (templateId: string) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${tpl.data.name}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.download = `${String(tpl.data.name).replace(/[\\/:*?"<>|]+/g, "_")}_${new Date().toISOString().slice(0, 10)}.xlsx`;
     a.click();
     window.URL.revokeObjectURL(url);
     toast.success("Excel-файл скачан");

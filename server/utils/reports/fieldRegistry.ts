@@ -754,8 +754,9 @@ export const ENTITY_GROUPS: EntityGroup[] = [
         type: "boolean",
         sqlExpression: "ts.passed",
         requiredJoins: ["test_sessions"],
-        allowedAggregations: ["count"],
-        defaultAggregation: "count",
+        // SUM — число сдавших (passed = 1), AVG — доля сдавших, COUNT — число попыток с результатом
+        allowedAggregations: ["none", "sum", "avg", "count"],
+        defaultAggregation: "sum",
       },
       {
         key: "grade.grade",
@@ -902,25 +903,36 @@ export function buildAggregatedExpression(
 }
 
 /**
- * Генерирует SQL-выражение для временной шкалы
+ * Генерирует SQL-выражение для временной шкалы.
+ * Форматы сортируются лексикографически = хронологически
+ * (2026-03, 2026-Q1, 2026-W07, 2026-03-15). Если передан alias — добавляет `AS`.
  */
 export function buildTimeScaleExpression(
   dateFieldSql: string,
   scale: TimeScale,
-  alias: string,
+  alias?: string,
 ): string {
+  let expr: string;
   switch (scale) {
     case "year":
-      return `YEAR(${dateFieldSql}) AS \`${alias}\``;
+      expr = `YEAR(${dateFieldSql})`;
+      break;
     case "quarter":
-      return `CONCAT(YEAR(${dateFieldSql}), '-Q', QUARTER(${dateFieldSql})) AS \`${alias}\``;
+      expr = `CONCAT(YEAR(${dateFieldSql}), '-Q', QUARTER(${dateFieldSql}))`;
+      break;
     case "month":
-      return `DATE_FORMAT(${dateFieldSql}, '%Y-%m') AS \`${alias}\``;
+      expr = `DATE_FORMAT(${dateFieldSql}, '%Y-%m')`;
+      break;
     case "week":
-      return `YEARWEEK(${dateFieldSql}, 1) AS \`${alias}\``;
+      // ISO-неделя: год недели (%x) + номер недели (%v)
+      expr = `DATE_FORMAT(${dateFieldSql}, '%x-W%v')`;
+      break;
     case "day":
-      return `DATE_FORMAT(${dateFieldSql}, '%d.%m.%Y') AS \`${alias}\``;
+    default:
+      expr = `DATE_FORMAT(${dateFieldSql}, '%Y-%m-%d')`;
+      break;
   }
+  return alias ? `${expr} AS \`${alias}\`` : expr;
 }
 
 export const TIME_SCALE_LABELS: Record<TimeScale, string> = {
