@@ -13,6 +13,11 @@ import { createError } from "h3";
 import type { RowDataPacket } from "mysql2/promise";
 import { executeQuery, getDbPool } from "./db";
 import {
+  createOrganization,
+  organizationInnExists,
+  updateStudentsCount,
+} from "../repositories/organizationRepository";
+import {
   fetchCoursePlannerGroup,
   type GroupResource,
   type StudentResource,
@@ -217,6 +222,7 @@ export async function ensurePlannerStudents(
 
   const pool = getDbPool();
   const createdPinfls = new Set<string>();
+  const affectedOrgIds = new Set<string>();
 
   for (const s of toCreate) {
     const pinfl = String(s.pinfl).trim();
@@ -225,7 +231,23 @@ export async function ensurePlannerStudents(
 
     const tin = s.organization?.tin ? String(s.organization.tin).trim() : null;
     const plannerOrgName = s.organization?.name?.trim() || null;
-    const org = (tin && orgByInn.get(tin)) || (plannerOrgName && orgByName.get(normalize(plannerOrgName))) || null;
+    let org = (tin && orgByInn.get(tin)) || (plannerOrgName && orgByName.get(normalize(plannerOrgName))) || null;
+    // Организации ещё нет в ATC — создаём, иначе слушатель останется без привязки
+    // (не виден в карточке организации и в поиске по организации)
+    if (!org && plannerOrgName) {
+      try {
+        const createdOrg = await createOrganization({
+          name: plannerOrgName,
+          inn: tin && !(await organizationInnExists(tin)) ? tin : undefined,
+        });
+        org = { id: createdOrg.id, name: createdOrg.name, inn: createdOrg.inn };
+        if (createdOrg.inn) orgByInn.set(String(createdOrg.inn).trim(), org);
+        orgByName.set(normalize(createdOrg.name), org);
+      } catch (e) {
+        console.error(`[plannerGroupSync] Не удалось создать организацию "${plannerOrgName}":`, e);
+      }
+    }
+    if (org?.id) affectedOrgIds.add(org.id);
 
     const dept = pickLang(s.department);
     const pos = pickLang(s.position);
@@ -274,6 +296,14 @@ export async function ensurePlannerStudents(
       }
     }
     created++;
+  }
+
+  for (const orgId of affectedOrgIds) {
+    try {
+      await updateStudentsCount(orgId);
+    } catch (e) {
+      console.error(`[plannerGroupSync] Не удалось обновить счётчик организации ${orgId}:`, e);
+    }
   }
 
   // Перечитываем id (на случай гонки, когда слушатель уже был создан параллельно)

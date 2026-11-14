@@ -20,6 +20,7 @@ import {
   getOrCreateOrganizationByName,
   updateStudentsCount,
 } from "./organizationRepository";
+import { buildFuzzyTextCondition } from "../utils/fuzzyTextSearch";
 
 // ============================================================================
 // ИНТЕРФЕЙСЫ
@@ -501,9 +502,20 @@ export async function getStudentsPaginated(
   }
 
   // Фильтр по организации
+  // Толерантно к кавычкам («» / "") и кириллице/латинице (ООО / OOO);
+  // ищем и по текстовому полю слушателя, и по названию привязанной организации.
   if (organization) {
-    conditions.push("organization LIKE ?");
-    queryParams.push(`%${organization}%`);
+    const byText = buildFuzzyTextCondition(["students.organization"], organization);
+    const byOrg = buildFuzzyTextCondition(
+      ["o.name", "o.name_ru", "o.name_uz", "o.name_en"],
+      organization,
+    );
+    if (byText && byOrg) {
+      conditions.push(
+        `(${byText.sql} OR students.organization_id IN (SELECT o.id FROM organizations o WHERE ${byOrg.sql}))`,
+      );
+      queryParams.push(...byText.params, ...byOrg.params);
+    }
   }
 
   // Фильтр по должности
@@ -700,6 +712,8 @@ export async function createStudent(
     ],
   );
 
+  await refreshOrganizationCounts([orgId]);
+
   // Возвращаем созданного студента
   const student = await getStudentById(id);
   if (!student) {
@@ -806,18 +820,44 @@ export async function updateStudent(
     params,
   );
 
-  return getStudentById(id);
+  const updated = await getStudentById(id);
+  if (updated && updated.organizationId !== existing.organizationId) {
+    await refreshOrganizationCounts([existing.organizationId, updated.organizationId]);
+  }
+  return updated;
+}
+
+/**
+ * Пересчитать кэшированный счётчик слушателей у организаций (ошибки не фатальны)
+ */
+async function refreshOrganizationCounts(
+  ids: Array<string | null | undefined>,
+): Promise<void> {
+  for (const orgId of new Set(ids.filter((v): v is string => !!v))) {
+    try {
+      await updateStudentsCount(orgId);
+    } catch (error) {
+      console.error(`Error updating students count for organization ${orgId}:`, error);
+    }
+  }
 }
 
 /**
  * Удалить студента
  */
 export async function deleteStudent(id: string): Promise<boolean> {
+  const rows = await executeQuery<RowDataPacket[]>(
+    "SELECT organization_id FROM students WHERE id = ? LIMIT 1",
+    [id],
+  );
   const result = await executeQuery<ResultSetHeader>(
     "DELETE FROM students WHERE id = ?",
     [id],
   );
 
+  if (result.affectedRows > 0) {
+    await refreshOrganizationCounts([rows[0]?.organization_id]);
+  }
   return result.affectedRows > 0;
 }
 

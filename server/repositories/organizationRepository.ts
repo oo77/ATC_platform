@@ -4,6 +4,7 @@
  */
 
 import { executeQuery, executeTransaction } from "../utils/db";
+import { buildFuzzyTextCondition } from "../utils/fuzzyTextSearch";
 import { v4 as uuidv4 } from "uuid";
 import type {
   PoolConnection,
@@ -123,6 +124,7 @@ interface OrganizationRow extends RowDataPacket {
   description: string | null;
   is_active: boolean | number;
   students_count: number;
+  live_students_count?: number;
   created_at: Date;
   updated_at: Date;
   // Статистика сертификатов (из JOIN)
@@ -159,7 +161,8 @@ function mapRowToOrganization(row: OrganizationRow): Organization {
     oked: row.oked || null,
     description: row.description,
     isActive: Boolean(row.is_active),
-    studentsCount: row.students_count || 0,
+    // Живой подсчёт по таблице students; кэш-колонка — запасной вариант
+    studentsCount: Number(row.live_students_count ?? row.students_count) || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     totalCertificates: row.total_certs !== undefined ? Number(row.total_certs) : undefined,
@@ -193,6 +196,7 @@ export async function getAllOrganizations(): Promise<Organization[]> {
   const rows = await executeQuery<OrganizationRow[]>(`
     SELECT 
       o.*,
+      COUNT(DISTINCT s.id) as live_students_count,
       COUNT(DISTINCT ic.id) as total_certs,
       SUM(CASE WHEN ic.status = 'issued' THEN 1 ELSE 0 END) as issued_certs,
       SUM(CASE WHEN ic.status = 'revoked' THEN 1 ELSE 0 END) as revoked_certs,
@@ -221,19 +225,15 @@ export async function getOrganizationsPaginated(
   const queryParams: any[] = [];
 
   if (search) {
-    conditions.push(
-      "(o.name LIKE ? OR o.name_uz LIKE ? OR o.name_en LIKE ? OR o.name_ru LIKE ? OR o.code LIKE ? OR o.inn LIKE ? OR o.contact_person LIKE ?)",
+    // Толерантно к кавычкам («» / "") и кириллице/латинице (ООО / OOO)
+    const fuzzy = buildFuzzyTextCondition(
+      ["o.name", "o.name_uz", "o.name_en", "o.name_ru", "o.code", "o.inn", "o.contact_person"],
+      search,
     );
-    const searchPattern = `%${search}%`;
-    queryParams.push(
-      searchPattern,
-      searchPattern,
-      searchPattern,
-      searchPattern,
-      searchPattern,
-      searchPattern,
-      searchPattern,
-    );
+    if (fuzzy) {
+      conditions.push(fuzzy.sql);
+      queryParams.push(...fuzzy.params);
+    }
   }
 
   if (isActive !== undefined) {
@@ -253,6 +253,7 @@ export async function getOrganizationsPaginated(
   const dataQuery = `
     SELECT 
       o.*,
+      COUNT(DISTINCT s.id) as live_students_count,
       COUNT(DISTINCT ic.id) as total_certs,
       SUM(CASE WHEN ic.status = 'issued' THEN 1 ELSE 0 END) as issued_certs,
       SUM(CASE WHEN ic.status = 'revoked' THEN 1 ELSE 0 END) as revoked_certs,
@@ -287,7 +288,7 @@ export async function getOrganizationById(
   id: string,
 ): Promise<Organization | null> {
   const rows = await executeQuery<OrganizationRow[]>(
-    "SELECT * FROM organizations WHERE id = ?",
+    `SELECT o.*, (SELECT COUNT(*) FROM students s WHERE s.organization_id = o.id) AS live_students_count FROM organizations o WHERE o.id = ?`,
     [id],
   );
   return rows.length > 0 ? mapRowToOrganization(rows[0]) : null;
@@ -300,7 +301,7 @@ export async function getOrganizationByInn(
   inn: string,
 ): Promise<Organization | null> {
   const rows = await executeQuery<OrganizationRow[]>(
-    "SELECT * FROM organizations WHERE inn = ?",
+    `SELECT o.*, (SELECT COUNT(*) FROM students s WHERE s.organization_id = o.id) AS live_students_count FROM organizations o WHERE o.inn = ?`,
     [inn.trim()],
   );
   return rows.length > 0 ? mapRowToOrganization(rows[0]) : null;
@@ -313,7 +314,7 @@ export async function getOrganizationByCode(
   code: string,
 ): Promise<Organization | null> {
   const rows = await executeQuery<OrganizationRow[]>(
-    "SELECT * FROM organizations WHERE code = ?",
+    `SELECT o.*, (SELECT COUNT(*) FROM students s WHERE s.organization_id = o.id) AS live_students_count FROM organizations o WHERE o.code = ?`,
     [code],
   );
   return rows.length > 0 ? mapRowToOrganization(rows[0]) : null;
@@ -326,7 +327,7 @@ export async function getOrganizationByName(
   name: string,
 ): Promise<Organization | null> {
   const rows = await executeQuery<OrganizationRow[]>(
-    "SELECT * FROM organizations WHERE name = ?",
+    `SELECT o.*, (SELECT COUNT(*) FROM students s WHERE s.organization_id = o.id) AS live_students_count FROM organizations o WHERE o.name = ?`,
     [name.trim()],
   );
   return rows.length > 0 ? mapRowToOrganization(rows[0]) : null;
@@ -339,12 +340,17 @@ export async function searchOrganizations(
   query: string,
   limit: number = 10,
 ): Promise<Organization[]> {
+  const fuzzy = buildFuzzyTextCondition(
+    ["o.name", "o.name_uz", "o.name_en", "o.name_ru", "o.inn"],
+    query,
+  );
+  if (!fuzzy) return [];
   const rows = await executeQuery<OrganizationRow[]>(
-    `SELECT * FROM organizations 
-     WHERE name LIKE ? OR name_uz LIKE ? OR name_en LIKE ? OR name_ru LIKE ? OR inn LIKE ?
-     ORDER BY name ASC
+    `SELECT o.* FROM organizations o
+     WHERE ${fuzzy.sql}
+     ORDER BY o.name ASC
      LIMIT ?`,
-    [`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, limit],
+    [...fuzzy.params, limit],
   );
   return rows.map(mapRowToOrganization);
 }
@@ -627,8 +633,8 @@ export async function getOrganizationsStats(): Promise<{
       COUNT(*) as total,
       SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active,
       SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) as inactive,
-      SUM(CASE WHEN students_count > 0 THEN 1 ELSE 0 END) as with_students
-    FROM organizations
+      SUM(CASE WHEN EXISTS (SELECT 1 FROM students s WHERE s.organization_id = o.id) THEN 1 ELSE 0 END) as with_students
+    FROM organizations o
   `);
 
   const row = stats[0];
