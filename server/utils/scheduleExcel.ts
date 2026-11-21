@@ -9,7 +9,10 @@
  *    отдельно для каждой аудитории и дня) и затем блоки по 5 колонок
  *    «Группа | Дисциплина | Вид | Инструктор»; после ФИО инструктора через пробел — число слушателей.
  *    Блоков в аудитории столько, сколько групп занимается в ней одновременно;
- *  - ячейка «Группа» залита цветом группы (тем же, что в календаре расписания);
+ *  - весь текст — Montserrat ExtraBold ПРОПИСНЫМИ, минимальные отступы от рамок;
+ *  - ячейка «Группа» залита светлым цветом темы Excel (одинаковые цвета не стоят рядом),
+ *    название группы — чёрным, у группы, начавшей обучение на прошлых неделях, — тёмно-красным;
+ *  - дисциплина длиннее трёх слов сокращается: «первые три слова ...»;
  *  - печать: A3, альбомная, на одну страницу.
  *
  * Модуль не обращается к БД: всё, что нужно, передаётся в `buildScheduleWorkbook`.
@@ -17,7 +20,6 @@
 
 import ExcelJS from "exceljs";
 import type { ScheduleEvent } from "../repositories/scheduleRepository";
-import { resolveGroupColor, readableTextOn } from "../../shared/utils/groupColors";
 import { eventKindShort } from "../../shared/utils/scheduleLabels";
 import { latinToCyrillic } from "../../shared/utils/latinToCyrillic";
 
@@ -64,13 +66,14 @@ export interface HourSpan {
 // КОНСТАНТЫ ОФОРМЛЕНИЯ
 // ============================================================================
 
-const FONT_NAME = "Montserrat";
+/** Весь текст книги — Montserrat ExtraBold, ПРОПИСНЫМИ (без bold/italic: начертание уже в имени шрифта) */
+const FONT_NAME = "Montserrat ExtraBold";
 /** Группа | Дисциплина | Вид | Инструктор (с количеством слушателей после ФИО) */
 const BLOCK_COLUMNS = 4;
-const BLOCK_WIDTHS = [17, 30, 6, 22];
+const BLOCK_WIDTHS = [18, 32, 6.5, 22];
 /** Колонки времени внутри каждого места проведения: Пара | Ак. час | Время */
 const TIME_COLUMNS = 3;
-const TIME_WIDTHS = [6.5, 6.5, 14];
+const TIME_WIDTHS = [7.5, 7, 14];
 const FIRST_LOC_COL = 4; // D: B — день недели, C — дата
 const MIN_PERIODS_SHOWN = 8; // 4 пары — как в печатной форме; больше — только если есть занятия
 
@@ -82,6 +85,36 @@ const HEADER_FILL = "FFE2EFDA";
 const DAY_FILL = "FFF2F2F2";
 const WEEKEND_FILL = "FFD9D9D9";
 const BLACK = "FF000000";
+/** Тёмно-красный («Стандартные цвета» Excel): группа продолжает обучение с прошлых недель */
+const DARK_RED = "FFC00000";
+
+/**
+ * Заливки ячейки «Группа» — только светлая строка палитры «Цвета темы» Excel
+ * (первая строка оттенков под основными цветами), без столбца чёрного.
+ * Цвет задаётся ссылкой на тему + оттенок — ровно как при выборе в палитре Excel.
+ * Порядок: сначала самые различимые оттенки, почти белый — последним.
+ */
+const THEME_TINT_LIGHT_80 = 0.7999816888943144;
+export const GROUP_THEME_FILLS: ReadonlyArray<{ theme: number; tint: number }> = [
+  { theme: 4, tint: THEME_TINT_LIGHT_80 }, // Акцент 1 — голубой
+  { theme: 9, tint: THEME_TINT_LIGHT_80 }, // Акцент 6 — оранжевый
+  { theme: 6, tint: THEME_TINT_LIGHT_80 }, // Акцент 3 — оливковый
+  { theme: 5, tint: THEME_TINT_LIGHT_80 }, // Акцент 2 — красный
+  { theme: 8, tint: THEME_TINT_LIGHT_80 }, // Акцент 5 — аква
+  { theme: 7, tint: THEME_TINT_LIGHT_80 }, // Акцент 4 — сиреневый
+  { theme: 3, tint: THEME_TINT_LIGHT_80 }, // Текст 2 — тёмно-синий, светлее 80%
+  { theme: 2, tint: -0.0999786370433668 }, // Фон 2 — бежевый, темнее 10%
+  { theme: 0, tint: -0.0499893185216834 }, // Фон 1 — белый, темнее 5%
+];
+
+/**
+ * Высота строки текста Montserrat в пунктах: межстрочный интервал шрифта ≈ 1.22 кегля,
+ * Excel округляет его вверх до целых пикселей — берём 1.3 кегля
+ */
+const lineHeightPt = (size: number) => size * 1.3;
+/** Минимальный зазор от рамки по вертикали (на строку ячейки, пункты) */
+const CELL_V_PAD = 2;
+const DATA_FONT_SIZE = 10;
 
 /** Сокращённые названия дней недели (пн … вс) */
 const DAY_NAMES = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -191,25 +224,29 @@ export function shortPersonName(fullName: string | null | undefined): string {
   return `${parts[0]} ${first.charAt(0).toUpperCase()}.`;
 }
 
-/** Грубая оценка числа строк, которые займёт текст в колонке заданной ширины */
-function estimateLines(text: string, widthChars: number): number {
+/** Грубая оценка числа строк, которые займёт текст ПРОПИСНЫМИ в колонке заданной ширины */
+function estimateLines(text: string, widthChars: number, fontSize = 11): number {
   if (!text) return 1;
-  // Montserrat шире Calibri, на которой считается ширина колонки Excel
-  const perLine = Math.max(4, Math.floor(widthChars * 0.82));
+  // Прописные Montserrat ExtraBold заметно шире цифры Calibri 11, по которой Excel считает ширину колонки
+  const perLine = Math.max(4, Math.floor((widthChars * 0.68 * 11) / fontSize));
   return text.split("\n").reduce((sum, line) => {
-    const words = line.split(" ");
+    // Excel переносит строку по пробелу и после дефиса: «АВИАЦИОННО-» | «СПАСАТЕЛЬНОЙ»
+    const words = line
+      .split(" ")
+      .flatMap((w) => w.split(/(?<=-)/).map((part, i) => ({ part, glued: i > 0 })));
     let lines = 1;
     let cur = 0;
-    for (const word of words) {
+    for (const { part: word, glued } of words) {
       const len = word.length;
+      const gap = glued ? 0 : 1;
       if (cur === 0) {
         cur = len;
         while (cur > perLine) {
           lines++;
           cur -= perLine;
         }
-      } else if (cur + 1 + len <= perLine) {
-        cur += 1 + len;
+      } else if (cur + gap + len <= perLine) {
+        cur += gap + len;
       } else {
         lines++;
         cur = len;
@@ -223,33 +260,100 @@ function estimateLines(text: string, widthChars: number): number {
   }, 0);
 }
 
-/** Максимум символов дисциплины в ячейке (≈ 3 строки при ширине колонки) */
-const DISCIPLINE_MAX_CHARS = 66;
+/** Сколько слов дисциплины показывать в ячейке */
+const DISCIPLINE_MAX_WORDS = 3;
 
 /**
- * Сокращает длинное название дисциплины до размера ячейки.
- * Если есть короткое первое предложение — берём его, иначе обрезаем по границе слова.
+ * Сокращает название дисциплины: больше трёх слов — первые три слова и «...».
+ * «Авиационная безопасность для персонала аэропорта» → «Авиационная безопасность для ...».
  */
-export function shortenDiscipline(name: string, max = DISCIPLINE_MAX_CHARS): {
+export function shortenDiscipline(name: string, maxWords = DISCIPLINE_MAX_WORDS): {
   text: string;
   truncated: boolean;
 } {
-  const clean = name.replace(/\s+/g, " ").trim();
-  if (clean.length <= max) return { text: clean, truncated: false };
-
-  const firstSentence = clean.split(/(?<=[.!?])\s+/)[0] ?? "";
-  if (firstSentence.length >= 12 && firstSentence.length <= max) {
-    return { text: firstSentence.replace(/[.!?]+$/, ""), truncated: true };
-  }
-
-  let cut = clean.slice(0, max);
-  const lastSpace = cut.lastIndexOf(" ");
-  if (lastSpace > max * 0.5) cut = cut.slice(0, lastSpace);
-  return { text: cut.replace(/[\s,;:–-]+$/, "") + "…", truncated: true };
+  const words = name.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  if (words.length <= maxWords) return { text: words.join(" "), truncated: false };
+  // Неразрывный пробел перед «...» — многоточие не уходит на отдельную строку
+  return { text: `${words.slice(0, maxWords).join(" ")} ...`, truncated: true };
 }
 
-function argb(hex: string): string {
-  return "FF" + hex.replace("#", "").toUpperCase();
+/**
+ * Назначает группам цвета из палитры так, чтобы одинаковые цвета не стояли рядом.
+ *
+ * @param grid  строки листа сверху вниз; в строке — ключ группы в каждой «дорожке» слева
+ *              направо (через все места проведения) или null, если ячейка пустая
+ * @returns     ключ группы → индекс цвета (0..paletteSize-1)
+ *
+ * Штрафы за совпадение цвета: соседи по строке слева/справа (ближайшая занятая дорожка) — 1000,
+ * соседи сверху/снизу — 100, по диагонали — 10, в одной строке не рядом — 2.
+ * Пока цветов хватает (≤ paletteSize групп), каждая группа получает свой цвет.
+ */
+export function assignGroupColors(
+  grid: ReadonlyArray<ReadonlyArray<string | null>>,
+  paletteSize: number,
+): Map<string, number> {
+  const weights = new Map<string, Map<string, number>>();
+  const order: string[] = [];
+  const link = (a: string | null | undefined, b: string | null | undefined, w: number) => {
+    if (!a || !b || a === b) return;
+    for (const [x, y] of [[a, b], [b, a]] as const) {
+      if (!weights.has(x)) weights.set(x, new Map());
+      const m = weights.get(x)!;
+      m.set(y, Math.max(m.get(y) ?? 0, w));
+    }
+  };
+
+  grid.forEach((row, r) => {
+    const filled = row
+      .map((key, c) => ({ key, c }))
+      .filter((x): x is { key: string; c: number } => !!x.key);
+    for (const { key } of filled) {
+      if (!order.includes(key)) order.push(key);
+      if (!weights.has(key)) weights.set(key, new Map());
+    }
+    for (let i = 0; i < filled.length; i++) {
+      for (let j = i + 1; j < filled.length; j++) {
+        link(filled[i]!.key, filled[j]!.key, j === i + 1 ? 1000 : 2);
+      }
+    }
+    const next = grid[r + 1];
+    if (!next) return;
+    row.forEach((key, c) => {
+      link(key, next[c], 100);
+      link(key, next[c - 1], 10);
+      link(key, next[c + 1], 10);
+    });
+  });
+
+  // Сначала — группы с самыми «тяжёлыми» соседствами; при равенстве — по первому появлению
+  const totalWeight = (k: string) =>
+    [...(weights.get(k)?.values() ?? [])].reduce((s, w) => s + w, 0);
+  const sorted = [...order].sort((a, b) => totalWeight(b) - totalWeight(a));
+  // …но цвета раздаём «по порядку появления», когда конфликтов нет
+  const appearance = new Map(order.map((k, i) => [k, i]));
+
+  const result = new Map<string, number>();
+  const used = new Array<number>(paletteSize).fill(0);
+  for (const key of sorted) {
+    let best = 0;
+    let bestScore = Infinity;
+    for (let color = 0; color < paletteSize; color++) {
+      let penalty = 0;
+      for (const [other, w] of weights.get(key) ?? []) {
+        if (result.get(other) === color) penalty += w;
+      }
+      // Неиспользованные цвета лучше повторных; затем — цвет «по порядку появления»
+      const rank = (color - (appearance.get(key)! % paletteSize) + paletteSize) % paletteSize;
+      const score = penalty * 1000 + used[color]! * 100 + rank;
+      if (score < bestScore) {
+        bestScore = score;
+        best = color;
+      }
+    }
+    result.set(key, best);
+    used[best]!++;
+  }
+  return result;
 }
 
 // ============================================================================
@@ -568,6 +672,25 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
   }
   const lastRow = rowCursor - 1;
 
+  // ---- 4а. Цвета групп: одинаковые цвета не должны стоять рядом -------------
+  const allLanes = locations.flatMap((loc) => loc.lanes);
+  const colorGrid: (string | null)[][] = [];
+  for (const day of days) {
+    if (day.isWeekend && !day.hasEvents) {
+      colorGrid.push(allLanes.map(() => null));
+      continue;
+    }
+    for (const period of day.periods) {
+      colorGrid.push(
+        allLanes.map((lane) => {
+          const ev = lane.get(laneKey(day.index, period.periodNumber))?.event;
+          return ev ? colorKey(ev) : null;
+        }),
+      );
+    }
+  }
+  const groupColorIdx = assignGroupColors(colorGrid, GROUP_THEME_FILLS.length);
+
   // ---- 5. Книга и лист -----------------------------------------------------
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "ATC Platform";
@@ -600,8 +723,8 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
 
   // Ширина колонок
   ws.getColumn(1).width = 3;
-  ws.getColumn(2).width = 9;
-  ws.getColumn(3).width = 11.5;
+  ws.getColumn(2).width = 10;
+  ws.getColumn(3).width = 13.5;
   for (const loc of locations) {
     for (let c = 0; c < TIME_COLUMNS; c++) {
       ws.getColumn(loc.firstCol + c).width = TIME_WIDTHS[c]!;
@@ -613,7 +736,11 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
     }
   }
 
-  const baseFont: Partial<ExcelJS.Font> = { name: FONT_NAME, size: 11 };
+  const baseFont: Partial<ExcelJS.Font> = { name: FONT_NAME, size: DATA_FONT_SIZE };
+  /** Высота строки под заданное число строк текста — с минимальным зазором от рамки */
+  const fitHeight = (lines: number, size = DATA_FONT_SIZE) =>
+    Math.round((lines * lineHeightPt(size) + 2 * CELL_V_PAD) * 4) / 4;
+  const MIN_ROW_HEIGHT = fitHeight(1);
   const center: Partial<ExcelJS.Alignment> = {
     horizontal: "center",
     vertical: "middle",
@@ -626,7 +753,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
     ws.mergeCells(row, approvalFirstCol, row, lastCol);
     const cell = ws.getCell(row, approvalFirstCol);
     cell.value = text;
-    cell.font = { ...baseFont, size: 14, bold };
+    cell.font = { ...baseFont, size: bold ? 14 : 12 };
     cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
     ws.getRow(row).height = height;
   };
@@ -642,12 +769,12 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
     weekStart,
     weekEnd,
   )}`;
-  title.font = { ...baseFont, size: 14, bold: true };
+  title.font = { ...baseFont, size: 14 };
   title.alignment = center;
   ws.getRow(8).height = 26;
 
   // ---- 8. Шапка таблицы ----------------------------------------------------
-  const headerFont: Partial<ExcelJS.Font> = { ...baseFont, size: 12, bold: true };
+  const headerFont: Partial<ExcelJS.Font> = { ...baseFont, size: 11 };
   const headerFill: ExcelJS.Fill = {
     type: "pattern",
     pattern: "solid",
@@ -679,9 +806,9 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
     }
   }
 
-  ws.getRow(HEADER_TOP).height = 21;
-  ws.getRow(HEADER_TOP + 1).height = 31;
-  ws.getRow(HEADER_BOTTOM).height = 36;
+  ws.getRow(HEADER_TOP).height = fitHeight(1, 11);
+  ws.getRow(HEADER_TOP + 1).height = fitHeight(1, 11);
+  ws.getRow(HEADER_BOTTOM).height = fitHeight(2, 11); // «АК. ЧАС» — в две строки
 
   for (let r = HEADER_TOP; r <= HEADER_BOTTOM; r++) {
     for (let c = 2; c <= lastCol; c++) {
@@ -701,7 +828,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
 
   const rowHeights = new Map<number, number>();
   const bumpHeight = (row: number, height: number) =>
-    rowHeights.set(row, Math.max(rowHeights.get(row) ?? 19.5, height));
+    rowHeights.set(row, Math.max(rowHeights.get(row) ?? MIN_ROW_HEIGHT, height));
 
   for (const day of days) {
     const compactWeekend = day.isWeekend && !day.hasEvents;
@@ -714,7 +841,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
     }
     const dayCell = ws.getCell(day.firstRow, 2);
     dayCell.value = day.name;
-    dayCell.font = { ...baseFont, bold: true };
+    dayCell.font = { ...baseFont, size: 11 };
     dayCell.fill = dayFill(day.isWeekend);
     dayCell.alignment = center;
 
@@ -797,12 +924,18 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
           const ev = placedEvent.event;
 
           const groupText = groupCellText(ev, input.continuingGroupIds);
-          const color = resolveGroupColor(ev.groupId, ev.group?.colorIndex);
+          const fill = GROUP_THEME_FILLS[groupColorIdx.get(colorKey(ev)) ?? 0]!;
+          const continuing = !!ev.groupId && input.continuingGroupIds.has(ev.groupId);
 
           const groupCell = ws.getCell(row, c0);
           groupCell.value = groupText;
-          groupCell.font = { ...baseFont, bold: true, color: { argb: argb(readableTextOn(color)) } };
-          groupCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: argb(color) } };
+          // Название группы — чёрным; группа, начавшая обучение на прошлых неделях, — тёмно-красным
+          groupCell.font = { ...baseFont, color: { argb: continuing ? DARK_RED : BLACK } };
+          groupCell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { theme: fill.theme, tint: fill.tint } as Partial<ExcelJS.Color> as ExcelJS.Color,
+          };
           groupCell.alignment = center;
 
           const disciplineFull = ev.discipline?.name || ev.title || "";
@@ -816,18 +949,18 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
             cell.font = font;
             cell.alignment = center;
           };
-          put(1, discipline, { ...baseFont, size: 10 });
+          put(1, discipline, baseFont);
           if (truncated) ws.getCell(row, c0 + 1).note = disciplineFull;
-          put(2, eventKindShort(ev.eventType), { ...baseFont, bold: true });
+          put(2, eventKindShort(ev.eventType), baseFont);
           const instructorCell = count !== null ? `${instructor} ${count}`.trim() : instructor;
           put(3, instructorCell, baseFont);
 
           // Высота строки под самый длинный текст (переносы включены)
           const lines = Math.max(
-            estimateLines(discipline, BLOCK_WIDTHS[1]! * 1.1),
-            estimateLines(instructorCell, BLOCK_WIDTHS[3]!),
+            estimateLines(discipline, BLOCK_WIDTHS[1]!, DATA_FONT_SIZE),
+            estimateLines(instructorCell, BLOCK_WIDTHS[3]!, DATA_FONT_SIZE),
           );
-          bumpHeight(row, Math.max(19.5, lines * 15 + 4));
+          bumpHeight(row, fitHeight(lines));
         });
 
         // Объединяем ячейку «Группа» по паре, если в обеих строках пары одна и та же группа
@@ -850,7 +983,9 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
           ws.mergeCells(r1, c0, r1 + 1, c0);
 
           // Текст группы делит высоту двух строк
-          const need = estimateLines(groupCellText(e1, input.continuingGroupIds), BLOCK_WIDTHS[0]!) * 15 + 4;
+          const need = fitHeight(
+            estimateLines(groupCellText(e1, input.continuingGroupIds), BLOCK_WIDTHS[0]!, DATA_FONT_SIZE),
+          );
           bumpHeight(r1, need / 2);
           bumpHeight(r1 + 1, need / 2);
         }
@@ -868,7 +1003,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
           const pe = lane.get(laneKey(day.index, period.periodNumber));
           if (!pe) return;
           const text = groupCellText(pe.event, input.continuingGroupIds);
-          bumpHeight(row, estimateLines(text, BLOCK_WIDTHS[0]!) * 15 + 4);
+          bumpHeight(row, fitHeight(estimateLines(text, BLOCK_WIDTHS[0]!, DATA_FONT_SIZE)));
         });
       });
     }
@@ -877,7 +1012,7 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
   for (const day of days) {
     if (day.isWeekend && !day.hasEvents) continue;
     for (let r = day.firstRow; r <= day.lastRow; r++) {
-      ws.getRow(r).height = rowHeights.get(r) ?? 19.5;
+      ws.getRow(r).height = rowHeights.get(r) ?? MIN_ROW_HEIGHT;
     }
   }
 
@@ -913,19 +1048,17 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
   }
 
   // ---- 11. Примечания ------------------------------------------------------
-  const notes: Array<{ text: string; size: number; italic: boolean }> = [
-    { text: TIMING_NOTE, size: 10, italic: false },
+  const notes: Array<{ text: string; size: number }> = [
+    { text: TIMING_NOTE, size: 10 },
     {
-      text: "Условные обозначения: Т — теория; П — практика; Э — проверка знаний (экзамен); Д — другое. Цвет ячейки «Группа» совпадает с цветом группы в календаре расписания.",
+      text: "Условные обозначения: Т — теория; П — практика; Э — проверка знаний (экзамен); Д — другое. Название группы тёмно-красным — группа начала обучение на прошлой неделе.",
       size: 10,
-      italic: true,
     },
   ];
   if (skippedOutsideGrid > 0) {
     notes.push({
       text: `Не отражено занятий вне сетки академических часов: ${skippedOutsideGrid}.`,
       size: 10,
-      italic: true,
     });
   }
 
@@ -937,12 +1070,17 @@ export function buildScheduleWorkbook(input: ScheduleExcelInput): ExcelJS.Workbo
     ws.mergeCells(row, 2, row, lastCol);
     const cell = ws.getCell(row, 2);
     cell.value = note.text;
-    cell.font = { ...baseFont, size: note.size, italic: note.italic };
+    cell.font = { ...baseFont, size: note.size };
     cell.alignment = { horizontal: "left", vertical: "middle", wrapText: true };
-    ws.getRow(row).height = Math.max(
-      16,
-      estimateLines(note.text, totalWidth * 1.1) * (note.size + 5) + 4,
-    );
+    ws.getRow(row).height = fitHeight(estimateLines(note.text, totalWidth, note.size), note.size);
+  });
+
+  // ---- 12. Весь текст — ПРОПИСНЫМИ ------------------------------------------
+  ws.eachRow({ includeEmpty: false }, (row) => {
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      if (cell.isMerged && cell.master !== cell) return;
+      if (typeof cell.value === "string") cell.value = cell.value.toUpperCase();
+    });
   });
 
   return workbook;
@@ -957,6 +1095,11 @@ function isRetake(ev: ScheduleEvent): boolean {
     Boolean(ev.originalEventId) ||
     (Array.isArray(ev.allowedStudentIds) && ev.allowedStudentIds.length > 0)
   );
+}
+
+/** Ключ «группы» для подбора цвета: группа или отдельное занятие без группы */
+function colorKey(ev: ScheduleEvent): string {
+  return ev.groupId || `event:${ev.id}`;
 }
 
 function groupCellText(ev: ScheduleEvent, continuing: Set<string>): string {

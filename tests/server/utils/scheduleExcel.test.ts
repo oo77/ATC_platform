@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  assignGroupColors,
   computeHourSpans,
+  shortenDiscipline,
   formatMinutes,
   isMixedPair,
   shortPersonName,
@@ -69,5 +71,51 @@ describe("имена инструкторов", () => {
 
   it("кириллица не меняется", () => {
     expect(shortPersonName("Кашаев Рустам Олегович")).toBe("Кашаев Р.");
+  });
+});
+
+describe("shortenDiscipline", () => {
+  it("до трёх слов — без изменений", () => {
+    expect(shortenDiscipline("Авиационная  безопасность")).toEqual({
+      text: "Авиационная безопасность",
+      truncated: false,
+    });
+  });
+  it("больше трёх слов — первые три и «...»", () => {
+    expect(shortenDiscipline("Авиационная безопасность для персонала аэропорта").text).toBe(
+      "Авиационная безопасность для\u00A0...",
+    );
+  });
+});
+
+describe("assignGroupColors", () => {
+  it("пока хватает палитры — у каждой группы свой цвет", () => {
+    const grid = [["a", "b", "c"], ["d", null, "e"]];
+    const colors = assignGroupColors(grid, 9);
+    expect(new Set(colors.values()).size).toBe(5);
+  });
+
+  it("больше групп, чем цветов: соседи по строке и по вертикали не совпадают", () => {
+    // 4 дорожки, 3 цвета, 12 групп
+    const grid = [
+      ["g1", "g2", "g3", "g4"],
+      ["g1", "g2", "g3", "g4"],
+      ["g5", "g6", "g7", "g8"],
+      ["g9", "g10", "g11", "g12"],
+    ];
+    const colors = assignGroupColors(grid, 3);
+    grid.forEach((row, r) => {
+      row.forEach((key, c) => {
+        if (c + 1 < row.length) expect(colors.get(key)).not.toBe(colors.get(row[c + 1]!));
+        const below = grid[r + 1]?.[c];
+        if (below && below !== key) expect(colors.get(key)).not.toBe(colors.get(below));
+      });
+    });
+  });
+
+  it("соседство через пустую дорожку тоже учитывается", () => {
+    const colors = assignGroupColors([["a", null, "b"], ["c", null, "d"]], 2);
+    expect(colors.get("a")).not.toBe(colors.get("b"));
+    expect(colors.get("c")).not.toBe(colors.get("d"));
   });
 });
