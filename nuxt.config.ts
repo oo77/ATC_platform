@@ -126,6 +126,8 @@ export default defineNuxtConfig({
     // Cron задачи
     experimental: {
       tasks: true,
+      // WebSocket (crossws): класс тестирования — компьютеры по IP и авто-вход в тест
+      websocket: true,
     },
     scheduledTasks: {
       "0 * * * *": ["check-deadlines"],

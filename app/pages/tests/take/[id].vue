@@ -39,7 +39,10 @@
           Ошибка загрузки
         </h2>
         <p class="text-gray-600 dark:text-gray-400 mb-6">{{ error }}</p>
-        <UiButton @click="navigateTo('/tests/my')">
+        <UiButton v-if="kioskMode" @click="testingRoom.exitToWaiting()">
+          Выйти
+        </UiButton>
+        <UiButton v-else @click="navigateTo('/tests/my')">
           Вернуться к списку тестов
         </UiButton>
       </div>
@@ -214,6 +217,13 @@
               />
             </svg>
             Вернуться к шаблонам
+          </UiButton>
+          <UiButton
+            v-else-if="kioskMode"
+            class="flex-1"
+            @click="testingRoom.exitToWaiting()"
+          >
+            Готово — выйти
           </UiButton>
           <UiButton
             v-else
@@ -704,6 +714,13 @@ definePageMeta({
 
 const route = useRoute();
 const { authFetch } = useAuthFetch();
+
+// Вход с компьютера класса тестирования: после теста — выход и ожидание следующего
+const testingRoom = useTestingRoom();
+const kioskMode = ref(false);
+onMounted(() => {
+  kioskMode.value = testingRoom.isKioskSession();
+});
 
 // ID сессии из URL
 const sessionId = computed(() => route.params.id);

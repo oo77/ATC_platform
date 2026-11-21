@@ -635,6 +635,9 @@ export const PAGE_PERMISSIONS: RoutePermissionConfig[] = [
     ],
   },
 
+  // Проведение тестирования в классе (компьютеры по IP, рассадка слушателей)
+  { path: "/testing", requiredPermissions: [Permission.TESTS_ASSIGN] },
+
   // Tests (Student)
   { path: "/tests/my", requiredPermissions: [Permission.TESTS_TAKE] },
 

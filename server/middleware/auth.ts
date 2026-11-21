@@ -41,6 +41,8 @@ const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/api/public-dashboard/", prefix: true, methods: ["GET"] }, // дашборды по ссылке (свой токен + пароль)
   { path: "/api/integration/", prefix: true, methods: ["GET", "OPTIONS"] }, // интеграция с планировщиком (свой токен)
   { path: "/api/integration", methods: ["GET", "OPTIONS"] },
+  // Класс тестирования: компьютер входит в тест по одноразовому билету (сам проверяет билет и IP)
+  { path: "/api/testing-room/claim", methods: ["POST"] },
 ];
 
 /**

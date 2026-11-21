@@ -68,6 +68,7 @@ import * as roomBookings from "./migrations/20261112_057_room_bookings";
 import * as studentsPinflNullable from "./migrations/20261116_058_students_pinfl_nullable";
 import * as testLanguages from "./migrations/20261109_055_test_languages";
 import * as schedulePeriods11to14 from "./migrations/20261112_056_schedule_periods_11_14";
+import * as testingRoom from "./migrations/20261121_059_testing_room";
 
 /**
  * ============================================================================
@@ -589,6 +590,12 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: studentsPinflNullable.up,
     down: studentsPinflNullable.down,
     description: studentsPinflNullable.description,
+  },
+  {
+    name: "20261121_059_testing_room",
+    up: testingRoom.up,
+    down: testingRoom.down,
+    description: testingRoom.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

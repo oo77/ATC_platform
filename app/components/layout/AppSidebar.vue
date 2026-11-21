@@ -285,6 +285,7 @@ import {
   Users,
   GraduationCap,
   FileCheck,
+  MonitorCheck,
   Library,
   BarChart3,
   FolderTree,
@@ -440,6 +441,13 @@ const allMenuGroups: MenuGroup[] = [
         name: "Тесты",
         showOnlyForRoles: ["STUDENT"],
         path: "/tests/my",
+      },
+      {
+        icon: MonitorCheck,
+        name: "Проведение тестирования",
+        path: "/testing",
+        permission: Permission.TESTS_ASSIGN,
+        hideForRoles: ["STUDENT"],
       },
       {
         icon: FileCheck,

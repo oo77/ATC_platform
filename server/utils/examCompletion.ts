@@ -22,6 +22,7 @@ import { getTestTemplateById } from "../repositories/testTemplateRepository";
 import { upsertResultScore } from "../repositories/attestationResultRepository";
 import { executeQuery } from "./db";
 import { v4 as uuidv4 } from "uuid";
+import { notifyTestingRoomAdmins } from "./testingRoomHub";
 
 /** Сколько секунд после окончания лимита ещё принимаем ответы (сетевые задержки) */
 export const EXAM_GRACE_SECONDS = 60;
@@ -143,6 +144,9 @@ export async function completeTestSession(sessionId: string): Promise<Completion
       // Не прерываем: тест всё равно завершён
     }
   }
+
+  // Экран «Проведение тестирования» обновит результат слушателя
+  notifyTestingRoomAdmins();
 
   return {
     completedNow: true,
