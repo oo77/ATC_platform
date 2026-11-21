@@ -93,7 +93,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { Download } from "lucide-vue-next";
-import type { RegistryForm } from "../../../shared/utils/registry";
+import type { RegistryForm } from "#shared/utils/registry";
 
 defineProps<{
   isOpen: boolean;

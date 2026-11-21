@@ -121,23 +121,22 @@
                 <!-- ПИНФЛ -->
                 <div>
                   <label class="mb-2.5 block text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                    ПИНФЛ <span class="text-danger">*</span>
+                    ПИНФЛ
                   </label>
                   <input
                     v-model="formData.pinfl"
                     type="text"
-                    placeholder="14-значный ПИНФЛ"
+                    placeholder="14-значный ПИНФЛ (необязательно)"
                     maxlength="14"
                     pattern="[0-9]{14}"
                     class="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all dark:border-slate-700 dark:bg-slate-800/50 font-mono"
                     :class="{ 'border-danger': errors.pinfl }"
-                    required
                   />
                   <p v-if="errors.pinfl" class="mt-1 text-sm text-danger">
                     {{ errors.pinfl[0] }}
                   </p>
                   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    14 цифр без пробелов
+                    14 цифр без пробелов. Можно оставить пустым
                   </p>
                 </div>
 
@@ -260,7 +259,15 @@
                 <!-- Секция учётной записи -->
                 <div class="sm:col-span-2 mt-4 pt-4 border-t border-stroke dark:border-strokedark">
                   <!-- При создании нового студента -->
-                  <template v-if="!props.student">
+                  <template v-if="!props.student && !formData.pinfl.trim()">
+                    <div class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg">
+                      <p class="text-sm text-amber-700 dark:text-amber-300">
+                        ПИНФЛ не указан — слушатель будет создан без учётной записи для входа.
+                        Её можно будет создать позже, указав ПИНФЛ.
+                      </p>
+                    </div>
+                  </template>
+                  <template v-else-if="!props.student">
                     <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                       <div class="flex items-center gap-2 text-blue-700 dark:text-blue-300">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,7 +283,7 @@
                   </template>
 
                   <!-- При редактировании студента (только для ADMIN/MANAGER) -->
-                  <template v-else-if="canManagePassword">
+                  <template v-else-if="canManagePassword && props.student.pinfl">
                     <h4 class="font-medium text-black dark:text-white mb-3">
                       Управление учётной записью
                     </h4>
@@ -482,7 +489,8 @@ const validateField = (field: string, value: string): string | null => {
       break;
     
     case 'pinfl':
-      if (!value || !/^\d{14}$/.test(value)) {
+      // ПИНФЛ необязателен; если указан — ровно 14 цифр
+      if (value && value.trim() && !/^\d{14}$/.test(value.trim())) {
         return 'ПИНФЛ должен содержать ровно 14 цифр';
       }
       break;
@@ -591,7 +599,7 @@ const handleSubmit = async () => {
     // Базовые данные студента
     const submitData: any = {
       fullName: formData.fullName.trim(),
-      pinfl: formData.pinfl.trim(),
+      pinfl: formData.pinfl.trim() || null,
       organization: formData.organization.trim(),
       department: formData.department?.trim() || undefined,
       position: formData.position.trim(),
@@ -648,7 +656,7 @@ onMounted(() => {
 
   if (props.student) {
     formData.fullName = props.student.fullName;
-    formData.pinfl = props.student.pinfl;
+    formData.pinfl = props.student.pinfl || '';
     formData.organization = props.student.organization;
     formData.department = props.student.department || '';
     formData.position = props.student.position;

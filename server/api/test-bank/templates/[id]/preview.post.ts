@@ -24,7 +24,7 @@ interface QuestionRow extends RowDataPacket {
 
 export default defineEventHandler(async (event) => {
   // P0-ACCESS: проверка прав доступа
-  await requireAnyPermission(event, [Permission.TEST_TEMPLATES_VIEW, Permission.TEST_TEMPLATES_MANAGE]);
+  const ctx = await requireAnyPermission(event, [Permission.TEST_TEMPLATES_VIEW, Permission.TEST_TEMPLATES_MANAGE]);
 
     try {
         const id = getRouterParam(event, 'id');
@@ -128,9 +128,12 @@ export default defineEventHandler(async (event) => {
                 id, assignment_id, student_id, attempt_number, status, is_preview, preview_user_id,
                 language, questions_order, current_question_index, started_at,
                 ip_address, user_agent, created_at, updated_at
-            ) VALUES (?, NULL, NULL, 1, 'in_progress', TRUE, NULL, ?, ?, 0, ?, NULL, NULL, ?, ?)`,
+            ) VALUES (?, NULL, NULL, 1, 'in_progress', TRUE, ?, ?, ?, 0, ?, NULL, NULL, ?, ?)`,
             [
                 sessionId,
+                // Владелец preview-сессии: без него проверка доступа (requireTestSessionAccess "owner")
+                // отклоняла сохранение ответов и завершение теста
+                ctx.userId,
                 selectedLanguage,  // Сохраняем выбранный язык в сессии
                 JSON.stringify(questionsOrder),
                 now,

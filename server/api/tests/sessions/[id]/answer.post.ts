@@ -11,6 +11,7 @@ import {
 import { getQuestionById } from '../../../../repositories/questionRepository';
 import type { AnswerData } from '../../../../types/testing';
 import { requireTestSessionAccess } from "../../../../utils/resourceAccess";
+import { completeTestSession, getTestSessionTimeLimit, isExamTimeOver } from "../../../../utils/examCompletion";
 
 export default defineEventHandler(async (event) => {
   // P0-ACCESS: проверка прав доступа
@@ -60,6 +61,16 @@ export default defineEventHandler(async (event) => {
             return {
                 success: false,
                 message: 'Тест уже завершён',
+            };
+        }
+
+        // Время вышло (с запасом на сеть) — ответы больше не принимаем, тест завершаем
+        if (isExamTimeOver(session.started_at, await getTestSessionTimeLimit(session.assignment_id))) {
+            await completeTestSession(id);
+            return {
+                success: false,
+                time_over: true,
+                message: 'Время вышло, тест завершён',
             };
         }
 

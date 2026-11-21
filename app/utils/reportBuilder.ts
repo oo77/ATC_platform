@@ -1,7 +1,7 @@
 /**
  * Общие типы и хелперы конструктора отчётов (клиент).
  */
-import { latinToCyrillic } from "../../shared/utils/latinToCyrillic";
+import { latinToCyrillic } from "#shared/utils/latinToCyrillic";
 
 // ── Типы ──────────────────────────────────────────────────────────────
 export interface FieldMeta {

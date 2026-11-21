@@ -25,16 +25,10 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody<UpdateStudentInput>(event);
 
-    // Валидация ПИНФЛ, если он передан
-    if (body.pinfl !== undefined) {
-      if (!body.pinfl.trim()) {
-        return {
-          success: false,
-          message: 'ПИНФЛ не может быть пустым',
-        };
-      }
-
-      if (!/^\d{14}$/.test(body.pinfl)) {
+    // Валидация ПИНФЛ, если он передан. Пустое значение допустимо — ПИНФЛ необязателен
+    const pinfl = body.pinfl !== undefined ? String(body.pinfl ?? '').trim() : undefined;
+    if (pinfl) {
+      if (!/^\d{14}$/.test(pinfl)) {
         return {
           success: false,
           message: 'ПИНФЛ должен содержать ровно 14 цифр',
@@ -42,7 +36,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // Проверка уникальности ПИНФЛ (исключая текущего студента)
-      const exists = await studentExistsByPinfl(body.pinfl, id);
+      const exists = await studentExistsByPinfl(pinfl, id);
       if (exists) {
         return {
           success: false,
@@ -76,7 +70,7 @@ export default defineEventHandler(async (event) => {
     // Подготовка данных для обновления
     const updateData: Partial<UpdateStudentInput> = {};
     if (body.fullName !== undefined) updateData.fullName = body.fullName.trim();
-    if (body.pinfl !== undefined) updateData.pinfl = body.pinfl.trim();
+    if (pinfl !== undefined) updateData.pinfl = pinfl || null;
     if (body.organization !== undefined) updateData.organization = body.organization.trim();
     if (body.department !== undefined) updateData.department = body.department?.trim() || undefined;
     if (body.position !== undefined) updateData.position = body.position.trim();

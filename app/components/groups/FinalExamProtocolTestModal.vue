@@ -406,7 +406,7 @@ import {
   MAX_PROTOCOL_MEMBERS,
   type FinalExamProtocolForm,
   type FinalExamProtocolPerson,
-} from "../../../shared/utils/finalExamProtocol";
+} from "#shared/utils/finalExamProtocol";
 
 interface ProtocolTestInfo {
   groupCode: string;

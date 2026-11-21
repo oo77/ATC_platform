@@ -15,7 +15,7 @@ interface ManualCertificateInput {
     createNewStudent?: boolean;
     studentData?: {
         fullName: string;
-        pinfl: string;
+        pinfl?: string | null;
         organization: string;
         position: string;
         department?: string;
@@ -61,9 +61,8 @@ export default defineEventHandler(async (event) => {
             if (!body.studentData.fullName?.trim()) {
                 errors.push({ field: 'studentData.fullName', message: 'ФИО слушателя обязательно' });
             }
-            if (!body.studentData.pinfl?.trim()) {
-                errors.push({ field: 'studentData.pinfl', message: 'ПИНФЛ обязателен' });
-            } else if (!/^\d{14}$/.test(body.studentData.pinfl.trim())) {
+            // ПИНФЛ необязателен; если указан — 14 цифр
+            if (body.studentData.pinfl?.trim() && !/^\d{14}$/.test(body.studentData.pinfl.trim())) {
                 errors.push({ field: 'studentData.pinfl', message: 'ПИНФЛ должен содержать 14 цифр' });
             }
             if (!body.studentData.organization?.trim()) {
@@ -118,8 +117,9 @@ export default defineEventHandler(async (event) => {
         let studentId = body.studentId;
 
         if (body.createNewStudent && body.studentData) {
-            // Проверка, нет ли уже слушателя с таким ПИНФЛ
-            const existingStudent = await getStudentByPinfl(body.studentData.pinfl.trim());
+            // Проверка, нет ли уже слушателя с таким ПИНФЛ (если указан)
+            const newPinfl = body.studentData.pinfl?.trim() || null;
+            const existingStudent = newPinfl ? await getStudentByPinfl(newPinfl) : null;
             if (existingStudent) {
                 throw createError({
                     statusCode: 409,
@@ -130,7 +130,7 @@ export default defineEventHandler(async (event) => {
             // Создание нового слушателя
             const newStudent = await createStudent({
                 fullName: body.studentData.fullName.trim(),
-                pinfl: body.studentData.pinfl.trim(),
+                pinfl: newPinfl,
                 organization: body.studentData.organization.trim(),
                 position: body.studentData.position.trim(),
                 department: body.studentData.department?.trim() || undefined,

@@ -93,7 +93,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { Lock, Maximize, Minimize, MonitorOff, RefreshCw, WifiOff } from "lucide-vue-next";
 import DashboardView from "~/components/public-dashboard/DashboardView.vue";
-import type { DashboardSettings, DashboardWidget, WidgetData } from "../../../shared/utils/publicDashboard";
+import type { DashboardSettings, DashboardWidget, WidgetData } from "#shared/utils/publicDashboard";
 
 definePageMeta({ layout: false });
 

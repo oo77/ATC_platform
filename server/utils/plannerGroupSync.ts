@@ -4,8 +4,9 @@
  * Направление данных: планер → ATC.
  *  - курс сопоставляется по коду (без учёта регистра), затем по названию;
  *  - даты и место проведения берутся из группы планера;
- *  - слушатели сопоставляются по ПИНФЛ, отсутствующие в ATC создаются
- *    из данных планера (ФИО, организация по ИНН, служба, должность, фото).
+ *  - слушатели сопоставляются по ПИНФЛ (без ПИНФЛ — по ФИО среди слушателей
+ *    ATC без ПИНФЛ), отсутствующие в ATC создаются из данных планера
+ *    (ФИО, организация по ИНН, служба, должность, фото). ПИНФЛ необязателен.
  */
 
 import crypto from "crypto";
@@ -35,10 +36,13 @@ export interface PlannerCourseMatch {
 }
 
 export interface PlannerStudentPreview {
+  /** Ключ сопоставления: ПИНФЛ, а без него — ФИО (см. plannerStudentKey) */
+  key: string;
+  /** ПИНФЛ (14 цифр) или пустая строка, если его нет */
   pinfl: string;
   name: string;
   organization: string | null;
-  /** existing — уже есть в ATC; new — будет создан; invalid — некорректный ПИНФЛ */
+  /** existing — уже есть в ATC; new — будет создан (invalid больше не выдаётся) */
   status: "existing" | "new" | "invalid";
   studentId: string | null;
 }
@@ -101,6 +105,24 @@ function pickLang(
   return { main: null, uz: null, ru: null, en: null };
 }
 
+/** Корректный ПИНФЛ слушателя планера (14 цифр) или null */
+export function plannerStudentPinfl(s: Pick<StudentResource, "pinfl">): string | null {
+  const pinfl = String(s.pinfl || "").trim();
+  return /^\d{14}$/.test(pinfl) ? pinfl : null;
+}
+
+/** Нормализованное ФИО для сопоставления слушателей без ПИНФЛ */
+const normalizeName = (name: string | null | undefined) =>
+  String(name || "").trim().replace(/\s+/g, " ").toLowerCase();
+
+/**
+ * Ключ сопоставления слушателя планера со слушателем ATC:
+ * ПИНФЛ, если он корректен, иначе ФИО.
+ */
+export function plannerStudentKey(s: Pick<StudentResource, "pinfl" | "name">): string {
+  return plannerStudentPinfl(s) ?? `name:${normalizeName(s.name)}`;
+}
+
 /** Найти курс ATC, соответствующий курсу группы планера */
 export async function matchPlannerCourse(
   course: GroupResource["group"]["course"],
@@ -139,15 +161,16 @@ export async function loadPlannerGroup(plannerGroupId: string): Promise<GroupRes
   return res.data;
 }
 
-/** Сопоставить слушателей планера со слушателями ATC по ПИНФЛ (без изменений в БД) */
-export async function previewPlannerStudents(
-  students: StudentResource[],
-): Promise<PlannerStudentPreview[]> {
-  const pinfls = students
-    .map((s) => String(s.pinfl || "").trim())
-    .filter((p) => /^\d{14}$/.test(p));
-
+/**
+ * Найти id слушателей ATC по ключам планера (без изменений в БД).
+ * С ПИНФЛ — по ПИНФЛ; без ПИНФЛ — по ФИО среди слушателей ATC без ПИНФЛ.
+ */
+async function findExistingStudentIds(students: StudentResource[]): Promise<Map<string, string>> {
   const existing = new Map<string, string>();
+
+  const pinfls = Array.from(
+    new Set(students.map(plannerStudentPinfl).filter((p): p is string => !!p)),
+  );
   if (pinfls.length > 0) {
     const rows = await executeQuery<RowDataPacket[]>(
       `SELECT id, pinfl FROM students WHERE pinfl IN (${pinfls.map(() => "?").join(", ")})`,
@@ -156,19 +179,49 @@ export async function previewPlannerStudents(
     for (const r of rows) existing.set(String(r.pinfl), r.id);
   }
 
+  const names = Array.from(
+    new Set(
+      students
+        .filter((s) => !plannerStudentPinfl(s))
+        .map((s) => String(s.name || "").trim().replace(/\s+/g, " "))
+        .filter(Boolean),
+    ),
+  );
+  if (names.length > 0) {
+    const rows = await executeQuery<RowDataPacket[]>(
+      `SELECT id, full_name FROM students
+       WHERE (pinfl IS NULL OR pinfl = '') AND full_name IN (${names.map(() => "?").join(", ")})
+       ORDER BY created_at ASC`,
+      names,
+    );
+    for (const r of rows) {
+      const key = `name:${normalizeName(r.full_name)}`;
+      if (!existing.has(key)) existing.set(key, r.id);
+    }
+  }
+
+  return existing;
+}
+
+/** Сопоставить слушателей планера со слушателями ATC (без изменений в БД) */
+export async function previewPlannerStudents(
+  students: StudentResource[],
+): Promise<PlannerStudentPreview[]> {
+  const existing = await findExistingStudentIds(students);
+
   const seen = new Set<string>();
   const result: PlannerStudentPreview[] = [];
   for (const s of students) {
-    const pinfl = String(s.pinfl || "").trim();
-    if (seen.has(pinfl)) continue;
-    seen.add(pinfl);
-    const valid = /^\d{14}$/.test(pinfl);
-    const studentId = valid ? existing.get(pinfl) || null : null;
+    const key = plannerStudentKey(s);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const studentId = existing.get(key) || null;
     result.push({
-      pinfl,
+      key,
+      pinfl: plannerStudentPinfl(s) || "",
       name: String(s.name || "").trim(),
       organization: s.organization?.name || null,
-      status: !valid ? "invalid" : studentId ? "existing" : "new",
+      status: studentId ? "existing" : "new",
       studentId,
     });
   }
@@ -176,41 +229,36 @@ export async function previewPlannerStudents(
 }
 
 /**
- * Создать в ATC слушателей, которых ещё нет (по ПИНФЛ).
- * Существующих слушателей не изменяет.
- * Возвращает карту ПИНФЛ → id слушателя ATC для всех валидных слушателей.
+ * Создать в ATC слушателей, которых ещё нет (по ПИНФЛ, без ПИНФЛ — по ФИО).
+ * Существующих слушателей не изменяет. Слушатели без ПИНФЛ создаются без ПИНФЛ.
+ * Возвращает карту ключ (plannerStudentKey) → id слушателя ATC.
  */
 export async function ensurePlannerStudents(
   students: StudentResource[],
   options: { createMissing?: boolean } = {},
-): Promise<{ idsByPinfl: Map<string, string>; created: number; errors: Array<{ pinfl: string; name: string; error: string }> }> {
+): Promise<{ idsByKey: Map<string, string>; created: number; errors: Array<{ pinfl: string; name: string; error: string }> }> {
   const createMissing = options.createMissing !== false;
   const preview = await previewPlannerStudents(students);
-  const idsByPinfl = new Map<string, string>();
+  const idsByKey = new Map<string, string>();
   const errors: Array<{ pinfl: string; name: string; error: string }> = [];
   let created = 0;
 
   for (const p of preview) {
-    if (p.status === "existing" && p.studentId) idsByPinfl.set(p.pinfl, p.studentId);
-    if (p.status === "invalid") {
-      errors.push({ pinfl: p.pinfl || "пусто", name: p.name, error: "Некорректный ПИНФЛ (нужно 14 цифр)" });
-    }
+    if (p.status === "existing" && p.studentId) idsByKey.set(p.key, p.studentId);
   }
 
   if (!createMissing) {
     for (const p of preview) {
       if (p.status === "new") {
-        errors.push({ pinfl: p.pinfl, name: p.name, error: "Нет в базе ATC; нет прав на создание слушателей" });
+        errors.push({ pinfl: p.pinfl || "—", name: p.name, error: "Нет в базе ATC; нет прав на создание слушателей" });
       }
     }
-    return { idsByPinfl, created, errors };
+    return { idsByKey, created, errors };
   }
 
-  const toCreate = students.filter((s) => {
-    const pinfl = String(s.pinfl || "").trim();
-    return preview.some((p) => p.pinfl === pinfl && p.status === "new");
-  });
-  if (toCreate.length === 0) return { idsByPinfl, created, errors };
+  const newKeys = new Set(preview.filter((p) => p.status === "new").map((p) => p.key));
+  const toCreate = students.filter((s) => newKeys.has(plannerStudentKey(s)));
+  if (toCreate.length === 0) return { idsByKey, created, errors };
 
   const orgs = await executeQuery<RowDataPacket[]>(`SELECT id, name, inn FROM organizations`);
   const orgByInn = new Map<string, any>();
@@ -221,13 +269,16 @@ export async function ensurePlannerStudents(
   }
 
   const pool = getDbPool();
+  const createdKeys = new Set<string>();
   const createdPinfls = new Set<string>();
   const affectedOrgIds = new Set<string>();
 
   for (const s of toCreate) {
-    const pinfl = String(s.pinfl).trim();
-    if (createdPinfls.has(pinfl)) continue;
-    createdPinfls.add(pinfl);
+    const key = plannerStudentKey(s);
+    if (createdKeys.has(key)) continue;
+    createdKeys.add(key);
+    const pinfl = plannerStudentPinfl(s);
+    if (pinfl) createdPinfls.add(pinfl);
 
     const tin = s.organization?.tin ? String(s.organization.tin).trim() : null;
     const plannerOrgName = s.organization?.name?.trim() || null;
@@ -287,15 +338,17 @@ export async function ensurePlannerStudents(
           params[13] = null;
           await pool.query(sql, params);
         } catch (e2: any) {
-          errors.push({ pinfl, name: String(s.name || ""), error: e2?.message || "Ошибка создания" });
+          errors.push({ pinfl: pinfl || "—", name: String(s.name || ""), error: e2?.message || "Ошибка создания" });
           continue;
         }
       } else {
-        errors.push({ pinfl, name: String(s.name || ""), error: err?.message || "Ошибка создания" });
+        errors.push({ pinfl: pinfl || "—", name: String(s.name || ""), error: err?.message || "Ошибка создания" });
         continue;
       }
     }
     created++;
+    // Без ПИНФЛ конфликта по уникальному ключу быть не может — id известен сразу
+    if (!pinfl) idsByKey.set(key, id);
   }
 
   for (const orgId of affectedOrgIds) {
@@ -306,17 +359,17 @@ export async function ensurePlannerStudents(
     }
   }
 
-  // Перечитываем id (на случай гонки, когда слушатель уже был создан параллельно)
+  // Слушатели с ПИНФЛ: перечитываем id (на случай гонки, когда слушатель уже был создан параллельно)
   const pinfls = Array.from(createdPinfls);
   if (pinfls.length > 0) {
     const rows = await executeQuery<RowDataPacket[]>(
       `SELECT id, pinfl FROM students WHERE pinfl IN (${pinfls.map(() => "?").join(", ")})`,
       pinfls,
     );
-    for (const r of rows) idsByPinfl.set(String(r.pinfl), r.id);
+    for (const r of rows) idsByKey.set(String(r.pinfl), r.id);
   }
 
-  return { idsByPinfl, created, errors };
+  return { idsByKey, created, errors };
 }
 
 /** ATC-группа, связанная с группой планера */

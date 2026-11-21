@@ -115,7 +115,7 @@ import {
   type DashboardSettings,
   type DashboardWidget,
   type WidgetData,
-} from "../../../shared/utils/publicDashboard";
+} from "#shared/utils/publicDashboard";
 import { widgetIcon } from "./widgetIcons";
 import KpiWidget from "./KpiWidget.vue";
 import ChartWidget from "./ChartWidget.vue";

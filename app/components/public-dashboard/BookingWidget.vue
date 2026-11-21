@@ -66,8 +66,8 @@
 </template>
 
 <script setup lang="ts">
-import { eventKindShort } from "../../../shared/utils/scheduleLabels";
-import type { WidgetData } from "../../../shared/utils/publicDashboard";
+import { eventKindShort } from "#shared/utils/scheduleLabels";
+import type { WidgetData } from "#shared/utils/publicDashboard";
 
 defineProps<{ data: Extract<WidgetData, { kind: "booking" }> }>();
 

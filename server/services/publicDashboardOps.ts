@@ -8,7 +8,7 @@
 
 import { executeQuery } from "../utils/db";
 import { addDays, dayLabel, int, maskName, num } from "../utils/publicDashboardFormat";
-import { getClassrooms } from "../repositories/scheduleRepository";
+import { getClassrooms, MAX_LESSONS_PER_CLASSROOM, peakOverlap } from "../repositories/scheduleRepository";
 import { bookingDays, listBookings } from "../repositories/roomBookingRepository";
 import type { BookingItem, StatusTone, WidgetData } from "../../shared/utils/publicDashboard";
 
@@ -470,10 +470,12 @@ export const opsResolvers: Record<string, Resolver> = {
       clash: false,
     }));
 
-    // Накладки: занятия в одной аудитории, пересекающиеся по времени.
+    // Накладки: в аудитории одновременно больше MAX_LESSONS_PER_CLASSROOM занятий
+    // (два параллельных занятия в одной аудитории разрешены).
     // Пересдачи не считаем — им разрешено занимать занятые аудитории.
     let clashCount = 0;
     if (options.highlightClashes !== false) {
+      const ms = (s: string) => new Date(s.replace(" ", "T")).getTime();
       const byRoom = new Map<string, BookingEvent[]>();
       for (const e of events) {
         if (e.retake) continue;
@@ -482,15 +484,13 @@ export const opsResolvers: Record<string, Resolver> = {
         byRoom.set(e.roomId, list);
       }
       for (const list of byRoom.values()) {
-        let latest: BookingEvent | null = null;
-        for (const e of list) {
-          if (latest && e.sFull < latest.eFull) {
+        const iv = list.map((e) => ({ start: ms(e.sFull), end: ms(e.eFull) }));
+        list.forEach((e, i) => {
+          if (peakOverlap(iv, iv[i]!.start, iv[i]!.end) > MAX_LESSONS_PER_CLASSROOM) {
             e.clash = true;
-            latest.clash = true;
             clashCount++;
           }
-          if (!latest || e.eFull > latest.eFull) latest = e;
-        }
+        });
       }
     }
 
@@ -731,13 +731,29 @@ export const opsResolvers: Record<string, Resolver> = {
       return rows[0] || {};
     };
 
+    // Пересдача: ссылка на исходное занятие или ограниченный список студентов (как isRetakeRow)
+    const NOT_RETAKE = (t: string) =>
+      `(${t}.original_event_id IS NULL AND (${t}.allowed_student_ids IS NULL OR JSON_LENGTH(${t}.allowed_student_ids) = 0))`;
     const OVERLAP = (col: "classroom_id" | "instructor_id") => `
       SELECT COUNT(*) AS n,
              MIN(CONCAT(DATE_FORMAT(a.start_time, '%d.%m %H:%i'), ' · ', COALESCE(${col === "classroom_id" ? "cr.name" : "i.full_name"}, '—'))) AS sample
       FROM schedule_events a
       JOIN schedule_events b ON b.${col} = a.${col} AND a.id < b.id
            AND a.start_time < b.end_time AND b.start_time < a.end_time
-      ${col === "classroom_id" ? "LEFT JOIN classrooms cr ON cr.id = a.classroom_id" : "LEFT JOIN instructors i ON i.id = a.instructor_id"}
+           -- Пересдачи ни аудиторию, ни инструктора не занимают
+           AND ${NOT_RETAKE("a")} AND ${NOT_RETAKE("b")}
+      ${
+        // В аудитории разрешены 2 занятия одновременно (MAX_LESSONS_PER_CLASSROOM):
+        // накладка — тройка попарно пересекающихся занятий (у интервалов это
+        // значит, что все три идут в один момент). Пересдачи не считаются.
+        col === "classroom_id"
+          ? `JOIN schedule_events c3 ON c3.classroom_id = a.classroom_id AND b.id < c3.id
+           AND a.start_time < c3.end_time AND c3.start_time < a.end_time
+           AND b.start_time < c3.end_time AND c3.start_time < b.end_time
+           AND ${NOT_RETAKE("c3")}
+      LEFT JOIN classrooms cr ON cr.id = a.classroom_id`
+          : "LEFT JOIN instructors i ON i.id = a.instructor_id"
+      }
       WHERE a.${col} IS NOT NULL AND a.end_time >= NOW() AND a.start_time < NOW() + INTERVAL ? DAY`;
 
     const [unmarked, roomConf, instConf, missing, noSchedule, startNoSchedule, noCerts, markReq, trainReq, tickets] =

@@ -80,6 +80,47 @@ async function renderCover(url: string, width: number): Promise<string | null> {
   }
 }
 
+/**
+ * Все страницы документа как картинки (object URL), по порядку.
+ * Для картинки (png/jpg) — массив из одного элемента; при ошибке — [].
+ */
+export async function renderDocumentPages(url: string, width: number): Promise<string[]> {
+  try {
+    const res = await fetch(url, { credentials: "same-origin" });
+    if (!res.ok) return [];
+    const type = res.headers.get("content-type") || "";
+    const blob = await res.blob();
+    if (type.startsWith("image/")) return [URL.createObjectURL(blob)];
+
+    const pdfjs = await loadPdfjs();
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;
+    try {
+      const pages: string[] = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const base = page.getViewport({ scale: 1 });
+        const scale = (width * Math.min(window.devicePixelRatio || 1, 2)) / base.width;
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext("2d", { alpha: false })!;
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
+        const out = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/webp", 0.9));
+        if (out) pages.push(URL.createObjectURL(out));
+        page.cleanup();
+      }
+      return pages;
+    } finally {
+      doc.destroy();
+    }
+  } catch {
+    return [];
+  }
+}
+
 /** URL картинки обложки (object URL) или null, если обложки нет */
 export function getCoverImage(url: string, width = 240): Promise<string | null> {
   const key = `${url}|${width}`;

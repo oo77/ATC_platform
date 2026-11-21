@@ -126,7 +126,7 @@ import {
   abbreviateFullName,
   MAX_COMMISSION_MEMBERS,
   type EvaluationSheetsCommission,
-} from "../../../shared/utils/evaluationSheets";
+} from "#shared/utils/evaluationSheets";
 
 const props = withDefaults(defineProps<{
   isOpen: boolean;

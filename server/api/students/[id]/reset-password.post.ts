@@ -50,6 +50,14 @@ export default defineEventHandler(async (event) => {
             });
         }
 
+        // Учётная запись слушателя привязана к ПИНФЛ (логин ПИНФЛ@student.local)
+        if (!student.pinfl) {
+            throw createError({
+                statusCode: 400,
+                message: 'У слушателя не указан ПИНФЛ — учётную запись создать нельзя. Укажите ПИНФЛ в карточке слушателя.',
+            });
+        }
+
         // Ищем связанного пользователя
         const email = `${student.pinfl}@student.local`;
         const [existingUser] = await executeQuery<RowDataPacket[]>(

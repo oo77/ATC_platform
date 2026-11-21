@@ -32,6 +32,8 @@ interface CertificateVerifyRow extends RowDataPacket {
   standalone_group_code: string | null;
   standalone_group_start_date: Date | null;
   standalone_group_end_date: Date | null;
+  group_start_date: Date | null;
+  group_end_date: Date | null;
   // Курс
   course_name: string | null;
   course_code: string | null;
@@ -41,6 +43,18 @@ interface CertificateVerifyRow extends RowDataPacket {
   // Организация (кто выдал)
   org_name: string | null;
   issued_at: Date | null;
+}
+
+/**
+ * DATE-колонку mysql2 отдаёт как локальную полночь сервера; в JSON она
+ * превращается в UTC (2026-10-29T19:00:00Z для 30.10) и у зрителя в другом
+ * часовом поясе съезжает на день. Отдаём календарную дату как YYYY-MM-DD.
+ */
+function toYmd(d: Date | string | null | undefined): string | null {
+  if (!d) return null;
+  if (typeof d === "string") return d.slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 /** Записываем факт верификации в таблицу логов */
@@ -93,6 +107,8 @@ export default defineEventHandler(async (event) => {
         ic.group_code      AS standalone_group_code,
         ic.group_start_date AS standalone_group_start_date,
         ic.group_end_date   AS standalone_group_end_date,
+        g.start_date       AS group_start_date,
+        g.end_date         AS group_end_date,
         c.name             AS course_name,
         c.code             AS course_code,
         ic.course_name     AS standalone_course_name,
@@ -147,8 +163,8 @@ export default defineEventHandler(async (event) => {
       certificate: {
         // ⚠️ id намеренно НЕ возвращается — UUID не должен быть публичным
         number:      row.certificate_number,
-        issueDate:   row.issue_date,
-        expiryDate:  row.expiry_date,
+        issueDate:   toYmd(row.issue_date),
+        expiryDate:  toYmd(row.expiry_date),
         issuedAt:    row.issued_at,
         revokedAt:   row.revoked_at,
         revokeReason: row.revoke_reason,
@@ -159,8 +175,8 @@ export default defineEventHandler(async (event) => {
         },
         group: {
           code:      row.group_code || row.standalone_group_code || null,
-          startDate: row.standalone_group_start_date,
-          endDate:   row.standalone_group_end_date,
+          startDate: toYmd(row.group_start_date || row.standalone_group_start_date),
+          endDate:   toYmd(row.group_end_date || row.standalone_group_end_date),
         },
         course: {
           name:  row.course_name || row.standalone_course_name || null,
@@ -170,7 +186,7 @@ export default defineEventHandler(async (event) => {
         issuer: {
           organizationName: row.org_name,
         },
-        previewUrl: `/api/public/cert-preview-${row.certificate_number}`,
+        previewUrl: `/api/public/cert-preview/${row.certificate_number}`,
       },
     };
   } catch (error: any) {

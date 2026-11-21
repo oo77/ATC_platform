@@ -1,9 +1,10 @@
 /**
  * API endpoint для создания нового студента
  * POST /api/students
- * 
- * Автоматически создаёт учётную запись (user) для входа в систему.
- * Логин: ПИНФЛ@student.local, Пароль: ПИНФЛ (или указанный)
+ *
+ * ПИНФЛ необязателен. Если он указан — автоматически создаётся учётная запись (user).
+ * Логин: ПИНФЛ@student.local, Пароль: ПИНФЛ (или указанный).
+ * Без ПИНФЛ слушатель создаётся без учётной записи.
  */
 
 import { randomUUID } from 'crypto';
@@ -17,7 +18,11 @@ import { Permission, requirePermission } from "../../utils/permissions";
 
 const studentSchema = z.object({
   fullName: z.string().min(1, 'ФИО обязательно'),
-  pinfl: z.string().regex(/^\d{14}$/, 'ПИНФЛ должен содержать ровно 14 цифр'),
+  // ПИНФЛ необязателен; если указан — ровно 14 цифр
+  pinfl: z
+    .union([z.string().trim().regex(/^\d{14}$/, 'ПИНФЛ должен содержать ровно 14 цифр'), z.literal('')])
+    .optional()
+    .nullable(),
   organization: z.string().min(1, 'Организация обязательна'),
   department: z.string().optional(),
   position: z.string().min(1, 'Должность обязательна'),
@@ -54,10 +59,10 @@ export default defineEventHandler(async (event) => {
     }
 
     const data = validationResult.data;
+    const pinfl = data.pinfl?.trim() || null;
 
-    // Проверка уникальности ПИНФЛ
-    const exists = await studentExistsByPinfl(data.pinfl);
-    if (exists) {
+    // Проверка уникальности ПИНФЛ (только если указан)
+    if (pinfl && (await studentExistsByPinfl(pinfl))) {
       return {
         success: false,
         message: 'Студент с таким ПИНФЛ уже существует',
@@ -68,42 +73,44 @@ export default defineEventHandler(async (event) => {
     let userId: string | null = null;
     let accountEmail: string | null = null;
 
-    // Всегда создаём учётную запись для студента
+    // Учётную запись создаём только при наличии ПИНФЛ
     // Логин: ПИНФЛ@student.local, Пароль: ПИНФЛ
-    accountEmail = `${data.pinfl}@student.local`;
+    if (pinfl) {
+      accountEmail = `${pinfl}@student.local`;
 
-    // Проверяем уникальность email в таблице users
-    const existingUsers = await executeQuery<User[]>(
-      'SELECT id FROM users WHERE email = ? LIMIT 1',
-      [accountEmail]
-    );
-
-    if (existingUsers.length === 0) {
-      // Пароль = ПИНФЛ (если не указан свой)
-      const password = data.accountPassword || data.pinfl;
-
-      // Хешируем пароль
-      const passwordHash = await hashPassword(password);
-
-      // Создаём пользователя с ролью STUDENT
-      userId = randomUUID();
-      await executeQuery(
-        `INSERT INTO users (id, role, name, email, password_hash, pinfl, workplace, position, created_at, updated_at)
-         VALUES (?, 'STUDENT', ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))`,
-        [userId, data.fullName, accountEmail, passwordHash, data.pinfl, data.organization, data.position]
+      // Проверяем уникальность email в таблице users
+      const existingUsers = await executeQuery<User[]>(
+        'SELECT id FROM users WHERE email = ? LIMIT 1',
+        [accountEmail]
       );
 
-      console.log(`[Students API] Создан пользователь: ${accountEmail} (role=STUDENT, password=${data.accountPassword ? 'custom' : 'ПИНФЛ'})`);
-    } else {
-      // Пользователь уже существует, используем его ID
-      userId = existingUsers[0].id;
-      console.log(`[Students API] Пользователь ${accountEmail} уже существует, связываем со студентом`);
+      if (existingUsers.length === 0) {
+        // Пароль = ПИНФЛ (если не указан свой)
+        const password = data.accountPassword || pinfl;
+
+        // Хешируем пароль
+        const passwordHash = await hashPassword(password);
+
+        // Создаём пользователя с ролью STUDENT
+        userId = randomUUID();
+        await executeQuery(
+          `INSERT INTO users (id, role, name, email, password_hash, pinfl, workplace, position, created_at, updated_at)
+           VALUES (?, 'STUDENT', ?, ?, ?, ?, ?, ?, NOW(3), NOW(3))`,
+          [userId, data.fullName, accountEmail, passwordHash, pinfl, data.organization, data.position]
+        );
+
+        console.log(`[Students API] Создан пользователь: ${accountEmail} (role=STUDENT, password=${data.accountPassword ? 'custom' : 'ПИНФЛ'})`);
+      } else {
+        // Пользователь уже существует, используем его ID
+        userId = existingUsers[0].id;
+        console.log(`[Students API] Пользователь ${accountEmail} уже существует, связываем со студентом`);
+      }
     }
 
     // Создаём студента
     const student = await createStudent({
       fullName: data.fullName.trim(),
-      pinfl: data.pinfl.trim(),
+      pinfl,
       organization: data.organization.trim(),
       department: data.department?.trim() || undefined,
       position: data.position.trim(),
@@ -134,7 +141,9 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
-      message: 'Студент и учётная запись успешно созданы',
+      message: userId
+        ? 'Студент и учётная запись успешно созданы'
+        : 'Студент создан (без учётной записи — не указан ПИНФЛ)',
       student,
       accountEmail,
     };

@@ -372,14 +372,19 @@ const loadSession = async () => {
   stage.value = "in_progress";
 
   if (brief.value.timeLimitMinutes) {
-    const startedAt = new Date(session.value.started_at).getTime();
-    const limitMs = brief.value.timeLimitMinutes * 60 * 1000;
-    const elapsed = Date.now() - startedAt;
-    remainingTime.value = Math.max(0, Math.floor((limitMs - elapsed) / 1000));
+    // elapsed_seconds считает сервер — не зависим от часов компьютера пользователя
+    const serverElapsed = session.value.elapsed_seconds;
+    const elapsed =
+      typeof serverElapsed === "number"
+        ? serverElapsed
+        : Math.max(0, Math.floor((Date.now() - new Date(session.value.started_at).getTime()) / 1000));
+    const initialRemaining = Math.max(0, brief.value.timeLimitMinutes * 60 - elapsed);
+    remainingTime.value = initialRemaining;
+    // Монотонные часы: не сбиваются от перевода системного времени и фоновых вкладок
+    const anchor = performance.now();
     timerInterval = setInterval(() => {
-      if (remainingTime.value > 0) {
-        remainingTime.value -= 1;
-      } else {
+      remainingTime.value = Math.max(0, initialRemaining - Math.floor((performance.now() - anchor) / 1000));
+      if (remainingTime.value <= 0) {
         clearInterval(timerInterval);
         finishExam();
       }

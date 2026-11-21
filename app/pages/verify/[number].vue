@@ -6,9 +6,10 @@
       <p>Загрузка документа...</p>
     </div>
 
-    <!-- Ошибка -->
-    <div v-else-if="error || !data" class="verify-error-screen">
+    <!-- Сертификат не найден в реестре -->
+    <div v-else-if="notFound" class="verify-error-screen">
       <div class="verify-error-box">
+        <img src="/logo.png" alt="ATC Platform" class="verify-error-logo" />
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -16,14 +17,45 @@
           stroke-width="2"
         >
           <circle cx="12" cy="12" r="10" />
+          <line x1="15" y1="9" x2="9" y2="15" />
+          <line x1="9" y1="9" x2="15" y2="15" />
+        </svg>
+        <span class="verify-status status-revoked verify-status-lg">Недействителен</span>
+        <h3>Сертификат не найден в реестре</h3>
+        <p>
+          Сертификат № <strong>{{ number }}</strong> не зарегистрирован в
+          реестре выданных сертификатов. Подлинность документа
+          не подтверждена.
+        </p>
+        <p class="verify-error-note">
+          Проверьте правильность номера. Если документ был предъявлен вам
+          как действительный, обратитесь в учебный центр, выдавший сертификат.
+        </p>
+      </div>
+    </div>
+
+    <!-- Сбой проверки (сеть, сервер, лимит запросов) -->
+    <div v-else-if="error || !data" class="verify-error-screen">
+      <div class="verify-error-box">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          class="icon-warn"
+        >
+          <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="8" x2="12" y2="12" />
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
-        <h3>Сертификат не найден</h3>
+        <h3>Не удалось выполнить проверку</h3>
         <p>
-          Документ с номером <strong>{{ number }}</strong> не зарегистрирован в
-          системе.
+          Сервис проверки временно недоступен. Повторите попытку через
+          несколько минут.
         </p>
+        <button class="verify-btn btn-secondary verify-retry" @click="refresh()">
+          Повторить
+        </button>
       </div>
     </div>
 
@@ -32,11 +64,6 @@
       <!-- Верхняя панель управления -->
       <header class="verify-topbar">
         <div class="verify-topbar-info">
-          <NuxtLink to="/verify" class="verify-back-btn" title="Вернуться назад">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-          </NuxtLink>
           <img src="/logo.png" alt="ATC Platform" class="verify-logo" />
           <div class="verify-topbar-text">
             <h1 class="verify-title">Сертификат № {{ cert?.number }}</h1>
@@ -85,7 +112,7 @@
 
           <a
             v-if="cert?.number"
-            :href="'/api/public/cert-download-' + cert.number"
+            :href="'/api/public/cert-download/' + encodeURIComponent(cert.number)"
             class="verify-btn btn-primary"
           >
             <svg
@@ -120,14 +147,16 @@
             <span v-if="cert.course.hours" class="detail-sub">{{ cert.course.hours }} ак. часов</span>
           </div>
           
-          <div class="verify-detail-item">
-            <span class="detail-label">Период действия</span>
+          <div v-if="cert.group.startDate || cert.group.endDate" class="verify-detail-item">
+            <span class="detail-label">Период обучения</span>
             <span class="detail-value">
-              {{ formatDate(cert.issuedAt || cert.issueDate) }} — 
-              <span :class="{'text-expired': data.verificationStatus === 'expired'}">
-                {{ cert.expiryDate ? formatDate(cert.expiryDate) : 'Бессрочно' }}
-              </span>
+              {{ formatDate(cert.group.startDate) }} — {{ formatDate(cert.group.endDate) }}
             </span>
+          </div>
+
+          <div class="verify-detail-item">
+            <span class="detail-label">Дата выдачи</span>
+            <span class="detail-value">{{ formatDate(cert.issueDate || cert.issuedAt) }}</span>
             <span class="detail-sub">Выдан: {{ cert.issuer.organizationName || 'ATC Platform' }}</span>
           </div>
         </div>
@@ -135,13 +164,25 @@
 
       <!-- Сам сертификат -->
       <main class="verify-main-content">
-        <div v-if="cert?.previewUrl" class="verify-frame-container">
-          <iframe
-            :src="cert.previewUrl"
-            class="verify-iframe"
-            frameborder="0"
-            allowfullscreen
-          ></iframe>
+        <div v-if="previewState === 'loading'" class="verify-empty-preview">
+          <div class="verify-spinner"></div>
+          <p>Загрузка сертификата...</p>
+        </div>
+        <div v-else-if="previewState === 'ready' && previewPages.length" class="verify-pages">
+          <figure
+            v-for="(src, i) in previewPages"
+            :key="i"
+            class="verify-page"
+          >
+            <img
+              :src="src"
+              :alt="`Сертификат № ${cert?.number}, страница ${i + 1}`"
+              class="verify-cert-image"
+            />
+            <figcaption v-if="previewPages.length > 1" class="verify-page-label">
+              Страница {{ i + 1 }} из {{ previewPages.length }}
+            </figcaption>
+          </figure>
         </div>
         <div v-else class="verify-empty-preview">
           <svg
@@ -222,15 +263,47 @@ type CertificateVerifyResponse = {
 };
 
 const certNum = number.value;
-const { data, pending, error } = await useAsyncData(
+const { data, pending, error, refresh } = await useAsyncData(
   `verify-${certNum}`,
   () =>
     ($fetch as any)(
-      `/api/certificates/verify/${certNum}`,
+      `/api/certificates/verify/${encodeURIComponent(certNum)}`,
     ) as Promise<CertificateVerifyResponse>,
 );
 
 const cert = computed(() => data.value?.certificate);
+
+// 404 — номера нет в реестре; прочие ошибки (сеть, 429, 500) — сбой проверки
+const notFound = computed(() => {
+  const e = error.value as any;
+  return (e?.statusCode ?? e?.status) === 404;
+});
+
+// Сертификат показываем картинкой, отрисованной через pdf.js:
+// мобильные браузеры не умеют показывать PDF во <iframe>
+// Все страницы сертификата (у части шаблонов их две: на узбекском и английском)
+const previewPages = ref<string[]>([]);
+const previewState = ref<"loading" | "ready" | "failed">("loading");
+
+async function loadPreview(url: string) {
+  previewState.value = "loading";
+  const width = Math.min(Math.max(window.innerWidth, 800), 1600);
+  const pages = await renderDocumentPages(url, width);
+  previewPages.value.forEach((u) => URL.revokeObjectURL(u));
+  previewPages.value = pages;
+  previewState.value = pages.length ? "ready" : "failed";
+}
+
+onMounted(() => {
+  watch(
+    () => cert.value?.previewUrl,
+    (url) => {
+      if (url) loadPreview(url);
+      else previewState.value = "failed";
+    },
+    { immediate: true },
+  );
+});
 
 const statusText = computed(() => {
   if (data.value?.verificationStatus === "valid") return "Действителен";
@@ -241,6 +314,11 @@ const statusText = computed(() => {
 
 const formatDate = (dateStr: string | Date | null | undefined): string => {
   if (!dateStr) return "—";
+  // Календарная дата YYYY-MM-DD — форматируем как есть, без часового пояса
+  if (typeof dateStr === "string") {
+    const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+  }
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("ru-RU", {
@@ -338,6 +416,40 @@ async function copyPageLink() {
   line-height: 1.5;
 }
 
+.verify-error-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 460px;
+  margin: 0 16px;
+}
+
+.verify-error-logo {
+  height: 36px;
+  width: auto;
+  margin-bottom: 24px;
+}
+
+.verify-error-box .verify-status-lg {
+  font-size: 13px;
+  padding: 4px 12px;
+  margin-bottom: 12px;
+}
+
+.verify-error-box .verify-error-note {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.verify-error-box svg.icon-warn {
+  color: #fbbf24;
+}
+
+.verify-retry {
+  margin-top: 20px;
+}
+
 /* Main Preview Layout */
 .verify-preview-screen {
   flex: 1;
@@ -362,28 +474,6 @@ async function copyPageLink() {
   display: flex;
   align-items: center;
   gap: 20px;
-}
-
-.verify-back-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  transition: all 0.2s ease;
-  text-decoration: none;
-}
-
-.verify-back-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.verify-back-btn svg {
-  width: 18px;
-  height: 18px;
 }
 
 .verify-logo {
@@ -490,7 +580,7 @@ async function copyPageLink() {
   max-width: 1100px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 24px;
 }
 
@@ -533,34 +623,49 @@ async function copyPageLink() {
 /* Content */
 .verify-main-content {
   flex: 1;
+  min-height: 0;
   padding: 24px;
   display: flex;
   justify-content: center;
-  align-items: center;
-  overflow: hidden;
+  align-items: flex-start;
+  overflow-y: auto;
   background: #0f172a;
 }
 
-.verify-frame-container {
+/* Страницы сертификата одна под другой, область прокручивается */
+.verify-pages {
   width: 100%;
-  height: 100%;
-  max-width: 1100px;
-  background: #1e293b;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  max-width: 860px;
+  margin: 0 auto;
   display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.verify-iframe {
-  flex: 1;
+.verify-page {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.verify-cert-image {
+  display: block;
   width: 100%;
-  height: 100%;
-  border: none;
-  background: #f1f5f9;
+  height: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.verify-page-label {
+  font-size: 12px;
+  color: #94a3b8;
 }
 
 .verify-empty-preview {
+  margin: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -584,6 +689,15 @@ async function copyPageLink() {
     grid-template-columns: 1fr;
     gap: 16px;
   }
+  /* На телефоне страница прокручивается целиком, сертификат — во всю ширину */
+  .verify-layout {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+  .verify-main-content {
+    overflow: visible;
+  }
 }
 
 @media (max-width: 640px) {
@@ -594,10 +708,7 @@ async function copyPageLink() {
     display: none;
   }
   .verify-main-content {
-    padding: 0;
-  }
-  .verify-frame-container {
-    border-radius: 0;
+    padding: 12px;
   }
   .d-none {
     display: none;

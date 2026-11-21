@@ -236,12 +236,12 @@ export async function finishSession(
     grade: number;
     timeSpentSeconds: number;
   }
-): Promise<void> {
-  await executeQuery(
+): Promise<boolean> {
+  const res: any = await executeQuery(
     `UPDATE attestation_test_sessions SET
       status = 'completed', completed_at = ?, total_points = ?, max_points = ?,
       score_percent = ?, passed = ?, grade = ?, time_spent_seconds = ?, updated_at = ?
-     WHERE id = ?`,
+     WHERE id = ? AND status = 'in_progress'`,
     [
       new Date(),
       results.totalPoints,
@@ -254,6 +254,8 @@ export async function finishSession(
       sessionId,
     ]
   );
+  // false — сессию уже завершил кто-то другой (инструктор, таймер или фоновая задача)
+  return (res?.affectedRows ?? 0) > 0;
 }
 
 // ============================================================================

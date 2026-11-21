@@ -1,7 +1,7 @@
 <template>
   <UiModal
     :is-open="isOpen"
-    title="Группа из Course Planner"
+    :title="mode === 'link' ? 'Привязка к группе Course Planner' : 'Группа из Course Planner'"
     size="lg"
     @close="$emit('close')"
   >
@@ -123,10 +123,10 @@
             <UiBadge v-if="counts.invalid" size="sm" color="error">ошибка ПИНФЛ: {{ counts.invalid }}</UiBadge>
           </div>
           <ul class="max-h-[220px] divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
-            <li v-for="s in preview.students" :key="s.pinfl" class="flex items-center justify-between gap-3 px-3 py-2">
+            <li v-for="s in preview.students" :key="s.key || s.pinfl || s.name" class="flex items-center justify-between gap-3 px-3 py-2">
               <div class="min-w-0">
                 <p class="truncate">{{ s.name }}</p>
-                <p class="truncate text-xs text-gray-400">{{ s.pinfl }}<span v-if="s.organization"> · {{ s.organization }}</span></p>
+                <p class="truncate text-xs text-gray-400">{{ s.pinfl || "без ПИНФЛ" }}<span v-if="s.organization"> · {{ s.organization }}</span></p>
               </div>
               <UiBadge size="sm" :color="s.status === 'existing' ? 'success' : s.status === 'new' ? 'info' : 'error'">
                 {{ s.status === "existing" ? "в ATC" : s.status === "new" ? "новый" : "ошибка" }}
@@ -149,7 +149,7 @@
           :disabled="!preview || !!preview.linkedGroup || loadingPreview"
           @click="apply"
         >
-          Заполнить форму
+          {{ mode === "link" ? "Привязать и сравнить состав" : "Заполнить форму" }}
         </UiButton>
       </div>
     </template>
@@ -157,7 +157,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { Search, Loader2, ArrowLeft } from "lucide-vue-next";
 
 export interface PlannerGroupListItem {
@@ -178,7 +178,7 @@ export interface PlannerGroupPreview {
   startDate: string | null;
   endDate: string | null;
   classroom: string | null;
-  students: Array<{ pinfl: string; name: string; organization: string | null; status: "existing" | "new" | "invalid"; studentId: string | null }>;
+  students: Array<{ key?: string; pinfl: string; name: string; organization: string | null; status: "existing" | "new" | "invalid"; studentId: string | null }>;
   linkedGroup: { id: string; code: string } | null;
 }
 
@@ -189,8 +189,13 @@ export interface PlannerGroupApplied {
   errors: Array<{ pinfl: string; name: string; error: string }>;
 }
 
-const props = defineProps<{ isOpen: boolean }>();
-const emit = defineEmits<{ close: []; apply: [data: PlannerGroupApplied] }>();
+// mode="create" — заполнить форму новой группы; mode="link" — выбрать группу планера
+// для привязки существующей группы ATC (слушатели здесь не создаются, это делает синхронизация)
+const props = withDefaults(defineProps<{ isOpen: boolean; mode?: "create" | "link"; initialSearch?: string }>(), {
+  mode: "create",
+  initialSearch: "",
+});
+const emit = defineEmits<{ close: []; apply: [data: PlannerGroupApplied]; link: [plannerGroupId: string] }>();
 
 const { authFetch } = useAuthFetch();
 const toast = useNotification();
@@ -259,6 +264,10 @@ const resetSelection = () => {
 
 const apply = async () => {
   if (!preview.value || !selected.value) return;
+  if (props.mode === "link") {
+    emit("link", selected.value.id);
+    return;
+  }
   applying.value = true;
   try {
     const res = await authFetch<{
@@ -302,9 +311,12 @@ watch(
   (open) => {
     if (open) {
       resetSelection();
-      search.value = "";
+      clearTimeout(searchTimer);
+      search.value = props.initialSearch;
       page.value = 1;
       loadGroups();
+      // watch(search) сработает от initialSearch — отменяем повторную загрузку
+      nextTick(() => clearTimeout(searchTimer));
     }
   },
 );

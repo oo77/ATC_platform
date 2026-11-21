@@ -6,7 +6,7 @@
 import {
   createScheduleEvent,
   checkScheduleConflicts,
-  formatConflictMessages,
+  formatScheduleConflicts,
   throwScheduleConflict,
 } from "../../repositories/scheduleRepository";
 import { withScheduleWriteLock } from "../../utils/scheduleLock";
@@ -132,7 +132,8 @@ export default defineEventHandler(async (event) => {
       const groupEndDate = formatDateOnly(group.end_date);
 
       // Проверяем, что дата занятия входит в период обучения группы
-      if (eventDate < groupStartDate || eventDate > groupEndDate) {
+      // (пересдачи можно ставить на любую дату — в т.ч. после окончания обучения)
+      if (!isRetake && (eventDate < groupStartDate || eventDate > groupEndDate)) {
         throw createError({
           statusCode: 400,
           statusMessage: `Дата занятия должна быть в пределах периода обучения группы (${formatDateForDisplay(
@@ -262,8 +263,12 @@ export default defineEventHandler(async (event) => {
           },
         );
 
-        const conflictMessages = conflicts.flatMap((conflict) =>
-          formatConflictMessages(conflict, body),
+        // Аудитория: до MAX_LESSONS_PER_CLASSROOM занятий одновременно
+        const conflictMessages = formatScheduleConflicts(
+          conflicts,
+          body,
+          body.startTime,
+          body.endTime,
         );
         // Бронь аудитории под другой курс тоже блокирует занятие
         const blocks = await findBookingBlocks([

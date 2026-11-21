@@ -83,10 +83,18 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const [existingStudents]: any = await pool.query("SELECT pinfl FROM students");
+    const [existingStudents]: any = await pool.query("SELECT id, pinfl, full_name FROM students");
     const existingPinflSet = new Set<string>(
-      existingStudents.map((s: any) => String(s.pinfl || "").trim())
+      existingStudents.map((s: any) => String(s.pinfl || "").trim()).filter(Boolean)
     );
+    // Слушатели без ПИНФЛ сопоставляются по ФИО (среди слушателей ATC без ПИНФЛ)
+    const normalizeName = (name: unknown) => String(name || "").trim().replace(/\s+/g, " ").toLowerCase();
+    const noPinflIdByName = new Map<string, string>();
+    for (const s of existingStudents) {
+      if (String(s.pinfl || "").trim()) continue;
+      const key = normalizeName(s.full_name);
+      if (key && !noPinflIdByName.has(key)) noPinflIdByName.set(key, s.id);
+    }
 
     // 2. Fetch Page 1 to inspect total count
     sendEvent("status", { message: "Подключение к API Course Planner 2..." });
@@ -132,12 +140,14 @@ export default defineEventHandler(async (event) => {
 
       for (const pStudent of studentsList) {
         try {
-          const pinfl = String(pStudent.pinfl || "").trim();
-          if (!pinfl || !/^\d{14}$/.test(pinfl)) {
+          // ПИНФЛ необязателен: некорректный/пустой сохраняем как NULL
+          const rawPinfl = String(pStudent.pinfl || "").trim();
+          const pinfl: string | null = /^\d{14}$/.test(rawPinfl) ? rawPinfl : null;
+          if (!pinfl && !String(pStudent.name || "").trim()) {
             errors.push({
-              name: pStudent.name || "Без имени",
-              pinfl: pinfl || "пусто",
-              error: "Некорректный ПИНФЛ (требуется 14 цифр)",
+              name: "Без имени",
+              pinfl: rawPinfl || "пусто",
+              error: "Нет ни ПИНФЛ, ни ФИО — слушателя не с чем сопоставить",
             });
             continue;
           }
@@ -223,15 +233,26 @@ export default defineEventHandler(async (event) => {
             });
           }
 
-          const isExisting = existingPinflSet.has(pinfl);
+          // Без ПИНФЛ upsert идёт по первичному ключу: берём id найденного по ФИО слушателя
+          let id: string;
+          let isExisting: boolean;
+          if (pinfl) {
+            id = crypto.randomUUID();
+            isExisting = existingPinflSet.has(pinfl);
+            existingPinflSet.add(pinfl);
+          } else {
+            const nameKey = normalizeName(fullName);
+            const existingId = noPinflIdByName.get(nameKey);
+            isExisting = !!existingId;
+            id = existingId || crypto.randomUUID();
+            noPinflIdByName.set(nameKey, id);
+          }
           if (isExisting) {
             updatedCount++;
           } else {
             createdCount++;
-            existingPinflSet.add(pinfl);
           }
 
-          const id = crypto.randomUUID();
           rowsToUpsert.push([
             id,
             fullName,
@@ -257,10 +278,10 @@ export default defineEventHandler(async (event) => {
         }
       }
 
-      // Deduplicate rows by PINFL within the page to avoid ER_DUP_ENTRY
+      // Deduplicate rows by PINFL (or id for students without PINFL) within the page to avoid ER_DUP_ENTRY
       const uniqueRowsMap = new Map<string, any[]>();
       for (const row of rowsToUpsert) {
-        uniqueRowsMap.set(row[2], row);
+        uniqueRowsMap.set(row[2] ? `p:${row[2]}` : `id:${row[0]}`, row);
       }
       const uniqueRows = Array.from(uniqueRowsMap.values());
 

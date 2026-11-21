@@ -26,13 +26,13 @@
 
       <div>
         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-          ПИНФЛ (14 цифр) <span class="text-danger">*</span>
+          ПИНФЛ (14 цифр, необязательно)
         </label>
         <input
           v-model="form.pinfl"
           type="text"
           maxlength="14"
-          placeholder="12345678901234"
+          placeholder="Можно оставить пустым"
           class="w-full rounded-xl border border-slate-200 bg-transparent py-2.5 px-3.5 text-sm font-medium font-mono outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800"
           :class="{ 'border-danger focus:border-danger focus:ring-danger': errors.pinfl }"
         />
@@ -148,9 +148,8 @@ watch(
 const validate = () => {
   errors.value = {};
   if (!form.value.fullName.trim()) errors.value.fullName = 'Укажите ФИО';
-  if (!form.value.pinfl.trim()) {
-    errors.value.pinfl = 'Укажите ПИНФЛ';
-  } else if (!/^\d{14}$/.test(form.value.pinfl.trim())) {
+  // ПИНФЛ необязателен; если указан — ровно 14 цифр
+  if (form.value.pinfl.trim() && !/^\d{14}$/.test(form.value.pinfl.trim())) {
     errors.value.pinfl = 'ПИНФЛ должен содержать ровно 14 цифр';
   }
   if (!form.value.organization.trim()) errors.value.organization = 'Укажите организацию';
@@ -167,7 +166,7 @@ const handleSubmit = async () => {
       method: 'POST',
       body: {
         fullName: form.value.fullName.trim(),
-        pinfl: form.value.pinfl.trim(),
+        pinfl: form.value.pinfl.trim() || null,
         organization: form.value.organization.trim(),
         position: form.value.position.trim(),
         department: form.value.department.trim() || undefined,

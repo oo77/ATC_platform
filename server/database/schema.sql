@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS students (
   id VARCHAR(191) PRIMARY KEY,
   user_id VARCHAR(191) NULL COMMENT 'Связь с таблицей users для авторизации',
   full_name VARCHAR(255) NOT NULL,
-  pinfl VARCHAR(14) NOT NULL UNIQUE,
+  pinfl VARCHAR(14) NULL UNIQUE,
   organization VARCHAR(255) NOT NULL COMMENT 'Текстовое название организации (legacy)',
   organization_id VARCHAR(191) NULL COMMENT 'Ссылка на таблицу organizations',
   department VARCHAR(255),

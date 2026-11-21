@@ -1422,7 +1422,7 @@ import {
   TEST_LANGUAGES,
   TEST_LANGUAGE_LABELS,
   TEST_LANGUAGE_FLAGS,
-} from "../../../../shared/utils/testLanguages";
+} from "#shared/utils/testLanguages";
 import { TEST_LANGUAGE_BADGE_CLASSES } from "../../../utils/testLanguageBadges";
 
 definePageMeta({

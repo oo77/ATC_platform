@@ -694,7 +694,7 @@
 import {
   testLanguageLabel,
   testLanguageFlag,
-} from "../../../../shared/utils/testLanguages";
+} from "#shared/utils/testLanguages";
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 
@@ -987,18 +987,33 @@ const loadTemplateInfo = async (apiTemplateSettings = null) => {
 const initTimer = () => {
   if (!timeLimit.value) return;
 
-  const startTime = new Date(session.value.started_at).getTime();
-  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  // elapsed_seconds приходит с сервера — не зависим от часов компьютера студента.
+  // Фолбэк на started_at только для старого ответа API.
+  const serverElapsed = session.value.elapsed_seconds;
+  const elapsed =
+    typeof serverElapsed === "number"
+      ? serverElapsed
+      : Math.max(
+          0,
+          Math.floor(
+            (Date.now() - new Date(session.value.started_at).getTime()) / 1000
+          )
+        );
   const totalSeconds = timeLimit.value * 60;
-  remainingTime.value = Math.max(0, totalSeconds - elapsed);
+  const initialRemaining = Math.max(0, totalSeconds - elapsed);
+  remainingTime.value = initialRemaining;
 
   if (remainingTime.value <= 0) {
     handleTimeout();
     return;
   }
 
+  // Отсчёт от монотонных часов (performance.now): не сбивается при переводе
+  // системных часов и не отстаёт, когда браузер притормаживает фоновую вкладку
+  const anchor = performance.now();
   timerInterval = setInterval(() => {
-    remainingTime.value--;
+    const passed = Math.floor((performance.now() - anchor) / 1000);
+    remainingTime.value = Math.max(0, initialRemaining - passed);
     if (remainingTime.value <= 0) {
       clearInterval(timerInterval);
       handleTimeout();

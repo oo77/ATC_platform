@@ -23,7 +23,7 @@ export interface StudentCertificate {
 export interface Student {
   id: string;
   fullName: string;
-  pinfl: string;
+  pinfl: string | null;
   organization: string;
   organizationId?: string | null;
   organizationUz?: string | null;
@@ -48,7 +48,7 @@ export interface Student {
 // Данные для создания студента
 export interface CreateStudentInput {
   fullName: string;
-  pinfl: string;
+  pinfl?: string | null;
   organization: string;
   organizationId?: string | null;
   organizationUz?: string;
@@ -69,7 +69,7 @@ export interface CreateStudentInput {
 // Данные для обновления студента
 export interface UpdateStudentInput {
   fullName?: string;
-  pinfl?: string;
+  pinfl?: string | null;
   organization?: string;
   organizationId?: string | null;
   organizationUz?: string;

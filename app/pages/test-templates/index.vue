@@ -509,7 +509,7 @@ import {
   TEST_LANGUAGES,
   TEST_LANGUAGE_LABELS,
   TEST_LANGUAGE_FLAGS,
-} from '../../../shared/utils/testLanguages';
+} from '#shared/utils/testLanguages';
 import { TEST_LANGUAGE_BADGE_CLASSES } from '../../utils/testLanguageBadges';
 import { ref, computed, onMounted } from 'vue';
 import { Plus, FileText, Library, CheckCircle, Globe, Filter, RotateCcw, Search, ChevronDown, Activity, Eye, Pencil, Trash2, Settings, Shuffle } from 'lucide-vue-next';

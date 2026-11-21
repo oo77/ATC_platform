@@ -13,6 +13,7 @@
 import {
   PDFDocument,
   PDFFont,
+  PDFImage,
   PDFPage,
   StandardFonts,
   rgb,
@@ -21,6 +22,8 @@ import {
 } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import QRCode from "qrcode";
+import sharp from "sharp";
+import { createHash } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import type {
@@ -226,14 +229,17 @@ function readLocalFont(filePath: string): Uint8Array | null {
 /**
  * Загружает шрифт через Google Fonts CSS API.
  *
- * Хитрость: используем User-Agent старого браузера (IE8/Trident),
- * чтобы Google Fonts вернул TTF вместо WOFF2 — pdf-lib принимает только TTF/OTF.
+ * Хитрость: запрашиваем CSS с «неизвестным» User-Agent (не браузерным),
+ * тогда Google Fonts отдаёт TTF (format truetype) вместо WOFF2 — pdf-lib
+ * принимает только TTF/OTF. (С UA от IE8 Google отдаёт EOT — так ломался Inter.)
  *
  * Порядок:
  * 1. Запрос CSS с перечнем шрифтового файла через fonts.googleapis.com
  * 2. Парсим URL шрифта из CSS (src: url(https://fonts.gstatic.com/...))
  * 3. Загружаем сам TTF-файл
  */
+const GOOGLE_FONTS_UA = "ATC-Platform-PDF/1.0";
+
 async function fetchFromGoogleFontsApi(
   fontFamily: string,
   weight: number,
@@ -244,9 +250,9 @@ async function fetchFromGoogleFontsApi(
     const cssRes = await fetch(cssUrl, {
       signal: AbortSignal.timeout(15_000),
       headers: {
-        // Старый UA → Google возвращает TTF вместо WOFF2
+        // Небраузерный UA → Google возвращает TTF (не WOFF2 и не EOT)
         "User-Agent":
-          "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)",
+          GOOGLE_FONTS_UA,
       },
     });
 
@@ -276,7 +282,7 @@ async function fetchFromGoogleFontsApi(
       signal: AbortSignal.timeout(15_000),
       headers: {
         "User-Agent":
-          "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.0; Trident/4.0)",
+          GOOGLE_FONTS_UA,
       },
     });
 
@@ -685,6 +691,124 @@ async function loadImageBuffer(url: string): Promise<Buffer | null> {
 }
 
 // ============================================================================
+// ПОДГОТОВКА ИЗОБРАЖЕНИЙ ДЛЯ PDF
+// ============================================================================
+//
+// pdf-lib встраивает PNG, полностью распаковывая его в память (RGBA) и заново
+// сжимая на JS. Фон шаблона бывает 9909×14032 px (~1200 DPI на A4) — это
+// ~0.5 ГБ на одну распаковку, ~30 с работы и >1 ГБ памяти на сертификат.
+// Поэтому перед встраиванием уменьшаем картинку до 300 DPI от размера на листе
+// (единицы шаблона — CSS px, 96 на дюйм), непрозрачные переводим в JPEG
+// и кэшируем результат (память + диск): фон шаблона обрабатывается один раз.
+
+const PRINT_DPI = 300;
+const TEMPLATE_UNITS_PER_INCH = 96;
+const IMAGE_DISK_CACHE = path.join(process.cwd(), "storage", ".image-cache");
+const IMAGE_MEM_CACHE_LIMIT = 30;
+
+type PreparedImage = { bytes: Buffer; kind: "png" | "jpg" };
+const preparedImageCache = new Map<string, Promise<PreparedImage>>();
+
+async function prepareImageUncached(
+  buf: Buffer,
+  boxW: number,
+  boxH: number,
+  hash: string,
+): Promise<PreparedImage> {
+  const scale = PRINT_DPI / TEMPLATE_UNITS_PER_INCH;
+  const targetW = Math.max(1, Math.round(boxW * scale));
+  const targetH = Math.max(1, Math.round(boxH * scale));
+
+  const meta = await sharp(buf, { limitInputPixels: false }).metadata();
+  const isSmallEnough =
+    (meta.width ?? 0) <= targetW * 1.2 && (meta.height ?? 0) <= targetH * 1.2;
+  if (isSmallEnough && (meta.format === "png" || meta.format === "jpeg")) {
+    return { bytes: buf, kind: meta.format === "png" ? "png" : "jpg" };
+  }
+
+  const diskBase = path.join(IMAGE_DISK_CACHE, `${hash}-${targetW}x${targetH}`);
+  for (const kind of ["jpg", "png"] as const) {
+    try {
+      const cached = fs.readFileSync(`${diskBase}.${kind}`);
+      if (cached.length > 0) return { bytes: cached, kind };
+    } catch {
+      /* нет в кэше */
+    }
+  }
+
+  // Растягиваем ровно в рамку: drawImage всё равно рисует в w×h,
+  // так что вид на листе не меняется
+  let pipeline = sharp(buf, { limitInputPixels: false });
+  if (!isSmallEnough) pipeline = pipeline.resize(targetW, targetH, { fit: "fill" });
+  const resizedPng = await pipeline.png({ compressionLevel: 6 }).toBuffer();
+
+  const opaque = !meta.hasAlpha || (await sharp(resizedPng).stats()).isOpaque;
+  const result: PreparedImage = opaque
+    ? {
+        bytes: await sharp(resizedPng).flatten({ background: "#ffffff" }).jpeg({ quality: 90, mozjpeg: true }).toBuffer(),
+        kind: "jpg",
+      }
+    : { bytes: resizedPng, kind: "png" };
+
+  try {
+    fs.mkdirSync(IMAGE_DISK_CACHE, { recursive: true });
+    fs.writeFileSync(`${diskBase}.${result.kind}`, result.bytes);
+  } catch {
+    /* кэш некритичен */
+  }
+  console.log(
+    `[pdfGenerator] Изображение ${meta.width}×${meta.height} → ${targetW}×${targetH} ${result.kind}, ` +
+      `${Math.round(buf.length / 1024)} KB → ${Math.round(result.bytes.length / 1024)} KB`,
+  );
+  return result;
+}
+
+/** Картинка, готовая к встраиванию: уменьшенная до 300 DPI для рамки boxW×boxH */
+async function prepareImageForPdf(buf: Buffer, boxW: number, boxH: number): Promise<PreparedImage> {
+  const hash = createHash("sha1").update(buf).digest("hex").slice(0, 16);
+  const key = `${hash}|${Math.round(boxW)}x${Math.round(boxH)}`;
+  let p = preparedImageCache.get(key);
+  if (!p) {
+    p = prepareImageUncached(buf, boxW, boxH, hash).catch((e) => {
+      preparedImageCache.delete(key);
+      console.warn("[pdfGenerator] Не удалось оптимизировать изображение, встраиваю как есть:", e?.message ?? e);
+      const isPng = buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+      return { bytes: buf, kind: isPng ? "png" : "jpg" } as PreparedImage;
+    });
+    if (preparedImageCache.size >= IMAGE_MEM_CACHE_LIMIT) {
+      preparedImageCache.delete(preparedImageCache.keys().next().value!);
+    }
+    preparedImageCache.set(key, p);
+  }
+  return p;
+}
+
+/**
+ * Встраивает картинку в документ один раз: одинаковый фон на нескольких
+ * страницах ссылается на один объект PDF, а не копируется.
+ */
+async function embedPreparedImage(
+  pdfDoc: PDFDocument,
+  buf: Buffer,
+  boxW: number,
+  boxH: number,
+): Promise<PDFImage> {
+  const prepared = await prepareImageForPdf(buf, boxW, boxH);
+  let perDoc = embeddedImages.get(pdfDoc);
+  if (!perDoc) {
+    perDoc = new Map();
+    embeddedImages.set(pdfDoc, perDoc);
+  }
+  let img = perDoc.get(prepared.bytes);
+  if (!img) {
+    img = prepared.kind === "png" ? pdfDoc.embedPng(prepared.bytes) : pdfDoc.embedJpg(prepared.bytes);
+    perDoc.set(prepared.bytes, img);
+  }
+  return img;
+}
+const embeddedImages = new WeakMap<PDFDocument, Map<Buffer, Promise<PDFImage>>>();
+
+// ============================================================================
 // ГЕНЕРАЦИЯ PDF
 // ============================================================================
 
@@ -736,14 +860,7 @@ async function buildPdf(
         const buf = await loadImageBuffer(pageData.background.value);
         if (buf) {
           try {
-            const isPng =
-              buf[0] === 0x89 &&
-              buf[1] === 0x50 &&
-              buf[2] === 0x4e &&
-              buf[3] === 0x47;
-            const pdfImage = isPng
-              ? await pdfDoc.embedPng(buf)
-              : await pdfDoc.embedJpg(buf);
+            const pdfImage = await embedPreparedImage(pdfDoc, buf, pageWidth, pageHeight);
             page.drawImage(pdfImage, {
               x: 0,
               y: 0,
@@ -1021,14 +1138,7 @@ async function drawElement(
       if (!imgBuffer) break;
 
       try {
-        const srcLower = el.src.split("?")[0].toLowerCase();
-        const isJpeg =
-          srcLower.endsWith(".jpg") ||
-          srcLower.endsWith(".jpeg") ||
-          el.src.startsWith("data:image/jpeg");
-        const img = isJpeg
-          ? await pdfDoc.embedJpg(imgBuffer)
-          : await pdfDoc.embedPng(imgBuffer);
+        const img = await embedPreparedImage(pdfDoc, imgBuffer, w, h);
 
         const imgRotDeg = element.rotation ?? 0;
         // pdf-lib поворачивает вокруг (x, y) — нижнего-левого угла.

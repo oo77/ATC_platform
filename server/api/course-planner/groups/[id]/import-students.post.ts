@@ -5,7 +5,7 @@
  * Ответ: studentIds — id слушателей ATC в порядке списка планера.
  */
 import { defineEventHandler, getRouterParam, createError } from "h3";
-import { ensurePlannerStudents, loadPlannerGroup } from "../../../../utils/plannerGroupSync";
+import { ensurePlannerStudents, loadPlannerGroup, plannerStudentKey } from "../../../../utils/plannerGroupSync";
 import { Permission, requirePermission, roleHasPermission } from "../../../../utils/permissions";
 import { logActivity } from "../../../../utils/activityLogger";
 
@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
   const studentIds = Array.from(new Set(
     (data.students || [])
-      .map((s) => result.idsByPinfl.get(String(s.pinfl || "").trim()))
+      .map((s) => result.idsByKey.get(plannerStudentKey(s)))
       .filter((v): v is string => !!v),
   ));
 

@@ -11,6 +11,7 @@ import {
 import { getQuestionById } from "../../../../repositories/questionRepository";
 import type { AnswerData } from "../../../../types/testing";
 import { requireAttestationSessionAccess } from "../../../../utils/resourceAccess";
+import { completeAttestationSession, getAttestationTimeLimit, isExamTimeOver } from "../../../../utils/examCompletion";
 
 export default defineEventHandler(async (event) => {
   // P0-ACCESS: проверка прав доступа
@@ -32,6 +33,12 @@ export default defineEventHandler(async (event) => {
     const session = await getSessionById(id);
     if (!session) return { success: false, message: "Сессия не найдена" };
     if (session.status !== "in_progress") return { success: false, message: "Тест уже завершён" };
+
+    // Время вышло (с запасом на сеть) — ответы больше не принимаем, тест завершаем
+    if (isExamTimeOver(session.startedAt, await getAttestationTimeLimit(session.groupId))) {
+      await completeAttestationSession(id);
+      return { success: false, time_over: true, message: "Время вышло, тест завершён" };
+    }
 
     const question = await getQuestionById(body.question_id);
     if (!question) return { success: false, message: "Вопрос не найден" };

@@ -129,6 +129,8 @@ export default defineNuxtConfig({
     },
     scheduledTasks: {
       "0 * * * *": ["check-deadlines"],
+      // Автозавершение тестов, у которых вышло время (если вкладку закрыли)
+      "* * * * *": ["expire-exam-sessions"],
     },
     // Добавляем сертификаты как серверные ассеты
     serverAssets: [

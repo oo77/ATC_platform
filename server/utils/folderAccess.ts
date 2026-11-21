@@ -12,7 +12,7 @@
  */
 
 import { createHmac, timingSafeEqual } from "crypto";
-import { createError, getCookie, setCookie, type H3Event } from "h3";
+import { createError, getCookie, getRequestProtocol, setCookie, type H3Event } from "h3";
 import { getFolderById, type Folder } from "../repositories/folderRepository";
 import {
   Permission,
@@ -48,7 +48,8 @@ export function grantFolderUnlock(event: H3Event, ctx: PermissionContext, folder
   setCookie(event, cookieName(folder.id), `${exp}.${sign(ctx.userId, folder.id, exp, folder.passwordHash)}`, {
     httpOnly: true,
     sameSite: "strict",
-    secure: process.env.NODE_ENV === "production",
+    // Secure только по https (по http в локальной сети браузер такую cookie не сохранит)
+    secure: getRequestProtocol(event, { xForwardedProto: true }) === "https",
     path: "/api",
     maxAge: UNLOCK_TTL_SECONDS,
   });

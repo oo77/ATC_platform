@@ -315,7 +315,7 @@ import {
   TEST_LANGUAGES,
   TEST_LANGUAGE_FLAGS,
   isTestLanguage,
-} from '../../../shared/utils/testLanguages';
+} from '#shared/utils/testLanguages';
 import { ref, computed } from 'vue';
 import * as XLSX from 'xlsx';
 

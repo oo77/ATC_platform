@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { eventKindShort } from "../../../shared/utils/scheduleLabels";
+import { eventKindShort } from "#shared/utils/scheduleLabels";
 
 defineProps<{
   data: {

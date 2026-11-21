@@ -173,7 +173,7 @@
                     <label
                       class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
                     >
-                      ПИНФЛ <span class="text-danger">*</span>
+                      ПИНФЛ <span class="text-xs text-gray-400">(необязательно)</span>
                     </label>
                     <input
                       v-model="newStudent.pinfl"
@@ -758,9 +758,7 @@ function validateForm() {
       if (!newStudent.value.fullName?.trim()) {
         errors.value["studentData.fullName"] = "ФИО обязательно";
       }
-      if (!newStudent.value.pinfl?.trim()) {
-        errors.value["studentData.pinfl"] = "ПИНФЛ обязателен";
-      } else if (!/^\d{14}$/.test(newStudent.value.pinfl.trim())) {
+      if (newStudent.value.pinfl?.trim() && !/^\d{14}$/.test(newStudent.value.pinfl.trim())) {
         errors.value["studentData.pinfl"] = "ПИНФЛ должен содержать 14 цифр";
       }
       if (!newStudent.value.organization?.trim()) {
@@ -833,7 +831,7 @@ async function handleSubmit() {
         !props.preselectedStudent && studentMode.value === "new"
           ? {
               fullName: newStudent.value.fullName.trim(),
-              pinfl: newStudent.value.pinfl.trim(),
+              pinfl: newStudent.value.pinfl.trim() || null,
               organization: newStudent.value.organization.trim(),
               position: newStudent.value.position.trim(),
               department: newStudent.value.department?.trim() || undefined,

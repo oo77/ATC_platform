@@ -65,6 +65,7 @@ import * as rolesAndAudit from "./migrations/20261109_054_roles_and_audit";
 import * as studyGroupsPlannerLink from "./migrations/20261109_055_study_groups_planner_link";
 import * as scheduleEventsCreatedBy from "./migrations/20261112_056_schedule_events_created_by";
 import * as roomBookings from "./migrations/20261112_057_room_bookings";
+import * as studentsPinflNullable from "./migrations/20261116_058_students_pinfl_nullable";
 import * as testLanguages from "./migrations/20261109_055_test_languages";
 import * as schedulePeriods11to14 from "./migrations/20261112_056_schedule_periods_11_14";
 
@@ -582,6 +583,12 @@ const MIGRATIONS_REGISTRY: Migration[] = [
     up: schedulePeriods11to14.up,
     down: schedulePeriods11to14.down,
     description: schedulePeriods11to14.description,
+  },
+  {
+    name: "20261116_058_students_pinfl_nullable",
+    up: studentsPinflNullable.up,
+    down: studentsPinflNullable.down,
+    description: studentsPinflNullable.description,
   },
   // ============================================================
   // Новые миграции добавлять ниже

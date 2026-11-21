@@ -24,7 +24,7 @@ export interface StudentCertificate {
 export interface Student {
   id: string;
   fullName: string; // Ф.И.О (обязательно)
-  pinfl: string; // ПИНФЛ (обязательно)
+  pinfl: string | null; // ПИНФЛ (необязательно)
   organization: string; // Организация (обязательно)
   department?: string | null; // Служба/отдел (не обязательно)
   departmentUz?: string | null;
@@ -44,7 +44,7 @@ export interface Student {
 // Данные для создания студента
 export interface CreateStudentData {
   fullName: string;
-  pinfl: string;
+  pinfl?: string | null;
   organization: string;
   department?: string;
   position: string;
@@ -55,7 +55,7 @@ export interface CreateStudentData {
 // Данные для обновления студента
 export interface UpdateStudentData {
   fullName?: string;
-  pinfl?: string;
+  pinfl?: string | null;
   organization?: string;
   department?: string;
   position?: string;

@@ -15,8 +15,8 @@ import {
   readableTextOn,
   resolveGroupColor,
   type GroupColorTokens,
-} from "../../shared/utils/groupColors";
-import { eventKindLabel, eventKindShort } from "../../shared/utils/scheduleLabels";
+} from "#shared/utils/groupColors";
+import { eventKindLabel, eventKindShort } from "#shared/utils/scheduleLabels";
 
 /** Ручные цвета занятия (поле `color`) — теперь только цвет метки вида занятия */
 export const EVENT_STATUS_COLORS: Record<string, string> = {
@@ -188,6 +188,22 @@ export function buildTimeGridCardHtml(data: TimeGridCardData): string {
   </div>`;
 }
 
+/** HTML занятия в виде «Месяц»: одна строка, лишнее обрезается многоточием */
+export function buildMonthEventHtml(data: {
+  groupCode?: string;
+  title: string;
+  timeText?: string;
+  isRetake?: boolean;
+  isArchived?: boolean;
+}): string {
+  const flags = `${data.isArchived ? "🔒" : ""}${data.isRetake ? "↻" : ""}`;
+  return `<div class="ev-month-wrap"><div class="ev-month">
+    ${data.timeText ? `<span class="ev-m-time">${escapeHtml(data.timeText)}</span>` : ""}
+    ${data.groupCode ? `<span class="ev-m-code">${escapeHtml(data.groupCode)}</span>` : ""}
+    <span class="ev-m-title">${flags ? `${flags} ` : ""}${escapeHtml(data.title)}</span>
+  </div></div>`;
+}
+
 // ============================================================================
 // Карточка занятия и разметка сетки в видах «Неделя» / «День»
 // ============================================================================
@@ -197,11 +213,24 @@ export function buildTimeGridCardHtml(data: TimeGridCardData): string {
  * (код группы, вид занятия, аудитория, инструктор), в остальных видах — стандартная (`true`).
  */
 export function renderTimeGridEventContent(arg: EventContentArg) {
-  if (!arg.view.type.startsWith("timeGrid")) return true;
-
   // «Зеркало» выделения при создании занятия — не наше событие, оставляем стандартный вид
   const p = arg.event.extendedProps;
   if (!p.groupTokens) return true;
+
+  // «Месяц»: компактная строка — время · группа · дисциплина
+  if (arg.view.type.startsWith("dayGrid")) {
+    return {
+      html: buildMonthEventHtml({
+        groupCode: p.groupCode,
+        title: p.disciplineShortName || p.rawTitle || arg.event.title,
+        timeText: arg.timeText,
+        isRetake: p.isRetake,
+        isArchived: p.isGroupArchived,
+      }),
+    };
+  }
+
+  if (!arg.view.type.startsWith("timeGrid")) return true;
 
   return {
     html: buildTimeGridCardHtml({

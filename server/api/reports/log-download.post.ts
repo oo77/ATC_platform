@@ -44,6 +44,7 @@ export default defineEventHandler(async (event: H3Event) => {
     acquaintance_sheet: "Лист ознакомления",
     group_list: "Список группы",
     group_schedule: "Расписание группы",
+    business_trip_list: "Командировочные",
     questionnaire: "Обезличенный вопросник",
   };
 

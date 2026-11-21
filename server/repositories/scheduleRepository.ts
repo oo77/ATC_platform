@@ -794,7 +794,83 @@ export function describeConflictingEvent(conflict: ScheduleEvent): string {
   return parts.join(", ");
 }
 
-/** Сообщения о занятых ресурсах для одного пересекающегося занятия */
+/**
+ * Сколько обычных занятий может одновременно идти в одной аудитории.
+ * Инструктор и группа не могут быть на двух обычных занятиях сразу.
+ * Пересдачи не учитываются нигде: сами ставятся без проверок и не занимают
+ * ни аудиторию, ни инструктора, ни группу для других занятий.
+ */
+export const MAX_LESSONS_PER_CLASSROOM = 2;
+
+type Interval = { start: number; end: number };
+
+/** "YYYY-MM-DD HH:MM:SS" / ISO без зоны / Date → миллисекунды (локальное время сервера) */
+const toMs = (v: string | Date): number =>
+  v instanceof Date ? v.getTime() : new Date(isoToMySqlDatetime(v).replace(" ", "T")).getTime();
+
+/** Наибольшее число интервалов, идущих одновременно внутри окна [start, end) */
+export function peakOverlap(intervals: Interval[], start: number, end: number): number {
+  const points: [number, number][] = [];
+  for (const it of intervals) {
+    const s = Math.max(it.start, start);
+    const e = Math.min(it.end, end);
+    if (s < e) points.push([s, 1], [e, -1]);
+  }
+  // Конец раньше начала в одной точке: занятие 10:00–11:00 и 11:00–12:00 не пересекаются
+  points.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let cur = 0;
+  let peak = 0;
+  for (const [, d] of points) {
+    cur += d;
+    if (cur > peak) peak = cur;
+  }
+  return peak;
+}
+
+/**
+ * Сообщения о конфликтах для нового занятия [start, end).
+ * Аудитория — конфликт, только если вместе с новым занятием в ней одновременно
+ * окажется больше MAX_LESSONS_PER_CLASSROOM занятий. `extraRoomIntervals` —
+ * другие занятия той же операции в этой аудитории (пакетный перенос/копирование).
+ */
+export function formatScheduleConflicts(
+  conflicts: ScheduleEvent[],
+  wanted: { classroomId?: string | null; instructorId?: string | null; groupId?: string | null },
+  start: string | Date,
+  end: string | Date,
+  extraRoomIntervals: Interval[] = [],
+): string[] {
+  // Пересдачи ни на что не влияют: не занимают ни аудиторию, ни инструктора, ни группу
+  const real = conflicts.filter(
+    (c) => !isRetakeRow({ original_event_id: c.originalEventId, allowed_student_ids: c.allowedStudentIds }),
+  );
+  const out = real.flatMap((c) =>
+    formatConflictMessages(c, { instructorId: wanted.instructorId, groupId: wanted.groupId }),
+  );
+  if (!wanted.classroomId) return out;
+
+  const inRoom = real.filter((c) => c.classroomId === wanted.classroomId);
+  const busy = peakOverlap(
+    [...inRoom.map((c) => ({ start: toMs(c.startTime), end: toMs(c.endTime) })), ...extraRoomIntervals],
+    toMs(start),
+    toMs(end),
+  );
+  if (busy + 1 > MAX_LESSONS_PER_CLASSROOM) {
+    const name = inRoom[0]?.classroom?.name ?? "";
+    const details = inRoom.map(describeConflictingEvent).join(" | ");
+    out.unshift(
+      `Аудитория${name ? ` «${name}»` : ""} занята: одновременно уже ${busy} занят${busy === 1 ? "ие" : busy < 5 ? "ия" : "ий"}, ` +
+        `а можно не больше ${MAX_LESSONS_PER_CLASSROOM}${details ? ` (${details})` : ""}`,
+    );
+  }
+  return out;
+}
+
+/**
+ * Сообщения о занятых ресурсах для одного пересекающегося занятия.
+ * Аудиторию здесь проверяют только по прямому совпадению — для расписания
+ * используйте formatScheduleConflicts (лимит занятий в аудитории).
+ */
 export function formatConflictMessages(
   conflict: ScheduleEvent,
   wanted: { classroomId?: string | null; instructorId?: string | null; groupId?: string | null },
@@ -870,7 +946,8 @@ export async function findBatchConflicts(
   const messages: string[] = [];
   const active = candidates.filter((c) => !c.skip);
 
-  for (const c of active) {
+  for (let idx = 0; idx < active.length; idx++) {
+    const c = active[idx]!;
     if (!c.classroomId && !c.instructorId && !c.groupId) continue;
     const conflicts = await checkScheduleConflicts(
       sqlToIso(c.start),
@@ -882,10 +959,16 @@ export async function findBatchConflicts(
         excludeEventIds: options.excludeEventIds,
       },
     );
-    for (const conflict of conflicts) {
-      for (const m of formatConflictMessages(conflict, c)) {
-        messages.push(`«${c.label}»: ${m}`);
-      }
+    // Занятия этой же операции в той же аудитории, стоящие раньше в списке:
+    // так перебор в 3+ занятия ловится один раз, на «лишнем» занятии
+    const sameOpInRoom = c.classroomId
+      ? active
+          .slice(0, idx)
+          .filter((o) => o.classroomId === c.classroomId && o.start < c.end && o.end > c.start)
+          .map((o) => ({ start: toMs(o.start), end: toMs(o.end) }))
+      : [];
+    for (const m of formatScheduleConflicts(conflicts, c, c.start, c.end, sameOpInRoom)) {
+      messages.push(`«${c.label}»: ${m}`);
     }
   }
 
@@ -895,9 +978,6 @@ export async function findBatchConflicts(
       const b = active[j]!;
       if (!(a.start < b.end && a.end > b.start)) continue;
       const when = `${sqlDay(a.start)} ${sqlTime(a.start)}–${sqlTime(a.end)}`;
-      if (a.classroomId && a.classroomId === b.classroomId) {
-        messages.push(`Аудитория занята дважды в одной операции: «${a.label}» и «${b.label}», ${when}`);
-      }
       if (a.instructorId && a.instructorId === b.instructorId) {
         messages.push(`Инструктор занят дважды в одной операции: «${a.label}» и «${b.label}», ${when}`);
       }

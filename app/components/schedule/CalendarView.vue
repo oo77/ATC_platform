@@ -12,60 +12,72 @@
     :style="plannerStyle"
    >
     <!-- Верхняя панель управления -->
-    <div
-      class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3 shrink-0"
-    >
+    <div class="mb-3 shrink-0 space-y-2.5">
+      <!-- Строка 1: навигация + период + переключатель видов -->
+      <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div class="flex min-w-0 items-center gap-3">
+          <!-- Навигация по датам -->
+          <div
+            class="flex shrink-0 items-center overflow-hidden rounded-lg border border-stroke dark:border-strokedark"
+          >
+            <button
+              @click="handlePrev"
+              class="p-2 hover:bg-gray-100 dark:hover:bg-meta-4 transition-colors"
+              title="Назад"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              @click="handleToday"
+              class="border-x border-stroke px-3 py-2 text-sm font-medium hover:bg-gray-100 dark:border-strokedark dark:hover:bg-meta-4 transition-colors"
+              title="Сегодня"
+            >
+              Сегодня
+            </button>
+            <button
+              @click="handleNext"
+              class="p-2 hover:bg-gray-100 dark:hover:bg-meta-4 transition-colors"
+              title="Вперёд"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Заголовок с текущим периодом -->
+          <h2
+            class="truncate whitespace-nowrap text-xl font-semibold text-black first-letter:uppercase dark:text-white"
+            :title="currentTitle"
+          >
+            {{ currentTitle }}
+          </h2>
+        </div>
+
+        <!-- Переключатель видов -->
+        <div
+          class="flex shrink-0 rounded-lg bg-gray-100 p-1 dark:bg-meta-4"
+        >
+          <button
+            v-for="view in viewOptions"
+            :key="view.value"
+            @click="handleViewChange(view.value)"
+            class="rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors"
+            :class="[
+              currentView === view.value
+                ? 'bg-white text-primary shadow-sm dark:bg-boxdark dark:text-white'
+                : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white',
+            ]"
+          >
+            {{ view.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Строка 2: действия -->
       <div class="flex flex-wrap items-center gap-2">
-        <!-- Навигация по датам -->
-        <button
-          @click="handlePrev"
-          class="p-2 rounded-lg border border-stroke dark:border-strokedark hover:bg-gray-100 dark:hover:bg-meta-4 transition-colors"
-          title="Назад"
-        >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-
-        <!-- Кнопка "Сегодня" -->
-        <button
-          @click="handleToday"
-          class="px-3 py-2 rounded-lg border border-stroke dark:border-strokedark hover:bg-gray-100 dark:hover:bg-meta-4 transition-colors text-sm font-medium"
-          title="Сегодня"
-        >
-          Сегодня
-        </button>
-
-        <button
-          @click="handleNext"
-          class="p-2 rounded-lg border border-stroke dark:border-strokedark hover:bg-gray-100 dark:hover:bg-meta-4 transition-colors"
-          title="Вперёд"
-        >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 5l7 7-7 7"
-            />
-          </svg>
-        </button>
-
         <!-- Кнопка добавления события -->
         <UiButton
           v-if="canCreateSchedule"
@@ -179,32 +191,6 @@
           <button type="button" class="px-2 py-2 min-w-[54px] tabular-nums hover:bg-gray-100 dark:hover:bg-meta-4" @click="setZoom(1)">{{ Math.round(zoom * 100) }}%</button>
           <button type="button" class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-meta-4" @click="setZoom(zoom * 1.25)">+</button>
         </div>
-      </div>
-
-      <!-- Заголовок с текущей датой -->
-      <h2
-        class="text-xl font-semibold text-black dark:text-white order-first sm:order-0"
-      >
-        {{ currentTitle }}
-      </h2>
-
-      <!-- Переключатель видов -->
-      <div
-        class="flex rounded-lg border border-stroke dark:border-strokedark overflow-hidden"
-      >
-        <button
-          v-for="view in viewOptions"
-          :key="view.value"
-          @click="handleViewChange(view.value)"
-          class="px-4 py-2 text-sm font-medium transition-colors"
-          :class="[
-            currentView === view.value
-              ? 'bg-primary text-white'
-              : 'bg-white dark:bg-boxdark text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4',
-          ]"
-        >
-          {{ view.label }}
-        </button>
       </div>
     </div>
 
@@ -496,7 +482,7 @@
         ref="scrollAreaRef"
         class="calendar-scroll-area"
         :class="plannerMode ? 'flex-1 min-h-0 overflow-auto overscroll-contain' : ''"
-        :style="plannerMode ? undefined : { height: normalCalendarHeight + 'px' }"
+        :style="plannerMode ? undefined : { height: normalAreaHeight + 'px' }"
       >
         <div
           :class="[
@@ -826,13 +812,16 @@ const zoomTier = computed(() => {
 
 // --- Высота календаря в обычном режиме: до низа экрана, без прокрутки страницы ---
 const normalCalendarHeight = ref(640);
+let pageObserver: ResizeObserver | null = null;
 const updateNormalHeight = () => {
   nextTick(() => {
     const el = scrollAreaRef.value;
     if (!el || plannerMode.value || typeof window === "undefined") return;
-    const top = el.getBoundingClientRect().top;
+    // Верх области относительно документа (а не окна), чтобы прокрутка страницы не влияла
+    const top = el.getBoundingClientRect().top + window.scrollY;
     // 64px — нижние отступы карточки и страницы
-    normalCalendarHeight.value = Math.max(480, Math.round(window.innerHeight - top - 64));
+    const next = Math.max(480, Math.round(window.innerHeight - top - 64));
+    if (next !== normalCalendarHeight.value) normalCalendarHeight.value = next;
   });
 };
 
@@ -1003,7 +992,8 @@ watch(
     eventMinHeight: plannerMode.value ? (zoomTier.value === "xs" ? 8 : 16) : 28,
     eventShortHeight: plannerMode.value ? 30 : 44,
     navLinks: plannerMode.value,
-    dayMaxEvents: plannerMode.value ? true : 3,
+    // Число видимых занятий в клетке месяца — по её высоте, остальные в «+ ещё»
+    dayMaxEvents: true,
   }),
   (opts, prev) => {
     const api = calendarRef.value?.getApi();
@@ -1016,6 +1006,25 @@ watch(
 
 // Храним текущий диапазон дат
 const currentDateRange = ref<{ start: Date; end: Date } | null>(null);
+
+// --- «Месяц» в обычном режиме: сетка всегда видна целиком ---
+// Строк столько, сколько недель в месяце (4–6), и каждая не ниже MONTH_ROW_MIN:
+// на высоком экране месяц растягивается до низа, на низком — растёт страница,
+// а не обрезается сетка
+const MONTH_ROW_MIN = 112;
+const MONTH_HEADER_H = 44;
+const monthWeeks = computed(() => {
+  const r = currentDateRange.value;
+  if (!r) return 6;
+  const days = Math.round((r.end.getTime() - r.start.getTime()) / 86_400_000);
+  return Math.min(6, Math.max(4, Math.round(days / 7)));
+});
+const normalAreaHeight = computed(() =>
+  currentView.value === "dayGridMonth"
+    ? Math.max(normalCalendarHeight.value, MONTH_HEADER_H + monthWeeks.value * MONTH_ROW_MIN)
+    : normalCalendarHeight.value,
+);
+watch(normalAreaHeight, refreshCalendarSize);
 
 const filters = ref({
   groupId: "",
@@ -1814,9 +1823,18 @@ const calendarOptions = computed<CalendarOptions>(() => {
     eventStartEditable: isEditable,
     eventDurationEditable: isEditable,
 
-    // В планировании число видимых занятий в ячейке зависит от её размера (масштаба)
-    dayMaxEvents: 3,
+    // Число видимых занятий в ячейке зависит от её размера, остальные — в «+ ещё N»
+    dayMaxEvents: true,
     moreLinkClick: "popover",
+    // На узких экранах слово «ещё» скрывается CSS — остаётся «+N»
+    moreLinkContent: (arg: { num: number }) => ({
+      html: `+<span class="more-word"> ещё</span> ${arg.num}`,
+    }),
+    // Только недели текущего месяца (4–6), без лишней строки следующего
+    fixedWeekCount: false,
+    views: {
+      dayGridMonth: { dayHeaderFormat: { weekday: "short" } },
+    },
     weekends: true,
     nowIndicator: true,
     slotMinTime: slotMinTime.value,
@@ -2438,6 +2456,12 @@ onMounted(async () => {
   window.addEventListener("wheel", handlePlannerWheel, { passive: false });
   window.addEventListener("keydown", handlePlannerKey);
   window.addEventListener("resize", updateNormalHeight);
+  // Содержимое над календарём (показатели, фильтры, баннеры) меняет его верх —
+  // пересчитываем высоту при любом изменении размера страницы
+  if (typeof ResizeObserver !== "undefined") {
+    pageObserver = new ResizeObserver(() => updateNormalHeight());
+    pageObserver.observe(document.body);
+  }
   try {
     const prefs = JSON.parse(localStorage.getItem(UI_PREFS_KEY) || "{}");
     showFilters.value = !!prefs.filters;
@@ -2475,6 +2499,8 @@ onUnmounted(() => {
   window.removeEventListener("wheel", handlePlannerWheel);
   window.removeEventListener("keydown", handlePlannerKey);
   window.removeEventListener("resize", updateNormalHeight);
+  pageObserver?.disconnect();
+  pageObserver = null;
   areaObserver?.disconnect();
   document.body.style.overflow = "";
   cleanupAllTooltips();
@@ -3122,6 +3148,192 @@ onUnmounted(() => {
 .schedule-calendar .fc-daygrid-event.ev-group .fc-event-title,
 .schedule-calendar .fc-daygrid-event.ev-group .fc-event-time {
   color: inherit;
+}
+
+/* Строка занятия в месяце: время · группа · дисциплина */
+.schedule-calendar .ev-month-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  container-type: inline-size;
+}
+.schedule-calendar .ev-month {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px 3px;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.schedule-calendar .ev-m-time {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+/* Код группы — главное в месяце: показываем целиком, дисциплина — сколько влезет */
+.schedule-calendar .ev-m-code {
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+}
+.schedule-calendar .ev-m-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+}
+/* Узкая клетка (телефон, планшет): только время и группа */
+@container (max-width: 120px) {
+  .schedule-calendar .ev-m-title {
+    display: none;
+  }
+  .schedule-calendar .ev-m-code {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+}
+@container (max-width: 64px) {
+  .schedule-calendar .ev-m-time {
+    display: none;
+  }
+}
+/* Совсем узко (телефон): цветная полоска группы, подробности — по «+N» и клику */
+@container (max-width: 40px) {
+  .schedule-calendar .ev-m-code,
+  .schedule-calendar .ev-m-title {
+    display: none;
+  }
+  .schedule-calendar .ev-month {
+    min-height: 8px;
+    padding: 0;
+  }
+}
+
+/* ============================================
+   ВИД «МЕСЯЦ» (обычный режим)
+   ============================================ */
+.schedule-calendar .fc-dayGridMonth-view {
+  --mv-line: #e5e7eb;
+  --mv-head-bg: #f8fafc;
+  --mv-head-ink: #64748b;
+  --mv-other-bg: #f8fafc;
+  --mv-weekend-bg: #fbfcff;
+  --mv-num: #334155;
+}
+.dark .schedule-calendar .fc-dayGridMonth-view {
+  --mv-line: #2e3a47;
+  --mv-head-bg: #1f2a37;
+  --mv-head-ink: #94a3b8;
+  --mv-other-bg: #1a2230;
+  --mv-weekend-bg: #1e2836;
+  --mv-num: #cbd5e1;
+}
+/* Все 7 дней всегда в ширину экрана: снимаем общий min-width: 718px из main.css,
+   иначе на узких экранах часть недели уходит в горизонтальную прокрутку */
+.schedule-calendar .fc-dayGridMonth-view.fc-view.fc-daygrid {
+  min-width: 0;
+}
+.schedule-calendar .fc-dayGridMonth-view td,
+.schedule-calendar .fc-dayGridMonth-view th,
+.schedule-calendar .fc-dayGridMonth-view .fc-scrollgrid {
+  border-color: var(--mv-line);
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-col-header-cell {
+  padding: 10px 0;
+  background: var(--mv-head-bg);
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-col-header-cell-cushion {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mv-head-ink);
+}
+/* Выходные — едва заметный фон, дни соседних месяцев — приглушены */
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-day.fc-day-sat,
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-day.fc-day-sun {
+  background: var(--mv-weekend-bg);
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-day.fc-day-other {
+  background: var(--mv-other-bg);
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-day-other .fc-daygrid-day-top {
+  opacity: 0.45;
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-day-frame {
+  padding: 2px 4px 4px;
+}
+/* Номер дня — слева, сегодня — в круге основного цвета */
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-day-top {
+  flex-direction: row;
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-day-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  margin: 2px 0 0;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mv-num);
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-day-today {
+  background: rgba(60, 80, 224, 0.05) !important;
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-day-today .fc-daygrid-day-number {
+  background: #3c50e0;
+  color: #fff;
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-day.fc-day:not(.fc-day-other):hover {
+  background: rgba(60, 80, 224, 0.035);
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-event-harness {
+  margin-top: 1px;
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-day-events {
+  margin-bottom: 0;
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-event {
+  margin: 0 1px;
+}
+/* «+ ещё N» — аккуратная плашка */
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-more-link {
+  display: inline-block;
+  margin: 2px 2px 0;
+  padding: 0 8px;
+  line-height: 1.5;
+  border-radius: 999px;
+  background: rgba(60, 80, 224, 0.09);
+  color: #3c50e0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.schedule-calendar .fc-dayGridMonth-view .fc-daygrid-more-link:hover {
+  background: rgba(60, 80, 224, 0.18);
+}
+@media (max-width: 767px) {
+  .schedule-calendar .fc-dayGridMonth-view .more-word {
+    display: none;
+  }
+  .schedule-calendar .fc-dayGridMonth-view .fc-daygrid-more-link {
+    padding: 0 5px;
+  }
+  .schedule-calendar .fc-dayGridMonth-view .fc-col-header-cell-cushion {
+    letter-spacing: 0;
+  }
+}
+.dark .schedule-calendar .fc-dayGridMonth-view .fc-daygrid-more-link {
+  background: rgba(124, 140, 255, 0.16);
+  color: #aab4ff;
 }
 
 /* «Список»: цветная полоса группы у строки */

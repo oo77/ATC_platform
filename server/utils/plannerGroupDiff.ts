@@ -83,15 +83,19 @@ export async function buildPlannerGroupDiff(group: StudyGroup): Promise<PlannerG
   }
 
   const plannerStudents = await previewPlannerStudents(raw.students || []);
-  const groupPinfls = new Set((group.students || []).map((s) => String(s.student?.pinfl || "")));
-  const plannerPinfls = new Set(plannerStudents.map((s) => s.pinfl));
+  // Сравниваем по id слушателя ATC: слушатели планера уже сопоставлены
+  // (по ПИНФЛ, а без ПИНФЛ — по ФИО), новые ещё не имеют id
+  const groupStudentIds = new Set((group.students || []).map((s) => s.studentId));
+  const plannerStudentIds = new Set(
+    plannerStudents.map((s) => s.studentId).filter((v): v is string => !!v),
+  );
 
   const studentsToAdd = plannerStudents.filter(
-    (s) => s.status !== "invalid" && !groupPinfls.has(s.pinfl),
+    (s) => !s.studentId || !groupStudentIds.has(s.studentId),
   );
   const studentsNotInPlanner = (group.students || [])
-    .filter((s) => s.student && !plannerPinfls.has(String(s.student.pinfl)))
-    .map((s) => ({ studentId: s.studentId, fullName: s.student!.fullName, pinfl: s.student!.pinfl }));
+    .filter((s) => s.student && !plannerStudentIds.has(s.studentId))
+    .map((s) => ({ studentId: s.studentId, fullName: s.student!.fullName, pinfl: s.student!.pinfl || "" }));
 
   return { plannerGroup: pg, plannerCourse, courseMismatch, fieldChanges, studentsToAdd, studentsNotInPlanner, raw };
 }

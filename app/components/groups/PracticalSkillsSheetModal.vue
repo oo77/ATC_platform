@@ -106,7 +106,7 @@ import {
   PRACTICAL_SKILLS_SERVICES,
   type PracticalSkillsService,
   type PracticalSkillsSheetForm,
-} from "../../../shared/utils/practicalSkillsSheet";
+} from "#shared/utils/practicalSkillsSheet";
 
 defineProps<{
   isOpen: boolean;

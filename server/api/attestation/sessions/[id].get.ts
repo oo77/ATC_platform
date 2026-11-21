@@ -90,6 +90,10 @@ export default defineEventHandler(async (event) => {
         status: session.status,
         current_question_index: session.currentQuestionIndex,
         started_at: session.startedAt,
+        // По часам сервера — часы на компьютере пользователя могут расходиться
+        elapsed_seconds: session.startedAt
+          ? Math.max(0, Math.floor((Date.now() - new Date(session.startedAt).getTime()) / 1000))
+          : 0,
         completed_at: session.completedAt,
         time_spent_seconds: session.timeSpentSeconds,
         template_name: templateSettings?.name,

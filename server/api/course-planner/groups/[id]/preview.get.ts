@@ -5,10 +5,11 @@
  */
 import { defineEventHandler, getRouterParam, createError } from "h3";
 import { buildPlannerGroupPreview } from "../../../../utils/plannerGroupSync";
-import { Permission, requirePermission } from "../../../../utils/permissions";
+import { Permission, requireAnyPermission } from "../../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
-  await requirePermission(event, Permission.GROUPS_CREATE);
+  // список нужен и при создании группы, и при привязке существующей
+  await requireAnyPermission(event, [Permission.GROUPS_CREATE, Permission.GROUPS_UPDATE]);
 
   const id = getRouterParam(event, "id");
   if (!id) throw createError({ statusCode: 400, message: "ID группы планера не указан" });

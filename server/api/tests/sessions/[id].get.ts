@@ -179,6 +179,11 @@ export default defineEventHandler(async (event) => {
                 is_preview: session.is_preview,
                 current_question_index: session.current_question_index,
                 started_at: session.started_at,
+                // Прошедшее время считаем по часам сервера: часы на компьютере
+                // студента могут отставать/спешить, и таймер стартовал бы не с полного лимита
+                elapsed_seconds: session.started_at
+                    ? Math.max(0, Math.floor((Date.now() - new Date(session.started_at).getTime()) / 1000))
+                    : 0,
                 completed_at: session.completed_at,
                 time_spent_seconds: session.time_spent_seconds,
                 template_name: session.template_name || templateSettings?.name,

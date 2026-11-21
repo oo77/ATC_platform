@@ -13,7 +13,7 @@ import {
 } from "../../../repositories/groupRepository";
 import { executeQuery } from "../../../utils/db";
 import { buildPlannerGroupDiff, groupDateToLocal } from "../../../utils/plannerGroupDiff";
-import { ensurePlannerStudents } from "../../../utils/plannerGroupSync";
+import { ensurePlannerStudents, plannerStudentKey } from "../../../utils/plannerGroupSync";
 import { logActivity } from "../../../utils/activityLogger";
 import { invalidateRelatedCache } from "../../../utils/botCache";
 import { Permission, requirePermission, roleHasPermission } from "../../../utils/permissions";
@@ -83,9 +83,9 @@ export default defineEventHandler(async (event) => {
 
   // 2. Добавление слушателей из планера (отсутствующие в ATC создаются)
   if (opts.addStudents && diff.studentsToAdd.length > 0) {
-    const pinflsToAdd = new Set(diff.studentsToAdd.map((s) => s.pinfl));
+    const keysToAdd = new Set(diff.studentsToAdd.map((s) => s.key));
     const plannerStudents = (diff.raw.students || []).filter((s) =>
-      pinflsToAdd.has(String(s.pinfl || "").trim()),
+      keysToAdd.has(plannerStudentKey(s)),
     );
     const ensured = await ensurePlannerStudents(plannerStudents, {
       createMissing: roleHasPermission(ctx, Permission.STUDENTS_CREATE),
@@ -93,7 +93,7 @@ export default defineEventHandler(async (event) => {
     result.created = ensured.created;
     result.errors.push(...ensured.errors);
 
-    let ids = Array.from(new Set(ensured.idsByPinfl.values()));
+    let ids = Array.from(new Set(ensured.idsByKey.values()));
     if (ids.length > 0) {
       const conflicts = await checkStudentConflicts(ids, startDate, endDate, id, id);
       if (conflicts.length > 0) {

@@ -181,7 +181,7 @@ export async function regenerateIssuedCertificatePdf(
       organizationRu: student.organizationRu,
       position: student.position,
       department: student.department || null,
-      pinfl: student.pinfl,
+      pinfl: student.pinfl || "",
       averageScore,
     },
     course: {

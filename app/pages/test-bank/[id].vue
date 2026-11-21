@@ -320,7 +320,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { TEST_LANGUAGES, TEST_LANGUAGE_FLAGS, emptyLanguageCounts } from "../../../shared/utils/testLanguages";
+import { TEST_LANGUAGES, TEST_LANGUAGE_FLAGS, emptyLanguageCounts } from "#shared/utils/testLanguages";
 import {
   ArrowLeft, Library, Plus, Upload, HelpCircle, Zap, TrendingUp, Flame, Tags, Search,
   ChevronDown, Filter, RotateCcw, Pencil, CheckCircle, XCircle, Trash2, Check, X,

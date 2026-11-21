@@ -1,5 +1,5 @@
 import { computed, readonly } from 'vue';
-import { useState, useCookie, navigateTo } from '#app';
+import { useState, useCookie, navigateTo, useRequestURL } from '#app';
 import type { UserPublic, AuthResponse, LoginData, RegisterData } from '../types/auth';
 
 /**
@@ -9,15 +9,21 @@ import type { UserPublic, AuthResponse, LoginData, RegisterData } from '../types
 export const useAuth = () => {
   // Состояние пользователя
   const user = useState<UserPublic | null>('auth:user', () => null);
+  // Secure-cookie только когда страница открыта по https (atc-platform.uz через
+  // Cloudflare). По http в локальной сети (http://192.168.x.x:3005) браузер
+  // Secure-cookie не сохраняет — вход бы «не держался».
+  const secure = import.meta.client
+    ? window.location.protocol === 'https:'
+    : useRequestURL({ xForwardedProto: true }).protocol === 'https:';
   const token = useCookie('auth_token', {
     maxAge: 60 * 60 * 24 * 7, // 7 дней
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure,
   });
   const refreshToken = useCookie('auth_refresh_token', {
     maxAge: 60 * 60 * 24 * 30, // 30 дней
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure,
   });
 
   // Вычисляемые свойства

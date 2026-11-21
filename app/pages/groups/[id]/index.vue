@@ -87,6 +87,18 @@
             Сертификаты
           </UiButton>
 
+          <!-- Обновить состав из Course Planner: связанная группа — сразу сравнение, иначе сначала привязка -->
+          <UiButton
+            v-if="canSyncPlanner"
+            variant="outline"
+            size="md"
+            :start-icon="RefreshCw"
+            title="Скопировать состав группы из Course Planner"
+            @click="openPlannerUpdate"
+          >
+            Обновить из Course Planner
+          </UiButton>
+
           <!-- 8 генераторов документов, сгруппированных по этапам обучения; пункты вызывают прежнюю логику -->
           <UiDropdown
             v-if="group.students && group.students.length > 0"
@@ -328,6 +340,40 @@
               <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                 {{ group.students?.length || 0 }} подтвержденных участников
               </p>
+              <!-- Фильтр по организации и режим сортировки -->
+              <div
+                v-if="group.students && group.students.length > 0"
+                class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center"
+              >
+                <select
+                  v-model="studentOrgFilter"
+                  class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:w-72 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  aria-label="Фильтр по организации"
+                >
+                  <option value="">Все организации</option>
+                  <option
+                    v-for="org in studentOrgOptions"
+                    :key="org.name"
+                    :value="org.name"
+                  >
+                    {{ org.name }} ({{ org.count }})
+                  </option>
+                </select>
+                <select
+                  v-model="studentSortMode"
+                  class="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-800 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 sm:w-64 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  aria-label="Сортировка слушателей"
+                >
+                  <option value="name">По алфавиту (ФИО)</option>
+                  <option value="organization">По организациям, внутри — по ФИО</option>
+                </select>
+                <span
+                  v-if="studentOrgFilter"
+                  class="text-xs text-gray-500 dark:text-gray-400"
+                >
+                  Показано: {{ displayedStudents.length }}
+                </span>
+              </div>
             </div>
 
             <!-- Пустое состояние -->
@@ -459,7 +505,7 @@
               <UiPagination
                 :current-page="currentStudentsPage"
                 :total-pages="totalStudentsPages"
-                :total="group.students.length"
+                :total="displayedStudents.length"
                 :limit="studentsPerPage"
                 hide-limit
                 @update:page="currentStudentsPage = $event"
@@ -761,6 +807,15 @@
       @unlinked="loadGroup"
     />
 
+    <GroupsPlannerGroupPicker
+      v-if="group && !group.plannerGroupId"
+      mode="link"
+      :is-open="showPlannerLinkPicker"
+      :initial-search="group.code"
+      @close="showPlannerLinkPicker = false"
+      @link="linkToPlanner"
+    />
+
     <GroupsManageStudentsModal
       :is-open="showManageStudentsModal"
       :group="group"
@@ -1020,10 +1075,10 @@ import {
   RefreshCw, // иконка «Синхронизировать с Course Planner»
 } from "lucide-vue-next";
 import type { StudyGroup } from "~/types/group";
-import type { EvaluationSheetsCommission } from "../../../../shared/utils/evaluationSheets";
-import type { PracticalSkillsSheetForm } from "../../../../shared/utils/practicalSkillsSheet";
-import type { FinalExamProtocolForm } from "../../../../shared/utils/finalExamProtocol";
-import type { RegistryForm } from "../../../../shared/utils/registry";
+import type { EvaluationSheetsCommission } from "#shared/utils/evaluationSheets";
+import type { PracticalSkillsSheetForm } from "#shared/utils/practicalSkillsSheet";
+import type { FinalExamProtocolForm } from "#shared/utils/finalExamProtocol";
+import type { RegistryForm } from "#shared/utils/registry";
 
 interface Discipline {
   id: string;
@@ -1062,6 +1117,7 @@ const group = ref<StudyGroup | null>(null);
 const showEditModal = ref(false);
 const showManageStudentsModal = ref(false);
 const showPlannerSyncModal = ref(false);
+const showPlannerLinkPicker = ref(false);
 const showDeleteModal = ref(false);
 const showArchiveModal = ref(false);
 const showUploadReportModal = ref(false);
@@ -1099,6 +1155,7 @@ const showQuestionnaireModal = ref(false); // Форма вопросника: �
 const generatingGroupList = ref(false); // Состояние генерации списка группы
 const showGroupListModal = ref(false); // Выбор инструктора для строки «Образец» списка группы
 const generatingGroupSchedule = ref(false); // Состояние генерации расписания группы
+const generatingBusinessTrip = ref(false); // Состояние генерации списка командированных
 
 // Состояния для просмотра и удаления документов
 const showPreviewModal = ref(false);
@@ -1358,9 +1415,73 @@ const daysInfo = computed(() => {
 });
 
 // Pagination computed...
+// Фильтр по организации и режим сортировки списка слушателей
+const NO_ORG_LABEL = "Без организации";
+const studentOrgFilter = ref("");
+const studentSortMode = ref<"name" | "organization">("name");
+const studentOrgName = (gs: any): string =>
+  gs.student?.organization?.trim() || NO_ORG_LABEL;
+const ruCompare = (a: string, b: string) =>
+  a.localeCompare(b, "ru", { sensitivity: "base" });
+
+const studentOrgOptions = computed(() => {
+  if (!group.value?.students) return [];
+  const orgCount: Record<string, number> = {};
+  group.value.students.forEach((gs: any) => {
+    const org = studentOrgName(gs);
+    orgCount[org] = (orgCount[org] || 0) + 1;
+  });
+  return Object.entries(orgCount)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => {
+      // «Без организации» всегда в конце
+      if (a.name === NO_ORG_LABEL) return 1;
+      if (b.name === NO_ORG_LABEL) return -1;
+      return ruCompare(a.name, b.name);
+    });
+});
+
+const displayedStudents = computed(() => {
+  if (!group.value?.students) return [];
+  let list = [...group.value.students];
+  if (studentOrgFilter.value) {
+    list = list.filter((gs: any) => studentOrgName(gs) === studentOrgFilter.value);
+  }
+  const byName = (a: any, b: any) =>
+    ruCompare(a.student?.fullName || "", b.student?.fullName || "");
+  if (studentSortMode.value === "organization") {
+    list.sort((a: any, b: any) => {
+      const oa = studentOrgName(a);
+      const ob = studentOrgName(b);
+      if (oa !== ob) {
+        if (oa === NO_ORG_LABEL) return 1;
+        if (ob === NO_ORG_LABEL) return -1;
+        return ruCompare(oa, ob);
+      }
+      return byName(a, b);
+    });
+  } else {
+    list.sort(byName);
+  }
+  return list;
+});
+
+// Смена фильтра/сортировки — возвращаемся на первую страницу
+watch([studentOrgFilter, studentSortMode], () => {
+  currentStudentsPage.value = 1;
+});
+// Если выбранной организации больше нет в группе — сбрасываем фильтр
+watch(studentOrgOptions, (opts) => {
+  if (
+    studentOrgFilter.value &&
+    !opts.some((o) => o.name === studentOrgFilter.value)
+  ) {
+    studentOrgFilter.value = "";
+  }
+});
+
 const totalStudentsPages = computed(() => {
-  if (!group.value?.students) return 1;
-  return Math.ceil(group.value.students.length / studentsPerPage.value) || 1;
+  return Math.ceil(displayedStudents.value.length / studentsPerPage.value) || 1;
 });
 
 const studentsByOrganization = computed(() => {
@@ -1378,13 +1499,12 @@ const studentsByOrganization = computed(() => {
 });
 
 const paginatedStudents = computed(() => {
-  if (!group.value?.students) return [];
   const start = (currentStudentsPage.value - 1) * studentsPerPage.value;
-  return group.value.students.slice(start, start + studentsPerPage.value);
+  return displayedStudents.value.slice(start, start + studentsPerPage.value);
 });
 const paginationInfo = computed(() => {
   if (!group.value?.students) return "";
-  const total = group.value.students.length;
+  const total = displayedStudents.value.length;
   const start = (currentStudentsPage.value - 1) * studentsPerPage.value + 1;
   const end = Math.min(
     currentStudentsPage.value * studentsPerPage.value,
@@ -2298,6 +2418,54 @@ const downloadGroupSchedule = async () => {
   }
 };
 
+// «Командировочные» — Xizmat safariga yuboriladigan tinglovchilar roʻyxati (Word)
+const downloadBusinessTrip = async () => {
+  if (generatingBusinessTrip.value || !group.value) return;
+
+  try {
+    generatingBusinessTrip.value = true;
+
+    const blob = await authFetch<Blob>(
+      `/api/groups/${group.value.id}/business-trip-list`,
+      { responseType: "blob" },
+    );
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Командировочные ${group.value.code}.docx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    try {
+      await authFetch("/api/reports/log-download", {
+        method: "POST",
+        body: {
+          reportType: "business_trip_list",
+          format: "docx",
+          groupCode: group.value.code,
+          groupId: group.value.id,
+        },
+      });
+    } catch (logError) {
+      console.error("Failed to log download:", logError);
+    }
+
+    toast.success("Список командированных сформирован");
+  } catch (error: any) {
+    console.error("Error generating business trip list:", error);
+    toast.error(
+      error?.statusCode === 403
+        ? "Недостаточно прав для скачивания документа"
+        : "Ошибка при формировании списка командированных",
+    );
+  } finally {
+    generatingBusinessTrip.value = false;
+  }
+};
+
 const confirmArchive = () => {
   showArchiveModal.value = true;
 };
@@ -2525,6 +2693,7 @@ const documentGroups = computed(() => [
       { key: "groupList", label: "Список группы", icon: FileText, loading: generatingGroupList.value },
       { key: "registry", label: "Реестр", icon: FileText, loading: generatingRegistry.value },
       { key: "acquaintance", label: "Лист ознакомления", icon: FileText, loading: generatingAcquaintanceSheet.value },
+      { key: "businessTrip", label: "Командировочные", icon: FileText, loading: generatingBusinessTrip.value },
     ],
   },
   {
@@ -2568,6 +2737,9 @@ const handleDocumentSelect = (key: string) => {
     case "groupSchedule":
       downloadGroupSchedule();
       break;
+    case "businessTrip":
+      downloadBusinessTrip();
+      break;
     case "emptyJournal":
       showEmptyJournalModal.value = true;
       break;
@@ -2595,6 +2767,33 @@ const handleDocumentSelect = (key: string) => {
   }
 };
 
+// Обновление состава из Course Planner: нужны права на редактирование группы и её слушателей
+const canSyncPlanner = computed(
+  () => !!group.value && !group.value.isArchived && canEditGroups.value && canManageGroupStudents.value,
+);
+
+const openPlannerUpdate = () => {
+  if (group.value?.plannerGroupId) showPlannerSyncModal.value = true;
+  else showPlannerLinkPicker.value = true;
+};
+
+// Привязка группы к выбранной группе планера, затем сразу окно сравнения состава
+const linkToPlanner = async (plannerGroupId: string) => {
+  if (!group.value) return;
+  try {
+    await authFetch(`/api/groups/${group.value.id}/planner-link`, {
+      method: "PUT",
+      body: { plannerGroupId },
+    });
+    showPlannerLinkPicker.value = false;
+    await loadGroup();
+    toast.success("Группа привязана к Course Planner");
+    showPlannerSyncModal.value = true;
+  } catch (e: any) {
+    toast.error(e?.data?.message || e?.message || "Не удалось привязать группу к Course Planner");
+  }
+};
+
 // Меню «Действия»: «Управление» + отдельная группа опасных операций (архив/удаление) — права проверяются через hidden
 const actionGroups = computed(() => [
   {
@@ -2610,9 +2809,9 @@ const actionGroups = computed(() => [
       { key: "upload", label: "Загрузить документ", icon: Upload, hidden: !canEditGroups.value },
       {
         key: "planner-sync",
-        label: "Синхронизировать с Course Planner",
+        label: group.value?.plannerGroupId ? "Синхронизировать с Course Planner" : "Привязать к Course Planner",
         icon: RefreshCw,
-        hidden: !(canEditGroups.value && group.value?.plannerGroupId && !group.value?.isArchived),
+        hidden: !canSyncPlanner.value,
       },
     ],
   },
@@ -2647,7 +2846,7 @@ const handleGroupAction = (key: string) => {
       showUploadReportModal.value = true;
       break;
     case "planner-sync":
-      showPlannerSyncModal.value = true;
+      openPlannerUpdate();
       break;
     case "archive":
       showArchiveModal.value = true;

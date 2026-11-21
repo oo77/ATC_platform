@@ -157,10 +157,9 @@ function validateRow(
 ): ValidationResult {
   const errors: string[] = [];
 
-  // Проверка ПИНФЛ
-  if (!row.ПИНФЛ || !row.ПИНФЛ.trim()) {
-    errors.push("ПИНФЛ не указан");
-  } else if (!validatePinfl(row.ПИНФЛ)) {
+  // Проверка ПИНФЛ (необязателен; если указан — 14 цифр)
+  const rawPinfl = row.ПИНФЛ ? String(row.ПИНФЛ).trim() : "";
+  if (rawPinfl && !validatePinfl(rawPinfl)) {
     errors.push("ПИНФЛ должен содержать 14 цифр");
   }
 
@@ -191,7 +190,7 @@ function validateRow(
 
   // Формируем данные для импорта
   const data: ImportStudentData = {
-    pinfl: row.ПИНФЛ.trim(),
+    pinfl: rawPinfl,
     fullName: row.ФИО.trim(),
     organization: row.Организация.trim(),
     department: row["Служба/Отдел"]?.trim() || null,
@@ -233,7 +232,7 @@ export async function analyzeImportData(
   });
 
   // Получаем существующих студентов из БД (Оптимизация: только нужные ПИНФЛ)
-  const pinflsToCheck = validData.map((d) => d.pinfl);
+  const pinflsToCheck = validData.map((d) => d.pinfl).filter(Boolean);
   const existingRows = await getExistingStudentsByPinfls(pinflsToCheck);
   const existingPinfls = new Set(existingRows.map((s) => s.pinfl));
 
@@ -243,7 +242,7 @@ export async function analyzeImportData(
   const existingPinflsInImport: string[] = []; // ПИНФЛ из импорта которые уже есть в БД
 
   validData.forEach((data) => {
-    if (existingPinfls.has(data.pinfl)) {
+    if (data.pinfl && existingPinfls.has(data.pinfl)) {
       existingStudentsCount++;
       existingPinflsInImport.push(data.pinfl);
     } else {
@@ -327,7 +326,7 @@ export async function executeImport(
     // Используем batch upsert из репозитория
     const result = await batchUpsertStudentsWithProgress(
       data.map((item) => ({
-        pinfl: item.pinfl,
+        pinfl: item.pinfl || null,
         fullName: item.fullName,
         organization: item.organization,
         department: item.department,

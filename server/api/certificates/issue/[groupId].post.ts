@@ -252,7 +252,7 @@ export default defineEventHandler(async (event) => {
             organizationRu: student.organizationRu,
             position: student.position,
             department: student.department || null,
-            pinfl: student.pinfl,
+            pinfl: student.pinfl || "",
             averageScore: eligibility.averageGrade,
           },
           course: {

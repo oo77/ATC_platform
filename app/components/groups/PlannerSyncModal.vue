@@ -60,8 +60,8 @@
           Добавить слушателей из планера ({{ diff.studentsToAdd.length }})
         </label>
         <ul class="max-h-[180px] divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
-          <li v-for="s in diff.studentsToAdd" :key="s.pinfl" class="flex items-center justify-between gap-3 px-3 py-1.5">
-            <span class="truncate">{{ s.name }} <span class="text-xs text-gray-400">{{ s.pinfl }}</span></span>
+          <li v-for="s in diff.studentsToAdd" :key="s.key || s.pinfl || s.name" class="flex items-center justify-between gap-3 px-3 py-1.5">
+            <span class="truncate">{{ s.name }} <span class="text-xs text-gray-400">{{ s.pinfl || "без ПИНФЛ" }}</span></span>
             <UiBadge size="sm" :color="s.status === 'existing' ? 'success' : 'info'">
               {{ s.status === "existing" ? "в ATC" : "будет создан" }}
             </UiBadge>
@@ -80,7 +80,7 @@
         </p>
         <ul class="max-h-[150px] divide-y divide-gray-100 overflow-y-auto rounded-lg border border-gray-200 text-sm dark:divide-gray-800 dark:border-gray-800">
           <li v-for="s in diff.studentsNotInPlanner" :key="s.studentId" class="px-3 py-1.5">
-            {{ s.fullName }} <span class="text-xs text-gray-400">{{ s.pinfl }}</span>
+            {{ s.fullName }} <span class="text-xs text-gray-400">{{ s.pinfl || "без ПИНФЛ" }}</span>
           </li>
         </ul>
       </section>
@@ -107,7 +107,7 @@ interface Diff {
   plannerCourse: { id: string; name: string } | null;
   courseMismatch: boolean;
   fieldChanges: Array<{ field: "startDate" | "endDate" | "classroom"; label: string; current: string | null; planner: string | null }>;
-  studentsToAdd: Array<{ pinfl: string; name: string; status: "existing" | "new" }>;
+  studentsToAdd: Array<{ key?: string; pinfl: string; name: string; status: "existing" | "new" }>;
   studentsNotInPlanner: Array<{ studentId: string; fullName: string; pinfl: string }>;
 }
 
@@ -224,5 +224,7 @@ watch(
   (open) => {
     if (open) load();
   },
+  // окно может смонтироваться уже открытым (сразу после привязки группы)
+  { immediate: true },
 );
 </script>

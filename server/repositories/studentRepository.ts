@@ -63,7 +63,7 @@ export interface PaginatedResult<T> {
 export interface StudentRow extends RowDataPacket {
   id: string;
   full_name: string;
-  pinfl: string;
+  pinfl: string | null;
   organization: string;
   organization_id: string | null;
   name_uz?: string | null;
@@ -694,7 +694,7 @@ export async function createStudent(
     [
       id,
       data.fullName,
-      data.pinfl,
+      data.pinfl?.trim() || null,
       data.organization,
       orgId,
       data.department || null,
@@ -746,7 +746,7 @@ export async function updateStudent(
   }
   if (data.pinfl !== undefined) {
     updates.push("pinfl = ?");
-    params.push(data.pinfl);
+    params.push(data.pinfl?.trim() || null);
   }
   if (data.organizationId !== undefined && data.organizationId !== null) {
     updates.push("organization_id = ?");
@@ -1100,7 +1100,8 @@ export async function batchUpsertStudents(
  */
 export async function batchUpsertStudentsWithProgress(
   students: Array<{
-    pinfl: string;
+    /** ПИНФЛ необязателен: без него слушатель сопоставляется по ФИО и создаётся без учётной записи */
+    pinfl?: string | null;
     fullName: string;
     organization: string;
     department?: string | null;
@@ -1155,33 +1156,63 @@ export async function batchUpsertStudentsWithProgress(
   // 2. Обработка студентов батчами
   for (let i = 0; i < students.length; i += batchSize) {
     const batch = students.slice(i, i + batchSize);
-    const batchPinfls = batch.map((s) => s.pinfl);
+    // Ключ сопоставления: ПИНФЛ, а без него — ФИО
+    const normalizeName = (name: string) =>
+      String(name || "").trim().replace(/\s+/g, " ").toLowerCase();
+    const keyOf = (s: { pinfl?: string | null; fullName: string }) =>
+      s.pinfl?.trim() || `name:${normalizeName(s.fullName)}`;
+    const batchPinfls = batch
+      .map((s) => s.pinfl?.trim())
+      .filter((p): p is string => !!p);
+    const batchNoPinflNames = [
+      ...new Set(
+        batch
+          .filter((s) => !s.pinfl?.trim())
+          .map((s) => s.fullName.trim().replace(/\s+/g, " ")),
+      ),
+    ];
 
     await executeTransaction(async (connection: PoolConnection) => {
       try {
         // --- ШАГ A: Получаем данные существующих студентов ---
-        const placeholders = batchPinfls.map(() => "?").join(",");
-        const [existingStudentRows] = await connection.query<StudentRow[]>(
-          `SELECT id, pinfl, user_id, organization_id FROM students WHERE pinfl IN (${placeholders})`,
-          batchPinfls,
-        );
-
         const existingStudentsMap = new Map<string, StudentRow>();
-        existingStudentRows.forEach((row) =>
-          existingStudentsMap.set(row.pinfl, row),
-        );
+        if (batchPinfls.length > 0) {
+          const placeholders = batchPinfls.map(() => "?").join(",");
+          const [existingStudentRows] = await connection.query<StudentRow[]>(
+            `SELECT id, pinfl, user_id, organization_id FROM students WHERE pinfl IN (${placeholders})`,
+            batchPinfls,
+          );
+          existingStudentRows.forEach((row) =>
+            existingStudentsMap.set(String(row.pinfl), row),
+          );
+        }
+        if (batchNoPinflNames.length > 0) {
+          const placeholders = batchNoPinflNames.map(() => "?").join(",");
+          const [noPinflRows] = await connection.query<StudentRow[]>(
+            `SELECT id, pinfl, full_name, user_id, organization_id FROM students
+             WHERE (pinfl IS NULL OR pinfl = '') AND full_name IN (${placeholders})
+             ORDER BY created_at ASC`,
+            batchNoPinflNames,
+          );
+          noPinflRows.forEach((row) => {
+            const key = `name:${normalizeName(row.full_name)}`;
+            if (!existingStudentsMap.has(key)) existingStudentsMap.set(key, row);
+          });
+        }
 
         // --- ШАГ B: Подготовка пользователей (Users) ---
-        // Нам нужно убедиться, что для каждого студента есть User
+        // Учётные записи создаются только для студентов с ПИНФЛ (логин = ПИНФЛ@student.local)
         const emailsToCheck: string[] = [];
         const pinflsOfNewUsers: string[] = [];
 
         batch.forEach((student) => {
-          const existing = existingStudentsMap.get(student.pinfl);
+          const pinfl = student.pinfl?.trim();
+          if (!pinfl) return;
+          const existing = existingStudentsMap.get(pinfl);
           // Если студента нет или у него нет user_id, нам нужен User
           if (!existing || !existing.user_id) {
-            emailsToCheck.push(`${student.pinfl}@student.local`);
-            pinflsOfNewUsers.push(student.pinfl);
+            emailsToCheck.push(`${pinfl}@student.local`);
+            pinflsOfNewUsers.push(pinfl);
           }
         });
 
@@ -1255,23 +1286,32 @@ export async function batchUpsertStudentsWithProgress(
         const upsertValues: any[] = [];
         const upsertPlaceholders = batch
           .map((student) => {
-            const existing = existingStudentsMap.get(student.pinfl);
+            const pinfl = student.pinfl?.trim() || null;
+            const key = keyOf(student);
+            const existing = existingStudentsMap.get(key);
             const organizationId =
               organizationCache.get(student.organization.trim()) || null;
 
-            // Если студент существует, используем его ID, иначе новый
+            // Если студент существует, используем его ID, иначе новый.
+            // Без ПИНФЛ upsert идёт по первичному ключу (id).
             const studentId = existing ? existing.id : uuidv4();
+            if (!existing && !pinfl) {
+              // Повтор того же ФИО без ПИНФЛ в батче — тот же слушатель
+              existingStudentsMap.set(key, { id: studentId, pinfl: null, user_id: null, organization_id: organizationId } as StudentRow);
+            }
 
             // Получаем userID: либо существующий у студента, либо из мапы пользователей
-            const email = `${student.pinfl}@student.local`;
-            const userId = existing?.user_id || userMap.get(email) || null; // Should not be null at this point
+            const userId =
+              existing?.user_id ||
+              (pinfl ? userMap.get(`${pinfl}@student.local`) : null) ||
+              null;
 
             const now = new Date();
 
             upsertValues.push(
               studentId,
               student.fullName,
-              student.pinfl,
+              pinfl,
               student.organization,
               organizationId,
               student.department || null,
@@ -1324,7 +1364,7 @@ export async function batchUpsertStudentsWithProgress(
         console.error("Batch import error:", error);
         batch.forEach((item) => {
           result.errors.push({
-            pinfl: item.pinfl,
+            pinfl: item.pinfl || "",
             error:
               error instanceof Error ? error.message : "Batch processing error",
           });

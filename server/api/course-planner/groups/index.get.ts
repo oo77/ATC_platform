@@ -7,10 +7,11 @@ import type { RowDataPacket } from "mysql2/promise";
 import { fetchCoursePlannerGroups, getCoursePlannerConfig } from "../../../utils/coursePlanner";
 import { executeQuery } from "../../../utils/db";
 import { plannerDateToLocal } from "../../../utils/plannerGroupSync";
-import { Permission, requirePermission } from "../../../utils/permissions";
+import { Permission, requireAnyPermission } from "../../../utils/permissions";
 
 export default defineEventHandler(async (event) => {
-  await requirePermission(event, Permission.GROUPS_CREATE);
+  // список нужен и при создании группы, и при привязке существующей
+  await requireAnyPermission(event, [Permission.GROUPS_CREATE, Permission.GROUPS_UPDATE]);
 
   if (!getCoursePlannerConfig().enabled) {
     throw createError({ statusCode: 400, message: "Интеграция с Course Planner выключена в настройках" });

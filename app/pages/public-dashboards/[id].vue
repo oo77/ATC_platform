@@ -450,7 +450,7 @@ import {
   type DashboardWidget,
   type WidgetCategory,
   type WidgetData,
-} from "../../../shared/utils/publicDashboard";
+} from "#shared/utils/publicDashboard";
 
 definePageMeta({ layout: "default", title: "Публичный дашборд" });
 
